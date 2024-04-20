@@ -1,0 +1,277 @@
+:root {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: #0f0f0f;
+  background-color: #f6f6f6;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button {
+  box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
+  background-color: white;
+  display: inline-block;
+  border: none;
+  border-radius: 5px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+button:hover {
+  background-color: rgb(241, 241, 241);
+}
+
+button[disabled] {
+  background-color: rgb(250, 250, 250);
+  color: rgb(200, 200, 200);
+}
+
+input {
+  font-size: 12px;
+}
+
+select {
+  font-size: 14px;
+}
+
+textarea {
+  font-size: 14px;
+}
+
+ul.menu {
+  flex: none;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: gray;
+  display: flex;
+  align-items: center;
+  cursor: default;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+
+ul.menu li {
+  float: left;
+  flex: none;
+}
+
+ul.menu button {
+  font-size: 14px;
+  display: block;
+  color: white;
+  min-width: max-content;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  text-align: center;
+  padding: 10px 15px 10px;
+  text-decoration: none;
+}
+
+ul.menu button:hover {
+  background-color: darkgray;
+}
+
+ul.menu button[disabled] {
+  background-color: transparent;
+  color: gainsboro;
+}
+
+ul.menu .label {
+  font-size: 14px;
+  display: block;
+  color: rgb(226, 223, 223);
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  height: 100%;
+  text-decoration: none;
+  padding-left: 10px;
+}
+
+ul.menu .separator {
+  width: 1.5px;
+  min-height: 60%;
+  display: block;
+  margin: 10px;
+  background-color: rgb(209, 209, 209);
+}
+
+table.config {
+  width: 100%;
+}
+
+table.config td:first-child {
+  vertical-align: top;
+  text-align: right;
+  padding-right: 10px;
+  font-weight: bold;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+
+h2 {
+  padding: 0;
+}
+
+.container {
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  /* border: 1px solid black; */
+  height: 100vh;
+  max-height: 100vh;
+  box-sizing: border-box;
+}
+
+.status {
+  text-align: left;
+  padding: 5px;
+  margin: 5px 0 0 0;
+  line-height: normal;
+  background-color: lightgray;
+}
+
+.contentarea {
+  width: 100%;
+  resize: none;
+  overflow: visible;
+  border-radius: 2px;
+  border: 1px solid gray;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.subscontainer {
+  height: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+.styleselect {
+  padding: 3px;
+  height: 100%;
+  /* background-color: white; */
+  box-sizing: border-box;
+}
+
+table.edit {
+  box-sizing: border-box;
+  flex: none;
+  height: 206px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-spacing: 0;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+
+table.edit > tr > td {
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+
+table.edit table {
+  width: 100%;
+  height: 100%;
+}
+
+table.fields {
+  border-collapse: collapse;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+}
+
+table.fields td {
+  vertical-align: top;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+
+table.subs {
+  border-collapse: collapse;
+  line-height: 1;
+  padding: 5px;
+  width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  position: relative;
+  cursor: default;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+
+table.subs thead {
+  background-color: #f6f6f6;
+  width: 100%;
+  position: sticky;
+  top: 0;
+}
+
+table.subs tbody {
+  background-color: #f6f6f6;
+  width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+table.subs th {
+  padding: 5px;
+}
+
+table.subs thead th:nth-child(6) {
+  width: 100%;
+  text-align: left;
+  padding-left: 10px;
+}
+table.subs tbody td {
+  padding: 5px;
+  border: 1px solid gray;
+  white-space: pre-wrap;
+  min-height: 1lh;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+table.subs tbody tr {
+  background-color: white;
+}
+tr.selected {
+  background-color: rgb(234, 234, 234) ! important;
+}
+tr.focushlt {
+  background-color: lightblue ! important;
+}
+tr.sametime {
+  color: crimson;
+}
+td.subtext {
+  text-align: left;
+}
