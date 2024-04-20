@@ -6,6 +6,7 @@ export class VideoPlayer implements WithCanvas {
     #video: HTMLVideoElement;
     #ctx: CanvasRenderingContext2D;
 
+    #sourceUrl: string | undefined = undefined;
     #loaded = false;
     #playing = false;
     #position = 0;
@@ -18,6 +19,7 @@ export class VideoPlayer implements WithCanvas {
     get currentPosition() {return this.#position;}
     get isLoaded() {return this.#loaded;}
     get isPlaying() {return this.#playing;}
+    get source() {return this.#sourceUrl;}
 
     #displayWidth = 1920;
     #displayHeight = 1080;
@@ -55,6 +57,7 @@ export class VideoPlayer implements WithCanvas {
                 this.#video.removeEventListener('loadeddata', handler1);
                 this.#playing = false;
                 this.#loaded = true;
+                this.#sourceUrl = url;
                 this.onPlayStateChange();
                 this.setPosition(0);
                 resolve();

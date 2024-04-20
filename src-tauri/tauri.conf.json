@@ -41,6 +41,7 @@
         "save": true
       },
       "fs": {
+        "scope": ["$CONFIG/*", "$APPCONFIG/*", "**", "**/*", "/**/*"],
         "all": true,
         "readFile": true,
         "writeFile": true,

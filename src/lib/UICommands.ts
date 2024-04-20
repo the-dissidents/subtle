@@ -199,18 +199,6 @@ export class UIHelper {
         },
         { is_separator: true },
         {
-            label: 'transform times...',
-            event: () => {
-                if (!this.frontend.modalDialogs.timeTrans) return;
-                let off = this.frontend.modalDialogs.timeTrans.$on('submit', (ev) => {
-                    if (this.frontend.subs.shiftTimes(ev.detail))
-                        this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
-                    off();
-                });
-                this.frontend.modalDialogs.timeTrans.$set({show: true});
-            }
-        },
-        {
             label: 'combine simultaneous',
             disabled: selection.length <= 1,
             event: () => this.#combineSimultaneous(selection)
@@ -233,83 +221,104 @@ export class UIHelper {
                 }
             ]
         },
-        {
-            label: 'sort by time',
-            disabled: isDisjunct || selection.length <= 1,
-            event: () => this.#sortSelection(selection, false)
-        },
-        {
-            label: 'sort by first style',
-            disabled: isDisjunct || selection.length <= 1,
-            event: () => this.#sortSelection(selection, true)
-        },
-        {
-            label: 'sort channels',
-            event: () => this.#sortChannels(selection)
-        },
         { is_separator: true },
         {
-            label: 'create channel',
-            subitems: allStyles.map((x) => ({
-                label: x.name,
-                event: () => {
-                    let done = false;
-                    for (let ent of selection)
-                        if (!ent.texts.find((t) => t.style == x)) {
-                            ent.texts.push({style: x, text: ''});
-                            done = true;
-                        }
-                    if (done)
-                        this.frontend.markChanged(ChangeType.NonTime, ChangeCause.Action);
-                }
-            }))
-        },
-        {
-            label: 'replace channel',
-            disabled: this.frontend.subs.styles.length == 0,
-            subitems: allStyles.map((x) => ({
-                label: x.name,
-                subitems: [{
-                    label: 'by:',
-                    disabled: true,
-                }, ...allStyles.filter((y) => y != x).map((y) => ({
-                    label: y.name,
+            label: 'utilities',
+            subitems: [
+                {
+                    label: 'transform times...',
                     event: () => {
-                        if (SubtitleTools.replaceStyle(selection, x, y)) 
-                            this.frontend.markChanged(ChangeType.NonTime, ChangeCause.Action);
+                        if (!this.frontend.modalDialogs.timeTrans) return;
+                        let off = this.frontend.modalDialogs.timeTrans.$on('submit', 
+                            (ev) => {
+                                if (this.frontend.subs.shiftTimes(ev.detail))
+                                    this.frontend.markChanged(
+                                        ChangeType.Times, ChangeCause.Action);
+                                off();
+                            });
+                        this.frontend.modalDialogs.timeTrans.$set({show: true});
                     }
-                }))]
-            }))
+                },
+                { is_separator: true },
+                {
+                    label: 'sort by time',
+                    disabled: isDisjunct || selection.length <= 1,
+                    event: () => this.#sortSelection(selection, false)
+                },
+                {
+                    label: 'sort by first style',
+                    disabled: isDisjunct || selection.length <= 1,
+                    event: () => this.#sortSelection(selection, true)
+                },
+                {
+                    label: 'sort channels',
+                    event: () => this.#sortChannels(selection)
+                },
+                { is_separator: true },
+                {
+                    label: 'create channel',
+                    subitems: allStyles.map((x) => ({
+                        label: x.name,
+                        event: () => {
+                            let done = false;
+                            for (let ent of selection)
+                                if (!ent.texts.find((t) => t.style == x)) {
+                                    ent.texts.push({style: x, text: ''});
+                                    done = true;
+                                }
+                            if (done)
+                                this.frontend.markChanged(ChangeType.NonTime, ChangeCause.Action);
+                        }
+                    }))
+                },
+                {
+                    label: 'replace channel',
+                    disabled: this.frontend.subs.styles.length == 0,
+                    subitems: allStyles.map((x) => ({
+                        label: x.name,
+                        subitems: [{
+                            label: 'by:',
+                            disabled: true,
+                        }, ...allStyles.filter((y) => y != x).map((y) => ({
+                            label: y.name,
+                            event: () => {
+                                if (SubtitleTools.replaceStyle(selection, x, y)) 
+                                    this.frontend.markChanged(ChangeType.NonTime, ChangeCause.Action);
+                            }
+                        }))]
+                    }))
+                },
+                {
+                    label: 'remove channel',
+                    disabled: this.frontend.subs.styles.length == 0,
+                    subitems: this.frontend.subs.styles.map((x) => ({
+                        label: x.name,
+                        event: () => this.#removeChannel(selection, (t) => t.style == x)
+                    }))
+                },
+                {
+                    label: 'remove empty',
+                    event: () => this.#removeChannel(selection, (t) => t.text == '')
+                },
+                // {
+                //     label: 'tools',
+                //     subitems: [
+                //         {
+                //             label: 'remove line breaks',
+                //             event: () => {}
+                //         },
+                //         {
+                //             label: 'add line breaks',
+                //             event: () => {}
+                //         },
+                //         {
+                //             label: 'combine channels with the same styles',
+                //             event: () => {}
+                //         }
+                //     ]
+                // },
+            ]
         },
-        {
-            label: 'remove channel',
-            disabled: this.frontend.subs.styles.length == 0,
-            subitems: this.frontend.subs.styles.map((x) => ({
-                label: x.name,
-                event: () => this.#removeChannel(selection, (t) => t.style == x)
-            }))
-        },
-        {
-            label: 'remove empty',
-            event: () => this.#removeChannel(selection, (t) => t.text == '')
-        },
-        // {
-        //     label: 'tools',
-        //     subitems: [
-        //         {
-        //             label: 'remove line breaks',
-        //             event: () => {}
-        //         },
-        //         {
-        //             label: 'add line breaks',
-        //             event: () => {}
-        //         },
-        //         {
-        //             label: 'combine channels with the same styles',
-        //             event: () => {}
-        //         }
-        //     ]
-        // },
         ]});
     }
 
@@ -392,8 +401,12 @@ export class UIHelper {
         let entry = selection[0];
         let start = entry.start, end = entry.end;
         for (let i = 1; i < selection.length; i++) {
-            if (keepAll)
-                entry.texts.push(...selection[i].texts);
+            if (keepAll) for (const text of selection[i].texts) {
+                const last = entry.texts.findLast(
+                    (x) => x.style.name == text.style.name);
+                if (last) last.text += ' ' + text.text;
+                else entry.texts.push(text);
+            }
             start = Math.min(start, selection[i].start);
             end = Math.max(end, selection[i].end);
         }
@@ -402,6 +415,7 @@ export class UIHelper {
         this.frontend.subs.entries.splice(
             this.frontend.subs.entries.indexOf(entry) + 1,
             selection.length - 1);
+        this.frontend.selectEntry(entry);
         this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
     }
 

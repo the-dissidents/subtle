@@ -6,12 +6,14 @@ import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from './lib/Subtitles'
-import { Basic, assert } from './lib/Basic';
+import { Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend } from './lib/frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
 import SearchDialog from './lib/SearchDialog.svelte';
-import { UIHelper } from './lib/UICommands';
 import { CanvasKeeper } from './lib/CanvasKeeper';
+    import { showMenu } from 'tauri-plugin-context-menu';
+    import { Config } from './lib/Config';
+    import { path } from '@tauri-apps/api';
 
 let frontend = new Frontend();
 let styleDialog: StyleManagerDialog;
@@ -139,6 +141,8 @@ let setupTimelineView = () => {
 
 $: videoCanvas, setupVideoView();
 $: timelineCanvas, setupTimelineView();
+
+Config.init();
 </script>
 
 <svelte:document 
@@ -157,7 +161,33 @@ $: timelineCanvas, setupTimelineView();
 <main class="container">
   <!-- toolbar -->
   <ul class='menu'>
-    <li><button on:click={() => frontend.askOpenFile()}>open</button></li>
+    <li><button on:click={() => {
+      const paths = Config.get('paths');
+      showMenu({
+        items: [
+          {
+            label: 'other file...',
+            event: () => frontend.askOpenFile()
+          },
+          { is_separator: true },
+          ...(paths.length == 0 ? [
+            {
+              label: 'no recent files',
+              disabled: true
+            }
+          ] : paths.map((x) => ({
+            label: '[...]/' + x.name.split(path.sep).slice(-2).join(path.sep),
+            event: () => frontend.openDocument(x.name)
+          }))),
+          { is_separator: true },
+          {
+            label: 'clear recents',
+            disabled: paths.length == 0,
+            event: () => Config.set('paths', [])
+          },
+        ]
+      })
+    }}>open</button></li>
     <li><button on:click={() => frontend.askSaveFile(true)}>save as</button></li>
     <li><button on:click={() => frontend.askImportFile()}>import</button></li>
     <li><button on:click={() => frontend.askExportFile()}>export</button></li>

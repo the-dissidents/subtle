@@ -7,6 +7,7 @@ import type TimeTransformDialog from "./TimeTransformDialog.svelte";
 import type SearchDialog from "./SearchDialog.svelte";
 import { Playback } from "./Playback";
 import { UIHelper } from "./UICommands";
+import { Config } from "./Config";
 
 type Snapshot = {
     archive: string,
@@ -209,22 +210,14 @@ export class Frontend {
     async askOpenFile() {
         const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
         if (typeof selected != 'string') return;
-        const text = await fs.readTextFile(selected);
-        let newSub = this.retrieveFromSource(text);
-        if (!newSub) {
-            this.status = `error when reading ${selected}`;
-            return;
-        }
-        this.openDocument(newSub, selected);
+        await this.openDocument(selected);
     }
 
     async askOpenVideo() {
         const selected = await dialog.open({multiple: false, 
         filters: [{name: 'video file', extensions: ['avi', 'mp4', 'webm', 'mkv']}]});
         if (typeof selected != 'string') return;
-        const path = tauri.convertFileSrc(selected);
-        await this.playback.load(path).catch((x) => this.#status = x).catch((x) => 
-            this.status = 'error opening video: ' + x);
+        await this.openVideo(selected);
     }
   
     async askSaveFile(saveAs = false) {
@@ -237,9 +230,6 @@ export class Frontend {
         }
         const text = JSON.stringify(this.subs.toSerializable());
         if (await this.saveTo(file, text)) {
-            this.status = 'saved to ' + file;
-            this.fileChanged = false;
-            this.currentFile = file;
         }
     }
 
@@ -266,7 +256,21 @@ export class Frontend {
         ]})
     }
 
-    openDocument(newSubs: Subtitles, path: string) {
+    async openDocument(path: string) {
+        let newSubs: Subtitles | null;
+        try {
+            const text = await fs.readTextFile(path);
+            newSubs = this.retrieveFromSource(text);
+            if (!newSubs)
+                throw 'file is unparsable';
+        } catch {
+            this.status = `error when reading ${path}`;
+            return;
+        }
+
+        const video = Config.getVideo(path);
+        Config.pushRecent(path);
+
         this.subs = newSubs;
         this.current.entry = null;
         this.current.style = newSubs.defaultStyle;
@@ -275,11 +279,29 @@ export class Frontend {
         this.status = 'opened: ' + path;
         this.onSubtitleObjectReload.dispatch();
         this.markChanged(ChangeType.Both, ChangeCause.Action);
+        if (video) await this.openVideo(video);
+    }
+
+    async openVideo(file: string) {
+        const path = tauri.convertFileSrc(file);
+        await this.playback.load(path).catch((x) => this.#status = x).catch((x) => 
+            this.status = 'error opening video: ' + x);
+        if (this.currentFile != '')
+            Config.rememberVideo(this.currentFile, file);
     }
 
     async saveTo(file: string, text: string) {
         try {
             await fs.writeTextFile(file, text);
+
+            this.status = 'saved to ' + file;
+            this.fileChanged = false;
+            if (file != this.currentFile) {
+                Config.pushRecent(file);
+                if (this.playback.video?.source)
+                    Config.rememberVideo(file, this.playback.video.source);
+                this.currentFile = file;
+            }
             return true;
         } catch (error) {
             this.status = `error when saving to ${file}: ${error}`;
