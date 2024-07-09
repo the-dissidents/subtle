@@ -1,6 +1,8 @@
 <script lang="ts">
 import ImportOptionsDialog from './lib/ImportOptionsDialog.svelte';
 import StyleManagerDialog from './lib/PropertiesDialog.svelte';
+import SplitLanguagesDialog from './lib/SplitLanguagesDialog.svelte';
+import CombineDialog from "./lib/CombineDialog.svelte";
 import Resizer from './lib/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
@@ -11,9 +13,9 @@ import { ChangeCause, ChangeType, Frontend } from './lib/frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
 import SearchDialog from './lib/SearchDialog.svelte';
 import { CanvasKeeper } from './lib/CanvasKeeper';
-    import { showMenu } from 'tauri-plugin-context-menu';
-    import { Config } from './lib/Config';
-    import { path } from '@tauri-apps/api';
+import { showMenu } from 'tauri-plugin-context-menu';
+import { Config } from './lib/Config';
+import { path } from '@tauri-apps/api';
 
 let frontend = new Frontend();
 let styleDialog: StyleManagerDialog;
@@ -45,17 +47,16 @@ frontend.onUndoBufferChanged.bind(() => {
 frontend.onStatusChanged.bind(() => {
   statusUpdateCounter++;
 });
+
 frontend.onSubtitlesChanged.bind((type: ChangeType, cause: ChangeCause) => {
   // for toolbar
   frontend.fileChanged = frontend.fileChanged;
-  //subListUpdateCounter++;
   if (cause != ChangeCause.UIForm)
     editFormUpdateCounter++;
   console.log('changed', ChangeType[type], ChangeCause[cause]);
 });
+
 frontend.onSelectionChanged.bind(() => {
-  //subListUpdateCounter++;
-  //editFormUpdateCounter++;
   selection = new Set(frontend.getSelection());
   frontend.current.entry = frontend.current.entry;
   setupEditForm();
@@ -153,10 +154,12 @@ Config.init();
   }}/>
 
 <!-- dialogs -->
-<TimeAdjustmentDialog {frontend} bind:this={frontend.modalDialogs.timeTrans}/>
 <StyleManagerDialog   {frontend} bind:this={styleDialog}/>
-<ImportOptionsDialog  {frontend} bind:this={frontend.modalDialogs.importOpt}/>
 <SearchDialog         {frontend} bind:this={frontend.dialogs.search}/>
+<TimeAdjustmentDialog {frontend} bind:this={frontend.modalDialogs.timeTrans}/>
+<ImportOptionsDialog  {frontend} bind:this={frontend.modalDialogs.importOpt}/>
+<CombineDialog        {frontend} bind:this={frontend.modalDialogs.combine}/>
+<SplitLanguagesDialog {frontend} bind:this={frontend.modalDialogs.splitLanguages}/>
 
 <main class="container">
   <!-- toolbar -->

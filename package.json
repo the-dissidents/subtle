@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1",
+    "eld": "^1.0.0",
     "tauri-plugin-context-menu": "^0.7.0"
   },
   "devDependencies": {

@@ -20,7 +20,7 @@
 
 	enum SearchAction {
 		Find, Select,
-		Replace,
+		Replace, ReplaceStyleOnly
 	}
 
 	function findAndReplace(type: SearchAction, once: boolean) {
@@ -66,6 +66,8 @@
 					} else if (type == SearchAction.Replace) {
 						channel.text = replaced;
 						if (replaceStyle) channel.style = style2;
+					} else if (type == SearchAction.ReplaceStyleOnly) {
+						channel.style = style2;
 					}
 					if (once) {
 						currentEntry = ent;
@@ -142,6 +144,9 @@
 					() => findAndReplace(SearchAction.Replace, true)}>replace next</button>
 				<button on:click={
 					() => findAndReplace(SearchAction.Replace, false)}>replace all</button>
+				<br/>
+				<button on:click={
+					() => findAndReplace(SearchAction.ReplaceStyleOnly, false)}>replace styles only</button>
 			</td>
 		</tr>
 	</table>

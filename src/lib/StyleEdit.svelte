@@ -133,6 +133,7 @@
     <input type='checkbox' id='strikethru' bind:checked={style.styles.strikethrough}/><label for="strikethru">strikethru</label>
   </td>
 </tr>
+
 <tr>
   <td><label for='color'>text color:</label></td>
   <td><input id='color' bind:value={style.color}/></td>

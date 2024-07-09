@@ -16,6 +16,10 @@
 		}
 		else dialog.show();
 	}
+
+	$: if (dialog && !show && dialog.open) {
+		dialog.close();
+	}
 	
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
@@ -70,7 +74,7 @@
 	<footer>
 		<!-- svelte-ignore a11y-autofocus -->
 		<button class='submit' autofocus 
-			on:click={() => {show = false; dialog.close(); submit()}}>done</button>
+			on:click={() => {show = false; submit()}}>done</button>
 	</footer>
 </dialog>
 

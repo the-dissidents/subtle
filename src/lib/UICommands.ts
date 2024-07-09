@@ -1,5 +1,5 @@
 import { showMenu } from "tauri-plugin-context-menu";
-import { Basic } from "./Basic";
+import { Basic, assert } from "./Basic";
 import { ChangeCause, ChangeType, type Frontend } from "./frontend";
 import { SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type SubtitleChannel } from "./Subtitles";
 
@@ -12,6 +12,8 @@ export class UIHelper {
             || document.activeElement?.localName == 'input';
         let isEditingList = !this.frontend.states.isEditing && !isEditing;
         let altOrNotEditing = (!this.frontend.states.isEditing || ev.altKey) && !isEditing;
+
+        // console.log(ev, isEditing, isEditingList, isEditing);
         
         if (ev.key == 'Enter' && ctrlOrMeta) {
             // insert after
@@ -197,18 +199,12 @@ export class UIHelper {
             shortcut: 'cmd_or_ctrl+enter',
             event: () => this.frontend.insertEntryAfter(selection[0])
         },
-        { is_separator: true },
-        {
-            label: 'combine simultaneous',
-            disabled: selection.length <= 1,
-            event: () => this.#combineSimultaneous(selection)
-        },
         {
             label: 'split simultaneous',
             event: () => this.#splitSimultaneous(selection)
         },
         {
-            label: 'combine entries',
+            label: 'merge entries',
             disabled: isDisjunct || selection.length <= 1,
             subitems: [
                 {
@@ -300,6 +296,35 @@ export class UIHelper {
                     label: 'remove empty',
                     event: () => this.#removeChannel(selection, (t) => t.text == '')
                 },
+                { is_separator: true },
+                {
+                    label: 'combine overlapping duplicates',
+                    disabled: selection.length <= 1,
+                    event: () => this.#combineDuplicate(selection)
+                },
+                {
+                    label: 'combine by matching time...',
+                    disabled: selection.length <= 1,
+                    event: () =>
+                        this.frontend.modalDialogs.combine?.$set({show: true})
+                },
+                {
+                    label: 'split by line',
+                    disabled: selection.length <= 1,
+                    event: () => this.#splitByNewline(selection)
+                },
+                {
+                    label: 'split by language...',
+                    event: () =>
+                        this.frontend.modalDialogs.splitLanguages?.$set({show: true})
+                },
+                {
+                    label: 'fix erroneous overlapping',
+                    event: () => this.#fixOverlap(selection)
+                }
+                // TODO: split by line
+
+
                 // {
                 //     label: 'tools',
                 //     subitems: [
@@ -397,6 +422,61 @@ export class UIHelper {
         }, 0);
     }
 
+    #fixOverlap(selection: SubtitleEntry[], epsilon = 0.05) {
+        let count = 0;
+        for (let i = 0; i < selection.length - 1; i++) {
+            let entry = selection[i];
+            for (let j = 1; j < selection.length; j++) {
+                let other = selection[j];
+                if (entry.start < other.end && other.end - entry.start < epsilon) {
+                    entry.start = other.end;
+                    count++;
+                }
+                if (entry.end > other.start && entry.end - other.start < epsilon) {
+                    entry.end = other.start;
+                    count++;
+                }
+            }
+        }
+        if (count > 0) {
+            this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
+            this.frontend.status = `changed ${count} entrie${count > 1 ? 's' : ''}`;
+        } else this.frontend.status = `changed nothing`;
+    }
+
+    #combineDuplicate(selection: SubtitleEntry[]) {
+        let deletion = new Set<SubtitleEntry>;
+        for (let i = 0; i < selection.length; i++) {
+            let entry = selection[i];
+            if (deletion.has(entry) || entry.texts.length > 1) continue;
+            
+            while (true) {
+                for (let j = 0; j < selection.length; j++) {
+                    if (i == j) continue;
+                    let other = selection[j];
+                    if (deletion.has(other) || other.texts.length > 1) continue;
+                    if (other.texts[0].text != entry.texts[0].text) continue;
+
+                    if (Math.abs(other.start - entry.end) < this.frontend.timeEpsilon 
+                        || Math.abs(other.end - entry.start) < this.frontend.timeEpsilon) 
+                    {
+                        entry.start = Math.min(entry.start, other.start);
+                        entry.end = Math.max(entry.end, other.end);
+                        deletion.add(other);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        for (const entry of deletion) {
+            let index = this.frontend.subs.entries.indexOf(entry);
+            assert(index > 0);
+            this.frontend.subs.entries.splice(index, 1);
+        }
+        this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
+    }
+
     #combineEntries(selection: SubtitleEntry[], keepAll: boolean) {
         let entry = selection[0];
         let start = entry.start, end = entry.end;
@@ -419,31 +499,19 @@ export class UIHelper {
         this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
     }
 
-    #combineSimultaneous(selection: SubtitleEntry[]) {
-        if (selection.length == 0) return;
-        let done = new Set<SubtitleEntry>();
-        for (let i = 0; i < selection.length - 1; i++) {
-            let entry0 = selection[i];
-            if (done.has(entry0)) continue;
-            for (let j = i+1; j < selection.length; j++) {
-                let entry1 = selection[j];
-                if (done.has(entry1)) continue;
-                if (Math.abs(entry0.start - entry1.start) < this.frontend.timeEpsilon && 
-                    Math.abs(entry0.end - entry1.end) < this.frontend.timeEpsilon)
-                {
-                    entry0.texts.push(...entry1.texts);
-                    this.frontend.subs.entries.splice(
-                        this.frontend.subs.entries.indexOf(entry1), 1);
-                    done.add(entry1);
-                }
+    #splitByNewline(selection: SubtitleEntry[]) {
+        for (const entry of selection) {
+            let newChannels: SubtitleChannel[] = [];
+            for (const channel of entry.texts) {
+                let split = channel.text.split('\n');
+                if (split.length > 1) {
+                    newChannels.push(...split.map(
+                        (x) => ({style: channel.style, text: x})));
+                } else newChannels.push(channel);
             }
+            entry.texts = newChannels;
         }
-        if (done.size > 0) {
-            this.frontend.clearSelection();
-            for (let ent of selection.filter((x) => !done.has(x)))
-                this.frontend.selection.submitted.add(ent);
-            this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
-        }
+        this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
     }
 
     #splitSimultaneous(selection: SubtitleEntry[]) {

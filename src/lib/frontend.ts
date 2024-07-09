@@ -8,6 +8,8 @@ import type SearchDialog from "./SearchDialog.svelte";
 import { Playback } from "./Playback";
 import { UIHelper } from "./UICommands";
 import { Config } from "./Config";
+import type CombineDialog from "./CombineDialog.svelte";
+import type SplitLanguagesDialog from "./SplitLanguagesDialog.svelte";
 
 type Snapshot = {
     archive: string,
@@ -73,6 +75,8 @@ export class Frontend {
     modalDialogs: {
         importOpt?: ImportOptionsDialog;
         timeTrans?: TimeTransformDialog;
+        combine?: CombineDialog;
+        splitLanguages?: SplitLanguagesDialog;
     } = {};
 
     dialogs: {
@@ -117,6 +121,7 @@ export class Frontend {
     uiHelper = new UIHelper(this);
 
     constructor() {
+        //this.subs = new Subtitles();
         this.subs = SubtitleTools.makeTestSubtitles();
         this.markChanged(ChangeType.Times, ChangeCause.Action);
         this.fileChanged = false;
@@ -189,6 +194,8 @@ export class Frontend {
 
     // document management
 
+    // ADV_TODO: warn if not saved
+
     async askImportFile() {
         assert(this.modalDialogs.importOpt !== undefined);
         const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
@@ -238,7 +245,7 @@ export class Frontend {
             const selected = await dialog.save({
                 filters: [{name: 'subtitle file', extensions: [ext]}]});
             if (typeof selected != 'string') return;
-            await this.saveTo(selected, func(this.subs));
+            await this.saveTo(selected, func(this.subs), true);
         }
         showMenu({items: [
             {
@@ -290,21 +297,24 @@ export class Frontend {
             Config.rememberVideo(this.currentFile, file);
     }
 
-    async saveTo(file: string, text: string) {
+    async saveTo(file: string, text: string, isExport = false) {
         try {
             await fs.writeTextFile(file, text);
-
-            this.status = 'saved to ' + file;
-            this.fileChanged = false;
-            if (file != this.currentFile) {
-                Config.pushRecent(file);
-                if (this.playback.video?.source)
-                    Config.rememberVideo(file, this.playback.video.source);
-                this.currentFile = file;
+            if (isExport) {
+                this.status = 'exported to ' + file;
+            } else {
+                this.status = 'saved to ' + file;
+                this.fileChanged = false;
+                if (file != this.currentFile) {
+                    Config.pushRecent(file);
+                    if (this.playback.video?.source)
+                        Config.rememberVideo(file, this.playback.video.source);
+                    this.currentFile = file;
+                }
             }
             return true;
         } catch (error) {
-            this.status = `error when saving to ${file}: ${error}`;
+            this.status = `error when writing to ${file}: ${error}`;
         }
         return false;
     }
@@ -419,7 +429,7 @@ export class Frontend {
         let entry = last 
             ? new SubtitleEntry(last.end, last.end + 2, 
                 ...last.texts.map((x) => ({style: x.style, text: ''}))) 
-            : new SubtitleEntry(0, 0, {style: this.subs.defaultStyle, text: ''});
+            : new SubtitleEntry(0, 2, {style: this.subs.defaultStyle, text: ''});
         this.subs.entries.push(entry);
         this.markChanged(ChangeType.Times, ChangeCause.Action);
 

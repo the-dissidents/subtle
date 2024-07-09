@@ -417,9 +417,9 @@ export const SubtitleTools = {
     },
     makeTestSubtitles: () => {
         let subs = new Subtitles();
-        for (let i = 0; i < 75; i++) {
+        for (let i = 0; i < 10; i++) {
             subs.entries.push(new SubtitleEntry(i*5, i*5+5, 
-                {style: subs.defaultStyle, text: `test line ${i}`}));
+                {style: subs.defaultStyle, text: `测试第${i}行\ntest line ${i}`}));
         }
         return subs;
     },
