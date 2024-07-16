@@ -57,6 +57,7 @@ export class EventHost<T extends unknown[] = []> {
 
 const IMPORT_FILTERS = [
     { name: 'SRT subtitles', extensions: ['srt'] },
+    { name: 'VTT subtitles', extensions: ['vtt'] },
     { name: 'SSA subtitles', extensions: ['ssa', 'ass'] },
     { name: 'subtle archive', extensions: ['json'] }];
 
@@ -174,6 +175,13 @@ export class Frontend {
         this.onSubtitlesChanged.dispatch(s.change, ChangeCause.Action);
     }
 
+    clearUndoRedo() {
+        this.undoStack = [];
+        this.redoStack = [];
+        this.markChanged(ChangeType.Both, ChangeCause.Action);
+        this.onUndoBufferChanged.dispatch();
+    }
+
     undo() {
         if (!this.canUndo()) return false;
         this.redoStack.push(this.undoStack.pop()!);
@@ -194,14 +202,16 @@ export class Frontend {
 
     // document management
 
-    // ADV_TODO: warn if not saved
+    async warnIfNotSaved() {
+        return !this.fileChanged || await dialog.confirm('Proceed without saving?');
+    }
 
     async askImportFile() {
         assert(this.modalDialogs.importOpt !== undefined);
         const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
         if (typeof selected != 'string') return;
         const text = await fs.readTextFile(selected);
-        let newSubs = this.retrieveFromSource(text);
+        let [newSubs, _] = this.retrieveFromSource(text);
         if (!newSubs) {
             this.#status = `import failed for ${selected}`;
             return;
@@ -265,13 +275,13 @@ export class Frontend {
 
     async openDocument(path: string) {
         let newSubs: Subtitles | null;
+        let isJSON: boolean;
         try {
             const text = await fs.readTextFile(path);
-            newSubs = this.retrieveFromSource(text);
-            if (!newSubs)
-                throw 'file is unparsable';
-        } catch {
-            this.status = `error when reading ${path}`;
+            [newSubs, isJSON] = this.retrieveFromSource(text);
+            if (!newSubs) throw 'file is unparsable';
+        } catch (ex) {
+            this.status = `error when reading ${path}: ${ex}`;
             return;
         }
 
@@ -281,11 +291,12 @@ export class Frontend {
         this.subs = newSubs;
         this.current.entry = null;
         this.current.style = newSubs.defaultStyle;
-        this.currentFile = path;
-        this.fileChanged = false;
+        this.currentFile = isJSON ? path : '';
+
         this.status = 'opened: ' + path;
         this.onSubtitleObjectReload.dispatch();
-        this.markChanged(ChangeType.Both, ChangeCause.Action);
+        this.clearUndoRedo();
+        this.fileChanged = false;
         if (video) await this.openVideo(video);
     }
 
@@ -319,14 +330,14 @@ export class Frontend {
         return false;
     }
 
-    retrieveFromSource(source: string) {
+    retrieveFromSource(source: string): [Subtitles | null, boolean] {
         let newSub = SubtitleImport.JSON(source);
-        if (newSub) return newSub;
+        if (newSub) return [newSub, true];
         source = SubtitleUtil.normalizeNewlines(source);
-        newSub = SubtitleImport.SRT(source);
-        if (newSub) return newSub;
+        newSub = SubtitleImport.SRT_VTT(source);
+        if (newSub) return [newSub, false];
         newSub = SubtitleImport.ASSFragment(source);
-        return newSub;
+        return [newSub, false];
     }
 
     // UI actions
@@ -338,7 +349,7 @@ export class Frontend {
         if (!channel) channel = focused!.texts[0];
         this.current.style = channel.style;
         if (!channel.gui) return;
-        this.status = 'focused on ' + channel.style.name + ' of ' + channel.text;
+        // this.status = 'focused on ' + channel.style.name + ' of ' + channel.text;
         channel.gui.focus();
         channel.gui.scrollIntoView();
     }
@@ -501,7 +512,7 @@ export class Frontend {
     async paste() {
         const source = await clipboard.readText();
         if (!source) return;
-        let portion = this.retrieveFromSource(source);
+        let portion, _ = this.retrieveFromSource(source);
         if (!portion) {
             this.status = 'cannot read clipboard data as subtitles';
             return;

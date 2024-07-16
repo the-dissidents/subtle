@@ -3,7 +3,7 @@
   import { assert } from "./Basic";
   import { SubtitleStyle, SubtitleTools, type Subtitles } from "./Subtitles";
   import { showMenu } from "tauri-plugin-context-menu";
-  import { ChangeCause, ChangeType, type Frontend } from "./frontend";
+  import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');

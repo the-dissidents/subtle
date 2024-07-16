@@ -2,7 +2,7 @@ import { AudioSampler } from "./AudioSampler";
 import { Basic, assert } from "./Basic";
 import type { WithCanvas } from "./CanvasKeeper";
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./Subtitles";
-import { ChangeCause, ChangeType, type Frontend } from "./frontend";
+import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
 
 const SCROLLER_HEIGHT = 15;
 const HEADER_HEIGHT = 30;

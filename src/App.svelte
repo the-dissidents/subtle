@@ -8,14 +8,16 @@ import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from './lib/Subtitles'
-import { Basic } from './lib/Basic';
-import { ChangeCause, ChangeType, Frontend } from './lib/frontend';
+import { assert, Basic } from './lib/Basic';
+import { ChangeCause, ChangeType, Frontend } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
 import SearchDialog from './lib/SearchDialog.svelte';
 import { CanvasKeeper } from './lib/CanvasKeeper';
 import { showMenu } from 'tauri-plugin-context-menu';
 import { Config } from './lib/Config';
 import { path } from '@tauri-apps/api';
+
+import { appWindow } from "@tauri-apps/api/window";
 
 let frontend = new Frontend();
 let styleDialog: StyleManagerDialog;
@@ -40,6 +42,8 @@ let keepDuration = false;
 let editingT0 = 0;
 let editingT1 = 0;
 let editingDt = 0;
+
+const textArea2Channel = new Map<HTMLTextAreaElement, SubtitleChannel>();
 
 frontend.onUndoBufferChanged.bind(() => {
   undoRedoUpdateCounter++;
@@ -111,15 +115,33 @@ function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
     destory: () => entry.gui = undefined};
 }
 
-function setupTextEditGUI(node: HTMLElement, channel: SubtitleChannel) {
+function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
+  console.log('setup', node);
   channel.gui = node;
+  node.value = channel.text;
+  textArea2Channel.set(node, channel);
   return {
     update: (channel: SubtitleChannel) => {
-      channel.gui = node;
-      if (frontend.states.editChanged)
-        frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm);
+      let curChannel = textArea2Channel.get(node);
+      assert(curChannel !== undefined);
+      if (curChannel != channel) {
+        curChannel.gui = undefined;
+        channel.gui = node;
+        textArea2Channel.set(node, channel);
+        // console.log('update', node.value, '->', channel.text);
+        curChannel.text = node.value;
+        node.value = channel.text;
+        if (frontend.states.editChanged)
+          frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm);
+      }
     },
-    destory: () => channel.gui = undefined};
+    destory: () => {
+      let curChannel = textArea2Channel.get(node);
+      assert(curChannel !== undefined);
+      curChannel.gui = undefined;
+      textArea2Channel.delete(node);
+    }
+  };
 }
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
@@ -142,6 +164,13 @@ let setupTimelineView = () => {
 
 $: videoCanvas, setupVideoView();
 $: timelineCanvas, setupTimelineView();
+
+appWindow.onCloseRequested(async (ev) => {
+  if (!await frontend.warnIfNotSaved()) {
+    ev.preventDefault();
+    return;
+  }
+});
 
 Config.init();
 </script>
@@ -170,7 +199,10 @@ Config.init();
         items: [
           {
             label: 'other file...',
-            event: () => frontend.askOpenFile()
+            event: async () => {
+              if (await frontend.warnIfNotSaved())
+                frontend.askOpenFile();
+            }
           },
           { is_separator: true },
           ...(paths.length == 0 ? [
@@ -180,7 +212,10 @@ Config.init();
             }
           ] : paths.map((x) => ({
             label: '[...]/' + x.name.split(path.sep).slice(-2).join(path.sep),
-            event: () => frontend.openDocument(x.name)
+            event: async () => {
+              if (await frontend.warnIfNotSaved())
+                frontend.openDocument(x.name);
+            }
           }))),
           { is_separator: true },
           {
@@ -292,19 +327,22 @@ Config.init();
             </td>
             <td style='width:100%'>
               <textarea class='contentarea' tabindex=0
-                bind:value={line.text}
                 use:setupTextEditGUI={line}
                 on:focus={() => {
                   frontend.states.isEditing = true;
                   frontend.current.style = line.style;
-                  frontend.status = 'set focusedStyle to ' + line.style.name;
+                  // frontend.status = 'set focusedStyle to ' + line.style.name;
                 }}
-                on:blur={() => frontend.states.isEditing = false}
+                on:blur={(x) => {
+                  if (frontend.states.editChanged) {
+                    line.text = x.currentTarget.value;
+                    frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm);
+                  }
+                  frontend.states.isEditing = false;
+                }}
                 on:input={(x) => {
                   contentSelfAdjust(x.currentTarget); 
                   frontend.states.editChanged = true;
-                }}
-                on:change={() => {
                 }} />
             </td>
           </tr>
@@ -357,12 +395,13 @@ Config.init();
     </thead>
     <tbody>
       <!-- list all entries -->
-      {#key subListUpdateCounter}
+      <!-- {#key subListUpdateCounter} -->
       {#each frontend.subs.entries as ent, i (ent.uniqueID)}
       {#each ent.texts as line, j (`${i},${j}`)}
       <tr on:mousedown={(ev) => {
-            if (ev.button == 0)frontend.toggleEntry(ent, 
-              ev.shiftKey, ev.getModifierState(Basic.ctrlKey()));
+            if (ev.button == 0)
+              frontend.toggleEntry(ent, 
+                ev.shiftKey, ev.getModifierState(Basic.ctrlKey()));
           }}
           on:contextmenu={(ev) => {
             frontend.uiHelper.contextMenu();
@@ -408,7 +447,7 @@ Config.init();
         <td colspan="5"/>
       </tr>
       {/if}
-      {/key}
+      <!-- {/key} -->
     </tbody>
   </table>
   </div>

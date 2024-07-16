@@ -2,7 +2,7 @@ import { assert } from "./Basic";
 import { Subtitles } from "./Subtitles";
 import { VideoPlayer } from "./VideoPlayer";
 import { Timeline } from "./Timeline";
-import { Frontend } from "./frontend";
+import { Frontend } from "./Frontend";
 
 export class Playback {
     #isLoaded = false;

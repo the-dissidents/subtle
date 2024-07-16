@@ -2,7 +2,7 @@
     import DialogBase from './DialogBase.svelte';
     import StyleSelect from './StyleSelect.svelte';
     import { SubtitleStyle, type SubtitleChannel } from './Subtitles';
-    import { ChangeCause, ChangeType, Frontend } from './frontend';
+    import { ChangeCause, ChangeType, Frontend } from './Frontend';
     // @ts-ignore
     import * as eld from 'eld';
 

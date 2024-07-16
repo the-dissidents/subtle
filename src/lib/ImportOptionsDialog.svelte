@@ -1,18 +1,20 @@
 <script lang="ts">
   import DialogBase from './DialogBase.svelte';
-  import { Frontend } from './frontend';
+  import { Frontend } from './Frontend';
   import StyleSelect from './StyleSelect.svelte';
-    import { createEventDispatcher } from 'svelte';
-    import { MergeStyleBehavior, type MergeOptions, MergePosition } from './Subtitles';
+  import { createEventDispatcher } from 'svelte';
+  import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from './Subtitles';
 
   export let frontend: Frontend;
   export let show = false;
 
   let form: HTMLFormElement;
   let select: StyleSelect;
-  let check: HTMLInputElement;
+  let importAll: HTMLInputElement;
+  let onlyStyles: HTMLInputElement;
   let overrideStyle = frontend.subs.defaultStyle;
   let styleOption = 'KeepDifferent';
+  let selectOption = 'UsedOnly';
   let posOption = 'After';
 
 	const dispatch = createEventDispatcher<{submit: MergeOptions}>();
@@ -26,7 +28,8 @@
     overrideStyle: overrideStyle,
     // @ts-ignore
     position: MergePosition[posOption],
-    importAllStyles: check.checked
+    // @ts-ignore
+    selection: MergeStyleSelection[selectOption]
   })
 }}><form bind:this={form}>
   <table class='config'>
@@ -48,24 +51,30 @@
       </td>
     </tr>
     <tr>
-      <td></td>
+      <td>options</td>
       <td>
-        <input type='checkbox' id="i6" bind:this={check}/>
-        <label for="i6">import unused styles as well</label><br/>
+        <input type="radio" id="ia1" value="UsedOnly" bind:group={selectOption}/>
+        <label for="ia1">import styles that are used</label><br/>
+
+        <input type="radio" id="ia2" value="All" bind:group={selectOption}/>
+        <label for="ia2">import unused styles as well</label><br/>
+
+        <input type="radio" id="ia3" value="OnlyStyles" bind:group={selectOption}/>
+        <label for="ia3">import only styles and no subtitles</label><br/>
       </td>
     </tr>
     <tr>
       <td>position</td>
       <td>
-        <input type="radio" id="ib1" value="After" bind:group={posOption}/>
+        <input type="radio" id="ib1" disabled={selectOption == 'OnlyStyles'} value="After" bind:group={posOption}/>
         <label for="ib1">after existing lines</label><br/>
-        <input type="radio" id="ib2" value="Before" bind:group={posOption}/>
+        <input type="radio" id="ib2" disabled={selectOption == 'OnlyStyles'} value="Before" bind:group={posOption}/>
         <label for="ib2">before existing lines</label><br/>
-        <input type="radio" id="ib3" value="SortedBefore" bind:group={posOption}/>
+        <input type="radio" id="ib3" disabled={selectOption == 'OnlyStyles'} value="SortedBefore" bind:group={posOption}/>
         <label for="ib3">sorted; before existing lines if time points are equal</label><br/>
-        <input type="radio" id="ib4" value="SortedAfter" bind:group={posOption}/>
+        <input type="radio" id="ib4" disabled={selectOption == 'OnlyStyles'} value="SortedAfter" bind:group={posOption}/>
         <label for="ib4">sorted; after existing lines if time points are equal</label><br/>
-        <input type="radio" id="ib5" value="Overwrite" bind:group={posOption}/>
+        <input type="radio" id="ib5" disabled={selectOption == 'OnlyStyles'} value="Overwrite" bind:group={posOption}/>
         <label for="ib5">overwrite current file</label><br/>
       </td>
     </tr>

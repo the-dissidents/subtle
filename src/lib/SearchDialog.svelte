@@ -2,7 +2,7 @@
 	import { SubtitleEntry, SubtitleStyle } from './Subtitles'
 	import DialogBase from './DialogBase.svelte';
 	import StyleEdit from './StyleEdit.svelte';
-	import { ChangeCause, ChangeType, Frontend } from './frontend';
+	import { ChangeCause, ChangeType, Frontend } from './Frontend';
 	import StyleSelect from './StyleSelect.svelte';
 	import { Basic } from './Basic';
 	
@@ -30,10 +30,10 @@
 		let selectionSet = new Set(selection);
 		let focus = currentEntry ?? entries[0];
 		if (selectionOnly) focus = selection.at(0) ?? focus;
-		// if (focus !== currentEntry) {
-		// 	currentEntry = focus;
-		// 	currentTextIndex = 0;
-		// }
+		if (focus !== currentEntry) {
+			// currentEntry = focus;
+			currentTextIndex = 0;
+		}
 		let expr = new RegExp(
 			useRegex ? searchTerm : Basic.escapeRegexp(searchTerm), 
 			`g${caseSensitive ? '' : 'i'}`);

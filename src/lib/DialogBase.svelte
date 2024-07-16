@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
-    import type { Frontend } from "./frontend";
+    import type { Frontend } from "./Frontend";
 
 	export let show = false;
 	export let modal = true;

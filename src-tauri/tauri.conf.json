@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "subtle",
-    "version": "0.0.3"
+    "version": "0.0.4"
   },
   "tauri": {
     "allowlist": {
@@ -52,6 +52,9 @@
         "removeFile": true,
         "renameFile": true,
         "exists": true
+      },
+      "window": {
+        "all": true
       }
     },
     "windows": [

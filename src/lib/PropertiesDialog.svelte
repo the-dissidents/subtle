@@ -2,7 +2,7 @@
 import { SubtitleStyle } from './Subtitles'
 import DialogBase from './DialogBase.svelte';
 import StyleEdit from './StyleEdit.svelte';
-import { Frontend } from './frontend';
+import { Frontend } from './Frontend';
 
 export let frontend: Frontend;
 export let show = false;

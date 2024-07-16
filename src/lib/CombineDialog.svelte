@@ -1,7 +1,7 @@
 <script lang="ts">
     import DialogBase from './DialogBase.svelte';
     import { SubtitleStyle, type SubtitleEntry } from './Subtitles';
-    import { ChangeCause, ChangeType, Frontend } from './frontend';
+    import { ChangeCause, ChangeType, Frontend } from './Frontend';
 
     export let frontend: Frontend;
 	export let show = false;

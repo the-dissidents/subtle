@@ -7,6 +7,12 @@ export enum AlignMode {
     TopLeft, TopCenter, TopRight,
 }
 
+export enum MergeStyleSelection {
+    UsedOnly,
+    All,
+    OnlyStyles
+}
+
 export enum MergeStyleBehavior {
     KeepAll,
     KeepDifferent,
@@ -23,7 +29,7 @@ export enum MergePosition {
 export type MergeOptions = {
     style?: MergeStyleBehavior,
     overrideStyle?: SubtitleStyle,
-    importAllStyles?: boolean,
+    selection?: MergeStyleSelection,
     position?: MergePosition,
     customPosition?: number
 }
@@ -192,9 +198,15 @@ export class Subtitles {
                 default: assert(false);
             }
         };
+        if (options.selection) switch (options.selection) {
+            case MergeStyleSelection.OnlyStyles:
+            case MergeStyleSelection.All:
+                for (let style of other.styles) processStyle(style);
+                break;
+        }
 
-        if (options.importAllStyles)
-            for (let style of other.styles) processStyle(style);
+        if (options.selection == MergeStyleSelection.OnlyStyles)
+            return;
 
         let position = options.position ?? MergePosition.After;
         if (position == MergePosition.Overwrite)
@@ -350,9 +362,9 @@ export const SubtitleImport = {
             return null;
         }
     },
-    SRT(source: string) {
+    SRT_VTT(source: string) {
         const regex = 
-            /\n(\d+:\d+:\d+[,.]\d+)\s-->\s(\d+:\d+:\d+[,.]\d+)\n((.+\n)+)$/gm;
+            /\n(\d+:\d+:\d+[,.]\d+)\s-->\s(\d+:\d+:\d+[,.]\d+).+\n((.+\n)+)$/gm;
         let matches = [...source.matchAll(regex)];
         if (matches.length == 0) return null;
 
@@ -419,7 +431,7 @@ export const SubtitleTools = {
         let subs = new Subtitles();
         for (let i = 0; i < 10; i++) {
             subs.entries.push(new SubtitleEntry(i*5, i*5+5, 
-                {style: subs.defaultStyle, text: `测试第${i}行\ntest line ${i}`}));
+                {style: subs.defaultStyle, text: `测试第${i}行`}));
         }
         return subs;
     },

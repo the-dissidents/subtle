@@ -1,6 +1,6 @@
 <script lang="ts">
   import DialogBase from './DialogBase.svelte';
-  import { Frontend } from './frontend';
+  import { Frontend } from './Frontend';
   import { createEventDispatcher } from 'svelte';
   import { SubtitleEntry, SubtitleUtil, type TimeShiftOptions } from './Subtitles';
   import TimestampInput from './TimestampInput.svelte';
