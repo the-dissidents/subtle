@@ -1,0 +1,31 @@
+{
+  "identifier": "migrated",
+  "description": "permissions that were migrated from v1",
+  "local": true,
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "os:default",
+    "fs:default",
+    "clipboard-manager:default",
+    "dialog:default",
+    "core:window:default",
+    "core:window:allow-destroy",
+    "fs:allow-appconfig-read-recursive",
+    "fs:allow-appconfig-write-recursive",
+    {
+      "identifier": "fs:allow-create",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "fs:read-all",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "fs:write-all",
+      "allow": [{ "path": "**" }]
+    }
+  ]
+}

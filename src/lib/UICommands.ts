@@ -1,4 +1,4 @@
-import { showMenu } from "tauri-plugin-context-menu";
+import { Menu } from "@tauri-apps/api/menu";
 import { Basic, assert } from "./Basic";
 import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
 import { SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type SubtitleChannel } from "./Subtitles";
@@ -123,64 +123,64 @@ export class UIHelper {
         }
     }
 
-    contextMenu() {
+    async contextMenu() {
         let selection = this.frontend.getSelection();
         if (selection.length == 0) return;
         let isDisjunct = this.frontend.isSelectionDisjunct();
         let allStyles = [this.frontend.subs.defaultStyle, ...this.frontend.subs.styles];
-        showMenu({items: [
+        let menu = await Menu.new({items: [
         {
-            label: 'copy',
-            subitems: [
+            text: 'copy',
+            items: [
                 {
-                    label: 'JSON (internal)',
-                    shortcut: 'cmd_or_ctrl+c',
-                    event: () => this.frontend.copySelection()
+                    text: 'JSON (internal)',
+                    accelerator: `${Basic.ctrlKey()}+c`,
+                    action: () => this.frontend.copySelection()
                 },
                 {
-                    label: 'SRT',
-                    event: () => this.frontend.copySelection(SubtitleExport.SRT)
+                    text: 'SRT',
+                    action: () => this.frontend.copySelection(SubtitleExport.SRT)
                 },
                 {
-                    label: 'ASS fragment',
-                    event: () => this.frontend.copySelection(SubtitleExport.ASSFragment)
+                    text: 'ASS fragment',
+                    action: () => this.frontend.copySelection(SubtitleExport.ASSFragment)
                 },
                 {
-                    label: 'plain text',
-                    event: () => this.frontend.copySelection(SubtitleExport.plaintext)
+                    text: 'plain text',
+                    action: () => this.frontend.copySelection(SubtitleExport.plaintext)
                 }
             ]
         },
         {
-            label: 'cut',
-            shortcut: 'cmd_or_ctrl+x',
-            event: () => {
+            text: 'cut',
+            accelerator: `${Basic.ctrlKey()}+x`,
+            action: () => {
                 this.frontend.copySelection();
                 this.frontend.deleteSelection();
             }
         },
         {
-            label: 'paste',
-            shortcut: 'cmd_or_ctrl+v',
-            event: () => this.frontend.paste()
+            text: 'paste',
+            accelerator: `${Basic.ctrlKey()}+v`,
+            action: () => this.frontend.paste()
         },
-        { is_separator: true },
+        { item: 'Separator' },
         {
-            label: 'delete',
-            shortcut: 'cmd_or_ctrl+backspace',
-            event: () => this.frontend.deleteSelection()
+            text: 'delete',
+            accelerator: `${Basic.ctrlKey()}+backspace`,
+            action: () => this.frontend.deleteSelection()
         },
-        { is_separator: true },
+        { item: 'Separator' },
         {
-            label: 'select all',
-            shortcut: 'cmd_or_ctrl+a',
-            event: () => this.#selectAll()
+            text: 'select all',
+            accelerator: `${Basic.ctrlKey()}+a`,
+            action: () => this.#selectAll()
         },
         {
-            label: 'select all by channel',
-            subitems: allStyles.map((x) => ({
-                label: x.name,
-                event: () => {
+            text: 'select all by channel',
+            items: allStyles.map((x) => ({
+                text: x.name,
+                action: () => {
                     this.frontend.selection.currentGroup = [];
                     this.frontend.selection.currentStart = null;
                     this.frontend.selection.submitted = new Set(this.frontend.subs.entries.filter((e) => e.texts.some((c) => c.style == x)));
@@ -188,47 +188,47 @@ export class UIHelper {
                 }
             }))
         },
-        { is_separator: true },
+        { item: 'Separator' },
         {
-            label: 'insert before',
-            event: () => this.frontend.insertEntryBefore(selection[0])
+            text: 'insert before',
+            action: () => this.frontend.insertEntryBefore(selection[0])
         },
         {
-            label: 'insert after',
-            shortcut: 'cmd_or_ctrl+enter',
-            event: () => this.frontend.insertEntryAfter(selection[0])
+            text: 'insert after',
+            accelerator: `${Basic.ctrlKey()}+enter`,
+            action: () => this.frontend.insertEntryAfter(selection[0])
         },
-        { is_separator: true },
+        { item: 'Separator' },
         {
-            label: 'combine',
-            disabled: selection.length <= 1,
-            event: () => this.#combineSelection(selection)
-        },
-        {
-            label: 'split simultaneous',
-            event: () => this.#splitSimultaneous(selection)
+            text: 'combine',
+            enabled: selection.length > 1,
+            action: () => this.#combineSelection(selection)
         },
         {
-            label: 'merge entries',
-            disabled: isDisjunct || selection.length <= 1,
-            subitems: [
+            text: 'split simultaneous',
+            action: () => this.#splitSimultaneous(selection)
+        },
+        {
+            text: 'merge entries',
+            enabled: !isDisjunct && selection.length > 1,
+            items: [
                 {
-                    label: 'connect all',
-                    event: () => this.#mergeEntries(selection, true)
+                    text: 'connect all',
+                    action: () => this.#mergeEntries(selection, true)
                 },
                 {
-                    label: 'keep first only',
-                    event: () => this.#mergeEntries(selection, false)
+                    text: 'keep first only',
+                    action: () => this.#mergeEntries(selection, false)
                 }
             ]
         },
-        { is_separator: true },
+        { item: 'Separator' },
         {
-            label: 'utilities',
-            subitems: [
+            text: 'utilities',
+            items: [
                 {
-                    label: 'transform times...',
-                    event: () => {
+                    text: 'transform times...',
+                    action: () => {
                         if (!this.frontend.modalDialogs.timeTrans) return;
                         let off = this.frontend.modalDialogs.timeTrans.$on('submit', 
                             (ev) => {
@@ -240,27 +240,27 @@ export class UIHelper {
                         this.frontend.modalDialogs.timeTrans.$set({show: true});
                     }
                 },
-                { is_separator: true },
+                { item: 'Separator' },
                 {
-                    label: 'sort by time',
-                    disabled: isDisjunct || selection.length <= 1,
-                    event: () => this.#sortSelection(selection, false)
+                    text: 'sort by time',
+                    enabled: !isDisjunct && selection.length > 1,
+                    action: () => this.#sortSelection(selection, false)
                 },
                 {
-                    label: 'sort by first style',
-                    disabled: isDisjunct || selection.length <= 1,
-                    event: () => this.#sortSelection(selection, true)
+                    text: 'sort by first style',
+                    enabled: !isDisjunct && selection.length > 1,
+                    action: () => this.#sortSelection(selection, true)
                 },
                 {
-                    label: 'sort channels',
-                    event: () => this.#sortChannels(selection)
+                    text: 'sort channels',
+                    action: () => this.#sortChannels(selection)
                 },
-                { is_separator: true },
+                { item: 'Separator' },
                 {
-                    label: 'create channel',
-                    subitems: allStyles.map((x) => ({
-                        label: x.name,
-                        event: () => {
+                    text: 'create channel',
+                    items: allStyles.map((x) => ({
+                        text: x.name,
+                        action: () => {
                             let done = false;
                             for (let ent of selection)
                                 if (!ent.texts.find((t) => t.style == x)) {
@@ -273,16 +273,16 @@ export class UIHelper {
                     }))
                 },
                 {
-                    label: 'replace channel',
-                    disabled: this.frontend.subs.styles.length == 0,
-                    subitems: allStyles.map((x) => ({
-                        label: x.name,
-                        subitems: [{
-                            label: 'by:',
+                    text: 'replace channel',
+                    enabled: this.frontend.subs.styles.length > 0,
+                    items: allStyles.map((x) => ({
+                        text: x.name,
+                        items: [{
+                            text: 'by:',
                             disabled: true,
                         }, ...allStyles.filter((y) => y != x).map((y) => ({
-                            label: y.name,
-                            event: () => {
+                            text: y.name,
+                            action: () => {
                                 if (SubtitleTools.replaceStyle(selection, x, y)) 
                                     this.frontend.markChanged(ChangeType.NonTime, ChangeCause.Action);
                             }
@@ -290,60 +290,58 @@ export class UIHelper {
                     }))
                 },
                 {
-                    label: 'remove channel',
-                    disabled: this.frontend.subs.styles.length == 0,
-                    subitems: this.frontend.subs.styles.map((x) => ({
-                        label: x.name,
-                        event: () => this.#removeChannel(selection, (t) => t.style == x)
+                    text: 'remove channel',
+                    enabled: this.frontend.subs.styles.length > 0,
+                    items: this.frontend.subs.styles.map((x) => ({
+                        text: x.name,
+                        action: () => this.#removeChannel(selection, (t) => t.style == x)
                     }))
                 },
                 {
-                    label: 'remove empty',
-                    event: () => this.#removeChannel(selection, (t) => t.text == '')
+                    text: 'remove empty',
+                    action: () => this.#removeChannel(selection, (t) => t.text == '')
                 },
-                { is_separator: true },
+                { item: 'Separator' },
                 {
-                    label: 'merge overlapping duplicates',
-                    disabled: selection.length <= 1,
-                    event: () => this.#mergeDuplicate(selection)
+                    text: 'merge overlapping duplicates',
+                    enabled: selection.length > 1,
+                    action: () => this.#mergeDuplicate(selection)
                 },
                 {
-                    label: 'combine by matching time...',
-                    disabled: selection.length <= 1,
-                    event: () =>
+                    text: 'combine by matching time...',
+                    enabled: selection.length > 1,
+                    action: () =>
                         this.frontend.modalDialogs.combine?.$set({show: true})
                 },
                 {
-                    label: 'split by line',
-                    disabled: selection.length <= 1,
-                    event: () => this.#splitByNewline(selection)
+                    text: 'split by line',
+                    enabled: selection.length > 1,
+                    action: () => this.#splitByNewline(selection)
                 },
                 {
-                    label: 'split by language...',
-                    event: () =>
+                    text: 'split by language...',
+                    action: () =>
                         this.frontend.modalDialogs.splitLanguages?.$set({show: true})
                 },
                 {
-                    label: 'fix erroneous overlapping',
-                    event: () => this.#fixOverlap(selection)
+                    text: 'fix erroneous overlapping',
+                    action: () => this.#fixOverlap(selection)
                 }
-                // TODO: split by line
-
 
                 // {
-                //     label: 'tools',
-                //     subitems: [
+                //     text: 'tools',
+                //     items: [
                 //         {
-                //             label: 'remove line breaks',
-                //             event: () => {}
+                //             text: 'remove line breaks',
+                //             action: () => {}
                 //         },
                 //         {
-                //             label: 'add line breaks',
-                //             event: () => {}
+                //             text: 'add line breaks',
+                //             action: () => {}
                 //         },
                 //         {
-                //             label: 'combine channels with the same styles',
-                //             event: () => {}
+                //             text: 'combine channels with the same styles',
+                //             action: () => {}
                 //         }
                 //     ]
                 // },

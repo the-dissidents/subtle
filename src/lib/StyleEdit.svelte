@@ -2,8 +2,8 @@
   import { createEventDispatcher } from "svelte";
   import { assert } from "./Basic";
   import { SubtitleStyle, SubtitleTools, type Subtitles } from "./Subtitles";
-  import { showMenu } from "tauri-plugin-context-menu";
   import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
+    import { Menu } from "@tauri-apps/api/menu";
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
@@ -24,23 +24,19 @@
     return false;
   }
 
-  function contextMenu() {
+  async function contextMenu() {
     let isDefault = style == subtitles.defaultStyle;
     let used = subtitles.entries.filter(
       (x) => x.texts.find((c) => c.style == style) !== undefined);
     let withoutThis = isDefault ? [] : [subtitles.defaultStyle];
     withoutThis.push(...subtitles.styles.filter((x) => x !== style));
-    // let position = button.getBoundingClientRect();
-    showMenu({
-      // pos: {
-      //   x: position.left + window.scrollX,
-      //   y: position.bottom + window.scrollY
-      // },
+    
+    let menu = await Menu.new({
       items: [
       {
-        label: 'delete',
-        disabled: used.length > 0 || isDefault,
-        event: () => {
+        text: 'delete',
+        enabled: used.length == 0 && !isDefault,
+        action() {
           let i = subtitles.styles.indexOf(style);
           if (i < 0) return;
           subtitles.styles.splice(i, 1);
@@ -49,21 +45,22 @@
         }
       },
       {
-        label: 'replace by',
-        disabled: withoutThis.length == 0,
-        subitems: withoutThis.map((x) => ({
-          label: x.name,
-          payload: x,
-          event: (e) => {
-            if (e && SubtitleTools.replaceStyle(
-              subtitles.entries, style, e.payload as SubtitleStyle))
+        text: 'replace by',
+        enabled: withoutThis.length > 0,
+        items: withoutThis.map((x, i) => ({
+          id: i.toString(),
+          text: x.name,
+          action(id) {
+            let n = Number.parseInt(id);
+            let other = withoutThis[n];
+            if (SubtitleTools.replaceStyle(subtitles.entries, style, other))
                 frontend.markChanged(ChangeType.NonTime, ChangeCause.Action);
           }
         }))
       },
       {
-        label: 'duplicate',
-        event: () => {
+        text: 'duplicate',
+        action() {
           let clone = style.clone();
           clone.name = SubtitleTools.getUniqueStyleName(subtitles, style.name);
           subtitles.styles.push(clone);
@@ -73,6 +70,7 @@
         }
       }
     ]});
+    menu.popup();
   }
 </script>
 

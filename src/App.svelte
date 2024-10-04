@@ -13,11 +13,12 @@ import { ChangeCause, ChangeType, Frontend } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
 import SearchDialog from './lib/SearchDialog.svelte';
 import { CanvasKeeper } from './lib/CanvasKeeper';
-import { showMenu } from 'tauri-plugin-context-menu';
 import { Config } from './lib/Config';
-import { path } from '@tauri-apps/api';
 
-import { appWindow } from "@tauri-apps/api/window";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { Menu } from '@tauri-apps/api/menu';
+
+const appWindow = getCurrentWebviewWindow()
 
 let frontend = new Frontend();
 let styleDialog: StyleManagerDialog;
@@ -69,7 +70,7 @@ frontend.onSelectionChanged.bind(() => {
 
 frontend.playback.onRefreshPlaybackControl = () => {
   let playback = frontend.playback;
-  sliderDisabled = !playback.isLoaded ?? false;
+  sliderDisabled = !playback.isLoaded;
   playIcon = playback.isPlaying ? '⏸' : '▶'
   playPosInput = playback.position ?? 0;
   playPos = playback.isLoaded 
@@ -193,38 +194,33 @@ Config.init();
 <main class="container">
   <!-- toolbar -->
   <ul class='menu'>
-    <li><button on:click={() => {
+    <li><button on:click={async () => {
       const paths = Config.get('paths');
-      showMenu({
-        items: [
+      let openMenu = await Menu.new({ items: [
           {
-            label: 'other file...',
-            event: async () => {
+            text: 'other file...',
+            async action(_) {
               if (await frontend.warnIfNotSaved())
                 frontend.askOpenFile();
-            }
+            },
           },
-          { is_separator: true },
+          { item: 'Separator' },
           ...(paths.length == 0 ? [
-            {
-              label: 'no recent files',
-              disabled: true
-            }
-          ] : paths.map((x) => ({
-            label: '[...]/' + x.name.split(path.sep).slice(-2).join(path.sep),
-            event: async () => {
-              if (await frontend.warnIfNotSaved())
-                frontend.openDocument(x.name);
-            }
-          }))),
-          { is_separator: true },
-          {
-            label: 'clear recents',
-            disabled: paths.length == 0,
-            event: () => Config.set('paths', [])
-          },
-        ]
-      })
+              {
+                text: 'no recent files',
+                enabled: false
+              }
+            ] : paths.map((x) => ({
+              text: '[...]/' + x.name.split(Basic.pathSeparator)
+                .slice(-2).join(Basic.pathSeparator),
+              action: async () => {
+                if (await frontend.warnIfNotSaved())
+                  frontend.openDocument(x.name);
+              }
+            }))
+          ),
+      ]});
+      openMenu.popup();
     }}>open</button></li>
     <li><button on:click={() => frontend.askSaveFile(true)}>save as</button></li>
     <li><button on:click={() => frontend.askImportFile()}>import</button></li>

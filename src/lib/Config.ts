@@ -1,6 +1,7 @@
-import { fs, path } from "@tauri-apps/api";
-import { BaseDirectory } from "@tauri-apps/api/fs";
+import {  path } from "@tauri-apps/api";
+import { BaseDirectory } from "@tauri-apps/plugin-fs";
 import { assert } from "./Basic";
+import * as fs from "@tauri-apps/plugin-fs"
 
 const configPath = 'config.json';
 let configData = {
@@ -18,25 +19,27 @@ type ConfigKey = keyof ConfigType;
 async function saveConfig() {
     const configDir = await path.appConfigDir();
     if (!await fs.exists(configDir))
-        fs.createDir(configDir, {recursive: true});
+        await fs.mkdir(configDir, {recursive: true});
 
-    fs.writeTextFile(configPath, 
-        JSON.stringify(configData), {dir: BaseDirectory.AppConfig})
-    .catch((x) => {
-        console.log('error saving config file:', x);
-    });
+    try {
+        await fs.writeTextFile(configPath, 
+            JSON.stringify(configData), {baseDir: BaseDirectory.AppConfig});
+    } catch (e) {
+        // fail silently
+        console.error('error saving config:', e);
+    }
 }
 
 export const Config = {
     async init() {
         console.log(await path.appConfigDir(), configPath);
-        if (await fs.exists(configPath, {dir: BaseDirectory.AppConfig})) {
-            try {
-                configData = JSON.parse(
-                    await fs.readTextFile(configPath, {dir: BaseDirectory.AppConfig}));
-            } catch {
-                console.log('error reading config file');
-            }
+        if (!await fs.exists(configPath, {baseDir: BaseDirectory.AppConfig}))
+            return;
+        try {
+            configData = JSON.parse(await fs.readTextFile(
+                configPath, {baseDir: BaseDirectory.AppConfig}));
+        } catch (e) {
+            console.error('error reading config file:', e);
         }
     },
     set<prop extends ConfigKey>(key: prop, value: ConfigType[prop]) {

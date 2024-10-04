@@ -1,8 +1,6 @@
-import { clipboard, dialog, fs, tauri } from "@tauri-apps/api";
 import { assert } from "./Basic";
 import { SubtitleEntry, SubtitleStyle, SubtitleTools, Subtitles, type SubtitleChannel, SubtitleUtil, SubtitleImport, SubtitleExport, MergePosition, MergeStyleBehavior, type MergeOptions } from "./Subtitles";
 import type ImportOptionsDialog from "./ImportOptionsDialog.svelte";
-import { showMenu } from "tauri-plugin-context-menu";
 import type TimeTransformDialog from "./TimeTransformDialog.svelte";
 import type SearchDialog from "./SearchDialog.svelte";
 import { Playback } from "./Playback";
@@ -10,6 +8,11 @@ import { UIHelper } from "./UICommands";
 import { Config } from "./Config";
 import type CombineDialog from "./CombineDialog.svelte";
 import type SplitLanguagesDialog from "./SplitLanguagesDialog.svelte";
+import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
+import * as dialog from "@tauri-apps/plugin-dialog"
+import * as fs from "@tauri-apps/plugin-fs"
+import { Menu } from "@tauri-apps/api/menu";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 type Snapshot = {
     archive: string,
@@ -257,20 +260,21 @@ export class Frontend {
             if (typeof selected != 'string') return;
             await this.saveTo(selected, func(this.subs), true);
         }
-        showMenu({items: [
+        let menu = await Menu.new({items: [
             {
-                label: 'SRT',
-                event: () => ask('srt', SubtitleExport.SRT)
+                text: 'SRT',
+                action: () => ask('srt', SubtitleExport.SRT)
             },
             {
-                label: 'ASS',
-                event: () => ask('ass', SubtitleExport.ASS)
+                text: 'ASS',
+                action: () => ask('ass', SubtitleExport.ASS)
             },
             {
-                label: 'plain text',
-                event: () => ask('txt', SubtitleExport.plaintext)
+                text: 'plain text',
+                action: () => ask('txt', SubtitleExport.plaintext)
             }
-        ]})
+        ]});
+        menu.popup();
     }
 
     async openDocument(path: string) {
@@ -301,7 +305,7 @@ export class Frontend {
     }
 
     async openVideo(file: string) {
-        const path = tauri.convertFileSrc(file);
+        const path = convertFileSrc(file);
         await this.playback.load(path).catch((x) => this.#status = x).catch((x) => 
             this.status = 'error opening video: ' + x);
         if (this.currentFile != '')

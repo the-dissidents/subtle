@@ -1,13 +1,14 @@
-import { os, path } from "@tauri-apps/api"
+import {  path } from "@tauri-apps/api"
+import * as os from "@tauri-apps/plugin-os"
 
 export function assert(val: boolean): asserts val {
     if (!val) throw Error('assertion failed');
 }
 
 export const Basic = {
-    OSType: await os.type(),
-    pathSeparator: path.sep,
-    ctrlKey: () => Basic.OSType == 'Darwin' ? 'Meta' : 'Control',
+    OSType: os.type(),
+    pathSeparator: path.sep(),
+    ctrlKey: () => Basic.OSType == 'macos' ? 'Meta' : 'Control',
 
     getFilename(p: string) { 
         return p.split(Basic.pathSeparator).at(-1);
