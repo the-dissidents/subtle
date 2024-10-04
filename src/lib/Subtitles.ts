@@ -83,7 +83,12 @@ export class SubtitleStyle {
             styles: this.styles,
             font: this.font,
             size: this.size,
-            margin: this.margin,
+            margin: {
+                top: this.margin.top,
+                bottom: this.margin.bottom,
+                left: this.margin.left,
+                right: this.margin.right
+            },
             alignment: this.alignment
         }
     }
