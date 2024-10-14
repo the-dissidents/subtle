@@ -1,9 +1,9 @@
 <script lang="ts">
 import ImportOptionsDialog from './lib/ImportOptionsDialog.svelte';
-import StyleManagerDialog from './lib/PropertiesDialog.svelte';
+import PropertiesToolbox from './lib/PropertiesToolbox.svelte';
 import SplitLanguagesDialog from './lib/SplitLanguagesDialog.svelte';
 import CombineDialog from "./lib/CombineDialog.svelte";
-import Resizer from './lib/Resizer.svelte';
+import Resizer from './lib/ui/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 
@@ -11,20 +11,29 @@ import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from './lib/Subtitl
 import { assert, Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
-import SearchDialog from './lib/SearchDialog.svelte';
+import SearchToolbox from './lib/SearchToolbox.svelte';
 import { CanvasKeeper } from './lib/CanvasKeeper';
 import { Config } from './lib/Config';
 
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Menu } from '@tauri-apps/api/menu';
+import TabView from './lib/ui/TabView.svelte';
+import TabPage from './lib/ui/TabPage.svelte';
+    import UntimedToolbox from './lib/UntimedToolbox.svelte';
 
 const appWindow = getCurrentWebviewWindow()
 
 let frontend = new Frontend();
-let styleDialog: StyleManagerDialog;
 let selection = new Set<SubtitleEntry>;
+let subsFocused = false;
 
+$: frontend.states.tableHasFocus = subsFocused;
+
+let leftPane: HTMLElement;
+let rightPane: HTMLElement;
+let editTable: HTMLElement;
 let videoCanvasContainer: HTMLElement;
+let toolboxContainer: HTMLElement;
 let videoCanvas: HTMLCanvasElement;
 let timelineCanvas: HTMLCanvasElement;
 
@@ -172,7 +181,6 @@ appWindow.onCloseRequested(async (ev) => {
     return;
   }
 });
-
 Config.init();
 </script>
 
@@ -181,286 +189,328 @@ Config.init();
 <svelte:window
   on:beforeunload={(ev) => {
     if (frontend.fileChanged) ev.preventDefault();
+  }}
+  on:focusin={(ev) => {
+    subsFocused = false;
   }}/>
 
 <!-- dialogs -->
-<StyleManagerDialog   {frontend} bind:this={styleDialog}/>
-<SearchDialog         {frontend} bind:this={frontend.dialogs.search}/>
 <TimeAdjustmentDialog {frontend} bind:this={frontend.modalDialogs.timeTrans}/>
 <ImportOptionsDialog  {frontend} bind:this={frontend.modalDialogs.importOpt}/>
 <CombineDialog        {frontend} bind:this={frontend.modalDialogs.combine}/>
 <SplitLanguagesDialog {frontend} bind:this={frontend.modalDialogs.splitLanguages}/>
 
-<main class="container">
+<main class="vlayout container fixminheight">
   <!-- toolbar -->
-  <ul class='menu'>
-    <li><button on:click={async () => {
-      const paths = Config.get('paths');
-      let openMenu = await Menu.new({ items: [
-          {
-            text: 'other file...',
-            async action(_) {
-              if (await frontend.warnIfNotSaved())
-                frontend.askOpenFile();
-            },
-          },
-          { item: 'Separator' },
-          ...(paths.length == 0 ? [
-              {
-                text: 'no recent files',
-                enabled: false
-              }
-            ] : paths.map((x) => ({
-              text: '[...]/' + x.name.split(Basic.pathSeparator)
-                .slice(-2).join(Basic.pathSeparator),
-              action: async () => {
+  <div>
+    <ul class='menu'>
+      <li><button on:click={async () => {
+        const paths = Config.get('paths');
+        let openMenu = await Menu.new({ items: [
+            {
+              text: 'other file...',
+              async action(_) {
                 if (await frontend.warnIfNotSaved())
-                  frontend.openDocument(x.name);
-              }
-            }))
-          ),
-      ]});
-      openMenu.popup();
-    }}>open</button></li>
-    <li><button on:click={() => frontend.askSaveFile(true)}>save as</button></li>
-    <li><button on:click={() => frontend.askImportFile()}>import</button></li>
-    <li><button on:click={() => frontend.askExportFile()}>export</button></li>
-    <li class='separator'></li>
-    {#key undoRedoUpdateCounter}
-    <li><button
-      on:click={() => frontend.undo()}
-      disabled={frontend.undoStack.length <= 1}>undo</button></li>
-    <li><button
-      on:click={() => frontend.redo()}
-      disabled={frontend.redoStack.length == 0}>redo</button></li>
-    {/key}
-    <li class='separator'></li>
-    <li><button on:click={() => frontend.askOpenVideo()}>open video</button></li>
-    <li><button 
-      on:click={() => styleDialog.$set({show: true})}>manage styles</button></li>
-    <li><div class='label'>
-      {frontend.currentFile ? Basic.getFilename(frontend.currentFile) : '<untitled>'}
-      {frontend.fileChanged ? '*' : ''}
-    </div></li>
-  </ul>
-
-  <!-- edit form -->
-  <table class='edit' bind:this={frontend.ui.editTable}>
-    <tr>
-      <!-- video player -->
-      <td class='player-container' bind:this={videoCanvasContainer}>
-        <canvas width="0" height="0" bind:this={videoCanvas}/>
-      </td>
-      <td style="width: 2px;">
-        <Resizer vertical={true} minValue={100}
-          control={videoCanvasContainer}/>
-      </td>
-      <!-- timestamp fields -->
-      {#key editFormUpdateCounter}
-      <td class='times'>
-        <div>
-          <select class="anchor-select"
-            on:input={(ev) => editMode = ev.currentTarget.selectedIndex}>
-            <option>anchor start</option>
-            <option>anchor end</option>
-          </select>
-          <span>
-            <input type='checkbox' id='keepd' bind:checked={keepDuration}/>
-            <label for='keepd'>keep duration</label>
-          </span>
-          <div><TimestampInput
-            bind:timestamp={editingT0} 
-            stretchX={true}
-            on:input={() => {
-              if (editMode == 0 && keepDuration)
-                editingT1 = editingT0 + editingDt;
-              applyEditForm(); 
-              frontend.states.editChanged = true;}} 
-            on:change={() => 
-              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
-          </div>
-          <div><TimestampInput bind:timestamp={editingT1} 
-            stretchX={true}
-            on:input={() => {
-              if (editMode == 1 && keepDuration)
-                editingT0 = editingT1 - editingDt;
-              applyEditForm(); 
-              frontend.states.editChanged = true;}} 
-            on:change={() => {
-              if (editingT1 < editingT0) editingT1 = editingT0;
-              applyEditForm();
-              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
-          </div>
-          <div><TimestampInput bind:timestamp={editingDt} 
-            stretchX={true}
-            on:input={() => {
-              if (editMode == 0)
-                editingT1 = editingT0 + editingDt; 
-              else if (editMode == 1)
-                editingT0 = editingT1 - editingDt; 
-              applyEditForm();
-              frontend.states.editChanged = true;}}
-            on:change={() => 
-              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
-          </div>  
-        </div>
-      </td>
-      <!-- channels view -->
-      <td class='scroll'>
-        {#if frontend.current.entry !== null}
-        <table class='fields'>
-          {#each frontend.current.entry.texts as line, i}
-          <tr>
-            <td>
-              <StyleSelect subtitles={frontend.subs} bind:currentStyle={line.style}
-                on:submit={() => {
-                  frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm)}} />
-              <button tabindex='-1'
-                on:click={() => frontend.insertChannelAt(i)}>+</button>
-              <button tabindex='-1'
-                on:click={() => frontend.deleteChannelAt(i)}
-                disabled={frontend.current.entry.texts.length == 1}>-</button>
-            </td>
-            <td style='width:100%'>
-              <textarea class='contentarea' tabindex=0
-                use:setupTextEditGUI={line}
-                on:focus={() => {
-                  frontend.states.isEditing = true;
-                  frontend.current.style = line.style;
-                  // frontend.status = 'set focusedStyle to ' + line.style.name;
-                }}
-                on:blur={(x) => {
-                  if (frontend.states.editChanged) {
-                    line.text = x.currentTarget.value;
-                    frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm);
-                  }
-                  frontend.states.isEditing = false;
-                }}
-                on:input={(x) => {
-                  contentSelfAdjust(x.currentTarget); 
-                  frontend.states.editChanged = true;
-                }} />
-            </td>
-          </tr>
-          {/each}
-        </table>
-        {:else}<i>{frontend.states.virtualEntryHighlighted
-          ? 'double-click or press enter to append new entry'
-          : 'select a line to start editing'}</i>{/if}
-      </td>
+                  frontend.askOpenFile();
+              },
+            },
+            { item: 'Separator' },
+            ...(paths.length == 0 ? [
+                {
+                  text: 'no recent files',
+                  enabled: false
+                }
+              ] : paths.map((x) => ({
+                text: '[...]/' + x.name.split(Basic.pathSeparator)
+                  .slice(-2).join(Basic.pathSeparator),
+                action: async () => {
+                  if (await frontend.warnIfNotSaved())
+                    frontend.openDocument(x.name);
+                }
+              }))
+            ),
+        ]});
+        openMenu.popup();
+      }}>open</button></li>
+      <li><button on:click={() => frontend.askSaveFile(true)}>save as</button></li>
+      <li><button on:click={() => frontend.askImportFile()}>import</button></li>
+      <li><button on:click={() => frontend.askExportFile()}>export</button></li>
+      <li class='separator'></li>
+      {#key undoRedoUpdateCounter}
+      <li><button
+        on:click={() => frontend.undo()}
+        disabled={frontend.undoStack.length <= 1}>undo</button></li>
+      <li><button
+        on:click={() => frontend.redo()}
+        disabled={frontend.redoStack.length == 0}>redo</button></li>
       {/key}
-    </tr>
-    <!-- resizer -->
-    <tfoot><td colspan=4>
-      <Resizer control={frontend.ui.editTable}
-        control2={videoCanvasContainer} minValue={100}/>
-    </td></tfoot>
-  </table>
-
-  <!-- video playback controls -->
-  <div class='controls-container'>
-    <button on:click={() => frontend.playback.toggle()
-      .catch(() => frontend.status = "can't play now!")}
-    >{playIcon}</button>
-    <input type='range' class='play-pointer' style="width: 100%;" 
-      step="any" max="1" min="0" disabled={sliderDisabled}
-      bind:value={playPos}
-      on:input={() => {
-        if (!frontend.playback.isLoaded) {
-          playPos = 0;
-          return;
-        }
-        frontend.playback.setPosition(playPos * frontend.playback.duration);
-      }}/>
-    <TimestampInput bind:timestamp={playPosInput}
-      on:change={() => frontend.playback.setPosition(playPosInput)}/>
+      <li class='separator'></li>
+      <li><button on:click={() => frontend.askOpenVideo()}>open video</button></li>
+      <li><div class='label'>
+        {frontend.currentFile ? Basic.getFilename(frontend.currentFile) : '<untitled>'}
+        {frontend.fileChanged ? '*' : ''}
+      </div></li>
+    </ul>
   </div>
 
-  <!-- table view -->
-  <div class='subscontainer' bind:this={frontend.ui.subscontainer}>
-  <table class='subs'>
-    <thead bind:this={frontend.ui.tableHeader}>
-      <tr>
-        <th scope="col">#</th>
-        <th scope="col">start</th>
-        <th scope="col">end</th>
-        <th scope="col">style</th>
-        <th scope="col">n/s</th>
-        <th scope="col">text</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- list all entries -->
-      <!-- {#key subListUpdateCounter} -->
-      {#each frontend.subs.entries as ent, i (ent.uniqueID)}
-      {#each ent.texts as line, j (`${i},${j}`)}
-      <tr on:mousedown={(ev) => {
-            if (ev.button == 0)
-              frontend.toggleEntry(ent, 
-                ev.shiftKey, ev.getModifierState(Basic.ctrlKey()));
-          }}
-          on:contextmenu={(ev) => {
-            frontend.uiHelper.contextMenu();
-            ev.preventDefault();
-          }}
-          on:dblclick={() => {
-            frontend.focusOnCurrentEntry();
-            frontend.playback.setPosition(ent.start);
-          }}
-          on:mousemove={(ev) => {
-            if (ev.buttons == 1)
-              frontend.selectEntry(ent, true, ev.getModifierState(Basic.ctrlKey()));
-          }}
-          class:focushlt={frontend.current.entry == ent}
-          class:sametime={frontend.current.entry != ent 
-            && overlappingTime(frontend.current.entry, ent)}
-          class:selected={selection.has(ent)}
-        >
-        {#if line === ent.texts[0]}
-          <td rowspan={ent.texts.length} use:setupEntryGUI={ent}>{i}</td>
-          <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
-          <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
-        {/if}
-        <td>{line.style.name}</td>
-        <td>{(() => {
-          let num = SubtitleUtil.getTextLength(line.text) / (ent.end - ent.start);
-          return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
-        })()}</td>
-        <td class='subtext'>{line.text}</td>
-      </tr>
-      {/each}
-      {/each}
-
-      <!-- virtual entry at the end -->
-      {#if !frontend.states.isEditingVirtualEntry}
-      <tr on:dblclick={() => {frontend.startEditingNewVirtualEntry();}}
-          on:mousedown={() => {
-            frontend.states.virtualEntryHighlighted = true;
-            frontend.clearSelection();
-          }}
-          class={frontend.states.virtualEntryHighlighted ? 'focushlt' : ''}>
-        <td>﹡</td>
-        <td colspan="5"/>
-      </tr>
-      {/if}
-      <!-- {/key} -->
-    </tbody>
-  </table>
+  <!-- body -->
+  <div class='hlayout flexgrow fixminheight'>
+    <div bind:this={leftPane} style="width: 300px;" class="fixminheight">
+      <div class='vlayout fill'>
+        <!-- video player -->
+        <div class='player-container' bind:this={videoCanvasContainer}>
+          <canvas width="0" height="0" bind:this={videoCanvas}/>
+        </div>
+        <!-- video playback controls -->
+        <div class='controls-container'>
+          <button on:click={() => frontend.playback.toggle()
+            .catch(() => frontend.status = "can't play now!")}
+          >{playIcon}</button>
+          <input type='range' class='play-pointer flexgrow'
+            step="any" max="1" min="0" disabled={sliderDisabled}
+            bind:value={playPos}
+            on:input={() => {
+              if (!frontend.playback.isLoaded) {
+                playPos = 0;
+                return;
+              }
+              frontend.playback.setPosition(playPos * frontend.playback.duration);
+            }}/>
+          <TimestampInput bind:timestamp={playPosInput}
+            stretchX={false}
+            on:change={() => frontend.playback.setPosition(playPosInput)}/>
+        </div>
+        <!-- resizer -->
+        <div>
+          <Resizer control={videoCanvasContainer} minValue={100}/>
+        </div>
+        <!-- toolbox -->
+        <div class="flexgrow fixminheight">
+          <div class='scrollable fixminheight' bind:this={toolboxContainer}>
+            <TabView>
+              <TabPage name="Properties">
+                <PropertiesToolbox {frontend}/>
+              </TabPage>
+              <TabPage name="Untimed text" active={true}>
+                <UntimedToolbox {frontend}/>
+              </TabPage>
+              <TabPage name="Search/Replace">
+                <SearchToolbox {frontend}/>
+              </TabPage>
+            </TabView>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="width: 10px;">
+      <Resizer vertical={true} minValue={300}
+        control={leftPane}/>
+    </div>
+    <div bind:this={rightPane} class="flexgrow fixminheight">
+      <div class='vlayout fill'>
+        <!-- edit box -->
+        <div bind:this={editTable} class='hlayout' style="height: 100px;">
+          <!-- timestamp fields -->
+          {#key editFormUpdateCounter}
+          <div style="">
+            <select
+              on:input={(ev) => editMode = ev.currentTarget.selectedIndex}>
+              <option>anchor start</option>
+              <option>anchor end</option>
+            </select>
+            <span>
+              <input type='checkbox' id='keepd' bind:checked={keepDuration}/>
+              <label for='keepd'>keep duration</label>
+            </span>
+            <br>
+            <TimestampInput
+              bind:timestamp={editingT0} 
+              stretchX={false}
+              on:input={() => {
+                if (editMode == 0 && keepDuration)
+                  editingT1 = editingT0 + editingDt;
+                applyEditForm(); 
+                frontend.states.editChanged = true;}} 
+              on:change={() => 
+                frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+            <br>
+            <TimestampInput bind:timestamp={editingT1} 
+              stretchX={false}
+              on:input={() => {
+                if (editMode == 1 && keepDuration)
+                  editingT0 = editingT1 - editingDt;
+                applyEditForm(); 
+                frontend.states.editChanged = true;}} 
+              on:change={() => {
+                if (editingT1 < editingT0) editingT1 = editingT0;
+                applyEditForm();
+                frontend.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
+            <br>
+            <TimestampInput bind:timestamp={editingDt} 
+              stretchX={false}
+              on:input={() => {
+                if (editMode == 0)
+                  editingT1 = editingT0 + editingDt; 
+                else if (editMode == 1)
+                  editingT0 = editingT1 - editingDt; 
+                applyEditForm();
+                frontend.states.editChanged = true;}}
+              on:change={() => 
+                frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+          </div>
+          <!-- channels view -->
+          <div class="flexgrow scroll">
+            {#if frontend.current.entry !== null}
+            <table class='fields'>
+              {#each frontend.current.entry.texts as line, i}
+              <tr>
+                <td>
+                  <StyleSelect subtitles={frontend.subs} bind:currentStyle={line.style}
+                    on:submit={() => {
+                      frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm)}} />
+                  <button tabindex='-1'
+                    on:click={() => frontend.insertChannelAt(i)}>+</button>
+                  <button tabindex='-1'
+                    on:click={() => frontend.deleteChannelAt(i)}
+                    disabled={frontend.current.entry.texts.length == 1}>-</button>
+                </td>
+                <td style='width:100%'>
+                  <textarea class='contentarea' tabindex=0
+                    use:setupTextEditGUI={line}
+                    on:focus={() => {
+                      frontend.states.isEditing = true;
+                      frontend.current.style = line.style;
+                      // frontend.status = 'set focusedStyle to ' + line.style.name;
+                    }}
+                    on:blur={(x) => {
+                      if (frontend.states.editChanged) {
+                        line.text = x.currentTarget.value;
+                        frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm);
+                      }
+                      frontend.states.isEditing = false;
+                    }}
+                    on:input={(x) => {
+                      contentSelfAdjust(x.currentTarget); 
+                      frontend.states.editChanged = true;
+                    }} />
+                </td>
+              </tr>
+              {/each}
+            </table>
+            {:else}<i>{frontend.states.virtualEntryHighlighted
+              ? 'double-click or press enter to append new entry'
+              : 'select a line to start editing'}</i>
+            {/if}
+          </div>
+          {/key}
+        </div>
+        <!-- resizer -->
+        <div>
+          <Resizer control={editTable} minValue={100}/>
+        </div>
+        <!-- table view -->
+        <div class='scrollable fixminheight subscontainer' class:subsfocused={subsFocused} bind:this={frontend.ui.subscontainer}>
+          <table class='subs'>
+            <thead bind:this={frontend.ui.tableHeader}>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">start</th>
+                <th scope="col">end</th>
+                <th scope="col">style</th>
+                <th scope="col">n/s</th>
+                <th scope="col">text</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- list all entries -->
+              {#each frontend.subs.entries as ent, i (ent.uniqueID)}
+              {#each ent.texts as line, j (`${i},${j}`)}
+              <tr on:mousedown={(ev) => {
+                    subsFocused = true;
+                    if (ev.button == 0)
+                      frontend.toggleEntry(ent, 
+                        ev.shiftKey, ev.getModifierState(Basic.ctrlKey()));
+                  }}
+                  on:contextmenu={(ev) => {
+                    subsFocused = true;
+                    frontend.uiHelper.contextMenu();
+                    ev.preventDefault();
+                  }}
+                  on:dblclick={() => {
+                    subsFocused = true;
+                    frontend.focusOnCurrentEntry();
+                    frontend.playback.setPosition(ent.start);
+                  }}
+                  on:mousemove={(ev) => {
+                    if (ev.buttons == 1)
+                      frontend.selectEntry(ent, true, ev.getModifierState(Basic.ctrlKey()));
+                  }}
+                  class:focushlt={frontend.current.entry == ent}
+                  class:sametime={frontend.current.entry != ent 
+                    && overlappingTime(frontend.current.entry, ent)}
+                  class:selected={selection.has(ent)}
+                >
+                {#if line === ent.texts[0]}
+                  <td rowspan={ent.texts.length} use:setupEntryGUI={ent} class='right'>{i}</td>
+                  <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
+                  <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
+                {/if}
+                <td>{line.style.name}</td>
+                <td>{(() => {
+                  let num = SubtitleUtil.getTextLength(line.text) / (ent.end - ent.start);
+                  return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
+                })()}</td>
+                <td class='subtext'>{line.text}</td>
+              </tr>
+              {/each}
+              {/each}
+        
+              <!-- virtual entry at the end -->
+              {#if !frontend.states.isEditingVirtualEntry}
+              <tr on:dblclick={() => {frontend.startEditingNewVirtualEntry();}}
+                  on:mousedown={() => {
+                    frontend.states.virtualEntryHighlighted = true;
+                    frontend.clearSelection();
+                  }}
+                  class={frontend.states.virtualEntryHighlighted ? 'focushlt' : ''}>
+                <td>﹡</td>
+                <td colspan="5"/>
+              </tr>
+              {/if}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
-
+  <!-- resizer -->
+  <div>
+    <Resizer control={timelineCanvas} reverse={true}/>
+  </div>
   <!-- timeline -->
-  <table>
-    <tr><Resizer control={timelineCanvas} reverse={true}/></tr>
-    <tr><canvas class="timeline" bind:this={timelineCanvas}></canvas></tr>
-  </table>
+  <div>
+    <canvas class="timeline" bind:this={timelineCanvas} 
+      style="height: 100px;"></canvas>
+  </div>
 
   <!-- status bar -->
   {#key statusUpdateCounter}
-  <p class='status'>{frontend.status}</p>
+  <div class='status'>{frontend.status}</div>
   {/key}
 </main>
 
 <style>
+.subscontainer {
+  padding: 0 3px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+}
+
+.subsfocused {
+  /* border: 2px solid skyblue; */
+  box-shadow: 0 5px 10px gray;
+}
+
 .controls-container {
   width: 100%;
   display: flex;
@@ -472,7 +522,6 @@ Config.init();
 }
 
 .player-container {
-  width: 300px;
   height: 200px;
   padding: 3px;
   overflow: scroll;
@@ -486,29 +535,77 @@ Config.init();
   background-color: lightgray;
 }
 
-.times {
-  width: 200px;
-  max-width: 200px;
+table.subs {
+  border-collapse: collapse;
+  border-style: hidden;
+  line-height: 1;
+  padding: 5px;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  cursor: default;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
 }
 
-.times div {
+table.subs thead {
+  background-color: #f6f6f6;
   width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  position: sticky;
+  top: 0;
 }
 
-.times div div {
+table.subs tbody {
+  border: none;
+  background-color: #f6f6f6;
   width: 100%;
-  height: 100%;
-  padding-top: 5px;
+  box-sizing: border-box;
+}
+
+table.subs th {
+  padding: 5px;
+}
+
+table.subs thead th:nth-child(6) {
+  width: 100%;
+  text-align: left;
+  padding-left: 10px;
+}
+
+.right {
+  text-align: right;
+}
+
+table.subs tbody td {
+  padding: 5px;
+  border: 1px solid gray;
+  white-space: pre-wrap;
+  min-height: 1lh;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+table.subs tbody tr {
+  background-color: white;
+}
+tr.selected {
+  background-color: rgb(234, 234, 234) ! important;
+}
+tr.focushlt {
+  background-color: lightblue ! important;
+}
+tr.sametime {
+  color: crimson;
+}
+td.subtext {
+  text-align: left;
 }
 
 .scroll {
   overflow: scroll;
   box-shadow: gray 0px 0px 3px inset;
-  margin: 3px;
-  padding: 3px;
+  margin-left: 3px;
+  border-top: solid transparent 3px;
+  /* padding: 3px; */
 }
 
 .timeline {

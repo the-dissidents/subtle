@@ -8,10 +8,9 @@ export class UIHelper {
 
     processGlobalKeydown(ev: KeyboardEvent) {
         let ctrlOrMeta = ev.getModifierState(Basic.ctrlKey());
-        let isEditing = this.frontend.states.modalOpenCounter > 0 
-            || document.activeElement?.localName == 'input';
-        let isEditingList = !this.frontend.states.isEditing && !isEditing;
-        let altOrNotEditing = (!this.frontend.states.isEditing || ev.altKey) && !isEditing;
+        let inModal = this.frontend.states.modalOpenCounter > 0;
+        let isEditingList = this.frontend.states.tableHasFocus && !inModal;
+        let altOrNotEditing = (this.frontend.states.tableHasFocus || ev.altKey) && !inModal;
         // console.log(ev, isEditing, isEditingList, isEditing);
         
         if (ev.key == 'Enter' && ctrlOrMeta) {
@@ -78,11 +77,6 @@ export class UIHelper {
             // save
             ev.preventDefault();
             this.frontend.askSaveFile();
-        }
-        else if (ev.key == 'f' && ctrlOrMeta && !isEditing) {
-            // search
-            ev.preventDefault();
-            this.frontend.dialogs.search?.$set({show: true});
         }
 
         else if (ev.key == 'ArrowUp' && altOrNotEditing && !ctrlOrMeta) {
@@ -348,6 +342,7 @@ export class UIHelper {
             ]
         },
         ]});
+        menu.popup();
     }
 
     #removeChannel(selection: SubtitleEntry[], pred: (ch: SubtitleChannel) => boolean) {

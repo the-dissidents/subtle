@@ -69,6 +69,7 @@
 	.timestamp {
 		text-align: center;
         box-sizing: border-box;
+        width: 120px;
 	}
     .stretch {
         width: 100%;

@@ -2,7 +2,7 @@ import { assert } from "./Basic";
 import { SubtitleEntry, SubtitleStyle, SubtitleTools, Subtitles, type SubtitleChannel, SubtitleUtil, SubtitleImport, SubtitleExport, MergePosition, MergeStyleBehavior, type MergeOptions } from "./Subtitles";
 import type ImportOptionsDialog from "./ImportOptionsDialog.svelte";
 import type TimeTransformDialog from "./TimeTransformDialog.svelte";
-import type SearchDialog from "./SearchDialog.svelte";
+import type SearchDialog from "./SearchToolbox.svelte";
 import { Playback } from "./Playback";
 import { UIHelper } from "./UICommands";
 import { Config } from "./Config";
@@ -71,7 +71,6 @@ export class Frontend {
     timeEpsilon = 0.01;
 
     ui: {
-        editTable?: HTMLElement;
         tableHeader?: HTMLElement;
         subscontainer?: HTMLElement;
     } = {};
@@ -83,13 +82,10 @@ export class Frontend {
         splitLanguages?: SplitLanguagesDialog;
     } = {};
 
-    dialogs: {
-        search?: SearchDialog;
-    } = {};
-
     states = {
         isEditing: false,
         isEditingVirtualEntry: false,
+        tableHasFocus: false,
         modalOpenCounter: 0,
         virtualEntryHighlighted: false,
         editChanged: false,

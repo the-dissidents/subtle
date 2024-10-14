@@ -7,7 +7,6 @@
 	import { Basic } from './Basic';
 	
 	export let frontend: Frontend;
-	export let show = false;
 	let searchTerm = '';
 	let replaceTerm = '';
 	let useRegex = false, caseSensitive = true, selectionOnly = false;
@@ -102,62 +101,45 @@
 	}
 </script>
 
-<DialogBase bind:frontend bind:show modal={false} centerWhenOpen={false}>
-	<h2 slot='header'>Search</h2>
-	<table class="config">
-		<tr>
-			<td class="right"><label for='expr'>expression:</label></td>
-			<td><input class='expr' bind:value={searchTerm} id='expr'/></td>
-		</tr>
-		<tr>
-			<td class="right"><label for='repl'>replace by:</label></td>
-			<td><input class='expr' bind:value={replaceTerm} id='repl'/></td>
-		</tr>
-		<tr>
-			<td></td>
-			<td>
-				<input type='checkbox' bind:checked={useRegex} id='reg'/>
-				<label for='reg'>use regular expressions</label><br/>
-				<input type='checkbox' bind:checked={caseSensitive} id='case'/>
-				<label for='case'>case sensitive</label><br/>
-				<input type='checkbox' bind:checked={selectionOnly} id='sel'/>
-				<label for='sel'>selected entries only</label><br/>
-				<input type='checkbox' bind:checked={useStyle} id='style1'/>
-				<label for='style1'>search in style</label>
-				<StyleSelect
-					bind:subtitles={frontend.subs}
-					bind:currentStyle={style1}/><br/>
-				<input type='checkbox' bind:checked={replaceStyle} id='style2'/>
-				<label for='style2'>replace by style</label>
-				<StyleSelect
-					bind:subtitles={frontend.subs}
-					bind:currentStyle={style2}/><br/>
-			</td>
-		</tr>
-		<tr>
-			<td colspan="2">
-				<button on:click={
-					() => findAndReplace(SearchAction.Find, true)}>find next</button>
-				<button on:click={
-					() => findAndReplace(SearchAction.Select, false)}>select all</button>
-				<button on:click={
-					() => findAndReplace(SearchAction.Replace, true)}>replace next</button>
-				<button on:click={
-					() => findAndReplace(SearchAction.Replace, false)}>replace all</button>
-				<br/>
-				<button on:click={
-					() => findAndReplace(SearchAction.ReplaceStyleOnly, false)}>replace styles only</button>
-			</td>
-		</tr>
-	</table>
-</DialogBase>
+<input class='expr' bind:value={searchTerm} id='expr' placeholder="expression"/>
+<input class='expr' bind:value={replaceTerm} id='repl' placeholder="replace term"/>
+<div>
+	<input type='checkbox' bind:checked={useRegex} id='reg'/>
+	<label for='reg'>use regular expressions</label><br/>
+	<input type='checkbox' bind:checked={caseSensitive} id='case'/>
+	<label for='case'>case sensitive</label><br/>
+	<input type='checkbox' bind:checked={selectionOnly} id='sel'/>
+	<label for='sel'>selected entries only</label><br/>
+	<input type='checkbox' bind:checked={useStyle} id='style1'/>
+	<label for='style1'>search in style</label>
+	<StyleSelect
+		bind:subtitles={frontend.subs}
+		bind:currentStyle={style1}/><br/>
+	<input type='checkbox' bind:checked={replaceStyle} id='style2'/>
+	<label for='style2'>replace by style</label>
+	<StyleSelect
+		bind:subtitles={frontend.subs}
+		bind:currentStyle={style2}/><br/>
+	<button on:click={() => findAndReplace(SearchAction.Find, true)}>
+		find next</button>
+	<button on:click={() => findAndReplace(SearchAction.Select, false)}>
+		select all</button>
+	<br/>
+	<div class="hlayout">
+		<button class="left"
+			on:click={() => findAndReplace(SearchAction.Replace, true)}
+		>replace next</button>
+		<button class="middle"
+			on:click={() => findAndReplace(SearchAction.Replace, false)}
+		>all</button>
+		<button class="right"
+			on:click={() => findAndReplace(SearchAction.ReplaceStyleOnly, false)}
+		>styles only</button>
+	</div>
+</div>
 
 <style>
-	.right {
-		text-align: right;
-		padding-right: 10px;
-	}
 	.expr {
-		width: 20em;
+		width: 100%;
 	}
 </style>

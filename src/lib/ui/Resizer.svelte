@@ -38,24 +38,52 @@
     }
     dragging = true;
   }}>
+<div class='inside'></div>
 <slot />
 </div>
 
 <style>
 .resizerH {
-  height: 2px;
+  height: 5px;
   width: 100%;
   margin: 2px;
-  background-color: gray;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
 }
+
+.resizerH .inside {
+  width: 100%;
+  height: 1px;
+  background-color: gray;
+  transform: translateY(50%);
+  /* transition: all 0.2s ease-out; */
+}
+
+.resizerH:hover .inside {
+  height: 3px;
+  background-color: palevioletred;
+  transform: translateY(-25%);
+}
+
 .resizerV {
   height: 100%;
-  width: 2px;
+  width: 5px;
   margin: 2px;
-  background-color: gray;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
+}
+
+.resizerV .inside {
+  height: 100%;
+  width: 1px;
+  background-color: gray;
+  transform: translateX(50%);
+  /* transition: all 0.2s ease-out; */
+}
+
+.resizerV:hover .inside {
+  width: 3px;
+  background-color: palevioletred;
+  transform: translateX(-25%);
 }
 </style>

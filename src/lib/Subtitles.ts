@@ -155,6 +155,8 @@ export class Subtitles {
     width = 1920;
     height = 1080;
 
+    untimedText = '';
+
     constructor(base?: Subtitles) {
         if (base) {
             this.defaultStyle = base.defaultStyle.clone();
@@ -275,7 +277,8 @@ export class Subtitles {
             language: this.language,
             defaultStyle: this.defaultStyle.toSerializable(),
             styles: this.styles.map((x) => x.toSerializable()),
-            entries: this.entries.map((x) => x.toSerializable())
+            entries: this.entries.map((x) => x.toSerializable()),
+            untimed: this.untimedText
         }
     }
 
@@ -290,6 +293,7 @@ export class Subtitles {
         subs.entries = o.entries
             .map((x) => SubtitleEntry.deserialize(x, subs))
             .filter((x) => x.texts.length > 0);
+        subs.untimedText = o.untimed ?? '';
         return subs;
     }
 }
