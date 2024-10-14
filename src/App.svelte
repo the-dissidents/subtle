@@ -20,6 +20,8 @@ import { Menu } from '@tauri-apps/api/menu';
 import TabView from './lib/ui/TabView.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
     import UntimedToolbox from './lib/UntimedToolbox.svelte';
+    import SubtitleTable from './lib/SubtitleTable.svelte';
+    import { invoke } from '@tauri-apps/api/core';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -118,13 +120,6 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
   elem.style.height = `${elem.scrollHeight + 3}px`;
 }
 
-function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
-  entry.gui = node;
-  return {
-    update: (entry: SubtitleEntry) => entry.gui = node,
-    destory: () => entry.gui = undefined};
-}
-
 function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
   console.log('setup', node);
   channel.gui = node;
@@ -142,7 +137,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
         curChannel.text = node.value;
         node.value = channel.text;
         if (frontend.states.editChanged)
-          frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm);
+          frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);
       }
     },
     destory: () => {
@@ -152,10 +147,6 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
       textArea2Channel.delete(node);
     }
   };
-}
-
-function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
-  return e1 && e2 && e1.start < e2.end && e1.end > e2.start;
 }
 
 let setupVideoView = () => {
@@ -187,6 +178,12 @@ Config.init();
 <svelte:document 
   on:keydown={(ev) => frontend.uiHelper.processGlobalKeydown(ev)}/>
 <svelte:window
+  on:load={() => {
+    let time = performance.now();
+    console.log('load time:', time);
+    setTimeout(() => invoke('init_complete', {task: 'frontend'}), 
+      Math.max(0, 200 - time));
+  }}
   on:beforeunload={(ev) => {
     if (frontend.fileChanged) ev.preventDefault();
   }}
@@ -367,7 +364,7 @@ Config.init();
                 <td>
                   <StyleSelect subtitles={frontend.subs} bind:currentStyle={line.style}
                     on:submit={() => {
-                      frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm)}} />
+                      frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm)}} />
                   <button tabindex='-1'
                     on:click={() => frontend.insertChannelAt(i)}>+</button>
                   <button tabindex='-1'
@@ -377,15 +374,20 @@ Config.init();
                 <td style='width:100%'>
                   <textarea class='contentarea' tabindex=0
                     use:setupTextEditGUI={line}
+                    on:keydown={(ev) => {
+                      if (ev.key == "Escape") {
+                        ev.currentTarget.blur();
+                        subsFocused = true;
+                      }
+                    }}
                     on:focus={() => {
                       frontend.states.isEditing = true;
                       frontend.current.style = line.style;
-                      // frontend.status = 'set focusedStyle to ' + line.style.name;
                     }}
                     on:blur={(x) => {
                       if (frontend.states.editChanged) {
                         line.text = x.currentTarget.value;
-                        frontend.markChanged(ChangeType.NonTime, ChangeCause.UIForm);
+                        frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);
                       }
                       frontend.states.isEditing = false;
                     }}
@@ -410,75 +412,7 @@ Config.init();
         </div>
         <!-- table view -->
         <div class='scrollable fixminheight subscontainer' class:subsfocused={subsFocused} bind:this={frontend.ui.subscontainer}>
-          <table class='subs'>
-            <thead bind:this={frontend.ui.tableHeader}>
-              <tr>
-                <th scope="col">#</th>
-                <th scope="col">start</th>
-                <th scope="col">end</th>
-                <th scope="col">style</th>
-                <th scope="col">n/s</th>
-                <th scope="col">text</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- list all entries -->
-              {#each frontend.subs.entries as ent, i (ent.uniqueID)}
-              {#each ent.texts as line, j (`${i},${j}`)}
-              <tr on:mousedown={(ev) => {
-                    subsFocused = true;
-                    if (ev.button == 0)
-                      frontend.toggleEntry(ent, 
-                        ev.shiftKey, ev.getModifierState(Basic.ctrlKey()));
-                  }}
-                  on:contextmenu={(ev) => {
-                    subsFocused = true;
-                    frontend.uiHelper.contextMenu();
-                    ev.preventDefault();
-                  }}
-                  on:dblclick={() => {
-                    subsFocused = true;
-                    frontend.focusOnCurrentEntry();
-                    frontend.playback.setPosition(ent.start);
-                  }}
-                  on:mousemove={(ev) => {
-                    if (ev.buttons == 1)
-                      frontend.selectEntry(ent, true, ev.getModifierState(Basic.ctrlKey()));
-                  }}
-                  class:focushlt={frontend.current.entry == ent}
-                  class:sametime={frontend.current.entry != ent 
-                    && overlappingTime(frontend.current.entry, ent)}
-                  class:selected={selection.has(ent)}
-                >
-                {#if line === ent.texts[0]}
-                  <td rowspan={ent.texts.length} use:setupEntryGUI={ent} class='right'>{i}</td>
-                  <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
-                  <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
-                {/if}
-                <td>{line.style.name}</td>
-                <td>{(() => {
-                  let num = SubtitleUtil.getTextLength(line.text) / (ent.end - ent.start);
-                  return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
-                })()}</td>
-                <td class='subtext'>{line.text}</td>
-              </tr>
-              {/each}
-              {/each}
-        
-              <!-- virtual entry at the end -->
-              {#if !frontend.states.isEditingVirtualEntry}
-              <tr on:dblclick={() => {frontend.startEditingNewVirtualEntry();}}
-                  on:mousedown={() => {
-                    frontend.states.virtualEntryHighlighted = true;
-                    frontend.clearSelection();
-                  }}
-                  class={frontend.states.virtualEntryHighlighted ? 'focushlt' : ''}>
-                <td>﹡</td>
-                <td colspan="5"/>
-              </tr>
-              {/if}
-            </tbody>
-          </table>
+          <SubtitleTable {frontend} bind:selection bind:isFocused={subsFocused}/>
         </div>
       </div>
     </div>
@@ -533,71 +467,6 @@ Config.init();
   display: block; /* to get rid of extra spacing at the bottom */
   box-sizing: border-box;
   background-color: lightgray;
-}
-
-table.subs {
-  border-collapse: collapse;
-  border-style: hidden;
-  line-height: 1;
-  padding: 5px;
-  width: 100%;
-  box-sizing: border-box;
-  position: relative;
-  cursor: default;
-  user-select: none; -webkit-user-select: none;
-  -moz-user-select: none; -ms-user-select: none;
-}
-
-table.subs thead {
-  background-color: #f6f6f6;
-  width: 100%;
-  position: sticky;
-  top: 0;
-}
-
-table.subs tbody {
-  border: none;
-  background-color: #f6f6f6;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-table.subs th {
-  padding: 5px;
-}
-
-table.subs thead th:nth-child(6) {
-  width: 100%;
-  text-align: left;
-  padding-left: 10px;
-}
-
-.right {
-  text-align: right;
-}
-
-table.subs tbody td {
-  padding: 5px;
-  border: 1px solid gray;
-  white-space: pre-wrap;
-  min-height: 1lh;
-  user-select: none; -webkit-user-select: none;
-  -moz-user-select: none; -ms-user-select: none;
-}
-table.subs tbody tr {
-  background-color: white;
-}
-tr.selected {
-  background-color: rgb(234, 234, 234) ! important;
-}
-tr.focushlt {
-  background-color: lightblue ! important;
-}
-tr.sametime {
-  color: crimson;
-}
-td.subtext {
-  text-align: left;
 }
 
 .scroll {

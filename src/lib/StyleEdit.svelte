@@ -41,7 +41,7 @@
           let i = subtitles.styles.indexOf(style);
           if (i < 0) return;
           subtitles.styles.splice(i, 1);
-          frontend.markChanged(ChangeType.Styles, ChangeCause.Action);
+          frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
           submit();
         }
       },
@@ -55,7 +55,7 @@
             let n = Number.parseInt(id);
             let other = withoutThis[n];
             if (SubtitleTools.replaceStyle(subtitles.entries, style, other))
-                frontend.markChanged(ChangeType.NonTime, ChangeCause.Action);
+                frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
           }
         }))
       },
@@ -66,7 +66,7 @@
           clone.name = SubtitleTools.getUniqueStyleName(subtitles, style.name);
           subtitles.styles.push(clone);
           subtitles.styles = subtitles.styles;
-          frontend.markChanged(ChangeType.Styles, ChangeCause.Action);
+          frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
           submit();
         }
       }
@@ -118,7 +118,7 @@
         <td><label for='name'>name:</label></td>
         <td><input id='name' bind:value={style.name}
           class={isDuplicate(style.name) ? 'duplicate' : ''}
-          on:change={() => frontend.markChanged(ChangeType.Styles, ChangeCause.Action)}/></td>
+          on:change={() => frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action)}/></td>
       </tr>
       <tr>
         <td><label for='font'>font:</label></td>

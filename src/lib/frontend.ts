@@ -2,7 +2,6 @@ import { assert } from "./Basic";
 import { SubtitleEntry, SubtitleStyle, SubtitleTools, Subtitles, type SubtitleChannel, SubtitleUtil, SubtitleImport, SubtitleExport, MergePosition, MergeStyleBehavior, type MergeOptions } from "./Subtitles";
 import type ImportOptionsDialog from "./ImportOptionsDialog.svelte";
 import type TimeTransformDialog from "./TimeTransformDialog.svelte";
-import type SearchDialog from "./SearchToolbox.svelte";
 import { Playback } from "./Playback";
 import { UIHelper } from "./UICommands";
 import { Config } from "./Config";
@@ -39,10 +38,11 @@ export enum ChangeCause {
 }
 
 export enum ChangeType {
-    NonTime,
+    TextOnly,
     Times,
-    Styles,
-    Both
+    StyleDefinitions,
+    General, // TODO: this is unclear
+    Metadata
 }
 
 export class EventHost<T extends unknown[] = []> {
@@ -113,6 +113,7 @@ export class Frontend {
 
     onUndoBufferChanged = new EventHost();
     onStatusChanged = new EventHost();
+    onBeforeSaving = new EventHost();
     onSubtitlesChanged = new EventHost<[type: ChangeType, cause: ChangeCause]>();
     onSubtitleObjectReload = new EventHost();
     onSelectionChanged = new EventHost<[cause: ChangeCause]>();
@@ -177,7 +178,7 @@ export class Frontend {
     clearUndoRedo() {
         this.undoStack = [];
         this.redoStack = [];
-        this.markChanged(ChangeType.Both, ChangeCause.Action);
+        this.markChanged(ChangeType.General, ChangeCause.Action);
         this.onUndoBufferChanged.dispatch();
     }
 
@@ -346,7 +347,10 @@ export class Frontend {
         if (!this.current.entry) return;
         let focused = this.current.entry;
         let channel = focused.texts.find((x) => x.style == this.current.style);
-        if (!channel) channel = focused!.texts[0];
+        if (!channel) {
+            console.warn('style not found on current entry', this.current.style, focused);
+            channel = focused!.texts[0];
+        }
         this.current.style = channel.style;
         if (!channel.gui) return;
         // this.status = 'focused on ' + channel.style.name + ' of ' + channel.text;
@@ -368,7 +372,7 @@ export class Frontend {
         this.subs.merge(other, options);
         for (let ent of other.entries)
             this.selection.submitted.add(ent);
-        this.markChanged(ChangeType.Both, ChangeCause.Action);
+        this.markChanged(ChangeType.General, ChangeCause.Action);
     }
 
     insertEntryBefore(ent?: SubtitleEntry) {
@@ -461,7 +465,7 @@ export class Frontend {
         let focused = this.current.entry;
         let newChannel: SubtitleChannel = {style: focused.texts[index].style, text: ''};
         focused.texts = focused.texts.toSpliced(index + 1, 0, newChannel);
-        this.markChanged(ChangeType.NonTime, ChangeCause.Action);
+        this.markChanged(ChangeType.TextOnly, ChangeCause.Action);
         setTimeout(() => {
             newChannel.gui?.focus();
             newChannel.gui?.scrollIntoView();
@@ -472,7 +476,7 @@ export class Frontend {
         assert(this.current.entry !== null);
         let focused = this.current.entry;
         focused.texts = focused.texts.toSpliced(index, 1);
-        this.markChanged(ChangeType.NonTime, ChangeCause.Action);
+        this.markChanged(ChangeType.TextOnly, ChangeCause.Action);
     }
 
     clearSelection(cause = ChangeCause.UIList) {

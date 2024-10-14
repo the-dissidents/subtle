@@ -88,7 +88,7 @@
 			} else {
 				frontend.status = `found ${nDone} line${nDone > 1 ? 's' : ''}; ${currentEntry?.start}, ${currentTextIndex}`;
 			}
-			frontend.markChanged(ChangeType.NonTime, ChangeCause.Action);
+			frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
 		} else {
 			frontend.status = `found nothing`;
 			currentEntry = null;

@@ -35,7 +35,21 @@
       {
         "title": "subtle",
         "width": 1000,
-        "height": 800
+        "height": 800,
+        "visible": false
+      },
+      {
+        "label": "splashscreen",
+        "url": "/splash",
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "title": "",
+        "closable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "resizable": false,
+        "width": 400,
+        "height": 250
       }
     ]
   }

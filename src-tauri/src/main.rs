@@ -3,10 +3,14 @@
 
 //mod media;
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+use tauri::AppHandle;
+use tauri::Manager;
+use tauri::State;
+use std::sync::Mutex;
+
+struct SetupState {
+    frontend_task: bool,
+    backend_task: bool,
 }
 
 fn main() {
@@ -15,7 +19,40 @@ fn main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(Mutex::new(SetupState {
+            frontend_task: false,
+            backend_task: true,
+        }))
+        .invoke_handler(tauri::generate_handler![init_complete])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+async fn init_complete(
+    app: AppHandle,
+    state: State<'_, Mutex<SetupState>>,
+    task: String,
+) -> Result<(), ()> {
+    // Lock the state without write access
+    let mut state_lock = state.lock().unwrap();
+    match task.as_str() {
+        "frontend" => state_lock.frontend_task = true,
+        "backend" => state_lock.backend_task = true,
+        _ => panic!("invalid task completed!"),
+    }
+    // Check if both tasks are completed
+    if state_lock.backend_task && state_lock.frontend_task {
+        // Setup is complete, we can close the splashscreen
+        // and unhide the main window!
+        let splash_window = 
+            match app.get_webview_window("splashscreen") {
+                Some(w) => w,
+                None => return Ok(())
+            };
+        let main_window = app.get_webview_window("main").unwrap();
+        splash_window.close().unwrap();
+        main_window.show().unwrap();
+    }
+    Ok(())
 }

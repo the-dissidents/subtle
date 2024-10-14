@@ -93,7 +93,7 @@
         }
         show = false;
         
-        frontend.markChanged(ChangeType.Both, ChangeCause.Action);
+        frontend.markChanged(ChangeType.General, ChangeCause.Action);
     }
 
     async function init() {

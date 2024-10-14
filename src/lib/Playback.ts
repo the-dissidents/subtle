@@ -2,7 +2,7 @@ import { assert } from "./Basic";
 import { Subtitles } from "./Subtitles";
 import { VideoPlayer } from "./VideoPlayer";
 import { Timeline } from "./Timeline";
-import { Frontend } from "./Frontend";
+import { ChangeType, Frontend } from "./Frontend";
 
 export class Playback {
     #isLoaded = false;
@@ -22,7 +22,7 @@ export class Playback {
     constructor(private readonly frontend: Frontend) {
         frontend.onSubtitlesChanged.bind((times, cause) => {
             if (!this.video?.subRenderer) return;
-            if (times)
+            if (times == ChangeType.Times || times == ChangeType.General)
                 this.video.subRenderer.updateTimes();
             this.video.subRenderer.requireRerender();
         });

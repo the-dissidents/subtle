@@ -141,7 +141,7 @@ export class Timeline implements WithCanvas {
             }
         });
         f.onSubtitlesChanged.bind((type) => {
-            if (type == ChangeType.Styles || type == ChangeType.Both)
+            if (type == ChangeType.StyleDefinitions || type == ChangeType.General)
                 this.#preprocessStyles();
         });
         f.onSubtitleObjectReload.bind(() => {

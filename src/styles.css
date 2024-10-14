@@ -1,7 +1,7 @@
 :root {
   font-family: Arial, sans-serif;
   font-size: 14px;
-  line-height: 24px;
+  line-height: 1.5em;
   font-weight: 400;
 
   color: #0f0f0f;
@@ -20,10 +20,19 @@
   box-sizing: border-box;
 }
 
+fieldset {
+  border: none;
+}
+
 input[type='checkbox'].button {
   display: none;
   width: 0;
   height: 0;
+}
+
+label {
+  font-size: 90%;
+  line-height: normal;
 }
 
 button,
@@ -47,7 +56,8 @@ label:has(input[type='checkbox'].button) {
   line-height: normal;
 
   &:hover {
-    background-color: rgb(241, 241, 241);
+    filter: brightness(95%);
+    /* background-color: rgb(241, 241, 241); */
   }
 
   &:has(input[type='checkbox'].button:checked) {

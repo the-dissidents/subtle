@@ -111,7 +111,7 @@ export class SubtitleStyle {
 export type SubtitleChannel = {
     style: SubtitleStyle,
     text: string,
-    gui?: HTMLElement
+    gui?: HTMLTextAreaElement
 }
 
 export class SubtitleEntry {

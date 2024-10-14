@@ -1,5 +1,56 @@
-function tokenize(str: string) {
-    return str.toLowerCase().split(/\b/);
+export interface Tokenizer {
+    tokenize(str: string): [tokens: string[], prefixLen: number[]]
+}
+
+export class RegexTokenizer implements Tokenizer {
+    constructor(private passes: RegExp[]) {}
+
+    tokenize(str: string): [tokens: string[], prefixLen: number[]] {
+        let tokens = [str.toLowerCase()];
+        for (let regex of this.passes) {
+            tokens = tokens.flatMap((x) => x.split(regex));
+        }
+        let prefix = tokens.reduce<number[]>((p, c) => {
+            p.push(p.at(-1)! + c.length);
+            return p;
+        }, [0]);
+        return [tokens, prefix];
+    }
+}
+
+export const DefaultTokenizer = new RegexTokenizer(
+    [/(?<![\p{L}\d])|(?![\p{L}\d])|(?<=[\u4E00-\u9FFF])|(?=[\u4E00-\u9FFF])/u]);
+
+
+export const SyllableTokenizer = new RegexTokenizer(
+    [/(?<![\p{L}\d])|(?![\p{L}\d])|(?<=[\u4E00-\u9FFF])|(?=[\u4E00-\u9FFF])/u,
+    /(?<!^[bcdfghjklmnpqrstvwxzßñç])(?=[bcdfghjklmnpqrstvwxzßñç][^bcdfghjklmnpqrstvwxzßñç])/]);
+
+export class Searcher {
+    #tokens: string[];
+    #prefix: number[];
+
+    constructor(private text: string, private tokenizer: Tokenizer) {
+        [this.#tokens, this.#prefix] = tokenizer.tokenize(text);
+    }
+
+    tokenList(): ReadonlyArray<string> {
+        return this.#tokens;
+    }
+
+    prefixLengthList(): ReadonlyArray<number> {
+        return this.#prefix;
+    }
+
+    search(term: string, maxSkip: number)
+    : [start: number, end: number, match: number, total: number] | undefined {
+        let [tt, _] = this.tokenizer.tokenize(term);
+        let [__, syns, array] = preprocess(this.#tokens, tt);
+        let result = LLIS(array, syns, maxSkip);
+        if (!result) return undefined;
+        let [i0, i1, n] = result;
+        return [this.#prefix[i0], this.#prefix[i1+1], n, i1-i0+1];
+    }
 }
 
 function preprocess(w: string[], x: string[]) {
@@ -18,69 +69,55 @@ function preprocess(w: string[], x: string[]) {
     return [minwords, synonyms, a] as const;
 }
 
-function LIS(a: number[], synonyms: Map<number, number[]>) {
+function LLIS(a: number[], synonyms: Map<number, number[]>, maxSkip: number) {
     const n = a.length;
-    let d = new Array(n+1);
-    let index = new Array(n+1);
-    let prev = new Array(n+1);
-    d[0] = Number.NEGATIVE_INFINITY;
-    for (let i = 1; i <= n; i++)
-         d[i] = Number.POSITIVE_INFINITY;
+    let d = new Array(n);
+    let prev = new Array(n);
+    for (let i = 0; i < n; i++)
+        d[i] = 1;
 
-    let currentMax = 1;
+    // let synomax = new Map([...synonyms].map(([a, b]) => [a, Math.max(...b)]));
+    // let synomin = new Map([...synonyms].map(([a, b]) => [a, Math.min(...b)]));
+
     for (let i = 0; i < n; i++) {
         if (a[i] < 0) continue;
         const syns = synonyms.get(a[i])!;
-        for (let j = 1; j <= currentMax; j++) {
-            let usable = syns.find((x) => d[j-1] < syns && syns < d[j]);
+        // const max = synomax.get(a[i])!;
+        for (let j = Math.max(0, i-maxSkip-1); j < i; j++) {
+            if (a[j] < 0) continue;
+            if (d[i] >= d[j] + 1) continue;
+            let usable = syns.find((value) => value > a[j]);
             if (usable !== undefined) {
-                prev[i] = index[j-1];
-                index[j] = i;
-                d[j] = usable;
-                if (j+1 > currentMax)
-                    currentMax = j+1;
-                break;
+            // if (max > synomin.get(a[j])!) {
+                d[i] = d[j] + 1;
+                prev[i] = j;
+                // TODO: I don't really know if this is correct!
+                a[i] = usable;
             }
         }
     }
-
-    for (let i = 1; i < n; i++) {
-        if (d[i] == Number.POSITIVE_INFINITY) {
-            i--;
-            if (i == 0) return [];
-            
-            let seq: number[] = [];
-            let idx = index[i];
-            while (idx !== undefined) {
-                seq.push(idx);
-                idx = prev[idx];
-            }
-            return seq.reverse();
-        }
-    }
-    // unreachable
-    return [];
+    let dmax = Math.max(...d);
+    if (dmax == 1) return undefined;
+    let idx = d.indexOf(dmax);
+    let first = idx;
+    while (prev[first] !== undefined)
+        first = prev[first];
+    return [first, idx, dmax] as const;
 }
 
-let text = `Ich habe noch eine Bitte, Frau Oberköchin
-es ist möglich, daß mir morgen, vielleicht sehr früh, meine früheren Kameraden eine Photographie bringen, die ich dringend brauche. Wären Sie so freundlich und würden Sie dem Portier telephonieren, er möchte die Leute zu mir schicken oder mich holen lassen?
-Gewiß
-aber würde es nicht genügen, wenn er ihnen die Photographie abnimmt? Was ist es denn für eine Photographie, wenn man fragen darf?
-Es ist die Photographie meiner Eltern
-Nein, ich muß mit den Leuten selbst sprechen.
-Wir können uns selbst bedienen
-Eine Arbeitszeit von zehn bis zwölf Stunden ist eben ein wenig zuviel für einen solchen Jungen
-Aber es ist eigentümlich in Amerika. Da ist dieser kleine Junge zum Beispiel, er ist auch erst vor einem halben Jahre mit seinen Eltern hier angekommen, er ist ein Italiener. Jetzt sieht er aus, als könne er die Arbeit unmöglich aushalten, hat schon kein Fleisch im Gesicht, schläft im Dienst ein, obwohl er von Natur sehr bereitwillig ist, – aber er muß nur noch ein halbes Jahr hier oder irgendwo anders in Amerika dienen und hält alles mit Leichtigkeit aus, und in fünf Jahren wird er ein starker Mann sein. Von solchen Beispielen könnte ich Ihnen stundenlang erzählen. Dabei denke ich gar nicht an Sie, denn Sie sind ein kräftiger Junge; Sie sind siebzehn Jahre alt, nicht?
-Ich werde nächsten Monat sechzehn
-Sogar erst sechzehn!
-Also nur Mut!
-Erschrecken Sie nicht über die Einrichtung
-es ist nämlich kein Hotelzimmer, sondern ein Zimmer meiner Wohnung, die aus drei Zimmern besteht, so daß Sie mich nicht im geringsten stören. Ich sperre die Verbindungstüre ab, so daß Sie ganz ungeniert bleiben. Morgen, als neuer Hotelangestellter, werden Sie natürlich Ihr eigenes Zimmerchen bekommen. Wären Sie mit Ihren Kameraden gekommen, dann hätte ich Ihnen in der gemeinsamen Schlafkammer der Hausdiener aufbetten lassen, aber da Sie allein sind, denke ich, daß es Ihnen hier besser passen wird, wenn Sie auch nur auf einem Sofa schlafen müssen. Und nun schlafen Sie wohl, damit Sie sich für den Dienst kräftigen. Er wird morgen noch nicht zu anstrengend sein.`;
+let text = `
+`
+let search = 'Die höchste Philosophie endigt in eine poetischen Idee. so die höchste Moralität, die höchste Politik.';
 
-let search = 'Es ist möglich in Amerika. Da ist dieser Junge zum Beispiel';
-console.log(tokenize(search))
-let [w, s, a] = preprocess(tokenize(text), tokenize(search));
-console.log(s);
-let t0 = Date.now();
-console.log(LIS(a, s));
-console.log(Date.now() - t0);
+console.log(SyllableTokenizer.tokenize(search))
+
+const Engine = new Searcher(text, SyllableTokenizer);
+let t0 = performance.now();
+let result = Engine.search(search, 5);
+console.log('time:', performance.now() - t0);
+if (result) {
+    console.log(result);
+    let [i0, i1, n, m] = result;
+    console.log(text.slice(i0, i1));
+    console.log(n, m, n / m);
+}
