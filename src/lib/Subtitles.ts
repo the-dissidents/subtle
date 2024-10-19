@@ -70,7 +70,7 @@ export class SubtitleStyle {
         return SubtitleStyle.deserialize(this.toSerializable());
     }
 
-    equals(other: SubtitleStyle) {
+    deepEquals(other: SubtitleStyle) {
         return JSON.stringify(this.toSerializable()) == JSON.stringify(other.toSerializable());
     }
 
@@ -186,7 +186,7 @@ export class Subtitles {
                 return s;
             } else switch (options.style ?? MergeStyleBehavior.KeepDifferent) {
                 case MergeStyleBehavior.KeepDifferent:
-                    if (s.equals(namedDefault ? this.defaultStyle : this.styles[iLocal]))
+                    if (s.deepEquals(namedDefault ? this.defaultStyle : this.styles[iLocal]))
                     {
                         if (namedDefault) styleMap.set(s, this.defaultStyle);
                         else styleMap.set(s, this.styles[iLocal]);
@@ -366,7 +366,7 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
 `;
         for (let s of [subs.defaultStyle, ...subs.styles])
             result += `Style: ${s.name},`
-                    + `${s.font == '' ? 'Arial' : ''},${s.size},`
+                    + `${s.font},${s.size},`
                     + `${toASSColor(s.color)},`
                     + `${toASSColor(s.color)},`
                     + `${toASSColor(s.outlineColor)},`
@@ -375,7 +375,8 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
                     + `${s.styles.italic ? '-1' : '0'},`
                     + `${s.styles.underline ? '-1' : '0'},`
                     + `${s.styles.strikethrough ? '-1' : '0'},`
-                    + `100,100,0,0,1,1,0,`
+                    + `100,100,0,0,1,`
+                    + `${s.outline},${s.shadow},`
                     + `${s.alignment},`
                     + `${s.margin.left},${s.margin.right},`
                     + `${Math.max(s.margin.top, s.margin.bottom)},`
@@ -507,6 +508,14 @@ export const SubtitleImport = {
                         const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
                         if (!Number.isNaN(n)) style.size = n;
                     }
+                    if (styleFieldMap.has('Outline')) {
+                        const n = Number.parseFloat(items[styleFieldMap.get('Outline')!]);
+                        if (!Number.isNaN(n)) style.outline = n;
+                    }
+                    if (styleFieldMap.has('Shadow')) {
+                        const n = Number.parseFloat(items[styleFieldMap.get('Shadow')!]);
+                        if (!Number.isNaN(n)) style.shadow = n;
+                    }
                     if (styleFieldMap.has('PrimaryColor')) {
                         const color = fromASSColor(items[styleFieldMap.get('PrimaryColor')!]);
                         if (color !== null) style.color = color;
@@ -590,7 +599,7 @@ export const SubtitleTools = {
         let changed = false;
         for (let ent of entries)
             for (let channel of ent.texts)
-                if (channel.style == from) {
+                if (channel.style.uniqueID == from.uniqueID) {
                     channel.style = to;
                     changed = true;
                 }
