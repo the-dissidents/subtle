@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-export type RGBA = [number, number, number, number]
+export type RGBA = [number, number, number, number];
 
 // http://www.w3.org/TR/css3-color/
 const kCSSColorTable: { [key: string]: RGBA } = {
@@ -100,6 +100,9 @@ const kCSSColorTable: { [key: string]: RGBA } = {
   "violet": [238,130,238,1], "wheat": [245,222,179,1],
   "white": [255,255,255,1], "whitesmoke": [245,245,245,1],
   "yellow": [255,255,0,1], "yellowgreen": [154,205,50,1]};
+
+export const CSSColors: ReadonlyMap<string, RGBA> 
+  = new Map(Object.entries(kCSSColorTable));
 
 function clamp_css_byte(i: number): number {  // Clamp to integer 0 .. 255.
   i = Math.round(i);  // Seems to be what Chrome does (vs truncation).

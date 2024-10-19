@@ -65,6 +65,7 @@ table.subs tbody td {
   padding: 5px;
   border: 1px solid gray;
   white-space: pre-wrap;
+  text-wrap: nowrap;
   min-height: 1lh;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;

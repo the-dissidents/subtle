@@ -10,12 +10,11 @@
 
   let form: HTMLFormElement;
   let select: StyleSelect;
-  let importAll: HTMLInputElement;
-  let onlyStyles: HTMLInputElement;
   let overrideStyle = frontend.subs.defaultStyle;
   let styleOption = 'KeepDifferent';
   let selectOption = 'UsedOnly';
   let posOption = 'After';
+  let overrideMetadata = false;
 
 	const dispatch = createEventDispatcher<{submit: MergeOptions}>();
 	const submit = (options: MergeOptions) => dispatch('submit', options);
@@ -29,10 +28,18 @@
     // @ts-ignore
     position: MergePosition[posOption],
     // @ts-ignore
-    selection: MergeStyleSelection[selectOption]
+    selection: MergeStyleSelection[selectOption],
+    overrideMetadata: overrideMetadata
   })
 }}><form bind:this={form}>
   <table class='config'>
+    <tr>
+      <td>metadata</td>
+      <td>
+        <input type="checkbox" id='md' bind:checked={overrideMetadata} />
+        <label for='md'>override metadata</label>
+      </td>
+    </tr>
     <tr>
       <td>styles</td>
       <td>

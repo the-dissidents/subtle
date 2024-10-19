@@ -40,14 +40,14 @@
   }
 
   function updateToSubs() {
-    if (frontend.subs.untimedText == textarea.value) return;
-    frontend.subs.untimedText = textarea.value;
+    if (frontend.subs.metadata.special.untimedText == textarea.value) return;
+    frontend.subs.metadata.special.untimedText = textarea.value;
     fuzzy.engine = null;
     frontend.markChanged(ChangeType.Metadata, ChangeCause.Action);
   }
 
   function readFromSubs() {
-    textarea.value = frontend.subs.untimedText;
+    textarea.value = frontend.subs.metadata.special.untimedText;
     fuzzy.channel = frontend.subs.defaultStyle;
   }
 
@@ -100,7 +100,7 @@
     }
     // snap to punctuation
     if (fuzzy.snapToPunct && textarea.value.length > i1 
-      && /\p{P}/u.test(textarea.value[i1])) i1++;
+      && !/\p{P}/u.test(textarea.value[i1-1]) && /\p{P}/u.test(textarea.value[i1])) i1++;
     // trim whitespaces
     while (i1 > 0 && /\s/.test(textarea.value[i1-1])) i1--;
     while (i0 < textarea.value.length && /\s/.test(textarea.value[i0])) i0++;

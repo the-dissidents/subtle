@@ -110,13 +110,13 @@ export class SubtitleRenderer {
         this.#canvas.height = height;
         this.width = width;
         this.height = height;
-        let ratio = this.#subs.width / this.#subs.height;
+        let ratio = this.#subs.metadata.width / this.#subs.metadata.height;
         if (width / height < ratio) {
             [this.#hMargin, this.#vMargin] = [0, (height - width / ratio) / 2];
-            this.#scale = width / this.#subs.width;
+            this.#scale = width / this.#subs.metadata.width;
         } else {
             [this.#hMargin, this.#vMargin] = [(width - height * ratio) / 2, 0];
-            this.#scale = height / this.#subs.height;
+            this.#scale = height / this.#subs.metadata.height;
         }
         //console.log(`margins: ${this.#hMargin} ${this.#vMargin}`)
         this.requireRerender();

@@ -1,5 +1,5 @@
 import { assert } from "./Basic";
-import { parseCSSColor } from "./colorparser";
+import { CSSColors, parseCSSColor } from "./colorparser";
 
 export enum AlignMode {
     BottomLeft = 1, BottomCenter, BottomRight,
@@ -31,7 +31,8 @@ export type MergeOptions = {
     overrideStyle?: SubtitleStyle,
     selection?: MergeStyleSelection,
     position?: MergePosition,
-    customPosition?: number
+    customPosition?: number,
+    overrideMetadata?: boolean
 }
 
 export type TimeShiftOptions = {
@@ -150,12 +151,15 @@ export class Subtitles {
     defaultStyle: SubtitleStyle;
     styles: SubtitleStyle[] = [];
     entries: SubtitleEntry[] = [];
-    title = '';
-    language = '';
-    width = 1920;
-    height = 1080;
-
-    untimedText = '';
+    metadata = {
+        title: '',
+        language: '',
+        width: 1920,
+        height: 1080,
+        special: {
+            untimedText: ''
+        }
+    }
 
     constructor(base?: Subtitles) {
         if (base) {
@@ -167,6 +171,10 @@ export class Subtitles {
 
     /** Note: this method will use and modify the entries in `other` */ 
     merge(other: Subtitles, options: MergeOptions) {
+        if (options.overrideMetadata) {
+            other.metadata = JSON.parse(JSON.stringify(this.metadata));
+        }
+
         let styleMap = new Map<SubtitleStyle, SubtitleStyle>();
         let processStyle = (s: SubtitleStyle) => {
             if (styleMap.has(s)) return styleMap.get(s)!;
@@ -272,32 +280,31 @@ export class Subtitles {
 
     toSerializable() {
         return {
-            width: this.width, height: this.height,
-            title: this.title,
-            language: this.language,
+            metadata: this.metadata,
             defaultStyle: this.defaultStyle.toSerializable(),
             styles: this.styles.map((x) => x.toSerializable()),
             entries: this.entries.map((x) => x.toSerializable()),
-            untimed: this.untimedText
         }
     }
 
     static deserialize(o: ReturnType<Subtitles['toSerializable']>) {
         let subs = new Subtitles();
-        subs.width = o.width ?? 1920;
-        subs.height = o.height ?? 1080;
-        subs.title = o.title ?? '';
-        subs.language = o.language ?? '';
+        subs.metadata.width = subs.metadata?.width ?? 1920;
+        subs.metadata.height = o.metadata?.height ?? 1080;
+        subs.metadata.title = o.metadata?.title ?? '';
+        subs.metadata.language = o.metadata?.language ?? '';
+        subs.metadata.special.untimedText = o.metadata?.special?.untimedText ?? '';
+
         subs.defaultStyle = SubtitleStyle.deserialize(o.defaultStyle);
         subs.styles = o.styles.map((x) => SubtitleStyle.deserialize(x));
         subs.entries = o.entries
             .map((x) => SubtitleEntry.deserialize(x, subs))
             .filter((x) => x.texts.length > 0);
-        subs.untimedText = o.untimed ?? '';
         return subs;
     }
 }
 
+// &HAABBGGRR
 function toASSColor(str: string) {
     let rgba = parseCSSColor(str);
     if (!rgba) return '&H00FFFFFF';
@@ -306,6 +313,25 @@ function toASSColor(str: string) {
         + rgba[2].toString(16).toUpperCase().padStart(2, '0')
         + rgba[1].toString(16).toUpperCase().padStart(2, '0')
         + rgba[0].toString(16).toUpperCase().padStart(2, '0');
+}
+
+function fromASSColor(str: string) {
+    str = str.toUpperCase();
+    if (!str.startsWith('&H') || str.length != 10) return null;
+
+    let [r, g, b, a] = [
+        Number.parseInt(str.slice(8, 10), 16), 
+        Number.parseInt(str.slice(6, 8), 16),
+        Number.parseInt(str.slice(4, 6), 16),
+        Number.parseInt(str.slice(2, 4), 16)];
+    if ([r, g, b, a].some((x) => Number.isNaN(x))) return null;
+
+    let cssColor = [...CSSColors.entries()].find(
+        ([_k, [_r, _g, _b, _a]]) => _r == r && _g == g && _b == b && _a == a);
+    if (cssColor !== undefined)
+        return cssColor[0];
+    else
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
 export const SubtitleExport = {
@@ -329,16 +355,31 @@ export const SubtitleExport = {
 `[Script Info]
 ScriptType: v4.00+
 YCbCr Matrix: None
-PlayResX: ${subs.width}
-PlayResY: ${subs.height}
-LayoutResX: ${subs.width}
-LayoutResY: ${subs.height}
+Title: ${subs.metadata.title}
+PlayResX: ${subs.metadata.width}
+PlayResY: ${subs.metadata.height}
+LayoutResX: ${subs.metadata.width}
+LayoutResY: ${subs.metadata.height}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 `;
         for (let s of [subs.defaultStyle, ...subs.styles])
-            result += `Style: ${s.name},${s.font == '' ? 'Arial' : ''},${s.size},${toASSColor(s.color)},${toASSColor(s.color)},${toASSColor(s.outlineColor)},${toASSColor(s.outlineColor)},${s.styles.bold ? '-1' : '0'},${s.styles.italic ? '-1' : '0'},${s.styles.underline ? '-1' : '0'},${s.styles.strikethrough ? '-1' : '0'},100,100,0,0,1,1,0,${s.alignment},${s.margin.left},${s.margin.right},${Math.max(s.margin.top, s.margin.bottom)},1\n`;
+            result += `Style: ${s.name},`
+                    + `${s.font == '' ? 'Arial' : ''},${s.size},`
+                    + `${toASSColor(s.color)},`
+                    + `${toASSColor(s.color)},`
+                    + `${toASSColor(s.outlineColor)},`
+                    + `${toASSColor(s.outlineColor)},`
+                    + `${s.styles.bold ? '-1' : '0'},`
+                    + `${s.styles.italic ? '-1' : '0'},`
+                    + `${s.styles.underline ? '-1' : '0'},`
+                    + `${s.styles.strikethrough ? '-1' : '0'},`
+                    + `100,100,0,0,1,1,0,`
+                    + `${s.alignment},`
+                    + `${s.margin.left},${s.margin.right},`
+                    + `${Math.max(s.margin.top, s.margin.bottom)},`
+                    + `1\n`;
         result += 
 `
 [Events]
@@ -387,14 +428,133 @@ export const SubtitleImport = {
         }
         return subs;
     },
-    ASSFragment(source: string) {
+    ASS(source: string) {
+        let result = this.ASSHeader(source);
+        return this.ASSFragment(source, result);
+    },
+    ASSHeader(source: string) {
+        const sectionRegex  = /\[(.+)\]\s*\n((?:\s*[^[\n]+.+\n)+)/g;
+        const entryRegex     = /(?<=\n)([^;].+?):\s*(.*)/g;
+        const styleMapRegex = /Format:\s*(.*)\n/;
+        const stylesRegex   = /Style:\s*(.*)\n/g;
+
+        const sections = new Map([...source.matchAll(sectionRegex)]
+            .map((x) => [x[1], x[2]]));
+
+        let subs = new Subtitles();
+
+        let text = sections.get('Script Info');
+        if (text) {
+            const infos = new Map([...text.matchAll(entryRegex)]
+                .map((x) => [x[1], x[2]]));
+            subs.metadata.title = infos.get('Title') ?? subs.metadata.title;
+            if (infos.has('PlayResX')) {
+                const n = Number.parseInt(infos.get('PlayResX')!);
+                if (!Number.isNaN(n)) subs.metadata.width = n;
+            }
+            if (infos.has('PlayResY')) {
+                const n = Number.parseInt(infos.get('PlayResY')!);
+                if (!Number.isNaN(n)) subs.metadata.height = n;
+            }
+        }
+
+        text = sections.get('V4 Styles') ?? sections.get('V4+ Styles');
+        if (text) {
+            const styleMapMatch = text.match(styleMapRegex);
+            if (!styleMapMatch) return subs;
+            console.log(styleMapMatch);
+            const styleFieldMap = new Map(
+                styleMapMatch[1].split(/,/).map((x, i) => [x.trim(), i] as const));
+            console.log(styleFieldMap);
+
+            let styles: Map<string, SubtitleStyle> = new Map();
+            let first: SubtitleStyle | null = null;
+            const styleMatches = text.matchAll(stylesRegex);
+            for (const match of styleMatches) {
+                const items = match[1].split(',');
+                try {
+                    const name = items[styleFieldMap.get('Name')!];
+                    let style = styles.get(name);
+                    if (style === undefined) {
+                        style = new SubtitleStyle(name);
+                        if (first === null)
+                            first = style;
+                        else
+                            subs.styles.push(style);
+                        styles.set(name, style);
+                    } else {
+                        // warn
+                        console.warn('duplicate style definition:', name);
+                    }
+                    if (styleFieldMap.has('Fontname'))
+                        style.font = items[styleFieldMap.get('Fontname')!];
+                    if (styleFieldMap.has('Bold'))
+                        style.styles.bold = items[styleFieldMap.get('Bold')!] == '-1';
+                    if (styleFieldMap.has('Italic'))
+                        style.styles.italic = items[styleFieldMap.get('Italic')!] == '-1';
+                    if (styleFieldMap.has('Underline'))
+                        style.styles.underline = 
+                            items[styleFieldMap.get('Underline')!] == '-1';
+                    if (styleFieldMap.has('StrikeOut'))
+                        style.styles.strikethrough = 
+                            items[styleFieldMap.get('StrikeOut')!] == '-1';
+                    
+                    if (styleFieldMap.has('Fontsize')) {
+                        const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
+                        if (!Number.isNaN(n)) style.size = n;
+                    }
+                    if (styleFieldMap.has('Fontsize')) {
+                        const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
+                        if (!Number.isNaN(n)) style.size = n;
+                    }
+                    if (styleFieldMap.has('PrimaryColor')) {
+                        const color = fromASSColor(items[styleFieldMap.get('PrimaryColor')!]);
+                        if (color !== null) style.color = color;
+                    }
+                    if (styleFieldMap.has('OutlineColor')) {
+                        const color = fromASSColor(items[styleFieldMap.get('OutlineColor')!]);
+                        if (color !== null) style.outlineColor = color;
+                    }
+    
+                    if (styleFieldMap.has('Alignment')) {
+                        const n = Number.parseFloat(items[styleFieldMap.get('Alignment')!]);
+                        if (n >= 1 && n <= 9) style.alignment = n as AlignMode;
+                    }
+                    if (styleFieldMap.has('MarginL')) {
+                        const n = Number.parseFloat(items[styleFieldMap.get('MarginL')!]);
+                        if (!Number.isNaN(n)) style.margin.left = n;
+                    }
+                    if (styleFieldMap.has('MarginR')) {
+                        const n = Number.parseFloat(items[styleFieldMap.get('MarginR')!]);
+                        if (!Number.isNaN(n)) style.margin.right = n;
+                    }
+                    if (styleFieldMap.has('MarginV')) {
+                        const n = Number.parseFloat(items[styleFieldMap.get('MarginV')!]);
+                        if (!Number.isNaN(n)) style.margin.top = style.margin.bottom = n;
+                    }
+                    console.log('imported style:', name, style);
+                } catch {
+                    console.log('erroe on importing style');
+                }
+            }
+            if (first == null) {
+                // no styles
+            } else {
+                subs.defaultStyle = first;
+            }
+        }
+
+        return subs;
+    },
+    ASSFragment(source: string, subs = new Subtitles()) {
         const regex = /^Dialogue: \d+,([\d:.]+),([\d:.]+),(.+),,\d+,\d+,\d+,,(.+)$/gm;
         let matches = [...source.matchAll(regex)];
         if (matches.length == 0) return null;
 
-        let subs = new Subtitles();
-        let styles: Map<string, SubtitleStyle> = new Map();
-        for (let match of matches) {
+        let styles: Map<string, SubtitleStyle> = new Map(
+            subs.styles.map((x) => [x.name, x]));
+        styles.set(subs.defaultStyle.name, subs.defaultStyle);
+        for (const match of matches) {
             let start = SubtitleUtil.parseTimestamp(match[1]),
                 end = SubtitleUtil.parseTimestamp(match[2]);
             if (start === null || end === null) continue;

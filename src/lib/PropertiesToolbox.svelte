@@ -26,10 +26,10 @@ $: show, frontend.subs.styles = frontend.subs.styles;
   <tr>
     <td>resolution</td>
     <td>
-      <input type='number' class='res' bind:value={frontend.subs.width}
+      <input type='number' class='res' bind:value={frontend.subs.metadata.width}
         on:change={() => frontend.playback.video?.subRenderer?.changeResolution()}/>
       ×
-      <input type='number' class='res' bind:value={frontend.subs.height}/>
+      <input type='number' class='res' bind:value={frontend.subs.metadata.height}/>
     </td>
   </tr>
 </table>

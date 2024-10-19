@@ -286,6 +286,8 @@ export class Frontend {
             return;
         }
 
+        console.log(newSubs);
+
         const video = Config.getVideo(path);
         Config.pushRecent(path);
 
@@ -298,6 +300,8 @@ export class Frontend {
         this.onSubtitleObjectReload.dispatch();
         this.clearUndoRedo();
         this.fileChanged = false;
+        this.onSubtitlesChanged.dispatch(ChangeType.General, ChangeCause.Action);
+        this.onSubtitlesChanged.dispatch(ChangeType.StyleDefinitions, ChangeCause.Action);
         if (video) await this.openVideo(video);
     }
 
@@ -337,7 +341,7 @@ export class Frontend {
         source = SubtitleUtil.normalizeNewlines(source);
         newSub = SubtitleImport.SRT_VTT(source);
         if (newSub) return [newSub, false];
-        newSub = SubtitleImport.ASSFragment(source);
+        newSub = SubtitleImport.ASS(source);
         return [newSub, false];
     }
 
@@ -348,7 +352,6 @@ export class Frontend {
         let focused = this.current.entry;
         let channel = focused.texts.find((x) => x.style == this.current.style);
         if (!channel) {
-            console.warn('style not found on current entry', this.current.style, focused);
             channel = focused!.texts[0];
         }
         this.current.style = channel.style;

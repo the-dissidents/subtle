@@ -7,7 +7,7 @@ export class RegexTokenizer implements Tokenizer {
 
     tokenize(str: string): [tokens: string[], prefixLen: number[]] {
         let tokens = [str.toLowerCase()];
-        for (let regex of this.passes) {
+        for (const regex of this.passes) {
             tokens = tokens.flatMap((x) => x.split(regex));
         }
         let prefix = tokens.reduce<number[]>((p, c) => {
@@ -103,21 +103,4 @@ function LLIS(a: number[], synonyms: Map<number, number[]>, maxSkip: number) {
     while (prev[first] !== undefined)
         first = prev[first];
     return [first, idx, dmax] as const;
-}
-
-let text = `
-`
-let search = 'Die höchste Philosophie endigt in eine poetischen Idee. so die höchste Moralität, die höchste Politik.';
-
-console.log(SyllableTokenizer.tokenize(search))
-
-const Engine = new Searcher(text, SyllableTokenizer);
-let t0 = performance.now();
-let result = Engine.search(search, 5);
-console.log('time:', performance.now() - t0);
-if (result) {
-    console.log(result);
-    let [i0, i1, n, m] = result;
-    console.log(text.slice(i0, i1));
-    console.log(n, m, n / m);
 }
