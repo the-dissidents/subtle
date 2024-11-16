@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-//mod media;
+mod media;
 
 use tauri::AppHandle;
 use tauri::Manager;
@@ -23,7 +23,19 @@ fn main() {
             frontend_task: false,
             backend_task: true,
         }))
-        .invoke_handler(tauri::generate_handler![init_complete])
+        .manage(Mutex::<Option<media::MediaPlayback>>::new( 
+            None
+        ))
+        .invoke_handler(tauri::generate_handler![
+            init_complete, 
+            media::media_status,
+            media::audio_status,
+            media::open_media,
+            media::close_media,
+            media::open_audio,
+            media::seek_audio,
+            media::get_intensities
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

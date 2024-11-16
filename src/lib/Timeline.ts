@@ -505,8 +505,9 @@ export class Timeline implements WithCanvas {
         this.#frontend.onSelectionChanged.dispatch(ChangeCause.Timeline);
     }
 
-    async load(url: string) {
-        this.#sampler = await AudioSampler.create(url);
+    async load(rawurl: string) {
+        // const url = convertFileSrc(rawurl);
+        this.#sampler = await AudioSampler.open(rawurl);
         this.#scale = Math.max(this.#width / this.#sampler.duration, 10);
         this.#offset = 0;
         this.#cursorPos = 0; // or setCursorPos?
@@ -536,8 +537,9 @@ export class Timeline implements WithCanvas {
         }
         if (this.#sampler.isSampling) return;
 
-        const i = Math.floor(this.#offset * AudioSampler.RESOLUTION),
-              i_end = Math.ceil(end * AudioSampler.RESOLUTION);
+        const resolution = this.#sampler.resolution;
+        const i = Math.floor(this.#offset * resolution),
+              i_end = Math.ceil(end * resolution);
         const subarray = this.#sampler.detail.subarray(i, i_end);
         const first0 = subarray.findIndex((x) => x == 0);
         const firstLarge = subarray.findIndex((x) => x > 5);
@@ -547,11 +549,11 @@ export class Timeline implements WithCanvas {
                     this.#requestedSampler = false;
                 return;
             }
-            start = (first0 + i) / AudioSampler.RESOLUTION;
+            start = (first0 + i) / resolution;
         } else {
             this.#requestedSampler = false;
-            if (first0 >= 0) start = (first0 + i) / AudioSampler.RESOLUTION;
-            else if (firstLarge >= 0) start = (firstLarge + i) / AudioSampler.RESOLUTION;
+            if (first0 >= 0) start = (first0 + i) / resolution;
+            else if (firstLarge >= 0) start = (firstLarge + i) / resolution;
             else return;
         }
 
@@ -604,27 +606,29 @@ export class Timeline implements WithCanvas {
     #renderWaveform() {
         if (!this.#sampler) return;
         if (this.#requestedSampler) this.#processSampler();
-        let start = Math.floor(this.#offset * AudioSampler.RESOLUTION);
-        let end = Math.ceil((this.#offset + this.#width / this.#scale) 
-            * AudioSampler.RESOLUTION);
+
+        const resolution = this.#sampler.resolution;
+
+        let start = Math.floor(this.#offset * resolution);
+        let end = Math.ceil((this.#offset + this.#width / this.#scale) * resolution);
         if (start < 0) start = 0;
         if (end >= this.#sampler.data.length) end = this.#sampler.data.length - 1;
-        const width = 1 / AudioSampler.RESOLUTION * this.#scale;
+        const width = 1 / resolution * this.#scale;
         const step = Math.max(1, Math.ceil(1 / width));
         const drawWidth = Math.max(1, step * width)
         for (let i = start; i < end; i += step) {
             const detail = this.#sampler.detail[i];
             if (detail == 0) continue;
-            let value = this.#sampler.data[i] * this.#height;
-            let x = (i - this.#offset * AudioSampler.RESOLUTION) * width;
+            let value = Math.sqrt(this.#sampler.data[i]) * this.#height;
+            let x = (i - this.#offset * resolution) * width;
 
             this.#cxt.fillStyle = `rgb(100 255 255)`;
             this.#cxt.fillRect(x, (this.#height - value) / 2, 
                 drawWidth, Math.max(value, 1));
 
-            this.#cxt.fillStyle = `rgb(100% 10% 10% / 30%)`;
-            let dh = detail / AudioSampler.RESOLUTION * 200;
-            this.#cxt.fillRect(x, this.#height - dh, drawWidth, dh);
+            // this.#cxt.fillStyle = `rgb(100% 10% 10% / 30%)`;
+            // let dh = detail / resolution * 200;
+            // this.#cxt.fillRect(x, this.#height - dh, drawWidth, dh);
         }
     }
 

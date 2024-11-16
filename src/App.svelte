@@ -424,7 +424,7 @@ Config.init();
   <!-- timeline -->
   <div>
     <canvas class="timeline" bind:this={timelineCanvas} 
-      style="height: 100px;"></canvas>
+      style="height: 150px;"></canvas>
   </div>
 
   <!-- status bar -->

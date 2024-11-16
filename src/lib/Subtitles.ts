@@ -366,7 +366,7 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
 `;
         for (let s of [subs.defaultStyle, ...subs.styles])
             result += `Style: ${s.name},`
-                    + `${s.font},${s.size},`
+                    + `${s.font == '' ? 'Arial' : s.font},${s.size},`
                     + `${toASSColor(s.color)},`
                     + `${toASSColor(s.color)},`
                     + `${toASSColor(s.outlineColor)},`

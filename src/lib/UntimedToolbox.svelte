@@ -238,6 +238,7 @@
   <div>
     <Collapsible header='Fuzzy proofreading [EXPERIMENTAL]'
       showCheck={true} bind:checked={fuzzy.enabled}
+      helpText="Matches currently selected subtitle text with phrases in the untimed text using a fuzzy algorithm. Usage: arrow keys to adjust selection; space to replace."
     >
       <fieldset disabled={!fuzzy.enabled}>
         <table class="config">
@@ -281,7 +282,7 @@
           </tr>
         </table>
       </fieldset>
-      <!-- <i>Note: arrow keys to adjust selection; space to replace </i> -->
+      <!-- <i></i> -->
       
     </Collapsible>
   </div>

@@ -1,6 +1,7 @@
 import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./Subtitles";
 import type { WithCanvas } from "./CanvasKeeper";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 export class VideoPlayer implements WithCanvas {
     #video: HTMLVideoElement;
@@ -51,7 +52,8 @@ export class VideoPlayer implements WithCanvas {
         this.requestRender();
     }
 
-    async load(url: string) {
+    async load(rawurl: string) {
+        const url = convertFileSrc(rawurl);
         return new Promise<void>((resolve, reject) => {
             let handler1 = () => {
                 this.#video.removeEventListener('loadeddata', handler1);

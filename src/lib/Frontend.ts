@@ -306,8 +306,7 @@ export class Frontend {
     }
 
     async openVideo(file: string) {
-        const path = convertFileSrc(file);
-        await this.playback.load(path).catch((x) => this.#status = x).catch((x) => 
+        await this.playback.load(file).catch((x) => this.#status = x).catch((x) => 
             this.status = 'error opening video: ' + x);
         if (this.currentFile != '')
             Config.rememberVideo(this.currentFile, file);

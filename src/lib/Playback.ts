@@ -3,6 +3,7 @@ import { Subtitles } from "./Subtitles";
 import { VideoPlayer } from "./VideoPlayer";
 import { Timeline } from "./Timeline";
 import { ChangeType, Frontend } from "./Frontend";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 export class Playback {
     #isLoaded = false;
@@ -62,12 +63,12 @@ export class Playback {
         return this.timeline;
     }
 
-    async load(url: string) {
+    async load(rawurl: string) {
         assert(this.video !== null);
         assert(this.timeline !== null);
         await Promise.allSettled([
-            this.video.load(url),
-            this.timeline.load(url)
+            this.video.load(rawurl),
+            this.timeline.load(rawurl)
         ]);
         this.#isLoaded = true;
         this.#duration = this.video.duration;

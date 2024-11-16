@@ -1,5 +1,8 @@
 <script lang="ts">
+    import Tooltip from "./Tooltip.svelte";
+
   export let header = "";
+  export let helpText = "";
   export let active = false;
   export let showCheck = false;
   export let checked = false;
@@ -9,8 +12,15 @@
   class:active class:checked
   on:click={() => {active = !active}}
 >
-  <span class='caret'>{header}</span>
-  <span class='check flexgrow' class:hidden={!showCheck}>
+  <span class='caret flexgrow'>{header}</span>
+
+  {#if helpText != ""}
+  <Tooltip position='left' text={helpText}>
+    <span class='info'>i</span>
+  </Tooltip>
+  {/if}
+  
+  <span class='check' class:hidden={!showCheck}>
     <input type='checkbox' bind:checked 
       on:click={(e) => e.stopPropagation()}/>
   </span>
@@ -20,6 +30,12 @@
 </div>
 
 <style>
+.info {
+  font-family: 'Webdings';
+  font-size: 120%;
+  color: gray;
+  margin-right: 5px;
+}
 .check {
   display: inline-block;
   text-align: right;
