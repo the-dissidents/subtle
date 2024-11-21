@@ -1,7 +1,7 @@
 <script lang="ts">
 import { SubtitleStyle } from './Subtitles'
 import StyleEdit from './StyleEdit.svelte';
-import { Frontend } from './Frontend';
+import { ChangeCause, ChangeType, Frontend } from './Frontend';
 import Collapsible from './ui/Collapsible.svelte';
 
 export let frontend: Frontend;
@@ -43,6 +43,7 @@ $: show, frontend.subs.styles = frontend.subs.styles;
     on:click={() => {
       let newStyle = new SubtitleStyle('new');
       frontend.subs.styles = [...frontend.subs.styles, newStyle];
+      frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
     }}>+</button>
 </Collapsible>
 

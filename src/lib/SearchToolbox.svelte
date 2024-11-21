@@ -73,7 +73,7 @@
 						currentTextIndex = j;
 
 						frontend.selectEntry(ent, false, true, ChangeCause.Action);
-						frontend.current.style = channel.style;
+						frontend.focused.style = channel.style;
 						break outerLoop;
 					}
 				}
@@ -94,7 +94,7 @@
 			currentEntry = null;
 			currentTextIndex = 0;
 			if (once) {
-				frontend.current.entry = null;
+				frontend.focused.entry = null;
 				frontend.onSelectionChanged.dispatch(ChangeCause.Action);
 			}
 		}

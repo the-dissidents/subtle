@@ -84,6 +84,7 @@
         assert(i >= 0);
         let newStyle = new SubtitleStyle('new');
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
+        frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>+</button><br/>
     <button disabled={style == subtitles.defaultStyle || style == subtitles.styles[0]}
@@ -95,6 +96,7 @@
           style, 
           subtitles.styles[i-1],
           ...subtitles.styles.slice(i+1)];
+        frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>↑</button><br/>
     <button disabled={style == subtitles.defaultStyle || style == subtitles.styles.at(-1)}
@@ -106,6 +108,7 @@
           subtitles.styles[i+1],
           style, 
           ...subtitles.styles.slice(i+2)];
+        frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>↓</button><br/>
     <button bind:this={button} on:click={() => contextMenu()}>...</button>

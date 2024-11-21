@@ -27,9 +27,9 @@ const appWindow = getCurrentWebviewWindow()
 
 let frontend = new Frontend();
 let selection = new Set<SubtitleEntry>;
-let subsFocused = false;
+let subsListFocused = false;
 
-$: frontend.states.tableHasFocus = subsFocused;
+$: frontend.states.tableHasFocus = subsListFocused;
 
 let leftPane: HTMLElement;
 let rightPane: HTMLElement;
@@ -55,8 +55,6 @@ let editingT0 = 0;
 let editingT1 = 0;
 let editingDt = 0;
 
-const textArea2Channel = new Map<HTMLTextAreaElement, SubtitleChannel>();
-
 frontend.onUndoBufferChanged.bind(() => {
   undoRedoUpdateCounter++;
 });
@@ -74,8 +72,10 @@ frontend.onSubtitlesChanged.bind((type: ChangeType, cause: ChangeCause) => {
 
 frontend.onSelectionChanged.bind(() => {
   selection = new Set(frontend.getSelection());
-  frontend.current.entry = frontend.current.entry;
-  setupEditForm();
+  // this refreshes the reactive UI
+  frontend.focused.entry = frontend.focused.entry;
+  if (frontend.focused.entry !== null)
+    setupEditForm();
   // console.log('selection changed');
 });
 
@@ -89,8 +89,8 @@ frontend.playback.onRefreshPlaybackControl = () => {
 };
 
 function setupEditForm() {
-  if (!frontend.current.entry) return;
-  let focused = frontend.current.entry;
+  assert(frontend.focused.entry !== null);
+  let focused = frontend.focused.entry;
   editingT0 = focused.start;
   editingT1 = focused.end;
   editingDt = editingT1 - editingT0;
@@ -98,17 +98,16 @@ function setupEditForm() {
   let isEditingNow = frontend.states.isEditing;
   setTimeout(() => {
     let col = document.getElementsByClassName('contentarea');
-    for (let i = 0; i < col.length; i++) {
-      let target = col.item(i) as HTMLTextAreaElement;
-      contentSelfAdjust(target);
+    for (const target of col) {
+      contentSelfAdjust(target as HTMLTextAreaElement);
     }
-    if (isEditingNow) frontend.focusOnCurrentEntry();
+    if (isEditingNow) frontend.startEditingFocusedEntry();
   }, 0);
 };
 
 function applyEditForm() {
-  if (!frontend.current.entry) return;
-  let focused = frontend.current.entry;
+  if (!frontend.focused.entry) return;
+  let focused = frontend.focused.entry;
   focused.start = editingT0;
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
@@ -120,41 +119,18 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
   elem.style.height = `${elem.scrollHeight + 3}px`;
 }
 
-function submitText(node: HTMLTextAreaElement) {
-  if (!frontend.states.editChanged) return;
-  let channel = textArea2Channel.get(node)!;
-  // assert(channel !== undefined);
-
-  console.log('update', channel.text, '->', node.value);
-  channel.text = node.value;
-  frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);
-}
-
 function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
-  console.log('setup', node);
   channel.gui = node;
   node.value = channel.text;
-  textArea2Channel.set(node, channel);
   return {
-    update: (channel: SubtitleChannel) => {
-      let curChannel = textArea2Channel.get(node);
-      assert(curChannel !== undefined);
-      if (curChannel != channel) {
-        curChannel.gui = undefined;
-        submitText(node);
-        textArea2Channel.set(node, channel);
-        console.log('update tae', curChannel, channel);
-        channel.gui = node;
-        node.value = channel.text;
+    update: (newChannel: SubtitleChannel) => {
+      // note that svelte calls this every time the channel object changes in any way, but it's only relevant if it's really changing into ANOTHER one
+      if (newChannel != channel) {
+        channel.gui = undefined;
+        newChannel.gui = node;
+        node.value = newChannel.text;
+        channel = newChannel;
       }
-    },
-    destory: () => {
-      let curChannel = textArea2Channel.get(node);
-      assert(curChannel !== undefined);
-      submitText(node);
-      curChannel.gui = undefined;
-      textArea2Channel.delete(node);
-      console.log('delete tae', curChannel);
     }
   };
 }
@@ -198,7 +174,7 @@ Config.init();
     if (frontend.fileChanged) ev.preventDefault();
   }}
   on:focusin={(ev) => {
-    subsFocused = false;
+    subsListFocused = false;
   }}/>
 
 <!-- dialogs -->
@@ -367,9 +343,9 @@ Config.init();
           </div>
           <!-- channels view -->
           <div class="flexgrow scroll">
-            {#if frontend.current.entry !== null}
+            {#if frontend.focused.entry !== null}
             <table class='fields'>
-              {#each frontend.current.entry.texts as line, i}
+              {#each frontend.focused.entry.texts as line, i}
               <tr>
                 <td>
                   <StyleSelect subtitles={frontend.subs} bind:currentStyle={line.style}
@@ -379,7 +355,7 @@ Config.init();
                     on:click={() => frontend.insertChannelAt(i)}>+</button>
                   <button tabindex='-1'
                     on:click={() => frontend.deleteChannelAt(i)}
-                    disabled={frontend.current.entry.texts.length == 1}>-</button>
+                    disabled={frontend.focused.entry.texts.length == 1}>-</button>
                 </td>
                 <td style='width:100%'>
                   <textarea class='contentarea' tabindex=0
@@ -387,15 +363,17 @@ Config.init();
                     on:keydown={(ev) => {
                       if (ev.key == "Escape") {
                         ev.currentTarget.blur();
-                        subsFocused = true;
+                        subsListFocused = true;
                       }
                     }}
                     on:focus={() => {
                       frontend.states.isEditing = true;
-                      frontend.current.style = line.style;
+                      frontend.focused.channel = line;
+                      frontend.focused.style = line.style;
                     }}
                     on:blur={(x) => {
-                      submitText(x.currentTarget);
+                      frontend.submitFocusedEntry();
+                      frontend.focused.channel = null;
                       frontend.states.isEditing = false;
                     }}
                     on:input={(x) => {
@@ -418,8 +396,8 @@ Config.init();
           <Resizer control={editTable} minValue={100}/>
         </div>
         <!-- table view -->
-        <div class='scrollable fixminheight subscontainer' class:subsfocused={subsFocused} bind:this={frontend.ui.subscontainer}>
-          <SubtitleTable {frontend} bind:selection bind:isFocused={subsFocused}/>
+        <div class='scrollable fixminheight subscontainer' class:subsfocused={subsListFocused} bind:this={frontend.ui.subscontainer}>
+          <SubtitleTable {frontend} bind:selection bind:isFocused={subsListFocused}/>
         </div>
       </div>
     </div>

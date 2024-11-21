@@ -16,7 +16,7 @@ export class UIHelper {
         if (ev.key == 'Enter' && ctrlOrMeta) {
             // insert after
             ev.preventDefault();
-            this.frontend.insertEntryAfter(this.frontend.current.entry ?? undefined);
+            this.frontend.insertEntryAfter(this.frontend.focused.entry ?? undefined);
         }
         else if (ev.key == 'Enter' && isEditingList) {
             // focus on this entry
@@ -24,7 +24,7 @@ export class UIHelper {
             if (this.frontend.states.virtualEntryHighlighted)
                 this.frontend.startEditingNewVirtualEntry();
             else
-                this.frontend.focusOnCurrentEntry();
+                this.frontend.startEditingFocusedEntry();
         }
         else if (ev.key == 'a' && ctrlOrMeta && isEditingList) {
             // select all
@@ -107,7 +107,7 @@ export class UIHelper {
         else if (ev.key == 'Enter' && !ev.shiftKey && this.frontend.states.isEditing){
             // next entry
             ev.preventDefault();
-            let focused = this.frontend.current.entry;
+            let focused = this.frontend.focused.entry;
             if (!focused) return;
             let i = this.frontend.subs.entries.indexOf(focused) + 1;
             if (i == this.frontend.subs.entries.length)
@@ -360,9 +360,9 @@ export class UIHelper {
             }
         if (done > 0) {
             let focus: SubtitleEntry | null = null;
-            if (this.frontend.current.entry
-                && newSelection.indexOf(this.frontend.current.entry) >= 0)
-                focus = this.frontend.current.entry;
+            if (this.frontend.focused.entry
+                && newSelection.indexOf(this.frontend.focused.entry) >= 0)
+                focus = this.frontend.focused.entry;
             this.frontend.clearSelection();
             this.frontend.selection.submitted = new Set(newSelection);
             this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);

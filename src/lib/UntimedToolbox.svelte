@@ -182,9 +182,9 @@
       } else if (ev.key == 'c') {
         textarea.selectionEnd = offset(textarea.selectionEnd, false);
       } else if (ev.key == 'a') {
-        if (fuzzy.currentEntry !== frontend.current.entry) {
+        if (fuzzy.currentEntry !== frontend.focused.entry) {
           console.warn('current entry is not fuzzy.currentEntry, but', 
-            frontend.current.entry);
+            frontend.focused.entry);
           return;
         }
 
@@ -199,9 +199,9 @@
         }
         // the above causes the UI to refresh, so we delay a bit
         setTimeout(() => {
-          frontend.current.entry = fuzzy.currentEntry;
-          frontend.current.style = fuzzy.channel;
-          frontend.focusOnCurrentEntry();
+          frontend.focused.entry = fuzzy.currentEntry;
+          frontend.focused.style = fuzzy.channel;
+          frontend.startEditingFocusedEntry();
         }, 0);
       } 
     }

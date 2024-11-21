@@ -112,15 +112,17 @@ export class SubtitleStyle {
 export type SubtitleChannel = {
     style: SubtitleStyle,
     text: string,
+    // I don't consider this a good practice, but we have to store which channel corresponds to which text area, if any
     gui?: HTMLTextAreaElement
 }
 
 export class SubtitleEntry {
     texts: SubtitleChannel[] = [];
+    // Same here
     gui?: HTMLElement;
-    readonly uniqueID: number;
 
     static #counter = 0;
+    readonly uniqueID: number;
 
     constructor(
         public start: number,

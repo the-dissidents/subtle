@@ -115,16 +115,16 @@ td.subtext {
     }}
     on:dblclick={() => {
       isFocused = true;
-      frontend.focusOnCurrentEntry();
+      frontend.startEditingFocusedEntry();
       frontend.playback.setPosition(ent.start);
     }}
     on:mousemove={(ev) => {
       if (ev.buttons == 1)
         frontend.selectEntry(ent, true, ev.getModifierState(Basic.ctrlKey()));
     }}
-    class:focushlt={frontend.current.entry == ent}
-    class:sametime={frontend.current.entry != ent 
-    && overlappingTime(frontend.current.entry, ent)}
+    class:focushlt={frontend.focused.entry == ent}
+    class:sametime={frontend.focused.entry != ent 
+    && overlappingTime(frontend.focused.entry, ent)}
     class:selected={selection.has(ent)}
   >
   {#if line === ent.texts[0]}

@@ -27,6 +27,9 @@ type SelectionState = {
 
 type FocusState = {
     entry: SubtitleEntry | null,
+    channel: SubtitleChannel | null,
+    control: HTMLTextAreaElement | null,
+    // TODO: maybe separate this, it's not really part of the focus, but a kind of current default
     style: SubtitleStyle | null
 }
 
@@ -96,8 +99,12 @@ export class Frontend {
         currentGroup: [],
         currentStart: null
     };
-    current: FocusState = {
+    
+    // TODO: make it more private to prevent direct editing
+    focused: FocusState = {
         entry: null,
+        channel: null,
+        control: null,
         style: null
     };
 
@@ -167,8 +174,7 @@ export class Frontend {
 
     #readSnapshot(s: Snapshot) {
         this.clearSelection();
-        this.current.entry = null;
-        this.current.style = null;
+        this.focused.style = null;
         this.subs = Subtitles.deserialize(JSON.parse(s.archive));
         this.fileChanged = !s.saved;
         this.onSubtitleObjectReload.dispatch();
@@ -232,7 +238,7 @@ export class Frontend {
 
     async askOpenVideo() {
         const selected = await dialog.open({multiple: false, 
-        filters: [{name: 'video file', extensions: ['avi', 'mp4', 'webm', 'mkv']}]});
+            filters: [{name: 'video file', extensions: ['avi', 'mp4', 'webm', 'mkv']}]});
         if (typeof selected != 'string') return;
         await this.openVideo(selected);
     }
@@ -246,8 +252,7 @@ export class Frontend {
             file = selected;
         }
         const text = JSON.stringify(this.subs.toSerializable());
-        if (await this.saveTo(file, text)) {
-        }
+        await this.saveTo(file, text);
     }
 
     async askExportFile() {
@@ -292,8 +297,8 @@ export class Frontend {
         Config.pushRecent(path);
 
         this.subs = newSubs;
-        this.current.entry = null;
-        this.current.style = newSubs.defaultStyle;
+        this.focused.entry = null;
+        this.focused.style = newSubs.defaultStyle;
         this.currentFile = isJSON ? path : '';
 
         this.status = 'opened: ' + path;
@@ -346,14 +351,15 @@ export class Frontend {
 
     // UI actions
 
-    focusOnCurrentEntry() {
-        if (!this.current.entry) return;
-        let focused = this.current.entry;
-        let channel = focused.texts.find((x) => x.style == this.current.style);
+    startEditingFocusedEntry() {
+        if (!this.focused.entry) return;
+        let focused = this.focused.entry;
+        let channel = focused.texts.find((x) => x.style == this.focused.style);
         if (!channel) {
             channel = focused!.texts[0];
         }
-        this.current.style = channel.style;
+        this.focused.style = channel.style;
+        this.focused.channel = channel;
         if (!channel.gui) return;
         // this.status = 'focused on ' + channel.style.name + ' of ' + channel.text;
         channel.gui.focus();
@@ -400,14 +406,7 @@ export class Frontend {
                 end = Math.min(start + 2, ent.start);
             }
         }
-        let entry = ent 
-            ? new SubtitleEntry(start, end, 
-                ...ent.texts.map((x) => ({style: x.style, text: ''}))) 
-            : new SubtitleEntry(start, end, {style: this.subs.defaultStyle, text: ''});
-        this.subs.entries.splice(index, 0, entry);
-        this.markChanged(ChangeType.Times, ChangeCause.Action);
-        setTimeout(() => this.selectEntry(entry), 0);
-        return entry;
+        return this.insertEntry(ent, start, end, index);
     }
 
     insertEntryAfter(ent?: SubtitleEntry) {
@@ -430,10 +429,14 @@ export class Frontend {
                 end = start + 2;
             }
         }
-        let entry = ent 
-            ? new SubtitleEntry(start, end, 
-                ...ent.texts.map((x) => ({style: x.style, text: ''}))) 
-            : new SubtitleEntry(start, end, {style: this.subs.defaultStyle, text: ''});
+        return this.insertEntry(ent, start, end, index);
+    }
+
+    private insertEntry(ent: SubtitleEntry | undefined, start: number, end: number, index: number) {
+        let entry = ent
+            ? new SubtitleEntry(start, end,
+                ...ent.texts.map((x) => ({ style: x.style, text: '' })))
+            : new SubtitleEntry(start, end, { style: this.subs.defaultStyle, text: '' });
         this.subs.entries.splice(index, 0, entry);
         this.markChanged(ChangeType.Times, ChangeCause.Action);
         setTimeout(() => this.selectEntry(entry), 0);
@@ -453,39 +456,66 @@ export class Frontend {
         // focus on the new entry
         this.clearSelection();
         this.selectEntry(entry);
-        this.current.style = entry.texts[0].style;
+        this.focused.style = entry.texts[0].style;
         setTimeout(() => {
             this.keepEntryInView(entry);
-            this.focusOnCurrentEntry();
+            this.startEditingFocusedEntry();
         }, 0);
         this.states.isEditingVirtualEntry = true;
         this.states.virtualEntryHighlighted = false;
     }
 
     insertChannelAt(index: number) {
-        assert(this.current.entry !== null);
-        let focused = this.current.entry;
+        assert(this.focused.entry !== null);
+        let focused = this.focused.entry;
         let newChannel: SubtitleChannel = {style: focused.texts[index].style, text: ''};
         focused.texts = focused.texts.toSpliced(index + 1, 0, newChannel);
         this.markChanged(ChangeType.TextOnly, ChangeCause.Action);
         setTimeout(() => {
+            // GUI is generated by this time
             newChannel.gui?.focus();
             newChannel.gui?.scrollIntoView();
         }, 0);
     }
 
     deleteChannelAt(index: number) {
-        assert(this.current.entry !== null);
-        let focused = this.current.entry;
+        assert(this.focused.entry !== null);
+        let focused = this.focused.entry;
+        let channel = focused.texts[index];
+        if (channel == this.focused.channel)
+            this.clearFocus(false); // don't try to submit since we're deleting it
         focused.texts = focused.texts.toSpliced(index, 1);
         this.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+    }
+
+    submitFocusedEntry() {
+        assert(this.focused.entry !== null);
+        if (!this.states.editChanged) return;
+
+        let channel = this.focused.channel;
+        assert(channel !== null);
+        let node = channel.gui;
+        assert(node !== undefined);
+
+        // console.log('submit:', channel.text, '->', node.value);
+        channel.text = node.value;
+        this.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);
+    }
+
+    clearFocus(trySubmit = true) {
+        if(this.focused.entry == null) return;
+
+        if (trySubmit && this.focused.channel !== null)
+            this.submitFocusedEntry();
+        this.focused.entry = null;
+        this.focused.channel = null;
     }
 
     clearSelection(cause = ChangeCause.UIList) {
         this.selection.submitted.clear();
         this.selection.currentGroup = [];
         this.selection.currentStart = null;
-        this.current.entry = null;
+        this.clearFocus();
         this.onSelectionChanged.dispatch(cause);
     }
 
@@ -493,8 +523,8 @@ export class Frontend {
         let selection = this.getSelection();
         if (selection.length == 0) return;
         let next = this.subs.entries.at(this.subs.entries.indexOf(selection.at(-1)!) + 1);
-        let newEntries = this.subs.entries.filter(
-            (x) => !selection.includes(x));
+        let newEntries = 
+            this.subs.entries.filter((x) => !selection.includes(x));
         this.subs.entries = newEntries;
         this.clearSelection();
         if (next) this.selectEntry(next);
@@ -540,8 +570,8 @@ export class Frontend {
     }
 
     offsetFocus(n: number, sequence = false, multiple = false) {
-        if (this.current.entry == null) return;
-        let focused = this.current.entry;
+        if (this.focused.entry == null) return;
+        let focused = this.focused.entry;
         let i = this.subs.entries.indexOf(focused) + n;
         if (i < 0 || i >= this.subs.entries.length) {
             this.status = 'focusOffset out of range'
@@ -553,9 +583,11 @@ export class Frontend {
     toggleEntry(ent: SubtitleEntry, 
         sequence = false, multiple = false, cause = ChangeCause.UIList) 
     {
+        // it's only a 'toggle' when multiselecting; otherwise, just select it
         if (multiple) {
-            if (this.current.entry == ent)
-                this.current.entry = null;
+            if (this.focused.entry == ent) {
+                this.clearFocus();
+            }
             if (this.selection.currentGroup.includes(ent)) {
                 for (let e of this.selection.currentGroup)
                     this.selection.submitted.add(e);
@@ -601,14 +633,13 @@ export class Frontend {
             this.selection.submitted.clear();
             this.selection.currentGroup = [ent];
             this.selection.currentStart = ent;
-            // this.#status = 'selection initiated';
         }
-        if (this.current.entry != ent) {
-            // if (this.states.editChanged)
-            //     this.markChanged(false, ChangeCause.UIForm);
+        if (this.focused.entry != ent) {
             this.states.isEditingVirtualEntry = false;
             this.states.virtualEntryHighlighted = false;
-            this.current.entry = ent;
+            this.clearFocus();
+            this.focused.entry = ent;
+            // TODO: focus on current style
             this.keepEntryInView(ent);
             this.onSelectionChanged.dispatch(cause);
         }
