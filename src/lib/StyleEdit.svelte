@@ -46,6 +46,17 @@
         }
       },
       {
+        text: 'duplicate',
+        action() {
+          let clone = style.clone();
+          clone.name = SubtitleTools.getUniqueStyleName(subtitles, style.name);
+          subtitles.styles.push(clone);
+          subtitles.styles = subtitles.styles;
+          frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+          submit();
+        }
+      },
+      {
         text: 'replace by',
         enabled: withoutThis.length > 0,
         items: withoutThis.map((x, i) => ({
@@ -60,16 +71,18 @@
         }))
       },
       {
-        text: 'duplicate',
+        text: 'set as default',
+        enabled: subtitles.defaultStyle != style,
         action() {
-          let clone = style.clone();
-          clone.name = SubtitleTools.getUniqueStyleName(subtitles, style.name);
-          subtitles.styles.push(clone);
-          subtitles.styles = subtitles.styles;
+          let oldDefault = subtitles.defaultStyle;
+          subtitles.defaultStyle = style;
+          const index = subtitles.styles.indexOf(style);
+          subtitles.styles.splice(index, 1);
+          subtitles.styles.splice(0, 0, oldDefault);
           frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
           submit();
         }
-      }
+      },
     ]});
     menu.popup();
   }
@@ -213,7 +226,6 @@
     </Collapsible>
   </div>
 </div>
-<hr>
 
 <style>
 .duplicate {
@@ -282,10 +294,5 @@ input[type='checkbox'] {
 }
 .margin div {
   padding-right: 5px;
-}
-
-hr {
-  border: 0.5px solid rgb(193, 193, 193);
-  border-radius: 0.5px;
 }
 </style>
