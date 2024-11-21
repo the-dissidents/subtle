@@ -191,8 +191,8 @@ Config.init();
   on:load={() => {
     let time = performance.now();
     console.log('load time:', time);
-    setTimeout(() => invoke('init_complete', {task: 'frontend'}), 
-      Math.max(0, 200 - time));
+    // setTimeout(() => invoke('init_complete', {task: 'frontend'}), 
+    //   Math.max(0, 200 - time));
   }}
   on:beforeunload={(ev) => {
     if (frontend.fileChanged) ev.preventDefault();
