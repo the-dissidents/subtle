@@ -1,6 +1,6 @@
 [package]
 name = "subtle"
-version = "0.0.0"
+version = "0.1.2"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -19,6 +19,7 @@ tauri-plugin-fs = "2"
 tauri-plugin-clipboard-manager = "2.0.1"
 tauri-plugin-dialog = "2"
 ffmpeg-next = "7.1.0"
+tauri-plugin-websocket = "2"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

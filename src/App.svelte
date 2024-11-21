@@ -120,6 +120,16 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
   elem.style.height = `${elem.scrollHeight + 3}px`;
 }
 
+function submitText(node: HTMLTextAreaElement) {
+  if (!frontend.states.editChanged) return;
+  let channel = textArea2Channel.get(node)!;
+  // assert(channel !== undefined);
+
+  console.log('update', channel.text, '->', node.value);
+  channel.text = node.value;
+  frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);
+}
+
 function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
   console.log('setup', node);
   channel.gui = node;
@@ -131,20 +141,20 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
       assert(curChannel !== undefined);
       if (curChannel != channel) {
         curChannel.gui = undefined;
-        channel.gui = node;
+        submitText(node);
         textArea2Channel.set(node, channel);
-        // console.log('update', node.value, '->', channel.text);
-        curChannel.text = node.value;
+        console.log('update tae', curChannel, channel);
+        channel.gui = node;
         node.value = channel.text;
-        if (frontend.states.editChanged)
-          frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);
       }
     },
     destory: () => {
       let curChannel = textArea2Channel.get(node);
       assert(curChannel !== undefined);
+      submitText(node);
       curChannel.gui = undefined;
       textArea2Channel.delete(node);
+      console.log('delete tae', curChannel);
     }
   };
 }
@@ -385,10 +395,7 @@ Config.init();
                       frontend.current.style = line.style;
                     }}
                     on:blur={(x) => {
-                      if (frontend.states.editChanged) {
-                        line.text = x.currentTarget.value;
-                        frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);
-                      }
+                      submitText(x.currentTarget);
                       frontend.states.isEditing = false;
                     }}
                     on:input={(x) => {

@@ -3,10 +3,10 @@
 
 mod media;
 
+use std::sync::Mutex;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::State;
-use std::sync::Mutex;
 
 struct SetupState {
     frontend_task: bool,
@@ -15,6 +15,7 @@ struct SetupState {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
@@ -23,11 +24,9 @@ fn main() {
             frontend_task: false,
             backend_task: true,
         }))
-        .manage(Mutex::<Option<media::MediaPlayback>>::new( 
-            None
-        ))
+        .manage(Mutex::<Option<media::MediaPlayback>>::new(None))
         .invoke_handler(tauri::generate_handler![
-            init_complete, 
+            init_complete,
             media::media_status,
             media::audio_status,
             media::open_media,
@@ -57,11 +56,10 @@ async fn init_complete(
     if state_lock.backend_task && state_lock.frontend_task {
         // Setup is complete, we can close the splashscreen
         // and unhide the main window!
-        let splash_window = 
-            match app.get_webview_window("splashscreen") {
-                Some(w) => w,
-                None => return Ok(())
-            };
+        let splash_window = match app.get_webview_window("splashscreen") {
+            Some(w) => w,
+            None => return Ok(()),
+        };
         let main_window = app.get_webview_window("main").unwrap();
         splash_window.close().unwrap();
         main_window.show().unwrap();

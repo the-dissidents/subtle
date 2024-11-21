@@ -2,6 +2,7 @@ import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./Subtitles";
 import type { WithCanvas } from "./CanvasKeeper";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import WebSocket from '@tauri-apps/plugin-websocket';
 
 export class VideoPlayer implements WithCanvas {
     #video: HTMLVideoElement;

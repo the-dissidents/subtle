@@ -1,7 +1,7 @@
 {
   "name": "subtle",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
     "@tauri-apps/plugin-os": "^2.0.0",
+    "@tauri-apps/plugin-websocket": "^2.0.0",
     "eld": "^1.0.0"
   },
   "devDependencies": {
