@@ -1,8 +1,15 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
+import WebSocket from '@tauri-apps/plugin-websocket';
+import { assert } from './Basic';
 
 type MediaEvent = {
     event: 'done'
     data: {}
+} | {
+    event: 'opened'
+    data: {
+        id: number
+    }
 } | {
     event: 'mediaStatus',
     data: {
@@ -36,7 +43,10 @@ type MediaEvent = {
         what: string
     }
 } | {
-    event: 'noMedia',
+    event: 'noStream',
+    data: {}
+} | {
+    event: 'invalidId',
     data: {}
 };
 
@@ -69,8 +79,8 @@ function createChannel(handler: {[key in MediaEventKey]?: MediaEventHandler<key>
             break;
         case 'runtimeError':
             throw new MediaError(msg.data.what);
-        case 'noMedia':
-            throw new MediaError('no media opened');
+        case 'invalidId':
+            throw new MediaError('invalid media ID referenced');
         default:
             console.warn('unhandled event:', msg);
         }
@@ -78,39 +88,76 @@ function createChannel(handler: {[key in MediaEventKey]?: MediaEventHandler<key>
     return channel;
 }
 
-export const MAPI = {
-    openMedia(path: string) {
-        return new Promise<void>((resolve, reject) => {
+export class IPCClient {
+    #socket: WebSocket;
+
+    private constructor(socket: WebSocket) {
+        this.#socket = socket;
+    }
+
+    static async create() {
+        let socket = await WebSocket.connect("ws://127.0.0.1:42069");
+        socket.addListener((msg) => {
+            console.log('from socket:', msg);
+        });
+        return new IPCClient(socket);
+    }
+}
+
+export class MMedia {
+    #destroyed = false;
+
+    private constructor(private id: number) {}
+
+    static open(path: string) {
+        return new Promise<MMedia>((resolve, reject) => {
             let channel = createChannel({
-                done: () => resolve()
+                opened: (data) => resolve(new MMedia(data.id))
             });
             console.log('called open_media');
             invoke('open_media', {path, channel});
         });
-    },
-    
-    openAudio(index: number) {
+    }
+
+    get isClosed() {
+        return this.#destroyed;
+    }
+
+    close() {
+        assert(!this.#destroyed);
+        return new Promise<void>((resolve, reject) => {
+            let channel = createChannel({
+                done: () => {
+                    this.#destroyed = true;
+                    resolve();
+                }
+            });
+            invoke('close_media', {id: this.id, channel});
+        });
+    }
+
+    openAudio(audioId: number) {
+        assert(!this.#destroyed);
         return new Promise<void>((resolve, reject) => {
             let channel = createChannel({
                 done: () => resolve()
             });
             console.log('called open_audio');
-            invoke('open_audio', {index, channel});
+            invoke('open_audio', {id: this.id, audioId, channel});
         });
-    },
+    }
 
-    mediaStatus() {
+    status() {
         return new Promise<{
             audioIndex: number,
             videoIndex: number
-        } | null>((resolve, reject) => {
+        }>((resolve, reject) => {
             let channel = createChannel({
-                mediaStatus: (data) => resolve(data),
-                noMedia: () => resolve(null)
+                mediaStatus: (data) => resolve(data)
             });
-            invoke('media_status', {channel});
+            invoke('media_status', {id: this.id, channel});
         });
-    },
+    }
 
     audioStatus() {
         return new Promise<{
@@ -120,29 +167,20 @@ export const MAPI = {
         } | null>((resolve, reject) => {
             let channel = createChannel({
                 audioStatus: (data) => resolve(data),
-                noMedia: () => resolve(null)
+                noStream: () => resolve(null)
             });
-            invoke('audio_status', {channel});
+            invoke('audio_status', {id: this.id, channel});
         });
-    },
-
-    closeMedia() {
-        return new Promise<void>((resolve, reject) => {
-            let channel = createChannel({
-                done: () => resolve()
-            });
-            invoke('close_media', {channel});
-        });
-    },
+    }
 
     seekAudio(position: number) {
         return new Promise<void>((resolve, reject) => {
             let channel = createChannel({
                 done: () => resolve()
             });
-            invoke('seek_audio', {channel, position});
+            invoke('seek_audio', {id: this.id, channel, position});
         });
-    },
+    }
 
     getIntensities(until: number, step: number) {
         return new Promise<{
@@ -153,8 +191,14 @@ export const MAPI = {
             let channel = createChannel({
                 intensityList: (data) => resolve(data),
             });
-            invoke('get_intensities', {channel, until, step});
+            invoke('get_intensities', {id: this.id, channel, until, step});
         });
+    }
+}
+
+export const MAPI = {
+    async testSocket() {
+        await invoke('request_something', {});
     }
 }
 

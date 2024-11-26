@@ -3,6 +3,7 @@ import { Basic, assert } from "./Basic";
 import type { WithCanvas } from "./CanvasKeeper";
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./Subtitles";
 import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
+import { MMedia } from "./API";
 
 const SCROLLER_HEIGHT = 15;
 const HEADER_HEIGHT = 30;
@@ -509,9 +510,14 @@ export class Timeline implements WithCanvas {
         this.#frontend.onSelectionChanged.dispatch(ChangeCause.Timeline);
     }
 
+    #samplerMedia?: MMedia;
+
     async load(rawurl: string) {
-        // const url = convertFileSrc(rawurl);
-        this.#sampler = await AudioSampler.open(rawurl);
+        if (this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed) {
+            this.#samplerMedia.close();
+        }
+        this.#samplerMedia = await MMedia.open(rawurl);
+        this.#sampler = await AudioSampler.open(this.#samplerMedia);
         this.#scale = Math.max(this.#width / this.#sampler.duration, 10);
         this.#offset = 0;
         this.#cursorPos = 0; // or setCursorPos?

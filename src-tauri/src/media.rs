@@ -1,12 +1,27 @@
 extern crate ffmpeg_next as ffmpeg;
 
 use serde::Serialize;
+use std::collections::HashMap;
 use std::sync::Mutex;
 use tauri::ipc::Channel;
 use tauri::State;
 
 pub mod internal;
 pub(crate) use internal::MediaPlayback;
+
+pub struct PlaybackRegistry {
+    next_id: i32,
+    table: HashMap<i32, MediaPlayback>
+}
+
+impl PlaybackRegistry {
+    pub fn new() -> PlaybackRegistry {
+        PlaybackRegistry {
+            next_id: 0,
+            table: HashMap::new()
+        } 
+    }
+}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
@@ -37,7 +52,13 @@ pub enum MediaEvent<'a> {
     #[serde(rename_all = "camelCase")]
     RuntimeError { what: &'a str },
     #[serde(rename_all = "camelCase")]
-    NoMedia {},
+    Opened {
+        id: i32
+    },
+    #[serde(rename_all = "camelCase")]
+    NoStream {},
+    #[serde(rename_all = "camelCase")]
+    InvalidId {},
 }
 
 fn send(channel: &Channel<MediaEvent>, what: MediaEvent) {
@@ -54,9 +75,9 @@ macro_rules! send_error {
     };
 }
 
-fn send_nomedia(channel: &Channel<MediaEvent>) {
+fn send_invalid_id(channel: &Channel<MediaEvent>) {
     channel
-        .send(MediaEvent::NoMedia {})
+        .send(MediaEvent::InvalidId {})
         .expect("Error sending event");
 }
 
@@ -65,11 +86,15 @@ fn send_done(channel: &Channel<MediaEvent>) {
 }
 
 #[tauri::command]
-pub fn media_status(state: State<Mutex<Option<MediaPlayback>>>, channel: Channel<MediaEvent>) {
+pub fn media_status(
+    id: i32,
+    state: State<Mutex<PlaybackRegistry>>, 
+    channel: Channel<MediaEvent>
+) {
     let mut ap = state.lock().unwrap();
-    let playback = match (*ap).as_mut() {
+    let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_nomedia(&channel),
+        None => return send_invalid_id(&channel),
     };
     let audio_index: i32 = match playback.audio() {
         Some(c) => c.stream_index().try_into().unwrap(),
@@ -88,15 +113,19 @@ pub fn media_status(state: State<Mutex<Option<MediaPlayback>>>, channel: Channel
 }
 
 #[tauri::command]
-pub fn audio_status(state: State<Mutex<Option<MediaPlayback>>>, channel: Channel<MediaEvent>) {
+pub fn audio_status(
+    id: i32,
+    state: State<Mutex<PlaybackRegistry>>, 
+    channel: Channel<MediaEvent>
+) {
     let mut ap = state.lock().unwrap();
-    let playback = match (*ap).as_mut() {
+    let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_nomedia(&channel),
+        None => return send_invalid_id(&channel),
     };
     let ctx = match playback.audio() {
         Some(c) => c,
-        None => return send_nomedia(&channel),
+        None => return send(&channel, MediaEvent::NoStream {  }),
     };
     send(
         &channel,
@@ -109,52 +138,55 @@ pub fn audio_status(state: State<Mutex<Option<MediaPlayback>>>, channel: Channel
 }
 
 #[tauri::command]
-pub fn close_media(state: State<Mutex<Option<MediaPlayback>>>, channel: Channel<MediaEvent>) {
+pub fn close_media(
+    id: i32,
+    state: State<Mutex<PlaybackRegistry>>, 
+    channel: Channel<MediaEvent>
+) {
     let mut ap = state.lock().unwrap();
-    if ap.is_none() {
-        return send_nomedia(&channel);
+    if ap.table.remove(&id).is_none() {
+        return send_invalid_id(&channel);
     }
-    *ap = None;
     send_done(&channel);
 }
 
 #[tauri::command]
 pub fn open_media(
-    state: State<Mutex<Option<MediaPlayback>>>,
+    state: State<Mutex<PlaybackRegistry>>,
     path: &str,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    if let Some(_) = *ap {
-        return send_error!(&channel, "Media already open");
-    }
-
     send(&channel, MediaEvent::Debug { message: path });
 
-    *ap = match MediaPlayback::from_file(path) {
-        Ok(x) => Some(x),
+    let playback = match MediaPlayback::from_file(path) {
+        Ok(x) => x,
         Err(e) => return send_error!(&channel, e.to_string()),
     };
 
-    send_done(&channel);
+    let id = ap.next_id;
+    ap.next_id += 1;
+    ap.table.insert(id, playback);
+    send(&channel, MediaEvent::Opened { id });
 }
 
 #[tauri::command]
 pub fn open_audio(
-    state: State<Mutex<Option<MediaPlayback>>>,
-    index: i32,
+    id: i32,
+    audio_id: i32,
+    state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let playback = match (*ap).as_mut() {
+    let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_nomedia(&channel),
+        None => return send_invalid_id(&channel),
     };
 
-    let index = if index < 0 {
+    let index = if audio_id < 0 {
         None
     } else {
-        Some(index as usize)
+        Some(audio_id as usize)
     };
     let audio = match playback.open_audio(index) {
         Ok(_) => playback.audio().unwrap(),
@@ -181,18 +213,19 @@ pub fn open_audio(
 
 #[tauri::command]
 pub fn seek_audio(
-    state: State<Mutex<Option<MediaPlayback>>>,
-    channel: Channel<MediaEvent>,
+    id: i32,
     position: i64,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let playback = match (*ap).as_mut() {
+    let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_nomedia(&channel),
+        None => return send_invalid_id(&channel),
     };
     let _ = match playback.audio() {
         Some(c) => c,
-        None => return send_nomedia(&channel),
+        None => return send_invalid_id(&channel),
     };
     if let Err(e) = playback.seek_audio(position) {
         return send_error!(&channel, e.to_string());
@@ -203,18 +236,19 @@ pub fn seek_audio(
 
 #[tauri::command]
 pub fn get_intensities(
-    state: State<Mutex<Option<MediaPlayback>>>,
-    channel: Channel<MediaEvent>,
+    id: i32,
     until: i64,
     step: i64,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let playback = match (*ap).as_mut() {
+    let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_nomedia(&channel),
+        None => return send_invalid_id(&channel),
     };
     if playback.audio().is_none() {
-        return send_nomedia(&channel);
+        return send_invalid_id(&channel);
     }
 
     let mut vector = Vec::<f32>::new();

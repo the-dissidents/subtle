@@ -2,7 +2,7 @@ import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./Subtitles";
 import type { WithCanvas } from "./CanvasKeeper";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import WebSocket from '@tauri-apps/plugin-websocket';
+import { IPCClient, MAPI } from "./API";
 
 export class VideoPlayer implements WithCanvas {
     #video: HTMLVideoElement;
@@ -26,6 +26,7 @@ export class VideoPlayer implements WithCanvas {
     #displayWidth = 1920;
     #displayHeight = 1080;
     #subRenderer?: SubtitleRenderer;
+    #ipc?: IPCClient;
 
     get subRenderer() {return this.#subRenderer;}
 
@@ -35,6 +36,11 @@ export class VideoPlayer implements WithCanvas {
     constructor(ctx: CanvasRenderingContext2D) {
         this.#video = document.createElement('video');
         this.#ctx = ctx;
+
+        IPCClient.create().then((x) => {
+            this.#ipc = x;
+            MAPI.testSocket();
+        });
     }
 
     setDisplaySize(w: number, h: number) {

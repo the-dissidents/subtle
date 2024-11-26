@@ -116,8 +116,7 @@ impl MediaPlayback {
         };
 
         let pts_multiplier: f64 = (decoder.time_base()
-            * ffmpeg::Rational::new(
-                decoder.rate().try_into().unwrap(), 1)).into();
+            * ffmpeg::Rational::new(decoder.rate().try_into().unwrap(), 1)).into();
         if pts_multiplier != 1.0 {
             return Err("time_base not equal to 1/rate".to_string());
         }

@@ -8,12 +8,42 @@ use tauri::AppHandle;
 use tauri::Manager;
 use tauri::State;
 
+use tokio::net::{TcpListener, TcpStream};
+use futures::SinkExt;
+use tokio::sync::broadcast;
+use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
+
 struct SetupState {
     frontend_task: bool,
     backend_task: bool,
 }
 
-fn main() {
+struct SocketState {
+    sender: broadcast::Sender<Message>
+}
+
+async fn handle_user(tcp: TcpStream, tx: broadcast::Sender<Message>) {
+    let mut socket_stream: tokio_tungstenite::WebSocketStream<TcpStream> 
+        = accept_async(tcp).await.unwrap();
+    let mut rx = tx.subscribe();
+    while let Ok(msg) = rx.recv().await {
+        socket_stream.send(msg).await.unwrap();
+    }
+}
+
+async fn accept_users(server: TcpListener, tx: broadcast::Sender<Message>) {
+    while let Ok((tcp, _)) = server.accept().await {
+        tokio::spawn(handle_user(tcp, tx.clone()));
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let (tx, _) 
+         = broadcast::channel::<Message>(16);
+    let server = TcpListener::bind("127.0.0.1:42069").await.unwrap();
+    tokio::spawn(accept_users(server, tx.clone()));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_dialog::init())
@@ -24,7 +54,10 @@ fn main() {
             frontend_task: false,
             backend_task: true,
         }))
-        .manage(Mutex::<Option<media::MediaPlayback>>::new(None))
+        .manage(Mutex::new(media::PlaybackRegistry::new()))
+        .manage(Mutex::new(SocketState {
+            sender: tx
+        }))
         .invoke_handler(tauri::generate_handler![
             init_complete,
             media::media_status,
@@ -33,10 +66,19 @@ fn main() {
             media::close_media,
             media::open_audio,
             media::seek_audio,
-            media::get_intensities
+            media::get_intensities,
+            request_something
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+async fn request_something(state: State<'_, Mutex<SocketState>>) -> Result<(), ()> {
+    let state_lock = state.lock().unwrap();
+    let rnd = rand::random::<i32>();
+    state_lock.sender.send(Message::Text(format!("Something: {rnd}"))).unwrap();
+    Ok(())
 }
 
 #[tauri::command]

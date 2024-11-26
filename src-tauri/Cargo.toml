@@ -20,6 +20,10 @@ tauri-plugin-clipboard-manager = "2.0.1"
 tauri-plugin-dialog = "2"
 ffmpeg-next = "7.1.0"
 tauri-plugin-websocket = "2"
+tokio = { version = "1.41.1", features = ["macros", "net", "sync"] }
+tokio-tungstenite = "0.24.0"
+futures = "0.3.31"
+rand = "0.8.5"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

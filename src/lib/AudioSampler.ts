@@ -1,12 +1,11 @@
-import { MAPI } from "./API";
+import { MAPI, MMedia } from "./API";
 import { assert } from "./Basic";
 
 export class AudioSampler {
     #length: number;
     #sampleRate: number;
     #size: number;
-    // TODO: implement a fixed buffer size, adjust resolution dynamically
-    // since data retreival is very fast now
+    // TODO: implement a fixed buffer size, adjust resolution dynamically since data retreival is very fast now
     // #bufferSize = 250000;
 
     #sampleStart = 0;
@@ -14,6 +13,7 @@ export class AudioSampler {
     #sampleProgress = 0;
     #cancelling = false;
     #isSampling = false;
+    #media: MMedia;
 
     static SAMPLE_LENGTH = 1024;
     data: Float32Array;
@@ -27,9 +27,8 @@ export class AudioSampler {
     get sampleEnd() {return this.#sampleEnd / this.#sampleRate;}
     get sampleProgress() {return this.#sampleProgress / this.#sampleRate;}
 
-    static Instance: AudioSampler | null = null;
-
-    private constructor(length: number, rate: number) {
+    private constructor(length: number, rate: number, media: MMedia) {
+        this.#media = media;
         this.#length = length;
         this.#sampleRate = rate;
         this.#size = length / AudioSampler.SAMPLE_LENGTH;
@@ -37,17 +36,17 @@ export class AudioSampler {
         this.detail = new Float32Array(this.#size);
     }
 
-    static async open(url: string) {
-        if (await MAPI.mediaStatus())
-            await MAPI.closeMedia();
-        await MAPI.openMedia(url);
-        await MAPI.openAudio(-1);
-        let info = await MAPI.audioStatus();
+    static async open(media: MMedia) {
+        await media.openAudio(-1);
+        let info = await media.audioStatus();
         if (info == null)
             throw Error("Unable to open audio");
-        this.Instance = new AudioSampler(
-            info.length, info.sampleRate);
-        return this.Instance;
+        return new AudioSampler(
+            info.length, info.sampleRate, media);
+    }
+
+    async close() {
+        await this.#media.close();
     }
 
     tryCancelSampling() {
@@ -74,8 +73,8 @@ export class AudioSampler {
         let doSampling = async (resolve: () => void) => {
             let next = this.#sampleProgress + AudioSampler.SAMPLE_LENGTH * 500;
             if (next > b) next = b;
-            const data = await MAPI.getIntensities(next, AudioSampler.SAMPLE_LENGTH);
-            const status = await MAPI.audioStatus();
+            const data = await this.#media.getIntensities(next, AudioSampler.SAMPLE_LENGTH);
+            const status = await this.#media.audioStatus();
             assert(status !== null);
             this.#sampleProgress = status.position;
             
@@ -102,7 +101,7 @@ export class AudioSampler {
         this.#isSampling = true;
         this.#cancelling = false;
         return new Promise<void>((resolve) => {
-            MAPI.seekAudio(a).then(() => {
+            this.#media.seekAudio(a).then(() => {
                 this.#sampleProgress = a;
                 console.log('starting sampling: ', a, b, 'at', speed);
                 requestAnimationFrame(() => doSampling(resolve));
