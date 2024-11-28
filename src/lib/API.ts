@@ -26,6 +26,14 @@ type MediaEvent = {
         sampleRate: number
     }
 } | {
+    event: 'videoStatus',
+    data: {
+        position: number,
+        length: number,
+        framerate: number,
+        width: number, height: number
+    }
+} | {
     event: 'intensityList',
     data: {
         start: number,
@@ -147,10 +155,24 @@ export class MMedia {
         });
     }
 
+    openVideo(videoId: number) {
+        assert(!this.#destroyed);
+        return new Promise<void>((resolve, reject) => {
+            let channel = createChannel({
+                done: () => resolve()
+            });
+            console.log('called open_video');
+            invoke('open_video', {id: this.id, videoId, channel});
+        });
+    }
+
     status() {
+        assert(!this.#destroyed);
         return new Promise<{
             audioIndex: number,
-            videoIndex: number
+            videoIndex: number,
+            duration: number,
+            streams: string[]
         }>((resolve, reject) => {
             let channel = createChannel({
                 mediaStatus: (data) => resolve(data)
@@ -160,6 +182,7 @@ export class MMedia {
     }
 
     audioStatus() {
+        assert(!this.#destroyed);
         return new Promise<{
             position: number,
             sampleRate: number,
@@ -173,7 +196,34 @@ export class MMedia {
         });
     }
 
+    videoStatus() {
+        assert(!this.#destroyed);
+        return new Promise<{
+            position: number,
+            length: number,
+            framerate: number,
+            width: number, height: number
+        } | null>((resolve, reject) => {
+            let channel = createChannel({
+                videoStatus: (data) => resolve(data),
+                noStream: () => resolve(null)
+            });
+            invoke('video_status', {id: this.id, channel});
+        });
+    }
+
+    setVideoSize(width: number, height: number) {
+        assert(!this.#destroyed);
+        return new Promise<void>((resolve, reject) => {
+            let channel = createChannel({
+                done: () => resolve()
+            });
+            invoke('video_set_size', {id: this.id, channel, width, height});
+        });
+    }
+
     seekAudio(position: number) {
+        assert(!this.#destroyed);
         return new Promise<void>((resolve, reject) => {
             let channel = createChannel({
                 done: () => resolve()
@@ -183,6 +233,7 @@ export class MMedia {
     }
 
     getIntensities(until: number, step: number) {
+        assert(!this.#destroyed);
         return new Promise<{
             start: number,
             end: number,

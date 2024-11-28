@@ -2,7 +2,7 @@ import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./Subtitles";
 import type { WithCanvas } from "./CanvasKeeper";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { IPCClient, MAPI } from "./API";
+import { IPCClient, MAPI, MMedia } from "./API";
 
 export class VideoPlayer implements WithCanvas {
     #video: HTMLVideoElement;
@@ -26,7 +26,6 @@ export class VideoPlayer implements WithCanvas {
     #displayWidth = 1920;
     #displayHeight = 1080;
     #subRenderer?: SubtitleRenderer;
-    #ipc?: IPCClient;
 
     get subRenderer() {return this.#subRenderer;}
 
@@ -38,7 +37,6 @@ export class VideoPlayer implements WithCanvas {
         this.#ctx = ctx;
 
         IPCClient.create().then((x) => {
-            this.#ipc = x;
             MAPI.testSocket();
         });
     }
@@ -59,7 +57,16 @@ export class VideoPlayer implements WithCanvas {
         this.requestRender();
     }
 
+    #media?: MMedia;
+
     async load(rawurl: string) {
+        if (this.#media !== undefined && !this.#media.isClosed) {
+            this.#media.close();
+        }
+        this.#media = await MMedia.open(rawurl);
+        await this.#media.openVideo(-1);
+        await this.#media.setVideoSize(640, 480);
+
         const url = convertFileSrc(rawurl);
         return new Promise<void>((resolve, reject) => {
             let handler1 = () => {

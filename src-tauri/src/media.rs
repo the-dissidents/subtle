@@ -48,6 +48,14 @@ pub enum MediaEvent<'a> {
         sample_rate: u32,
     },
     #[serde(rename_all = "camelCase")]
+    VideoStatus {
+        position: i64,
+        length: i64,
+        framerate: f64,
+        width: u32,
+        height: u32
+    },
+    #[serde(rename_all = "camelCase")]
     Debug { message: &'a str },
     #[serde(rename_all = "camelCase")]
     RuntimeError { what: &'a str },
@@ -125,7 +133,7 @@ pub fn audio_status(
     };
     let ctx = match playback.audio() {
         Some(c) => c,
-        None => return send(&channel, MediaEvent::NoStream {  }),
+        None => return send(&channel, MediaEvent::NoStream { }),
     };
     send(
         &channel,
@@ -135,6 +143,55 @@ pub fn audio_status(
             sample_rate: ctx.decoder().rate(),
         },
     );
+}
+
+#[tauri::command]
+pub fn video_status(
+    id: i32,
+    state: State<Mutex<PlaybackRegistry>>, 
+    channel: Channel<MediaEvent>
+) {
+    let mut ap = state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => return send_invalid_id(&channel),
+    };
+    let ctx = match playback.video() {
+        Some(c) => c,
+        None => return send(&channel, MediaEvent::NoStream { }),
+    };
+    let (width, height) = ctx.output_size();
+    send(
+        &channel,
+        MediaEvent::VideoStatus { 
+            position: ctx.position(), 
+            length: ctx.length(), 
+            framerate: ctx.framerate().into(),
+            width, height
+        }
+    );
+}
+
+#[tauri::command]
+pub fn video_set_size(
+    id: i32,
+    width: u32, height: u32,
+    state: State<Mutex<PlaybackRegistry>>, 
+    channel: Channel<MediaEvent>
+) {
+    let mut ap = state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => return send_invalid_id(&channel),
+    };
+    let ctx = match playback.video_mut() {
+        Some(c) => c,
+        None => return send(&channel, MediaEvent::NoStream { }),
+    };
+    match ctx.set_output_size((width, height)) {
+        Ok(_) => send_done(&channel),
+        Err(e) => send_error!(&channel, e)
+    }
 }
 
 #[tauri::command]
@@ -171,6 +228,39 @@ pub fn open_media(
 }
 
 #[tauri::command]
+pub fn open_video(
+    id: i32,
+    video_id: i32,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) {
+    let mut ap = state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => return send_invalid_id(&channel),
+    };
+
+    let index = 
+        if video_id < 0 { None } else { Some(video_id as usize) };
+    let video = match playback.open_video(index) {
+        Ok(_) => playback.video().unwrap(),
+        Err(e) => return send_error!(&channel, e.to_string()),
+    };
+
+    send(&channel, MediaEvent::Debug 
+        {
+            message: format!(
+                "opening video {}; len={}:format={}",
+                video.stream_index(),
+                video.length(),
+                video.decoder().format().descriptor().unwrap().name()
+            ).as_str(),
+        });
+
+    send_done(&channel);
+}
+
+#[tauri::command]
 pub fn open_audio(
     id: i32,
     audio_id: i32,
@@ -183,30 +273,25 @@ pub fn open_audio(
         None => return send_invalid_id(&channel),
     };
 
-    let index = if audio_id < 0 {
-        None
-    } else {
-        Some(audio_id as usize)
-    };
+    let index = 
+        if audio_id < 0 { None } else { Some(audio_id as usize) };
     let audio = match playback.open_audio(index) {
         Ok(_) => playback.audio().unwrap(),
         Err(e) => return send_error!(&channel, e.to_string()),
     };
 
-    send(
-        &channel,
-        MediaEvent::Debug {
-            message: format!(
-                "opening audio {}; time_base={}:sample_rate={}:sample_fmt={}:channel_layout=0x{:x}",
-                audio.stream_index(),
-                audio.decoder().time_base(),
-                audio.decoder().rate(),
-                audio.decoder().format().name(),
-                audio.decoder().channel_layout().bits()
-            )
-            .as_str(),
-        },
-    );
+    send(&channel, MediaEvent::Debug 
+    {
+        message: format!(
+            "opening audio {}; len={}:decoder_tb={}:sample_rate={}:sample_fmt={}:channel_layout=0x{:x}",
+            audio.stream_index(),
+            audio.length(),
+            audio.decoder().time_base(),
+            audio.decoder().rate(),
+            audio.decoder().format().name(),
+            audio.decoder().channel_layout().bits()
+        ).as_str(),
+    });
 
     send_done(&channel);
 }
@@ -221,13 +306,36 @@ pub fn seek_audio(
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_invalid_id(&channel),
+        None => return send_invalid_id(&channel)
     };
-    let _ = match playback.audio() {
+    let ctx = match playback.audio() {
         Some(c) => c,
-        None => return send_invalid_id(&channel),
+        None => return send(&channel, MediaEvent::NoStream { })
     };
-    if let Err(e) = playback.seek_audio(position) {
+    if let Err(e) = playback.seek(position, ctx.pos_timebase()) {
+        return send_error!(&channel, e.to_string());
+    };
+
+    send_done(&channel);
+}
+
+#[tauri::command]
+pub fn seek_video(
+    id: i32,
+    position: i64,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) {
+    let mut ap = state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => return send_invalid_id(&channel)
+    };
+    let ctx = match playback.video() {
+        Some(c) => c,
+        None => return send(&channel, MediaEvent::NoStream { })
+    };
+    if let Err(e) = playback.seek(position, ctx.pos_timebase()) {
         return send_error!(&channel, e.to_string());
     };
 
@@ -248,7 +356,7 @@ pub fn get_intensities(
         None => return send_invalid_id(&channel),
     };
     if playback.audio().is_none() {
-        return send_invalid_id(&channel);
+        return send(&channel, MediaEvent::NoStream { });
     }
 
     let mut vector = Vec::<f32>::new();

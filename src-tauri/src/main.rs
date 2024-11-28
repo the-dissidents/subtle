@@ -62,11 +62,18 @@ async fn main() {
             init_complete,
             media::media_status,
             media::audio_status,
+            media::video_status,
             media::open_media,
             media::close_media,
+
             media::open_audio,
             media::seek_audio,
             media::get_intensities,
+
+            media::open_video,
+            media::seek_video,
+            media::video_set_size,
+            
             request_something
         ])
         .run(tauri::generate_context!())
