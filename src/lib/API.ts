@@ -115,11 +115,12 @@ const IPCInternal = {
     listeners: new Map<Object, IPCListener[]>()
 }
 
+/** @deprecated */
 export const IPC = {
     async init() {
         if (IPCInternal.socket != undefined) return;
         
-        IPCInternal.socket = new WebSocket("ws://127.0.0.1:42069");
+        IPCInternal.socket = new WebSocket("wss://127.0.0.1:42069");
         IPCInternal.socket.binaryType = "arraybuffer";
         return new Promise<void>((resolve, reject) => {
             IPCInternal.socket!.onopen = () => {
@@ -196,33 +197,38 @@ export class MMedia {
         private _duration: number,
         private _streams: string[]
     ) {
-        IPC.registerListener(this, (msg) => {
-            if (msg.type == 'binary' && this.onReceiveVideoFrame !== undefined) {
-                const view = new DataView(msg.content);
-                const kind = String.fromCharCode(view.getUint8(0));
-                const position = Number(view.getBigInt64(1+0, true));
-                const time = view.getFloat64(1+8, true);
-                const stride = Number(view.getBigUint64(1+16, true));
-                const length = Number(view.getBigUint64(1+24, true));
-                // console.log(position, time, length);
-                const content = new Uint8ClampedArray(msg.content, 1+32, length);
+        // IPC.registerListener(this, (msg) => {
+        //     if (msg.type == 'binary' && this.onReceiveVideoFrame !== undefined) {
+                
+        //     }
+        // })
+    }
 
-                switch (kind) {
-                case 'V':
-                    const struct: VideoFrameData = { position, time, stride, content };
-                    this.onReceiveVideoFrame(struct);
-                    break;
-                case 'A':
-                    
-                default:
-                    console.log('Invalid message type:', kind);
-                }
-            }
-        })
+    #readFrameData(data: ArrayBuffer) {
+        const view = new DataView(data);
+        const kind = String.fromCharCode(view.getUint8(0));
+        const position = Number(view.getBigInt64(1+0, true));
+        const time = view.getFloat64(1+8, true);
+        const stride = Number(view.getBigUint64(1+16, true));
+        const length = Number(view.getBigUint64(1+24, true));
+        // console.log(position, time, length);
+        const content = new Uint8ClampedArray(data, 1+32, length);
+
+        switch (kind) {
+        case 'V':
+            const struct: VideoFrameData = { position, time, stride, content };
+            if (this.onReceiveVideoFrame)
+                this.onReceiveVideoFrame(struct);
+            break;
+        case 'A':
+            
+        default:
+            console.log('Invalid message type:', kind);
+        }
     }
 
     static async open(path: string) {
-        await IPC.init();
+        // await IPC.init();
         const id = await new Promise<number>((resolve, reject) => {
             let channel = createChannel({
                 opened: (data) => resolve(data.id)
@@ -254,7 +260,7 @@ export class MMedia {
             let channel = createChannel({
                 done: () => {
                     this.#destroyed = true;
-                    IPC.deleteListeners(this);
+                    // IPC.deleteListeners(this);
                     resolve();
                 }
             });
@@ -378,9 +384,12 @@ export class MMedia {
         return new Promise<void>((resolve, reject) => {
             this.#currentJobs += 1;
             let channel = createChannel({
-                done: () => resolve()
+                // done: () => resolve()
             });
-            invoke('send_next_video_frame', {id: this.id, channel});
+            invoke<ArrayBuffer>('send_next_video_frame', {id: this.id, channel}).then((x) => {
+                resolve();
+                this.#readFrameData(x);
+            });
         }).finally(() => this.#currentJobs -= 1);
     }
 
@@ -389,9 +398,12 @@ export class MMedia {
         return new Promise<void>((resolve, reject) => {
             this.#currentJobs += 1;
             let channel = createChannel({
-                done: () => resolve()
+                // done: () => resolve()
             });
-            invoke('send_current_video_frame', {id: this.id, channel});
+            invoke<ArrayBuffer>('send_current_video_frame', {id: this.id, channel}).then((x) => {
+                resolve();
+                this.#readFrameData(x);
+            });
         }).finally(() => this.#currentJobs -= 1);
     }
 
@@ -433,8 +445,12 @@ export class MMedia {
 }
 
 export const MAPI = {
-    async testSocket() {
-        await invoke('request_something', {});
+    // async testSocket() {
+    //     await invoke('request_something', {});
+    // },
+
+    async testResponse() {
+        console.log(await invoke('test_response', {}));
     }
 }
 

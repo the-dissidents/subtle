@@ -219,7 +219,7 @@ export class Frontend {
         const text = await fs.readTextFile(selected);
         let [newSubs, _] = this.retrieveFromSource(text);
         if (!newSubs) {
-            this.#status = `import failed for ${selected}`;
+            this.status = `import failed for ${selected}`;
             return;
         }
         let off = this.modalDialogs.importOpt.$on('submit', (ev) => {
@@ -311,8 +311,9 @@ export class Frontend {
     }
 
     async openVideo(file: string) {
-        await this.playback.load(file).catch((x) => this.#status = x).catch((x) => 
-            this.status = 'error opening video: ' + x);
+        await this.playback.load(file).catch((x) => {
+            this.status = 'error opening video: ' + JSON.stringify(x);
+        });
         if (this.currentFile != '')
             Config.rememberVideo(this.currentFile, file);
     }
@@ -444,7 +445,7 @@ export class Frontend {
     }
 
     startEditingNewVirtualEntry() {
-        this.#status = 'new entry appended';
+        this.status = 'new entry appended';
         let last = this.subs.entries.at(-1);
         let entry = last 
             ? new SubtitleEntry(last.end, last.end + 2, 
@@ -598,7 +599,7 @@ export class Frontend {
                 this.selection.submitted.delete(ent);
                 this.states.isEditingVirtualEntry = false;
                 this.states.virtualEntryHighlighted = false;
-                this.#status = 'multiselect removed item';
+                this.status = 'multiselect removed item';
                 this.onSelectionChanged.dispatch(cause);
                 return;
             }

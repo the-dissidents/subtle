@@ -1,11 +1,17 @@
 <script lang="ts">
-    import { IPC } from "./API";
+    import { IPC, MAPI } from "./API";
     import type { Frontend } from "./Frontend";
 
 	export let frontend: Frontend;
     let result = "";
 </script>
 
+<button
+    on:click={async () => {
+        await MAPI.testResponse();
+    }}>
+    test response
+</button>
 <button
     on:click={async () => {
         let video = frontend.playback.video;

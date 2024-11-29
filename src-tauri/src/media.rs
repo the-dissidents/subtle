@@ -4,7 +4,7 @@ use serde::Serialize;
 use tokio_tungstenite::tungstenite::Message;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tauri::ipc::Channel;
+use tauri::ipc::{self, Channel, InvokeResponseBody, Response};
 use tauri::State;
 
 pub mod internal;
@@ -339,7 +339,6 @@ pub fn move_to_next_video_frame(
     id: i32,
     n: i32,
     state: State<Mutex<PlaybackRegistry>>,
-    socket_state: State<Mutex<crate::SocketState>>,
     channel: Channel<MediaEvent>,
 ) {
     {
@@ -354,14 +353,13 @@ pub fn move_to_next_video_frame(
             }
         }
     };
-    get_current_video_position(id, state, socket_state, channel);
+    get_current_video_position(id, state, channel);
 }
 
 #[tauri::command]
 pub fn get_current_video_position(
     id: i32,
     state: State<Mutex<PlaybackRegistry>>,
-    socket_state: State<Mutex<crate::SocketState>>,
     channel: Channel<MediaEvent>,
 ) {
     {
@@ -378,47 +376,53 @@ pub fn get_current_video_position(
             return send(&channel, MediaEvent::Position { value: x.position });
         }
     };
-    return move_to_next_video_frame(id, 1, state, socket_state, channel);
+    return move_to_next_video_frame(id, 1, state, channel);
 }
 
 #[tauri::command]
 pub fn send_next_video_frame(
     id: i32,
     state: State<Mutex<PlaybackRegistry>>,
-    socket_state: State<Mutex<crate::SocketState>>,
     channel: Channel<MediaEvent>,
-) {
+) -> Result<ipc::Response, ()> {
     {
         let mut ap = state.lock().unwrap();
         let playback = match ap.table.get_mut(&id) {
             Some(x) => x,
-            None => return send_invalid_id(&channel)
+            None => {
+                send_invalid_id(&channel);
+                return Err(());
+            }
         };
         if let Err(e) = playback.advance_to_next_video_frame() {
-            return send_error!(&channel, e.to_string());
+            send_error!(&channel, e.to_string());
+            return Err(());
         }
     };
-    send_current_video_frame(id, state, socket_state, channel);
+    return send_current_video_frame(id, state, channel);
 }
 
 #[tauri::command]
 pub fn send_current_video_frame(
     id: i32,
     state: State<Mutex<PlaybackRegistry>>,
-    socket_state: State<Mutex<crate::SocketState>>,
     channel: Channel<MediaEvent>,
-) {
+) -> Result<ipc::Response, ()> {
     let mut ap = state.lock().unwrap();
-    let socket = socket_state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_invalid_id(&channel)
+        None => {
+            send_invalid_id(&channel);
+            return Err(());
+        }
     };
     if playback.video().is_none() {
-        return send(&channel, MediaEvent::NoStream { });
+        send(&channel, MediaEvent::NoStream { });
+        return Err(());
     };
     if let Err(x) = playback.render_current_video_frame() {
-        return send_error!(&channel, x.to_string());
+        send_error!(&channel, x.to_string());
+        return Err(());
     };
 
     let video = playback.video().unwrap();
@@ -435,12 +439,7 @@ pub fn send_current_video_frame(
     binary.extend(((frame.stride(0) / 4) as u64).to_le_bytes().iter());
     binary.extend((data.len() as u64).to_le_bytes().iter());
     binary.append(&mut data);
-    if let Err(x) = 
-        socket.sender.send(Message::Binary(binary))
-    {
-        return send_error!(&channel, x.to_string());
-    }
-    return send_done(&channel);
+    Ok(Response::new(InvokeResponseBody::Raw(binary)))
 }
 
 #[tauri::command]
