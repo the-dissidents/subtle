@@ -408,47 +408,39 @@ pub fn send_current_video_frame(
     socket_state: State<Mutex<crate::SocketState>>,
     channel: Channel<MediaEvent>,
 ) {
-    'has_current: {
-        let mut ap = state.lock().unwrap();
-        let socket = socket_state.lock().unwrap();
-        let playback = match ap.table.get_mut(&id) {
-            Some(x) => x,
-            None => return send_invalid_id(&channel)
-        };
-        let video = match playback.video_mut() {
-            Some(c) => c,
-            None => return send(&channel, MediaEvent::NoStream { })
-        };
-        if video.current().is_none() {
-            break 'has_current;
-        };
-        if video.current().unwrap().scaled.is_none() {
-            if let Err(x) = video.scale_current_frame() {
-                return send_error!(&channel, x.to_string());
-            }
-        };
-
-        let current = video.current().unwrap();
-        let pos = current.position;
-        let time = f64::from(video.pos_timebase()) * pos as f64;
-    
-        let frame = current.scaled.as_ref().unwrap();
-        let mut data = flatten6(frame.plane(0));
-        let mut binary = Vec::<u8>::new();
-        binary.push(b'V');
-        binary.extend(pos.to_le_bytes().iter());
-        binary.extend(time.to_le_bytes().iter());
-        binary.extend(((frame.stride(0) / 4) as u64).to_le_bytes().iter());
-        binary.extend((data.len() as u64).to_le_bytes().iter());
-        binary.append(&mut data);
-        if let Err(x) = 
-            socket.sender.send(Message::Binary(binary))
-        {
-            return send_error!(&channel, x.to_string());
-        }
-        return send_done(&channel);
+    let mut ap = state.lock().unwrap();
+    let socket = socket_state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => return send_invalid_id(&channel)
     };
-    send_next_video_frame(id, state, socket_state, channel);
+    if playback.video().is_none() {
+        return send(&channel, MediaEvent::NoStream { });
+    };
+    if let Err(x) = playback.update_current_video_frame() {
+        return send_error!(&channel, x.to_string());
+    };
+
+    let video = playback.video().unwrap();
+    let current = video.current().unwrap();
+    let frame = current.scaled.as_ref().unwrap();
+
+    let pos = current.position;
+    let time = f64::from(video.pos_timebase()) * pos as f64;
+    let mut data = flatten6(frame.plane(0));
+    let mut binary = Vec::<u8>::new();
+    binary.push(b'V');
+    binary.extend(pos.to_le_bytes().iter());
+    binary.extend(time.to_le_bytes().iter());
+    binary.extend(((frame.stride(0) / 4) as u64).to_le_bytes().iter());
+    binary.extend((data.len() as u64).to_le_bytes().iter());
+    binary.append(&mut data);
+    if let Err(x) = 
+        socket.sender.send(Message::Binary(binary))
+    {
+        return send_error!(&channel, x.to_string());
+    }
+    return send_done(&channel);
 }
 
 #[tauri::command]

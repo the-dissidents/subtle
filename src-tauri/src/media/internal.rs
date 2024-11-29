@@ -67,7 +67,7 @@ fn print_frame_debug_date(frame: &frame::Video, incipit: &str) {
 }
 
 impl VideoContext {
-    pub fn scale_current_frame(&mut self) -> Result<(), String> {
+    fn scale_current_frame(&mut self) -> Result<(), String> {
         let cache = self.current.as_mut().ok_or("No current frame")?;
         let mut scaled = frame::Video::empty();
         self.scaler.run(&cache.decoded, &mut scaled)
@@ -77,7 +77,7 @@ impl VideoContext {
         Ok(())
     }
 
-    pub fn try_receive_frame(&mut self) -> Result<(), String> {
+    fn try_receive_frame(&mut self) -> Result<(), String> {
         if self.state == ContextState::EOF {
             return Ok(());
         }
@@ -360,12 +360,10 @@ impl MediaPlayback {
             .ok_or("No video opened".to_string())?;
 
         if cxt.current.is_none() {
-            if cxt.state != ContextState::EOF {
-                self.advance_to_next_video_frame()?;
-                return Ok(());
-            }
+            self.advance_to_next_video_frame()?;
         }
 
+        let cxt = self.video.as_mut().unwrap();
         if cxt.current.as_ref().unwrap().scaled.is_none() {
             cxt.scale_current_frame()?;
         }
