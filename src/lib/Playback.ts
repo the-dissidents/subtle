@@ -74,13 +74,13 @@ export class Playback {
         this.onRefreshPlaybackControl();
     }
 
-    setPosition(pos: number) {
+    async setPosition(pos: number) {
         if (!this.video) {
             this.#position = pos;
             this.timeline?.setCursorPos(pos, true);
         } else {
             assert(this.timeline !== null);
-            this.video.setTargetPosition(pos);
+            await this.video.setPosition(pos);
             this.#position = pos;
             this.timeline?.setCursorPos(pos, true);
         }

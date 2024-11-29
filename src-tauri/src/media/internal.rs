@@ -355,14 +355,17 @@ impl MediaPlayback {
         Ok(())
     }
 
-    pub fn update_current_video_frame(&mut self) -> Result<(), String> {
+    pub fn ensure_current_video_frame(&mut self) -> Result<(), String> {
         let cxt = self.video.as_mut()
             .ok_or("No video opened".to_string())?;
-
         if cxt.current.is_none() {
             self.advance_to_next_video_frame()?;
         }
+        Ok(())
+    }
 
+    pub fn render_current_video_frame(&mut self) -> Result<(), String> {
+        self.ensure_current_video_frame()?;
         let cxt = self.video.as_mut().unwrap();
         if cxt.current.as_ref().unwrap().scaled.is_none() {
             cxt.scale_current_frame()?;
@@ -384,7 +387,6 @@ impl MediaPlayback {
             return self.advance_to_next_video_frame();
         };
         Ok(())
-        // self.update_current_video_frame()
     }
 
     pub fn next_audio_frame(&mut self) -> Result<Option<frame::Audio>, String> {
@@ -462,11 +464,46 @@ impl MediaPlayback {
         }
     }
 
-    pub fn seek_video(&mut self, position: i64) -> Result<(), String> {
-        // TODO: if very close to current position then don't seek at all
-        self.clear_packets();
-        let video = self.video.as_ref().ok_or("No video".to_string())?;
+    pub fn seek_video_precise(&mut self, position: i64) -> Result<(), String> {
+        // let guard = pprof::ProfilerGuardBuilder::default().frequency(1000).blocklist(&["libc", "libgcc", "pthread", "vdso"]).build().unwrap();
 
+        self.ensure_current_video_frame()?;
+        let cxt = self.video.as_mut().unwrap();
+        let current = cxt.current.as_ref().unwrap();
+
+        // do not seek if we're just at the position
+        if current.position == position {
+            return Ok(());
+        }
+
+        self.seek_video(position)?;
+        loop {
+            self.advance_to_next_video_frame()?;
+            let cxt = self.video.as_mut().unwrap();
+            let current = cxt.current.as_ref().unwrap();
+            if current.position >= position {
+                break;
+            }
+        }
+
+        // if let Ok(report) = guard.report().build() {
+        //     let file = std::fs::File::create("debug/flamegraph.svg").unwrap();
+        //     report.flamegraph(file).unwrap();
+        // };
+        Ok(())
+    }
+
+    pub fn seek_video(&mut self, position: i64) -> Result<(), String> {
+        let video = self.video.as_ref().ok_or("No video".to_string())?;
+        if let Some(cache) = video.current.as_ref() {
+            // do not seek if we're close enough
+            if cache.position >= position && cache.position < position + 10 {
+                return Ok(());
+            }
+        }
+        
+        self.clear_packets();
+        let video = self.video.as_ref().unwrap();
         let rescaled = position.rescale(
             video.pos_timebase, 
             video.stream_timebase);
@@ -479,7 +516,7 @@ impl MediaPlayback {
                 0,
                 rescaled,
                 rescaled,
-                0,
+                ffmpeg_sys_next::AVSEEK_FLAG_BACKWARD,
             ) {
                 s if s >= 0 => Ok(()),
                 e => Err(format!("Seek failed: {e}")),

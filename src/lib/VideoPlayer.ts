@@ -108,56 +108,6 @@ export class VideoPlayer implements WithCanvas {
         this.requestRender();
     }
 
-    setTargetPosition(t: number) {
-        if (!this.#media) {
-            return;
-        };
-        if (t == this.#targetPosition) return;
-        if (t < 0) t = 0;
-        if (t > this.duration!) t = this.duration!;
-
-        if (this.#targetPosition === undefined)
-            requestAnimationFrame(() => this.#pursueTargetPosition());
-
-        this.#targetPosition = t;
-        console.log('target pos:', t, Math.floor(this.#targetPosition * this.#framerate!));
-        this.play(false);
-    }
-
-    #alreadySeekedFor = -1;
-    async #pursueTargetPosition() {
-        if (!this.#media || !this.#targetPosition) return;
-
-        let curFrame = Math.floor(this.#position! * this.#framerate!);
-        let targetFrame = Math.floor(this.#targetPosition * this.#framerate!);
-        if (targetFrame > curFrame && (
-            (targetFrame - curFrame) < 50 || (curFrame <= this.#alreadySeekedFor && this.#alreadySeekedFor <= targetFrame)
-        )) {
-            // go by step
-            curFrame = await this.#media.moveToNextVideoFrame(Math.min(30, targetFrame - curFrame));
-            this.#position = curFrame / this.#framerate!;
-            console.log('step ->', this.#position, curFrame);
-        } else if (targetFrame != curFrame) {
-            // go by seeking
-            await this.#media.seekVideo(targetFrame);
-            curFrame = await this.#media.videoPosition();
-            this.#position = curFrame / this.#framerate!;
-            this.#alreadySeekedFor = targetFrame;
-            console.log('seek ->', this.#position, curFrame);
-        }
-        if (curFrame == targetFrame) {
-            // reached objective
-            this.#targetPosition = undefined;
-            this.onPositionChange();
-            this.requestRender();
-            return;
-        } else requestAnimationFrame(() => this.#pursueTargetPosition());
-    }
-
-    #pursueTargetPositionNext() {
-        
-    } 
-
     async setPosition(t: number) {
         assert(this.#media !== undefined);
         if (t == this.#position) return;

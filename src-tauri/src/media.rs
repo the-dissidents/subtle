@@ -417,7 +417,7 @@ pub fn send_current_video_frame(
     if playback.video().is_none() {
         return send(&channel, MediaEvent::NoStream { });
     };
-    if let Err(x) = playback.update_current_video_frame() {
+    if let Err(x) = playback.render_current_video_frame() {
         return send_error!(&channel, x.to_string());
     };
 
@@ -458,7 +458,7 @@ pub fn seek_video(
     if playback.video().is_none() {
         return send(&channel, MediaEvent::NoStream { })
     };
-    if let Err(e) = playback.seek_video(position) {
+    if let Err(e) = playback.seek_video_precise(position) {
         return send_error!(&channel, e.to_string());
     };
 
