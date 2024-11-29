@@ -550,20 +550,20 @@ export class Timeline implements WithCanvas {
               i_end = Math.ceil(end * resolution);
         const subarray = this.#sampler.detail.subarray(i, i_end);
         const first0 = subarray.findIndex((x) => x == 0);
-        const firstLarge = subarray.findIndex((x) => x > 5);
+        // const firstLarge = subarray.findIndex((x) => x > 5);
         if (this.#frontend.playback.isPlaying) {
             if (first0 < 0) {
-                if (firstLarge < 0)
+                // if (firstLarge < 0)
                     this.#requestedSampler = false;
                 return;
             }
-            start = (first0 + i) / resolution;
         } else {
             this.#requestedSampler = false;
-            if (first0 >= 0) start = (first0 + i) / resolution;
-            else if (firstLarge >= 0) start = (firstLarge + i) / resolution;
-            else return;
+            if (first0 < 0) return;
         }
+        start = (first0 + i) / resolution;
+        let end0 = subarray.findIndex((x, i) => i > first0 && x > 0);
+        if (end0 > 0) end = (end0 + i) / resolution;
 
         end += preload;
         if (start < 0) start = 0;
@@ -571,11 +571,10 @@ export class Timeline implements WithCanvas {
         if (end <= start) return;
 
         this.#animating = true;
-        const promise = this.#sampler.startSampling(
-            start, end, Math.min(25, (end - this.#offset) / 8));
-        promise.then(() => {
+        this.#sampler.startSampling(start, end).then(() => {
             this.#animating = false;
             this.requestRender();
+            this.#processSampler();
         });
         this.requestRender();
     }
@@ -627,17 +626,18 @@ export class Timeline implements WithCanvas {
         const drawWidth = Math.max(1, step * width)
         for (let i = start; i < end; i += step) {
             const detail = this.#sampler.detail[i];
+            const x = (i - this.#offset * resolution) * width;
+
+            this.#cxt.fillStyle = `rgb(100% 10% 10% / 30%)`;
+            let dh = (1 - detail) * this.#height;
+            this.#cxt.fillRect(x, this.#height - dh, drawWidth, dh);
+
             if (detail == 0) continue;
             let value = Math.sqrt(this.#sampler.data[i]) * this.#height;
-            let x = (i - this.#offset * resolution) * width;
-
             this.#cxt.fillStyle = `rgb(100 255 255)`;
             this.#cxt.fillRect(x, (this.#height - value) / 2, 
                 drawWidth, Math.max(value, 1));
 
-            // this.#cxt.fillStyle = `rgb(100% 10% 10% / 30%)`;
-            // let dh = detail / resolution * 200;
-            // this.#cxt.fillRect(x, this.#height - dh, drawWidth, dh);
         }
     }
 

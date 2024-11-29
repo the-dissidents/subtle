@@ -7,10 +7,7 @@ use ffmpeg::software::scaling;
 use ffmpeg::{codec, frame, media, rescale, ChannelLayout, Rescale};
 use ffmpeg_next::error::EAGAIN;
 use ffmpeg_next::format::Pixel;
-use ffmpeg_next::packet;
-use ffmpeg_next::Packet;
 use ffmpeg_next::Rational;
-use ffmpeg_next::Stream;
 
 #[derive(PartialEq)]
 enum ContextState {
@@ -181,7 +178,7 @@ impl AudioContext {
 
         self.position = decoded_frame.pts()
             .ok_or("decoded frame has no pts")?
-            .rescale(self.stream_timebase, self.decoder.time_base());
+            .rescale(self.stream_timebase, self.pos_timebase);
 
         let mut transformed_frame = frame::Audio::empty();
         match self.resampler.run(&decoded_frame, &mut transformed_frame) {
@@ -352,9 +349,9 @@ impl MediaPlayback {
         ).or_else(|x| Err(format!("Can't create resampler: {x}")))?;
 
         let invert_rate = 
-            ffmpeg::Rational::new(decoder.rate().try_into().unwrap(), 1);
+            ffmpeg::Rational::new(1, decoder.rate().try_into().unwrap());
         // if I understand correctly, we can actually remove this as it holds by definition
-        assert!(f64::from(decoder.time_base() * invert_rate) == 1.0);
+        assert!(decoder.time_base() == invert_rate);
 
         println!("audio: stream_tb={};decoder_tb={};rate={}", stream.time_base(), decoder.time_base(), decoder.rate());
 
@@ -592,16 +589,42 @@ impl MediaPlayback {
     }
 
     pub fn seek_audio(&mut self, position: i64) -> Result<(), String> {
-        // TODO: if very close to current position then don't seek at all
+        let audio = self.audio.as_ref().ok_or("No audio".to_string())?;
+        if audio.position >= position && audio.position < position + 100 {
+            return Ok(());
+        }
+        
         self.clear_packets();
-
-        let cxt = self.audio.as_ref().ok_or("No audio".to_string())?;
+        let audio = self.audio.as_ref().unwrap();
         let rescaled = position.rescale(
-            cxt.pos_timebase, 
-            rescale::TIME_BASE);
-        self.input.seek(rescaled, ..rescaled)
-            .or_else(|x| Err(format!("Seek failed: {x}")))?;
-        Ok(())
+            audio.pos_timebase, 
+            audio.stream_timebase);
+        // println!("seek: pos={}, rescaled={}", position, rescaled);
+
+        unsafe {
+            match ffmpeg_sys_next::avformat_seek_file(
+                self.input.as_mut_ptr(),
+                audio.stream_i as i32,
+                0,
+                rescaled,
+                rescaled,
+                ffmpeg_sys_next::AVSEEK_FLAG_BACKWARD,
+            ) {
+                s if s >= 0 => Ok(()),
+                e => Err(format!("Seek failed: {e}")),
+            }
+        }
+
+        // // TODO: if very close to current position then don't seek at all
+        // self.clear_packets();
+
+        // let cxt = self.audio.as_ref().ok_or("No audio".to_string())?;
+        // let rescaled = position.rescale(
+        //     cxt.pos_timebase, 
+        //     rescale::TIME_BASE);
+        // self.input.seek(rescaled, ..rescaled)
+        //     .or_else(|x| Err(format!("Seek failed: {x}")))?;
+        // Ok(())
     }
 }
 
