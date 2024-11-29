@@ -305,7 +305,7 @@ export class Timeline implements WithCanvas {
         } else {
             if (e0.offsetY * ratio < HEADER_HEIGHT) {
                 // move cursor
-                onMove = (e1) => this.setCursorPos(
+                onMove = async (e1) => await this.setCursorPos(
                     this.#offset + e1.offsetX / this.#scale * ratio);
                 onMove(e0);
             } else {
@@ -589,7 +589,7 @@ export class Timeline implements WithCanvas {
         this.#requestedSampler = true;
     }
 
-    setCursorPos(pos: number, passive = false) {
+    async setCursorPos(pos: number, passive = false) {
         if (pos == this.#cursorPos) return;
         if (pos < 0) pos = 0;
         pos = Math.min(pos, this.#maxPosition());
@@ -597,7 +597,7 @@ export class Timeline implements WithCanvas {
         this.#keepPosInSafeArea(pos);
         this.requestRender();
         if (!passive)
-            this.#frontend.playback.setPosition(pos);
+            await this.#frontend.playback.setPosition(pos);
     }
 
     setViewScale(v: number) {

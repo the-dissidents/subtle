@@ -77,12 +77,12 @@ export class Playback {
     async setPosition(pos: number) {
         if (!this.video) {
             this.#position = pos;
-            this.timeline?.setCursorPos(pos, true);
+            await this.timeline?.setCursorPos(pos, true);
         } else {
             assert(this.timeline !== null);
             await this.video.setPosition(pos);
             this.#position = pos;
-            this.timeline?.setCursorPos(pos, true);
+            await this.timeline?.setCursorPos(pos, true);
         }
     }
 

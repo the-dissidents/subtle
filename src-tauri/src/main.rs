@@ -9,74 +9,12 @@ use tauri::AppHandle;
 use tauri::Manager;
 use tauri::State;
 
-use futures::SinkExt;
-use tokio::sync::broadcast;
-use tokio::net::{TcpListener, TcpStream};
-use tokio_rustls::rustls::pki_types::pem::PemObject;
-use tokio_rustls::rustls::pki_types::PrivateKeyDer;
-use tokio_rustls::rustls::pki_types::PrivatePkcs8KeyDer;
-use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
-
 struct SetupState {
     frontend_task: bool,
     backend_task: bool,
 }
 
-// struct SocketState {
-//     sender: broadcast::Sender<Message>
-// }
-
-async fn handle_user(
-    tcp: tokio_rustls::server::TlsStream<TcpStream>, 
-    tx: broadcast::Sender<Message>
-) {
-    let mut socket_stream
-        = accept_async(tcp).await.unwrap();
-    let mut rx = tx.subscribe();
-    while let Ok(msg) = rx.recv().await {
-        socket_stream.send(msg).await.unwrap();
-    }
-}
-
-async fn accept_users(
-    server: TcpListener, 
-    acceptor: tokio_rustls::TlsAcceptor,
-    tx: broadcast::Sender<Message>
-) {
-    while let Ok((tcp, _)) = server.accept().await {
-        let tls_acceptor = acceptor.clone();
-        let sender = tx.clone();
-        tokio::spawn( async move {
-            let stream = tls_acceptor.accept(tcp).await.unwrap();
-            handle_user(stream, sender)
-        });
-    }
-}
-
-#[tokio::main]
-async fn main() {
-    let cert = rcgen::generate_simple_self_signed(["127.0.0.1".to_owned()]).unwrap();
-
-    println!("{}", cert.cert.pem());
-    println!("{}", cert.key_pair.serialize_pem());
-    let acceptor = tokio_rustls::TlsAcceptor::from(std::sync::Arc::new(
-        tokio_rustls::rustls::ServerConfig::builder()
-            .with_no_client_auth()
-            .with_single_cert(
-                vec![cert.cert.der().clone()],
-                PrivateKeyDer::Pkcs8(
-                    PrivatePkcs8KeyDer::from_pem_slice(
-                    cert.key_pair.serialize_pem().as_bytes()
-                    ).unwrap(),
-                ),
-            ).unwrap(),
-    ));
-
-    let (tx, _) = broadcast::channel::<Message>(16);
-    let server = TcpListener::bind("127.0.0.1:42069").await.unwrap();
-
-    tokio::spawn(accept_users(server, acceptor, tx.clone()));
-
+fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_dialog::init())
@@ -117,14 +55,6 @@ async fn main() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
-// #[tauri::command]
-// async fn request_something(state: State<'_, Mutex<SocketState>>) -> Result<(), ()> {
-//     let state_lock = state.lock().unwrap();
-//     let rnd = rand::random::<i32>();
-//     state_lock.sender.send(Message::Text(format!("Something: {rnd}"))).unwrap();
-//     Ok(())
-// }
 
 #[tauri::command]
 async fn test_response() -> Result<tauri::ipc::Response, ()> {

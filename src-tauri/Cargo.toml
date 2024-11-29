@@ -13,21 +13,16 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
 tauri-plugin-os = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-clipboard-manager = "2.0.1"
 tauri-plugin-dialog = "2"
 ffmpeg-next = "7.1.0"
 tauri-plugin-websocket = "2"
-tokio = { version = "1.41.1", features = ["macros", "net", "sync"] }
-tokio-tungstenite = { version = "0.24.0", features = ["native-tls", "rustls-tls-webpki-roots"] }
-futures = "0.3.31"
 rand = "0.8.5"
 pprof = { version = "0.14.0", features = ["flamegraph"] }
 ffmpeg-sys-next = "7.1.0"
-rcgen = "0.13.1"
-tokio-rustls = "0.26.0"
+serde_json = "1.0.133"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

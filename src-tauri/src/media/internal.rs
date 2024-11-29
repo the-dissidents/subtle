@@ -5,8 +5,12 @@ use ffmpeg::software;
 use ffmpeg::software::resampling;
 use ffmpeg::software::scaling;
 use ffmpeg::{codec, frame, media, rescale, ChannelLayout, Rescale};
+use ffmpeg_next::error::EAGAIN;
 use ffmpeg_next::format::Pixel;
+use ffmpeg_next::packet;
+use ffmpeg_next::Packet;
 use ffmpeg_next::Rational;
+use ffmpeg_next::Stream;
 
 #[derive(PartialEq)]
 enum ContextState {
@@ -54,7 +58,8 @@ pub struct VideoContext {
 pub struct MediaPlayback {
     input: Box<format::context::Input>,
     audio: Option<AudioContext>,
-    video: Option<VideoContext>
+    video: Option<VideoContext>,
+    stream_timebases: Vec<Rational>
 }
 
 fn print_frame_debug_date(frame: &frame::Video, incipit: &str) {
@@ -88,18 +93,24 @@ impl VideoContext {
             scaled: None
         };
 
-        if self.decoder.receive_frame(&mut cache.decoded).is_err() {
-            self.state = ContextState::NeedPacket;
-            return Ok(());
+        match self.decoder.receive_frame(&mut cache.decoded) {
+            Ok(()) => {
+                cache.position = cache.decoded.pts()
+                // fall back to packet's DTS if no pts available (as in AVI)
+                .unwrap_or(cache.decoded.packet().dts)
+                .rescale(self.stream_timebase, self.pos_timebase);
+                println!("receive: got frame {}", cache.position);
+                self.current = Some(cache);
+                Ok(())
+            },
+            Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
+                self.state = ContextState::NeedPacket;
+                Ok(())
+            },
+            Err(e) => {
+                Err(format!("avcodec_receive_frame: {:?}", e))
+            }
         }
-        // print_frame_debug_date(&cache.decoded, "video: decoded frame:");
-        cache.position = cache.decoded.pts()
-            .ok_or("decoded frame has no pts")?
-            .rescale(self.stream_timebase, self.pos_timebase);
-        self.current = Some(cache);
-        // self.scale_current_frame()?;
-
-        Ok(())
     }
 
     pub fn set_output_size(&mut self, size: (u32, u32)) -> Result<(), String>  {
@@ -183,9 +194,9 @@ impl AudioContext {
         self.stream_i
     }
 
-    pub fn pos_timebase(&self) -> Rational {
-        self.pos_timebase
-    }
+    // pub fn pos_timebase(&self) -> Rational {
+    //     self.pos_timebase
+    // }
 
     pub fn length(&self) -> i64 {
         self.length
@@ -206,10 +217,15 @@ impl MediaPlayback {
             Ok(i) => Box::new(i),
             Err(e) => return Err(e.to_string()),
         };
+        let mut tbs = Vec::<Rational>::new();
+        for stream in ictx.streams() {
+            tbs.push(stream.time_base());
+        }
         Ok(MediaPlayback {
             input: ictx,
             audio: None,
             video: None,
+            stream_timebases: tbs
         })
     }
 
@@ -359,6 +375,7 @@ impl MediaPlayback {
         let cxt = self.video.as_mut()
             .ok_or("No video opened".to_string())?;
         if cxt.current.is_none() {
+            println!("ensure_current_video_frame");
             self.advance_to_next_video_frame()?;
         }
         Ok(())
@@ -383,7 +400,8 @@ impl MediaPlayback {
             return Err("already at EOF".to_string());
         }
         if cxt.current.is_none() {
-            self.fill_packets()?;
+            println!("filling packet for decoder");
+            self.fill_packets(None)?;
             return self.advance_to_next_video_frame();
         };
         Ok(())
@@ -398,12 +416,12 @@ impl MediaPlayback {
         } else if self.audio.as_ref().unwrap().state == ContextState::EOF {
             return Ok(None);
         } else {
-            self.fill_packets()?;
+            self.fill_packets(None)?;
             return self.next_audio_frame();
         }
     }
 
-    fn fill_packets(&mut self) -> Result<(), String> {
+    fn fill_packets(&mut self, skip_until: Option<(i64, Rational)>) -> Result<(), String> {
         let mut audio_id: i32 = match &self.audio {
             Some(AudioContext { state: ContextState::HasPacket, .. }) 
                 => return Err("unconsumed audio packet".to_string()),
@@ -421,25 +439,58 @@ impl MediaPlayback {
         }
 
         // read packets
+        let mut n_skipped = 0;
+        let mut n_after_ok = 0;
+        let mut has_been_ok = false;
+        let mut first = true;
         for (stream, packet) in self.input.packets() {
+            let mut is_ok = true;
+            if !has_been_ok {
+                if let (Some((until, base)), Some(stamp)) 
+                    = (skip_until, packet.pts().or(packet.dts())) 
+                {
+                    let stream_tb = self.stream_timebases[packet.stream()];
+                    let duration = packet.duration().max(0);
+                    let pktpos = stamp.rescale(stream_tb, base);
+                    let pktpos2 = (stamp + duration).rescale(stream_tb, base);
+                    let until = until.rescale(base, stream_tb);
+                    is_ok = stamp + duration >= until - 10;
+                    if first {
+                        println!("fillmany: first: {}~{}; pts={:?}:dts={:?}", pktpos, pktpos2, packet.pts(), packet.dts());
+                        first = false;
+                    }
+                    if is_ok {
+                        println!("fillmany: ok at {}~{}; pts={:?}:dts={:?}", pktpos, pktpos2, packet.pts(), packet.dts());
+                        has_been_ok = true;
+                    }
+                }
+            }
+
             if audio_id >= 0 && stream.index() == audio_id as usize {
                 let cxt = self.audio.as_mut().unwrap();
-                if let Err(e) = cxt.decoder.send_packet(&packet) {
-                    return Err(e.to_string());
-                };
+                cxt.decoder.send_packet(&packet).map_err(|x| x.to_string())?;
                 cxt.state = ContextState::HasPacket;
                 audio_id = -1;
             } else if video_id >= 0 && stream.index() == video_id as usize {
                 let cxt = self.video.as_mut().unwrap();
-                if let Err(e) = cxt.decoder.send_packet(&packet) {
-                    return Err(e.to_string());
-                };
+                cxt.decoder.send_packet(&packet).map_err(|x| x.to_string())?;
                 cxt.state = ContextState::HasPacket;
                 cxt.current = None;
                 video_id = -1;
             }
-            if audio_id < 0 && video_id < 0 {
+            if audio_id < 0 && video_id < 0 && is_ok {
+                if n_skipped > 0 {
+                    println!("fillmany: n_skipped={}:n_after_ok={}", n_skipped, n_after_ok);
+                }
+                if skip_until.is_some() {
+                    println!("fillmany: returning; pts={:?}:dts={:?}", packet.pts(), packet.dts());
+                }
                 return Ok(());
+            }
+            if !is_ok {
+                n_skipped += 1;
+            } else {
+                n_after_ok += 1;
             }
         }
         if audio_id >= 0 {
@@ -470,6 +521,7 @@ impl MediaPlayback {
         self.ensure_current_video_frame()?;
         let cxt = self.video.as_mut().unwrap();
         let current = cxt.current.as_ref().unwrap();
+        let timebase = cxt.pos_timebase;
 
         // do not seek if we're just at the position
         if current.position == position {
@@ -477,14 +529,29 @@ impl MediaPlayback {
         }
 
         self.seek_video(position)?;
+        // self.ensure_current_video_frame()?;
+
+        self.clear_packets();
+        self.fill_packets(Some((position, timebase)))?;
+        self.ensure_current_video_frame()?;
+
+        let current = self.video.as_ref().unwrap().current.as_ref().unwrap();
+        println!("note: now at {}", current.position);
+
+        let mut n_advanced = 0;
         loop {
-            self.advance_to_next_video_frame()?;
             let cxt = self.video.as_mut().unwrap();
             let current = cxt.current.as_ref().unwrap();
             if current.position >= position {
                 break;
             }
+            n_advanced += 1;
+            self.advance_to_next_video_frame()?;
         }
+        if n_advanced > 0 {
+            println!("note: advanced {} additional times", n_advanced);
+        }
+        println!("note: arrived at {}", position);
 
         // if let Ok(report) = guard.report().build() {
         //     let file = std::fs::File::create("debug/flamegraph.svg").unwrap();

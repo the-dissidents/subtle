@@ -100,60 +100,6 @@ function createChannel(handler: {[key in MediaEventKey]?: MediaEventHandler<key>
     return channel;
 }
 
-type IPCMessage = {
-    type: 'text',
-    content: string
-} | {
-    type: 'binary',
-    content: Readonly<ArrayBuffer>
-};
-
-type IPCListener = (msg: IPCMessage) => void;
-
-const IPCInternal = {
-    socket: undefined as WebSocket | undefined,
-    listeners: new Map<Object, IPCListener[]>()
-}
-
-/** @deprecated */
-export const IPC = {
-    async init() {
-        if (IPCInternal.socket != undefined) return;
-        
-        IPCInternal.socket = new WebSocket("wss://127.0.0.1:42069");
-        IPCInternal.socket.binaryType = "arraybuffer";
-        return new Promise<void>((resolve, reject) => {
-            IPCInternal.socket!.onopen = () => {
-                console.log('IPC socket connected');
-                resolve();
-            }
-            IPCInternal.socket!.onerror = () => {
-                IPCInternal.socket = undefined;
-                reject('socket error');
-            }
-            IPCInternal.socket!.onmessage = (ev) => {
-                const msg: IPCMessage = (typeof ev.data == 'string') 
-                    ? { type: 'text', content: ev.data } 
-                    : { type: 'binary', content: ev.data };
-
-                for (const [_, fns] of IPCInternal.listeners.entries()) {
-                    fns.forEach((x) => x(msg));
-                }
-            };
-        });
-    },
-    registerListener(key: Object, fn: IPCListener) {
-        assert(IPCInternal.socket !== undefined);
-        if (!IPCInternal.listeners.has(key))
-            IPCInternal.listeners.set(key, []);
-        IPCInternal.listeners.get(key)!.push(fn);
-    },
-    deleteListeners(key: Object) {
-        assert(IPCInternal.socket !== undefined);
-        IPCInternal.listeners.delete(key);
-    }
-}
-
 export type VideoFrameData = {
     position: number,
     time: number,

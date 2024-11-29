@@ -20,10 +20,8 @@ export class VideoPlayer implements WithCanvas {
 
     #requestedTime = 0;
     #lastRenderTime = 0;
-    #latency = 0;
     #retrieveTime = 0;
     #frameTime = 0;
-    #startTimeDifference = 0; // (world time - media time) when playing started
     #waitTimeCorrection = 0;
 
     #framerate: number | undefined = undefined;
@@ -116,11 +114,8 @@ export class VideoPlayer implements WithCanvas {
         if (t > this.duration!) t = this.duration!;
         await this.#media.seekVideo(Math.floor(t * this.#framerate!));
         this.#position = (await this.#media.videoPosition()) / this.#framerate!;
-        if (this.#playing) {
-            this.#startTimeDifference = performance.now() - this.#position * 1000;
-            this.#latency = 0;
-        }
         this.onPositionChange();
+        this.requestRender();
     }
 
     async #render(data?: VideoFrameData) {
@@ -137,7 +132,6 @@ export class VideoPlayer implements WithCanvas {
             this.#ctx.putImageData(imgData, 
                 this.#outOffsetX, this.#outOffsetY, 0, 0, nw, nh);
             this.subRenderer?.setTime(this.#position);
-            this.onPositionChange();
 
             if (this.#playing) {
                 const K = Math.exp(-LATENCY_DAMPING * (t0 - this.#lastRenderTime) / 1000);
@@ -145,8 +139,6 @@ export class VideoPlayer implements WithCanvas {
                     this.#retrieveTime * K + (t0 - this.#requestedTime) * (1-K);
                 this.#frameTime = 
                     this.#frameTime * K + (t0 - this.#lastRenderTime) * (1-K);
-                this.#latency =
-                    this.#latency * K + (t0 - this.#position * 1000 - this.#startTimeDifference) * (1-K);
                 this.#lastRenderTime = t0;
 
                 let waitTime = (1000 / this.#framerate!) - this.#retrieveTime;
@@ -156,8 +148,7 @@ export class VideoPlayer implements WithCanvas {
                 this.#ctx.fillText(`fra=${this.#frameTime.toFixed(1)}`, 0, 30);
                 this.#ctx.fillText(`ret=${this.#retrieveTime.toFixed(1)}`, 0, 50);
                 this.#ctx.fillText(`wai=${waitTime.toFixed(1)}`, 0, 70);
-                this.#ctx.fillText(`lat=${this.#latency.toFixed(1)}`, 0, 90);
-                this.#ctx.fillText(`cor=${this.#waitTimeCorrection.toFixed(1)}`, 0, 110);
+                this.#ctx.fillText(`cor=${this.#waitTimeCorrection.toFixed(1)}`, 0, 90);
             }
         }
         if (this.subRenderer)
@@ -165,9 +156,13 @@ export class VideoPlayer implements WithCanvas {
 
         if (data && this.#playing) {
             await this.#media!.moveToNextVideoFrame();
+            this.onPositionChange();
+
             let targetTime = 1000 / this.#framerate!;
-            this.#waitTimeCorrection = targetTime - this.#frameTime - this.#latency;
-            let waitTime = targetTime - this.#retrieveTime + Math.min(10, this.#waitTimeCorrection);
+            this.#waitTimeCorrection += targetTime - this.#frameTime;
+            this.#waitTimeCorrection = Math.min(10, Math.max(-20, this.#waitTimeCorrection));
+
+            let waitTime = targetTime - this.#retrieveTime + this.#waitTimeCorrection;
             if (waitTime > 0) setTimeout(() => this.requestRender(), waitTime)
             else this.requestRender();
         }
@@ -191,8 +186,6 @@ export class VideoPlayer implements WithCanvas {
             this.onPlayStateChange();
         } else if (state && !this.#playing) {
             this.#playing = true;
-            this.#latency = 0;
-            this.#startTimeDifference = performance.now() - this.#position! * 1000;
             this.onPlayStateChange();
             this.requestRender();
         }

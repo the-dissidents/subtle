@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { IPC, MAPI } from "./API";
+    import { MAPI } from "./API";
     import type { Frontend } from "./Frontend";
 
 	export let frontend: Frontend;
