@@ -104,8 +104,6 @@ export class Timeline implements WithCanvas {
     get viewOffset() {return this.#offset;}
     get cursorPos() {return this.#cursorPos;}
 
-    onPositionChange = (_passive: boolean) => {};
-
     setDisplaySize(_1: number, _2: number, w: number, h: number): void {
         this.#width = w;
         this.#height = h;
@@ -592,12 +590,14 @@ export class Timeline implements WithCanvas {
     }
 
     setCursorPos(pos: number, passive = false) {
+        if (pos == this.#cursorPos) return;
         if (pos < 0) pos = 0;
         pos = Math.min(pos, this.#maxPosition());
         this.#cursorPos = pos;
         this.#keepPosInSafeArea(pos);
         this.requestRender();
-        this.onPositionChange(passive);
+        if (!passive)
+            this.#frontend.playback.setPosition(pos);
     }
 
     setViewScale(v: number) {

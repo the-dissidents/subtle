@@ -73,7 +73,11 @@ async fn main() {
             media::open_video,
             media::seek_video,
             media::video_set_size,
-            
+            media::send_next_video_frame,
+            media::send_current_video_frame,
+            media::get_current_video_position,
+            media::move_to_next_video_frame,
+
             request_something
         ])
         .run(tauri::generate_context!())

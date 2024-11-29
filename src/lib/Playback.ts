@@ -39,7 +39,7 @@ export class Playback {
         this.video.onPositionChange = () => {
             assert(this.video != null);
             if (this.#isPlaying)
-                this.#reportProgress(this.video.currentPosition);
+                this.#reportProgress(this.video.currentPosition!);
             this.onRefreshPlaybackControl();
         };
         this.video.onPlayStateChange = () => {
@@ -53,25 +53,18 @@ export class Playback {
     createTimeline(cxt: CanvasRenderingContext2D, frontend: Frontend) {
         assert(this.timeline == null);
         this.timeline = new Timeline(cxt, frontend);
-        this.timeline.onPositionChange = (passive) => {
-            assert(this.timeline != null);
-            if (passive) return;
-            this.#position = this.timeline.cursorPos;
-            if (this.video) this.video.setPosition(this.#position);
-            this.onRefreshPlaybackControl();
-        }
         return this.timeline;
     }
 
     async load(rawurl: string) {
         assert(this.video !== null);
         assert(this.timeline !== null);
-        await Promise.allSettled([
+        await Promise.all([
             this.video.load(rawurl),
             this.timeline.load(rawurl)
         ]);
         this.#isLoaded = true;
-        this.#duration = this.video.duration;
+        this.#duration = this.video.duration!;
         this.onRefreshPlaybackControl();
     }
 
@@ -81,13 +74,13 @@ export class Playback {
         this.onRefreshPlaybackControl();
     }
 
-    async setPosition(pos: number) {
+    setPosition(pos: number) {
         if (!this.video) {
             this.#position = pos;
             this.timeline?.setCursorPos(pos, true);
         } else {
             assert(this.timeline !== null);
-            await this.video.setPosition(pos);
+            this.video.setTargetPosition(pos);
             this.#position = pos;
             this.timeline?.setCursorPos(pos, true);
         }

@@ -1,6 +1,5 @@
 <script lang="ts">
 import ImportOptionsDialog from './lib/ImportOptionsDialog.svelte';
-import PropertiesToolbox from './lib/PropertiesToolbox.svelte';
 import SplitLanguagesDialog from './lib/SplitLanguagesDialog.svelte';
 import CombineDialog from "./lib/CombineDialog.svelte";
 import Resizer from './lib/ui/Resizer.svelte';
@@ -11,7 +10,6 @@ import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from './lib/Subtitl
 import { assert, Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
-import SearchToolbox from './lib/SearchToolbox.svelte';
 import { CanvasKeeper } from './lib/CanvasKeeper';
 import { Config } from './lib/Config';
 
@@ -19,9 +17,12 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Menu } from '@tauri-apps/api/menu';
 import TabView from './lib/ui/TabView.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
-    import UntimedToolbox from './lib/UntimedToolbox.svelte';
-    import SubtitleTable from './lib/SubtitleTable.svelte';
-    import { invoke } from '@tauri-apps/api/core';
+import SubtitleTable from './lib/SubtitleTable.svelte';
+
+import PropertiesToolbox from './lib/PropertiesToolbox.svelte';
+import UntimedToolbox from './lib/UntimedToolbox.svelte';
+import SearchToolbox from './lib/SearchToolbox.svelte';
+import TestToolbox from './lib/TestToolbox.svelte';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -44,7 +45,6 @@ let sliderDisabled = true;
 let playPos = 0;
 let playPosInput = 0;
 
-let subListUpdateCounter = 0;
 let editFormUpdateCounter = 0;
 let undoRedoUpdateCounter = 0;
 let statusUpdateCounter = 0;
@@ -279,6 +279,9 @@ Config.init();
               </TabPage>
               <TabPage name="Search/Replace">
                 <SearchToolbox {frontend}/>
+              </TabPage>
+              <TabPage name="Test">
+                <TestToolbox {frontend}/>
               </TabPage>
             </TabView>
           </div>

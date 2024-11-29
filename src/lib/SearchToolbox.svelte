@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { SubtitleEntry, SubtitleStyle } from './Subtitles'
-	import DialogBase from './DialogBase.svelte';
-	import StyleEdit from './StyleEdit.svelte';
 	import { ChangeCause, ChangeType, Frontend } from './Frontend';
 	import StyleSelect from './StyleSelect.svelte';
 	import { Basic } from './Basic';
