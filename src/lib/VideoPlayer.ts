@@ -4,7 +4,7 @@ import type { WithCanvas } from "./CanvasKeeper";
 import { MMedia, type VideoFrameData } from "./API";
 import { assert } from "./Basic";
 
-import decodedAudioLoaderUrl from './worker/DecodedAudioLoader.ts?url';
+import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 import type { AudioFeedbackData } from "./worker/DecodedAudioLoader";
 
 const LATENCY_DAMPING = 10;
@@ -98,6 +98,8 @@ export class VideoPlayer implements WithCanvas {
     }
     
     async load(rawurl: string) {
+        console.log('VideoPlayer: url=', rawurl);
+
         if (this.#media !== undefined && !this.#media.isClosed) {
             this.#media.close();
             this.#audioMedia?.close();
@@ -105,6 +107,7 @@ export class VideoPlayer implements WithCanvas {
         this.#media = await MMedia.open(rawurl);
         await this.#media.openVideo(-1);
         await this.#updateOutputSize();
+        console.log('VideoPlayer: opened video');
 
         this.#audioMedia = await MMedia.open(rawurl);
         await this.#audioMedia.openAudio(-1);
@@ -119,6 +122,7 @@ export class VideoPlayer implements WithCanvas {
         const worklet = new AudioWorkletNode(this.#audioCxt, "decoded-audio-loader");
         worklet.connect(this.#audioCxt.destination);
         this.#audioCxt.suspend();
+        console.log('VideoPlayer: opened audio');
 
         worklet.port.onmessage = (ev) => {
             if (Array.isArray(ev.data)) {
@@ -143,6 +147,7 @@ export class VideoPlayer implements WithCanvas {
         console.log('framerate=', this.#framerate);
         this.#media.onReceiveVideoFrame = (data) => this.#render(data);
         this.requestRender();
+        console.log('VideoPlayer: loaded media');
     }
 
     async fillAudioBuffer() {

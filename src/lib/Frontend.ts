@@ -311,9 +311,11 @@ export class Frontend {
     }
 
     async openVideo(file: string) {
-        await this.playback.load(file).catch((x) => {
-            this.status = 'error opening video: ' + x;
-        });
+        try {
+            await this.playback.load(file);
+        } catch (x) {
+            this.status = `error opening video '${file}': ${x}`;
+        };
         if (this.currentFile != '')
             Config.rememberVideo(this.currentFile, file);
     }

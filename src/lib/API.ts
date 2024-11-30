@@ -181,7 +181,6 @@ export class MMedia {
             let channel = createChannel({
                 opened: (data) => resolve(data.id)
             });
-            console.log('called open_media');
             invoke('open_media', {path, channel});
         });
         const status = await new Promise<{
@@ -222,7 +221,6 @@ export class MMedia {
             let channel = createChannel({
                 done: () => resolve()
             });
-            console.log('called open_audio');
             invoke('open_audio', {id: this.id, audioId, channel});
         });
     }
@@ -233,7 +231,6 @@ export class MMedia {
             let channel = createChannel({
                 done: () => resolve()
             });
-            console.log('called open_video');
             invoke('open_video', {id: this.id, videoId, channel});
         });
         let status = await this.videoStatus();

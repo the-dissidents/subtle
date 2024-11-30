@@ -16,8 +16,6 @@
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
     "@tauri-apps/plugin-os": "^2.0.0",
-    "@tauri-apps/plugin-websocket": "^2.0.0",
-    "capture-stack-trace": "^2.1.0",
     "eld": "^1.0.0"
   },
   "devDependencies": {
