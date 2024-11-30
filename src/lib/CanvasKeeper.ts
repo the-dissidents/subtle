@@ -10,7 +10,7 @@ export class CanvasKeeper {
 
     constructor(public canvas: HTMLCanvasElement, resizing: HTMLElement) 
     {
-        let context = canvas.getContext('2d');
+        let context = canvas.getContext('2d', { alpha: false });
         assert(context !== null);
         this.cxt = context;
         this.#handler();

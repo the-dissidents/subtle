@@ -611,7 +611,12 @@ export class Timeline implements WithCanvas {
     }
 
     // rendering
-
+    // TODO: it's timeline rendering that takes the most CPU time when playing video,
+    // and there's a lot we can do to optimize it.
+    //
+    // 1. Make the pointer a separate sprite, or equivalently, render waveform on a 
+    //    background canvas
+    // 2. Render incrementally when scrolling
     #renderWaveform() {
         if (!this.#sampler) return;
         if (this.#requestedSampler) this.#processSampler();

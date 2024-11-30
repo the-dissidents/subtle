@@ -20,7 +20,6 @@ type MediaEvent = {
 } | {
     event: 'audioStatus',
     data: {
-        position: number,
         length: number,
         sampleRate: number
     }
@@ -107,6 +106,12 @@ export type VideoFrameData = {
     content: Uint8ClampedArray
 }
 
+export type AudioFrameData = {
+    position: number,
+    time: number,
+    content: Float32Array
+}
+
 export class MMedia {
     #destroyed = false;
     #width: number = -1;
@@ -137,40 +142,37 @@ export class MMedia {
     }
 
     onReceiveVideoFrame: ((data: VideoFrameData) => void) | undefined = undefined;
+    onReceiveAudioFrame: ((data: AudioFrameData) => void) | undefined = undefined;
 
     private constructor(
         private id: number,
         private _duration: number,
         private _streams: string[]
-    ) {
-        // IPC.registerListener(this, (msg) => {
-        //     if (msg.type == 'binary' && this.onReceiveVideoFrame !== undefined) {
-                
-        //     }
-        // })
+    ) { }
+
+    #readVideoData(data: ArrayBuffer) {
+        const view = new DataView(data);
+        const position = Number(view.getBigInt64(0, true));
+        const time = view.getFloat64(8, true);
+        const stride = Number(view.getBigUint64(16, true));
+        const length = Number(view.getBigUint64(24, true));
+        const content = new Uint8ClampedArray(data, 32, length);
+
+        const struct: VideoFrameData = { position, time, stride, content };
+        if (this.onReceiveVideoFrame)
+            this.onReceiveVideoFrame(struct);
     }
 
-    #readFrameData(data: ArrayBuffer) {
+    #readAudioData(data: ArrayBuffer) {
         const view = new DataView(data);
-        const kind = String.fromCharCode(view.getUint8(0));
-        const position = Number(view.getBigInt64(1+0, true));
-        const time = view.getFloat64(1+8, true);
-        const stride = Number(view.getBigUint64(1+16, true));
-        const length = Number(view.getBigUint64(1+24, true));
-        // console.log(position, time, length);
-        const content = new Uint8ClampedArray(data, 1+32, length);
+        const position = Number(view.getBigInt64(0, true));
+        const time = view.getFloat64(8, true);
+        const length = Number(view.getBigUint64(16, true));
+        const content = new Float32Array(data, 24, length);
 
-        switch (kind) {
-        case 'V':
-            const struct: VideoFrameData = { position, time, stride, content };
-            if (this.onReceiveVideoFrame)
-                this.onReceiveVideoFrame(struct);
-            break;
-        case 'A':
-            
-        default:
-            console.log('Invalid message type:', kind);
-        }
+        const struct: AudioFrameData = { position, time, content };
+        if (this.onReceiveAudioFrame)
+            this.onReceiveAudioFrame(struct);
     }
 
     static async open(path: string) {
@@ -200,9 +202,9 @@ export class MMedia {
         return this.#destroyed;
     }
 
-    close() {
+    async close() {
         assert(!this.#destroyed);
-        return new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
             let channel = createChannel({
                 done: () => {
                     this.#destroyed = true;
@@ -214,9 +216,9 @@ export class MMedia {
         });
     }
 
-    openAudio(audioId: number) {
+    async openAudio(audioId: number) {
         assert(!this.#destroyed);
-        return new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
             let channel = createChannel({
                 done: () => resolve()
             });
@@ -238,9 +240,9 @@ export class MMedia {
         assert(status !== null);
     }
 
-    status() {
+    async status() {
         assert(!this.#destroyed);
-        return new Promise<{
+        return await new Promise<{
             audioIndex: number,
             videoIndex: number
         }>((resolve, reject) => {
@@ -251,10 +253,9 @@ export class MMedia {
         });
     }
 
-    audioStatus() {
+    async audioStatus() {
         assert(!this.#destroyed);
-        return new Promise<{
-            position: number,
+        return await new Promise<{
             sampleRate: number,
             length: number
         } | null>((resolve, reject) => {
@@ -303,81 +304,146 @@ export class MMedia {
         this.#outHeight = height;
     }
 
-    videoPosition() {
+    async videoPosition() {
         assert(!this.#destroyed);
-        return new Promise<number>((resolve, reject) => {
-            this.#currentJobs += 1;
-            let channel = createChannel({
-                position: (data) => resolve(data.value)
+        try {
+            return await new Promise<number>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({
+                    position: (data_1) => resolve(data_1.value)
+                });
+                invoke('get_current_video_position', { id: this.id, channel });
             });
-            invoke('get_current_video_position', {id: this.id, channel});
-        }).finally(() => this.#currentJobs -= 1);
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+    
+    async audioPosition() {
+        assert(!this.#destroyed);
+        try {
+            return await new Promise<number>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({
+                    position: (data_1) => resolve(data_1.value)
+                });
+                invoke('get_current_audio_position', { id: this.id, channel });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
     }
 
-    moveToNextVideoFrame(n = 1) {
+    async moveToNextVideoFrame() {
         assert(!this.#destroyed);
-        return new Promise<number>((resolve, reject) => {
-            this.#currentJobs += 1;
-            let channel = createChannel({
-                position: (data) => resolve(data.value)
+        try {
+            return await new Promise<number>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({
+                    position: (data_1) => resolve(data_1.value)
+                });
+                invoke('move_to_next_video_frame', { id: this.id, channel });
             });
-            invoke('move_to_next_video_frame', {id: this.id, n, channel});
-        }).finally(() => this.#currentJobs -= 1);
+        } finally {
+            this.#currentJobs -= 1;
+        }
     }
 
-    readNextVideoFrame() {
+    async moveToNextAudioFrame() {
         assert(!this.#destroyed);
-        return new Promise<void>((resolve, reject) => {
-            this.#currentJobs += 1;
-            let channel = createChannel({
-                // done: () => resolve()
+        try {
+            return await new Promise<number>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({
+                    position: (data_1) => resolve(data_1.value)
+                });
+                invoke('move_to_next_audio_frame', { id: this.id, channel });
             });
-            invoke<ArrayBuffer>('send_next_video_frame', {id: this.id, channel}).then((x) => {
-                resolve();
-                this.#readFrameData(x);
-            });
-        }).finally(() => this.#currentJobs -= 1);
+        } finally {
+            this.#currentJobs -= 1;
+        }
     }
 
-    readCurrentVideoFrame() {
+    async pollAudioFrame() {
         assert(!this.#destroyed);
-        return new Promise<void>((resolve, reject) => {
-            this.#currentJobs += 1;
-            let channel = createChannel({
-                // done: () => resolve()
+        try {
+            return await new Promise<number>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({
+                    position: (data_1) => resolve(data_1.value)
+                });
+                invoke('poll_next_audio_frame', { id: this.id, channel });
             });
-            invoke<ArrayBuffer>('send_current_video_frame', {id: this.id, channel}).then((x) => {
-                resolve();
-                this.#readFrameData(x);
-            });
-        }).finally(() => this.#currentJobs -= 1);
+        } finally {
+            this.#currentJobs -= 1;
+        }
     }
 
-    seekAudio(position: number) {
+    async readCurrentVideoFrame() {
         assert(!this.#destroyed);
-        return new Promise<void>((resolve, reject) => {
-            this.#currentJobs += 1;
-            let channel = createChannel({
-                done: () => resolve()
+        try {
+            return await new Promise<void>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({});
+                invoke<ArrayBuffer>('send_current_video_frame', { id: this.id, channel }).then((x) => {
+                    resolve();
+                    this.#readVideoData(x);
+                });
             });
-            invoke('seek_audio', {id: this.id, channel, position});
-        }).finally(() => this.#currentJobs -= 1);
+        } finally {
+            this.#currentJobs -= 1;
+        }
     }
 
-    seekVideo(position: number) {
+    async readCurrentAudioFrame() {
         assert(!this.#destroyed);
-        return new Promise<void>((resolve, reject) => {
-            this.#currentJobs += 1;
-            let channel = createChannel({
-                done: () => resolve()
+        try {
+            return await new Promise<void>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({});
+                invoke<ArrayBuffer>('send_current_audio_frame', { id: this.id, channel }).then((x) => {
+                    resolve();
+                    this.#readAudioData(x);
+                });
             });
-            invoke('seek_video', {id: this.id, channel, position});
-        }).finally(() => this.#currentJobs -= 1);
+        } finally {
+            this.#currentJobs -= 1;
+        }
     }
 
-    getIntensities(until: number, step: number) {
+    async seekAudio(position: number) {
         assert(!this.#destroyed);
-        return new Promise<{
+        try {
+            return await new Promise<void>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({
+                    done: () => resolve()
+                });
+                invoke('seek_audio', { id: this.id, channel, position });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
+    async seekVideo(position: number) {
+        assert(!this.#destroyed);
+        try {
+            return await new Promise<void>((resolve, reject) => {
+                this.#currentJobs += 1;
+                let channel = createChannel({
+                    done: () => resolve()
+                });
+                invoke('seek_video', { id: this.id, channel, position });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
+    async getIntensities(until: number, step: number) {
+        assert(!this.#destroyed);
+        return await new Promise<{
             start: number,
             end: number,
             data: number[]

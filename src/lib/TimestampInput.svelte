@@ -67,6 +67,7 @@
 
 <style>
 	.timestamp {
+        font-family: monospace;
 		text-align: center;
         box-sizing: border-box;
         width: 120px;

@@ -2,7 +2,8 @@ import {  path } from "@tauri-apps/api"
 import * as os from "@tauri-apps/plugin-os"
 
 export function assert(val: boolean): asserts val {
-    if (!val) throw Error('assertion failed');
+    console.assert(val);
+    if (!val) throw new Error('assertion failed');
 }
 
 export const Basic = {

@@ -312,7 +312,7 @@ export class Frontend {
 
     async openVideo(file: string) {
         await this.playback.load(file).catch((x) => {
-            this.status = 'error opening video: ' + JSON.stringify(x);
+            this.status = 'error opening video: ' + x;
         });
         if (this.currentFile != '')
             Config.rememberVideo(this.currentFile, file);

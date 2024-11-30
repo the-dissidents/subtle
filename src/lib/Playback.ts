@@ -3,7 +3,6 @@ import { Subtitles } from "./Subtitles";
 import { VideoPlayer } from "./VideoPlayer";
 import { Timeline } from "./Timeline";
 import { ChangeType, Frontend } from "./Frontend";
-import { convertFileSrc } from "@tauri-apps/api/core";
 
 export class Playback {
     #isLoaded = false;
@@ -88,7 +87,7 @@ export class Playback {
 
     async play(state = true) {
         assert(this.video !== null);
-        await this.video.play(state);
+        this.video.play(state);
     }
 
     async toggle() {

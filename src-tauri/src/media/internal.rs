@@ -8,6 +8,9 @@ use ffmpeg::{codec, frame, media, rescale, ChannelLayout, Rescale};
 use ffmpeg_next::error::EAGAIN;
 use ffmpeg_next::format::Pixel;
 use ffmpeg_next::Rational;
+use log::debug;
+use log::trace;
+use log::warn;
 
 #[derive(PartialEq)]
 enum ContextState {
@@ -23,16 +26,21 @@ pub struct AudioContext {
 
     stream_timebase: Rational,
     pos_timebase: Rational, // = rate ^ -1
-
-    position: i64,
     length: i64,
+
     state: ContextState,
+    current: Option<CachedAudioFrame>
 }
 
 pub struct CachedFrame {
     pub position: i64,
     pub decoded: frame::Video,
     pub scaled: Option<frame::Video>
+}
+
+pub struct CachedAudioFrame {
+    pub position: i64,
+    pub decoded: frame::Audio,
 }
 
 pub struct VideoContext {
@@ -59,26 +67,16 @@ pub struct MediaPlayback {
     stream_timebases: Vec<Rational>
 }
 
-fn print_frame_debug_date(frame: &frame::Video, incipit: &str) {
-    println!("{} ts={:?}:pts={:?}:planes={}:format={:?}", 
-        incipit,
-        frame.timestamp(), 
-        frame.pts(),
-        frame.planes(),
-        frame.format());
-}
+// fn print_frame_debug_date(frame: &frame::Video, incipit: &str) {
+//     trace!("{} ts={:?}:pts={:?}:planes={}:format={:?}", 
+//         incipit,
+//         frame.timestamp(), 
+//         frame.pts(),
+//         frame.planes(),
+//         frame.format());
+// }
 
 impl VideoContext {
-    fn scale_current_frame(&mut self) -> Result<(), String> {
-        let cache = self.current.as_mut().ok_or("No current frame")?;
-        let mut scaled = frame::Video::empty();
-        self.scaler.run(&cache.decoded, &mut scaled)
-            .or_else(|x| Err(format!("Scaler failed: {x}")))?;
-        cache.scaled = Some(scaled);
-        // print_frame_debug_date(&cache.scaled, "video: scaled frame:");
-        Ok(())
-    }
-
     fn try_receive_frame(&mut self) -> Result<(), String> {
         if self.state == ContextState::EOF {
             return Ok(());
@@ -93,14 +91,15 @@ impl VideoContext {
         match self.decoder.receive_frame(&mut cache.decoded) {
             Ok(()) => {
                 cache.position = cache.decoded.pts()
-                // fall back to packet's DTS if no pts available (as in AVI)
-                .unwrap_or(cache.decoded.packet().dts)
-                .rescale(self.stream_timebase, self.pos_timebase);
-                println!("receive: got frame {}", cache.position);
+                    // fall back to packet's DTS if no pts available (as in AVI)
+                    .unwrap_or(cache.decoded.packet().dts)
+                    .rescale(self.stream_timebase, self.pos_timebase);
+                trace!("receive: got frame {}", cache.position);
                 self.current = Some(cache);
                 Ok(())
             },
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
+                trace!("receive: EAGAIN");
                 self.state = ContextState::NeedPacket;
                 Ok(())
             },
@@ -127,7 +126,7 @@ impl VideoContext {
         if let Some(cached) = self.current.as_mut() {
             cached.scaled = None;
         }
-        println!("set output size: {:?}", size);
+        trace!("set output size: {:?}", size);
         Ok(())
     }
 
@@ -165,25 +164,38 @@ impl VideoContext {
 }
 
 impl AudioContext {
-    pub fn try_next_frame(&mut self) -> Result<Option<frame::Audio>, String> {
+    pub fn try_next_frame(&mut self) -> Result<(), String> {
         if self.state == ContextState::EOF {
-            return Ok(None);
+            return Ok(());
         }
+
+        let mut cache = CachedAudioFrame {
+            position: -1,
+            decoded: frame::Audio::empty()
+        };
 
         let mut decoded_frame = frame::Audio::empty();
-        if self.decoder.receive_frame(&mut decoded_frame).is_err() {
-            self.state = ContextState::NeedPacket;
-            return Ok(None);
+        match self.decoder.receive_frame(&mut decoded_frame) {
+            Ok(_) => (),
+            Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
+                self.state = ContextState::NeedPacket;
+                return Ok(());
+            },
+            Err(e) => {
+                return Err(format!("avcodec_receive_frame: {:?}", e));
+            }
         }
 
-        self.position = decoded_frame.pts()
+        cache.position = decoded_frame.pts()
             .ok_or("decoded frame has no pts")?
             .rescale(self.stream_timebase, self.pos_timebase);
 
-        let mut transformed_frame = frame::Audio::empty();
-        match self.resampler.run(&decoded_frame, &mut transformed_frame) {
-            Ok(_) => Ok(Some(transformed_frame)),
-            Err(e) => Err(e.to_string())
+        match self.resampler.run(&decoded_frame, &mut cache.decoded) {
+            Ok(_) => {
+                self.current = Some(cache);
+                Ok(())
+            },
+            Err(e) => Err(format!("Resampler fail: {e}"))
         }
     }
 
@@ -191,16 +203,16 @@ impl AudioContext {
         self.stream_i
     }
 
-    // pub fn pos_timebase(&self) -> Rational {
-    //     self.pos_timebase
-    // }
+    pub fn pos_timebase(&self) -> Rational {
+        self.pos_timebase
+    }
 
     pub fn length(&self) -> i64 {
         self.length
     }
 
-    pub fn position(&self) -> i64 {
-        self.position
+    pub fn current(&self) -> Option<&CachedAudioFrame> {
+        self.current.as_ref()
     }
 
     pub fn decoder(&self) -> &codec::decoder::Audio {
@@ -212,7 +224,7 @@ impl MediaPlayback {
     pub fn from_file(path: &str) -> Result<MediaPlayback, String> {
         let ictx = match format::input(&path) {
             Ok(i) => Box::new(i),
-            Err(e) => return Err(e.to_string()),
+            Err(e) => return Err(format!("Can't create input: {e}")),
         };
         let mut tbs = Vec::<Rational>::new();
         for stream in ictx.streams() {
@@ -282,7 +294,7 @@ impl MediaPlayback {
         let stream_avgfr = stream.avg_frame_rate();
         let stream_rfr = stream.rate();
         let decoder_fr = decoder.frame_rate();
-        println!("video: avgfr={stream_avgfr}:rfr={stream_rfr}; decoder: fr={:?}", decoder_fr);
+        debug!("video: avgfr={stream_avgfr}:rfr={stream_rfr}; decoder: fr={:?}", decoder_fr);
         // we decide to use r_frame_rate
 
         let scaler = scaling::Context::get(
@@ -353,7 +365,7 @@ impl MediaPlayback {
         // if I understand correctly, we can actually remove this as it holds by definition
         assert!(decoder.time_base() == invert_rate);
 
-        println!("audio: stream_tb={};decoder_tb={};rate={}", stream.time_base(), decoder.time_base(), decoder.rate());
+        debug!("audio: stream_tb={};decoder_tb={};rate={}", stream.time_base(), decoder.time_base(), decoder.rate());
 
         self.audio = Some(AudioContext {
             stream_i: index,
@@ -361,8 +373,8 @@ impl MediaPlayback {
             pos_timebase: invert_rate,
             length: self.input.duration()
                 .rescale(rescale::TIME_BASE, decoder.time_base()),
-            position: -1,
             state: ContextState::NeedPacket,
+            current: None,
             decoder, resampler
         });
         Ok(())
@@ -372,7 +384,7 @@ impl MediaPlayback {
         let cxt = self.video.as_mut()
             .ok_or("No video opened".to_string())?;
         if cxt.current.is_none() {
-            println!("ensure_current_video_frame");
+            trace!("ensure_current_video_frame");
             self.advance_to_next_video_frame()?;
         }
         Ok(())
@@ -382,52 +394,82 @@ impl MediaPlayback {
         self.ensure_current_video_frame()?;
         let cxt = self.video.as_mut().unwrap();
         if cxt.current.as_ref().unwrap().scaled.is_none() {
-            cxt.scale_current_frame()?;
+            let this = &mut *cxt;
+            let cache = this.current.as_mut().ok_or("No current frame")?;
+            let mut scaled = frame::Video::empty();
+            this.scaler.run(&cache.decoded, &mut scaled)
+                .or_else(|x| Err(format!("Scaler failed: {x}")))?;
+            cache.scaled = Some(scaled);
+            // print_frame_debug_date(&cache.scaled, "video: scaled frame:");
         }
         Ok(())
     }
 
     pub fn advance_to_next_video_frame(&mut self) -> Result<(), String> {
-        let cxt = self.video.as_mut()
-            .ok_or("No video opened".to_string())?;
+        self.video.as_ref().ok_or("No video opened".to_string())?;
 
-        cxt.current = None;
-        cxt.try_receive_frame()?;
-        if cxt.state == ContextState::EOF {
-            return Err("already at EOF".to_string());
-        }
-        if cxt.current.is_none() {
-            println!("filling packet for decoder");
+        let mut counter = 0;
+        while counter < 6 {
+            let cxt = self.video.as_mut().unwrap();
+            cxt.current = None;
+            cxt.try_receive_frame()?;
+            if cxt.state == ContextState::EOF {
+                return Err("Video already at EOF".to_string());
+            }
+            if cxt.current.is_some() {
+                return Ok(());
+            }
+
+            trace!("filling packet for video");
             self.fill_packets(None)?;
-            return self.advance_to_next_video_frame();
-        };
-        Ok(())
+            counter += 1;
+        }
+        Err("video decoder locked!".to_string())
     }
 
-    pub fn next_audio_frame(&mut self) -> Result<Option<frame::Audio>, String> {
+    pub fn advance_to_next_audio_frame(&mut self) -> Result<(), String> {
+        self.audio.as_ref().ok_or("No audio opened".to_string())?;
+
+        let mut counter = 0;
+        while counter < 20 {
+            let cxt = self.audio.as_mut().unwrap();
+            cxt.current = None;
+            if cxt.current.is_none() {
+                cxt.try_next_frame()?;
+                if cxt.state == ContextState::EOF {
+                    return Err("Audio already at EOF".to_string());
+                }
+            }
+            if cxt.current.is_some() {
+                return Ok(());
+            }
+            self.fill_packets(None)?;
+            counter += 1;
+        }
+        Err("audio decoder locked!".to_string())
+    }
+
+    pub fn poll_next_audio_frame(&mut self) -> Result<bool, String> {
         let cxt = self.audio.as_mut()
             .ok_or("No audio opened".to_string())?;
-
-        if let Some(f) = cxt.try_next_frame()? {
-            return Ok(Some(f));
-        } else if self.audio.as_ref().unwrap().state == ContextState::EOF {
-            return Ok(None);
-        } else {
-            self.fill_packets(None)?;
-            return self.next_audio_frame();
+        cxt.current = None;
+        cxt.try_next_frame()?;
+        if cxt.state == ContextState::EOF {
+            return Err("Audio already at EOF".to_string());
         }
+        Ok(cxt.current.is_some())
     }
 
     fn fill_packets(&mut self, skip_until: Option<(i64, Rational)>) -> Result<(), String> {
         let mut audio_id: i32 = match &self.audio {
-            Some(AudioContext { state: ContextState::HasPacket, .. }) 
-                => return Err("unconsumed audio packet".to_string()),
+            // Some(AudioContext { state: ContextState::HasPacket, .. }) 
+            //     => return Err("unconsumed audio packet".to_string()),
             Some(c) => c.stream_i as i32,
             None => -1,
         };
         let mut video_id = match &self.video {
-            Some(VideoContext { state: ContextState::HasPacket, .. }) 
-                => return Err("unconsumed audio packet".to_string()),
+            // Some(VideoContext { state: ContextState::HasPacket, .. }) 
+            //     => return Err("unconsumed audio packet".to_string()),
             Some(c) => c.stream_i as i32,
             None => -1,
         };
@@ -453,34 +495,56 @@ impl MediaPlayback {
                     let until = until.rescale(base, stream_tb);
                     is_ok = stamp + duration >= until - 10;
                     if first {
-                        println!("fillmany: first: {}~{}; pts={:?}:dts={:?}", pktpos, pktpos2, packet.pts(), packet.dts());
+                        trace!("fillmany: first: {}~{}; pts={:?}:dts={:?}", pktpos, pktpos2, packet.pts(), packet.dts());
                         first = false;
                     }
                     if is_ok {
-                        println!("fillmany: ok at {}~{}; pts={:?}:dts={:?}", pktpos, pktpos2, packet.pts(), packet.dts());
+                        trace!("fillmany: ok at {}~{}; pts={:?}:dts={:?}", pktpos, pktpos2, packet.pts(), packet.dts());
                         has_been_ok = true;
+                    } else {
+                        // n_skipped += 1;
+                        // continue;
                     }
                 }
             }
 
             if audio_id >= 0 && stream.index() == audio_id as usize {
                 let cxt = self.audio.as_mut().unwrap();
-                cxt.decoder.send_packet(&packet).map_err(|x| x.to_string())?;
-                cxt.state = ContextState::HasPacket;
-                audio_id = -1;
+                match cxt.decoder.send_packet(&packet) {
+                    Ok(_) => {
+                        cxt.state = ContextState::HasPacket;
+                        audio_id = -1;
+                    },
+                    Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
+                        // discard buffer
+                        warn!("fill: EAGAIN met in sending audio pkt, flushing");
+                        cxt.decoder.flush();
+                    },
+                    Err(e) => return Err(format!("Sending audio packet: {e}"))
+                }
             } else if video_id >= 0 && stream.index() == video_id as usize {
                 let cxt = self.video.as_mut().unwrap();
-                cxt.decoder.send_packet(&packet).map_err(|x| x.to_string())?;
-                cxt.state = ContextState::HasPacket;
-                cxt.current = None;
-                video_id = -1;
+                match cxt.decoder.send_packet(&packet) {
+                    Ok(_) => {
+                        trace!("fill: avcodec_send_packet video ok");
+                        cxt.state = ContextState::HasPacket;
+                        cxt.current = None;
+                        video_id = -1;
+                    },
+                    Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
+                        // discard buffer
+                        warn!("fill: EAGAIN met in sending video pkt");
+                        cxt.decoder.flush();
+                    },
+                    Err(e) => return Err(format!("Sending video packet: {e}"))
+                }
             }
             if audio_id < 0 && video_id < 0 && is_ok {
                 if n_skipped > 0 {
-                    println!("fillmany: n_skipped={}:n_after_ok={}", n_skipped, n_after_ok);
+                    trace!("fillmany: n_skipped={}:n_after_ok={}", n_skipped, n_after_ok);
                 }
                 if skip_until.is_some() {
-                    println!("fillmany: returning; pts={:?}:dts={:?}", packet.pts(), packet.dts());
+                    trace!("fillmany: returning; pts={:?}:dts={:?}", packet.pts(), packet.dts());
                 }
                 return Ok(());
             }
@@ -490,6 +554,7 @@ impl MediaPlayback {
                 n_after_ok += 1;
             }
         }
+        debug!("fill: met EOF!");
         if audio_id >= 0 {
             self.audio.as_mut().unwrap().state = ContextState::EOF;
         }
@@ -501,7 +566,7 @@ impl MediaPlayback {
 
     fn clear_packets(&mut self) {
         if let Some(ctx) = self.audio.as_mut() {
-            ctx.position = -1;
+            ctx.current = None;
             ctx.state = ContextState::NeedPacket;
             ctx.decoder.flush();
         }
@@ -528,12 +593,13 @@ impl MediaPlayback {
         self.seek_video(position)?;
         // self.ensure_current_video_frame()?;
 
-        self.clear_packets();
+        // self.clear_packets();
         self.fill_packets(Some((position, timebase)))?;
-        self.ensure_current_video_frame()?;
+        // self.ensure_current_video_frame()?;
+        self.advance_to_next_video_frame()?;
 
         let current = self.video.as_ref().unwrap().current.as_ref().unwrap();
-        println!("note: now at {}", current.position);
+        debug!("seek_precise: now at {}", current.position);
 
         let mut n_advanced = 0;
         loop {
@@ -546,9 +612,9 @@ impl MediaPlayback {
             self.advance_to_next_video_frame()?;
         }
         if n_advanced > 0 {
-            println!("note: advanced {} additional times", n_advanced);
+            debug!("seek_precise: advanced {} additional times", n_advanced);
         }
-        println!("note: arrived at {}", position);
+        debug!("seek_precise: arrived at {}", position);
 
         // if let Ok(report) = guard.report().build() {
         //     let file = std::fs::File::create("debug/flamegraph.svg").unwrap();
@@ -571,7 +637,7 @@ impl MediaPlayback {
         let rescaled = position.rescale(
             video.pos_timebase, 
             video.stream_timebase);
-        // println!("seek: pos={}, rescaled={}", position, rescaled);
+        trace!("seek video: pos={}, rescaled={}", position, rescaled);
 
         unsafe {
             match ffmpeg_sys_next::avformat_seek_file(
@@ -590,8 +656,11 @@ impl MediaPlayback {
 
     pub fn seek_audio(&mut self, position: i64) -> Result<(), String> {
         let audio = self.audio.as_ref().ok_or("No audio".to_string())?;
-        if audio.position >= position && audio.position < position + 100 {
-            return Ok(());
+        if let Some(cache) = audio.current.as_ref() {
+            // do not seek if we're close enough
+            if cache.position >= position && cache.position < position + 10 {
+                return Ok(());
+            }
         }
         
         self.clear_packets();
@@ -599,7 +668,7 @@ impl MediaPlayback {
         let rescaled = position.rescale(
             audio.pos_timebase, 
             audio.stream_timebase);
-        // println!("seek: pos={}, rescaled={}", position, rescaled);
+        trace!("seek audio: pos={}, rescaled={}", position, rescaled);
 
         unsafe {
             match ffmpeg_sys_next::avformat_seek_file(
@@ -614,17 +683,6 @@ impl MediaPlayback {
                 e => Err(format!("Seek failed: {e}")),
             }
         }
-
-        // // TODO: if very close to current position then don't seek at all
-        // self.clear_packets();
-
-        // let cxt = self.audio.as_ref().ok_or("No audio".to_string())?;
-        // let rescaled = position.rescale(
-        //     cxt.pos_timebase, 
-        //     rescale::TIME_BASE);
-        // self.input.seek(rescaled, ..rescaled)
-        //     .or_else(|x| Err(format!("Seek failed: {x}")))?;
-        // Ok(())
     }
 }
 

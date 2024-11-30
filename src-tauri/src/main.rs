@@ -15,6 +15,8 @@ struct SetupState {
 }
 
 fn main() {
+    simple_logger::init_with_level(log::Level::Debug).unwrap();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_dialog::init())
@@ -40,11 +42,14 @@ fn main() {
             media::open_audio,
             media::seek_audio,
             media::get_intensities,
+            media::send_current_audio_frame,
+            media::get_current_audio_position,
+            media::poll_next_audio_frame,
+            media::move_to_next_audio_frame,
 
             media::open_video,
             media::seek_video,
             media::video_set_size,
-            media::send_next_video_frame,
             media::send_current_video_frame,
             media::get_current_video_position,
             media::move_to_next_video_frame,

@@ -247,7 +247,7 @@ Config.init();
         <!-- video playback controls -->
         <div class='controls-container'>
           <button on:click={() => frontend.playback.toggle()
-            .catch(() => frontend.status = "can't play now!")}
+            .catch((e) => frontend.status = `Error playing video: ${e}`)}
           >{playIcon}</button>
           <input type='range' class='play-pointer flexgrow'
             step="any" max="1" min="0" disabled={sliderDisabled}

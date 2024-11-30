@@ -73,7 +73,7 @@
         box-shadow: none;
 		margin: 0;
 		color: #a6a6a6;
-        font-size: 100%;
+        font-size: 90%;
         text-wrap: nowrap;
 	}
 	.selected {

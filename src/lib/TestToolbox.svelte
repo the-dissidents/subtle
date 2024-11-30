@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { cursorPosition } from "@tauri-apps/api/window";
     import { MAPI } from "./API";
+    import { assert } from "./Basic";
     import type { Frontend } from "./Frontend";
 
 	export let frontend: Frontend;
@@ -8,9 +10,22 @@
 
 <button
     on:click={async () => {
-        await MAPI.testResponse();
+        let video = frontend.playback.video;
+        if (video == null) {
+            result = "No video!";
+            return;
+        }
+        let media = video._testGetMedia();
+        if (media == null) {
+            result = "No MMedia!";
+            return;
+        }
+        let t0 = performance.now();
+        await media.moveToNextVideoFrame();
+        await media.readCurrentVideoFrame();
+        result = `done: t=${performance.now() - t0}\n`;
     }}>
-    test response
+    next video frame
 </button>
 <button
     on:click={async () => {
@@ -25,10 +40,14 @@
             return;
         }
         let t0 = performance.now();
-        await media.readNextVideoFrame();
-        result = `readNextVideoFrame done: t=${performance.now() - t0}\n`;
+        assert(video.currentPosition !== undefined);
+        assert(video.framerate !== undefined);
+        let pos = video.currentPosition * video.framerate - 1;
+        await video.setPosition(pos / video.framerate);
+        await media.readCurrentVideoFrame();
+        result = `done: t=${performance.now() - t0}\n`;
     }}>
-    read video frame
+    previous video frame
 </button>
 <br>
 <span>{result}</span>

@@ -43,7 +43,6 @@ pub enum MediaEvent<'a> {
     },
     #[serde(rename_all = "camelCase")]
     AudioStatus {
-        position: i64,
         length: i64,
         sample_rate: u32,
     },
@@ -143,7 +142,6 @@ pub fn audio_status(
     send(
         &channel,
         MediaEvent::AudioStatus {
-            position: ctx.position(),
             length: ctx.length(),
             sample_rate: ctx.decoder().rate(),
         },
@@ -324,19 +322,9 @@ pub fn seek_audio(
     send_done(&channel);
 }
 
-// per https://users.rust-lang.org/t/flattening-a-vector-of-tuples/11409/3
-fn flatten6(data: &[(u8, u8, u8, u8)]) -> Vec<u8> {
-    let mut result = data.to_vec();
-    unsafe {
-        result.set_len(data.len() * 4);
-        std::mem::transmute(result)
-    }
-}
-
 #[tauri::command]
 pub fn move_to_next_video_frame(
     id: i32,
-    n: i32,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
@@ -346,13 +334,53 @@ pub fn move_to_next_video_frame(
             Some(x) => x,
             None => return send_invalid_id(&channel)
         };
-        for _ in 0..n {
-            if let Err(e) = playback.advance_to_next_video_frame() {
-                return send_error!(&channel, e.to_string());
-            }
+        if let Err(e) = playback.advance_to_next_video_frame() {
+            return send_error!(&channel, e.to_string());
         }
     };
     get_current_video_position(id, state, channel);
+}
+
+#[tauri::command]
+pub fn move_to_next_audio_frame(
+    id: i32,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) {
+    {
+        let mut ap = state.lock().unwrap();
+        let playback = match ap.table.get_mut(&id) {
+            Some(x) => x,
+            None => return send_invalid_id(&channel)
+        };
+        if let Err(e) = playback.advance_to_next_audio_frame() {
+            return send_error!(&channel, format!("advance_to_next_audio_frame: {e}"))
+        }
+    };
+    get_current_audio_position(id, state, channel);
+}
+
+#[tauri::command]
+pub fn poll_next_audio_frame(
+    id: i32,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) {
+    {
+        let mut ap = state.lock().unwrap();
+        let playback = match ap.table.get_mut(&id) {
+            Some(x) => x,
+            None => return send_invalid_id(&channel)
+        };
+        match playback.poll_next_audio_frame() {
+            Ok(true) => (),
+            Ok(false) => 
+                return send(&channel, MediaEvent::Position { value: -1 }),
+            Err(e) => 
+                return send_error!(&channel, format!("poll_next_audio_frame: {e}"))
+        }
+    };
+    get_current_audio_position(id, state, channel);
 }
 
 #[tauri::command]
@@ -367,7 +395,7 @@ pub fn get_current_video_position(
             Some(x) => x,
             None => return send_invalid_id(&channel)
         };
-        let video = match playback.video_mut() {
+        let video = match playback.video() {
             Some(c) => c,
             None => return send(&channel, MediaEvent::NoStream { })
         };
@@ -375,38 +403,62 @@ pub fn get_current_video_position(
             return send(&channel, MediaEvent::Position { value: x.position });
         }
     };
-    return move_to_next_video_frame(id, 1, state, channel);
+    return move_to_next_video_frame(id, state, channel);
 }
 
 #[tauri::command]
-pub fn send_next_video_frame(
+pub fn get_current_audio_position(
     id: i32,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
-) -> Result<ipc::Response, ()> {
+) {
     {
         let mut ap = state.lock().unwrap();
         let playback = match ap.table.get_mut(&id) {
             Some(x) => x,
-            None => {
-                send_invalid_id(&channel);
-                return Err(());
-            }
+            None => return send_invalid_id(&channel)
         };
-        if let Err(e) = playback.advance_to_next_video_frame() {
-            send_error!(&channel, e.to_string());
-            return Err(());
+        let audio = match playback.audio() {
+            Some(c) => c,
+            None => return send(&channel, MediaEvent::NoStream { })
+        };
+        if let Some(x) = audio.current() {
+            return send(&channel, MediaEvent::Position { value: x.position });
         }
     };
-    return send_current_video_frame(id, state, channel);
+    return send(&channel, MediaEvent::Position { value: -1 });
+    //return move_to_next_audio_frame(id, state, channel);
 }
 
+/** 
+ * returns: [
+ *  position    : i64
+ *  time        : f64
+ *  stride      : u64
+ *  length      : u64
+ *  rgba_data   : [u8]
+ * ]
+ * */ 
 #[tauri::command]
 pub fn send_current_video_frame(
     id: i32,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) -> Result<ipc::Response, ()> {
+    fn to_byte_slice<'a>(data: &'a [(u8, u8, u8, u8)]) -> &'a [u8] {
+        unsafe {
+            std::slice::from_raw_parts(data.as_ptr() as *const _, data.len() * 4)
+        }
+    }
+    // // per https://users.rust-lang.org/t/flattening-a-vector-of-tuples/11409/3
+    // fn flatten6(data: &[(u8, u8, u8, u8)]) -> Vec<u8> {
+    //     let mut result = data.to_vec();
+    //     unsafe {
+    //         result.set_len(data.len() * 4);
+    //         std::mem::transmute(result)
+    //     }
+    // }
+
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
@@ -430,14 +482,15 @@ pub fn send_current_video_frame(
 
     let pos = current.position;
     let time = f64::from(video.pos_timebase()) * pos as f64;
-    let mut data = flatten6(frame.plane(0));
+    let data = to_byte_slice(frame.plane(0));
+
     let mut binary = Vec::<u8>::new();
-    binary.push(b'V');
     binary.extend(pos.to_le_bytes().iter());
     binary.extend(time.to_le_bytes().iter());
     binary.extend(((frame.stride(0) / 4) as u64).to_le_bytes().iter());
     binary.extend((data.len() as u64).to_le_bytes().iter());
-    binary.append(&mut data);
+    binary.extend_from_slice(data);
+
     Ok(Response::new(InvokeResponseBody::Raw(binary)))
 }
 
@@ -463,6 +516,62 @@ pub fn seek_video(
     send_done(&channel);
 }
 
+/** 
+ * returns: [
+ *  position    : i64
+ *  time        : f64
+ *  length      : u64
+ *  sample_data : [f32]
+ * ]
+ * */ 
+#[tauri::command]
+pub fn send_current_audio_frame(
+    id: i32,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) -> Result<ipc::Response, ()> {
+    // FIXME: support multiple channels
+
+    fn to_byte_slice<'a>(floats: &'a [f32]) -> &'a [u8] {
+        unsafe {
+            std::slice::from_raw_parts(floats.as_ptr() as *const _, floats.len() * 4)
+        }
+    }
+
+    let mut ap = state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => {
+            send_invalid_id(&channel);
+            return Err(());
+        }
+    };
+    if playback.audio().is_none() {
+        send(&channel, MediaEvent::NoStream { });
+        return Err(());
+    }
+
+    let cxt = playback.audio().unwrap();
+    let cached = match cxt.current() {
+        Some(x) => x,
+        None => {
+            send_error!(&channel, "No current audio frame");
+            return Err(());
+        }
+    };
+    let pos = cached.position;
+    let time = f64::from(cxt.pos_timebase()) * pos as f64;
+    let data: &[f32] = cached.decoded.plane(0);
+
+    let mut binary = Vec::<u8>::new();
+    binary.extend(pos.to_le_bytes().iter());
+    binary.extend(time.to_le_bytes().iter());
+    binary.extend((data.len() as u64).to_le_bytes().iter());
+    binary.extend_from_slice(&to_byte_slice(data));
+
+    Ok(Response::new(InvokeResponseBody::Raw(binary)))
+}
+
 #[tauri::command]
 pub fn get_intensities(
     id: i32,
@@ -485,8 +594,12 @@ pub fn get_intensities(
     let mut sum: f32 = 0.0;
     let mut start_position = -1;
 
-    while let Ok(Some(resampled_frame)) = playback.next_audio_frame() {
-        let data: &[f32] = resampled_frame.plane(0);
+    loop {
+        if let Err(e) = playback.advance_to_next_audio_frame() {
+            return send_error!(&channel, format!("Can't advance audio: {e}"));
+        }
+        let current = playback.audio().unwrap().current().unwrap();
+        let data: &[f32] = current.decoded.plane(0);
         for sample in data {
             sum += (*sample) * (*sample);
             counter += 1;
@@ -497,9 +610,9 @@ pub fn get_intensities(
             }
         }
         if start_position < 0 {
-            start_position = playback.audio().unwrap().position();
+            start_position = current.position;
         }
-        if playback.audio().unwrap().position() >= until {
+        if current.position >= until {
             break;
         }
     }
