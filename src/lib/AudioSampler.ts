@@ -15,7 +15,7 @@ export class AudioSampler {
     #isSampling = false;
     #media: MMedia;
 
-    static SAMPLE_LENGTH = 1024;
+    static SAMPLE_LENGTH = 512;
     data: Float32Array;
     detail: Float32Array;
 

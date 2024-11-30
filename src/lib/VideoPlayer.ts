@@ -270,9 +270,11 @@ export class VideoPlayer implements WithCanvas {
         this.#ctx.globalCompositeOperation = 'copy';
 
         if (this.#opened) {
-            this.#requestedTime = performance.now();
-            await this.fillAudioBuffer();
-            await this.#opened.video.moveToNextVideoFrame();
+            if (this.isPlaying) {
+                this.#requestedTime = performance.now();
+                await this.fillAudioBuffer();
+                await this.#opened.video.moveToNextVideoFrame();
+            }
             let data = await this.#opened.video.readCurrentVideoFrame();
             this.#opened.pos = data.position;
             this.onVideoPositionChange();

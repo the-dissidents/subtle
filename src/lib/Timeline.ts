@@ -628,10 +628,10 @@ export class Timeline implements WithCanvas {
             this.#sampler.data.length - 1);
         const width = 1 / resolution * this.#scale;
         const step = Math.max(1, Math.ceil(1 / width));
-        const drawWidth = Math.max(1, step * width)
+        const drawWidth = Math.ceil(Math.max(1, step * width))
         for (let i = start; i < end; i += step) {
             const detail = this.#sampler.detail[i];
-            const x = (i - this.#offset * resolution) * width;
+            const x = Math.floor((i - this.#offset * resolution) * width);
 
             this.#cxt.fillStyle = `rgb(100% 10% 10% / 30%)`;
             let dh = (1 - detail) * this.#height;

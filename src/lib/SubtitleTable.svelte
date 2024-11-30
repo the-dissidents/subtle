@@ -31,6 +31,7 @@ table.subs {
   cursor: default;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
+  overflow-wrap: break-word;
 }
 
 table.subs thead {
