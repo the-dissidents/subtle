@@ -93,7 +93,7 @@ function createChannel(handler: {[key in MediaEventKey]?: MediaEventHandler<key>
         case 'invalidId':
             throw new MediaError('invalid media ID referenced');
         default:
-            console.warn('unhandled event:', msg);
+            throw new Error('unhandled event: ' + msg.event);
         }
     }
     return channel;
@@ -141,9 +141,6 @@ export class MMedia {
         return this.#currentJobs != 0;
     }
 
-    onReceiveVideoFrame: ((data: VideoFrameData) => void) | undefined = undefined;
-    onReceiveAudioFrame: ((data: AudioFrameData) => void) | undefined = undefined;
-
     private constructor(
         private id: number,
         private _duration: number,
@@ -159,8 +156,7 @@ export class MMedia {
         const content = new Uint8ClampedArray(data, 32, length);
 
         const struct: VideoFrameData = { position, time, stride, content };
-        if (this.onReceiveVideoFrame)
-            this.onReceiveVideoFrame(struct);
+        return struct;
     }
 
     #readAudioData(data: ArrayBuffer) {
@@ -171,8 +167,7 @@ export class MMedia {
         const content = new Float32Array(data, 24, length);
 
         const struct: AudioFrameData = { position, time, content };
-        if (this.onReceiveAudioFrame)
-            this.onReceiveAudioFrame(struct);
+        return struct;
     }
 
     static async open(path: string) {
@@ -379,12 +374,11 @@ export class MMedia {
     async readCurrentVideoFrame() {
         assert(!this.#destroyed);
         try {
-            return await new Promise<void>((resolve, reject) => {
+            return await new Promise<VideoFrameData>((resolve, reject) => {
                 this.#currentJobs += 1;
                 let channel = createChannel({});
                 invoke<ArrayBuffer>('send_current_video_frame', { id: this.id, channel }).then((x) => {
-                    resolve();
-                    this.#readVideoData(x);
+                    resolve(this.#readVideoData(x));
                 });
             });
         } finally {
@@ -395,12 +389,11 @@ export class MMedia {
     async readCurrentAudioFrame() {
         assert(!this.#destroyed);
         try {
-            return await new Promise<void>((resolve, reject) => {
+            return await new Promise<AudioFrameData>((resolve, reject) => {
                 this.#currentJobs += 1;
                 let channel = createChannel({});
                 invoke<ArrayBuffer>('send_current_audio_frame', { id: this.id, channel }).then((x) => {
-                    resolve();
-                    this.#readAudioData(x);
+                    resolve(this.#readAudioData(x));
                 });
             });
         } finally {

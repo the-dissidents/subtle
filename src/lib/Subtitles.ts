@@ -406,6 +406,165 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
     }
 }
 
+function getASSSections(source: string) {
+    const sectionRegex  = /\[(.+)\]\s*\n((?:\s*[^[\n]+.+\n)+)/g;
+    return new Map([...source.matchAll(sectionRegex)].map((x) => [x[1], x[2]]));
+}
+
+function getASSFormatFieldMap(section: string) {
+    const fieldMapMatch = section.match(/Format:\s*(.*)\n/);
+    if (!fieldMapMatch) return null;
+    return new Map(
+        fieldMapMatch[1].split(/,/).map((x, i) => [x.trim(), i] as const));
+}
+
+function parseASSScriptInfo(sections: Map<string, string>, subs: Subtitles) {
+    let text = sections.get('Script Info');
+    if (text === undefined) return;
+
+    const entryRegex = /(?<=\n)([^;].+?):\s*(.*)/g;
+    const infos = new Map([...text.matchAll(entryRegex)]
+        .map((x) => [x[1], x[2]]));
+    subs.metadata.title = infos.get('Title') ?? subs.metadata.title;
+    if (infos.has('PlayResX')) {
+        const n = Number.parseInt(infos.get('PlayResX')!);
+        if (!Number.isNaN(n)) subs.metadata.width = n;
+    }
+    if (infos.has('PlayResY')) {
+        const n = Number.parseInt(infos.get('PlayResY')!);
+        if (!Number.isNaN(n)) subs.metadata.height = n;
+    }
+}
+
+function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
+    let text = sections.get('V4 Styles') ?? sections.get('V4+ Styles');
+    if (text === undefined) return;
+
+    const styleFieldMap = getASSFormatFieldMap(text);
+    if (styleFieldMap == null) return subs;
+    console.log(styleFieldMap);
+
+    const stylesRegex   = /Style:\s*(.*)\n/g;
+    let styles: Map<string, SubtitleStyle> = new Map();
+    let first: SubtitleStyle | null = null;
+    const styleMatches = text.matchAll(stylesRegex);
+    for (const match of styleMatches) {
+        const items = match[1].split(',');
+        try {
+            const name = items[styleFieldMap.get('Name')!];
+            let style = styles.get(name);
+            if (style === undefined) {
+                style = new SubtitleStyle(name);
+                if (first === null)
+                    first = style;
+                else
+                    subs.styles.push(style);
+                styles.set(name, style);
+            } else {
+                // warn
+                console.warn('duplicate style definition:', name);
+            }
+            if (styleFieldMap.has('Fontname'))
+                style.font = items[styleFieldMap.get('Fontname')!];
+            if (styleFieldMap.has('Bold'))
+                style.styles.bold = items[styleFieldMap.get('Bold')!] == '-1';
+            if (styleFieldMap.has('Italic'))
+                style.styles.italic = items[styleFieldMap.get('Italic')!] == '-1';
+            if (styleFieldMap.has('Underline'))
+                style.styles.underline = 
+                    items[styleFieldMap.get('Underline')!] == '-1';
+            if (styleFieldMap.has('StrikeOut'))
+                style.styles.strikethrough = 
+                    items[styleFieldMap.get('StrikeOut')!] == '-1';
+            
+            if (styleFieldMap.has('Fontsize')) {
+                const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
+                if (!Number.isNaN(n)) style.size = n;
+            }
+            if (styleFieldMap.has('Fontsize')) {
+                const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
+                if (!Number.isNaN(n)) style.size = n;
+            }
+            if (styleFieldMap.has('Outline')) {
+                const n = Number.parseFloat(items[styleFieldMap.get('Outline')!]);
+                if (!Number.isNaN(n)) style.outline = n;
+            }
+            if (styleFieldMap.has('Shadow')) {
+                const n = Number.parseFloat(items[styleFieldMap.get('Shadow')!]);
+                if (!Number.isNaN(n)) style.shadow = n;
+            }
+            if (styleFieldMap.has('PrimaryColor')) {
+                const color = fromASSColor(items[styleFieldMap.get('PrimaryColor')!]);
+                if (color !== null) style.color = color;
+            }
+            if (styleFieldMap.has('OutlineColor')) {
+                const color = fromASSColor(items[styleFieldMap.get('OutlineColor')!]);
+                if (color !== null) style.outlineColor = color;
+            }
+            if (styleFieldMap.has('Alignment')) {
+                const n = Number.parseFloat(items[styleFieldMap.get('Alignment')!]);
+                if (n >= 1 && n <= 9) style.alignment = n as AlignMode;
+            }
+            if (styleFieldMap.has('MarginL')) {
+                const n = Number.parseFloat(items[styleFieldMap.get('MarginL')!]);
+                if (!Number.isNaN(n)) style.margin.left = n;
+            }
+            if (styleFieldMap.has('MarginR')) {
+                const n = Number.parseFloat(items[styleFieldMap.get('MarginR')!]);
+                if (!Number.isNaN(n)) style.margin.right = n;
+            }
+            if (styleFieldMap.has('MarginV')) {
+                const n = Number.parseFloat(items[styleFieldMap.get('MarginV')!]);
+                if (!Number.isNaN(n)) style.margin.top = style.margin.bottom = n;
+            }
+            console.log('imported style:', name, style);
+        } catch {
+            console.log('error when importing style');
+        }
+    }
+    
+    if (first == null) {
+        // no styles
+        console.warn('no style defined', name);
+    } else {
+        subs.defaultStyle = first;
+    }
+}
+
+function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
+    let text = sections.get('Events');
+    if (text === undefined) return;
+
+    const fieldMap = getASSFormatFieldMap(text);
+    if (fieldMap == null 
+        || !fieldMap.has('Start') 
+        || !fieldMap.has('End') 
+        || !fieldMap.has('Style')
+        || !fieldMap.has('Text')) return subs;
+    console.log(fieldMap);
+
+    const regex = RegExp(String.raw
+        `^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
+    let styles: Map<string, SubtitleStyle> = new Map(
+        [subs.defaultStyle, ...subs.styles].map((x) => [x.name, x]));
+    for (const match of text.matchAll(regex)) {
+        const opts = match[1].split(',');
+        const start = SubtitleUtil.parseTimestamp(opts[fieldMap.get('Start')!]),
+              end   = SubtitleUtil.parseTimestamp(opts[fieldMap.get('End')!]);
+        if (start === null || end === null) continue;
+
+        let styleName = opts[fieldMap.get('Style')!];
+        if (!styles.has(styleName)) {
+            let style = new SubtitleStyle(styleName);
+            styles.set(styleName, style);
+            subs.styles.push(style);
+        }
+        subs.entries.push(new SubtitleEntry(start, end, {
+            style: styles.get(styleName)!, 
+            text: match[2].replaceAll('\\N', '\n').trimEnd()}))
+    }
+}
+
 export const SubtitleImport = {
     JSON(source: string) {
         try {
@@ -432,152 +591,11 @@ export const SubtitleImport = {
         return subs;
     },
     ASS(source: string) {
-        let result = this.ASSHeader(source);
-        return this.ASSFragment(source, result);
-    },
-    ASSHeader(source: string) {
-        const sectionRegex  = /\[(.+)\]\s*\n((?:\s*[^[\n]+.+\n)+)/g;
-        const entryRegex     = /(?<=\n)([^;].+?):\s*(.*)/g;
-        const styleMapRegex = /Format:\s*(.*)\n/;
-        const stylesRegex   = /Style:\s*(.*)\n/g;
-
-        const sections = new Map([...source.matchAll(sectionRegex)]
-            .map((x) => [x[1], x[2]]));
-
+        const sections = getASSSections(source);
         let subs = new Subtitles();
-
-        let text = sections.get('Script Info');
-        if (text) {
-            const infos = new Map([...text.matchAll(entryRegex)]
-                .map((x) => [x[1], x[2]]));
-            subs.metadata.title = infos.get('Title') ?? subs.metadata.title;
-            if (infos.has('PlayResX')) {
-                const n = Number.parseInt(infos.get('PlayResX')!);
-                if (!Number.isNaN(n)) subs.metadata.width = n;
-            }
-            if (infos.has('PlayResY')) {
-                const n = Number.parseInt(infos.get('PlayResY')!);
-                if (!Number.isNaN(n)) subs.metadata.height = n;
-            }
-        }
-
-        text = sections.get('V4 Styles') ?? sections.get('V4+ Styles');
-        if (text) {
-            const styleMapMatch = text.match(styleMapRegex);
-            if (!styleMapMatch) return subs;
-            console.log(styleMapMatch);
-            const styleFieldMap = new Map(
-                styleMapMatch[1].split(/,/).map((x, i) => [x.trim(), i] as const));
-            console.log(styleFieldMap);
-
-            let styles: Map<string, SubtitleStyle> = new Map();
-            let first: SubtitleStyle | null = null;
-            const styleMatches = text.matchAll(stylesRegex);
-            for (const match of styleMatches) {
-                const items = match[1].split(',');
-                try {
-                    const name = items[styleFieldMap.get('Name')!];
-                    let style = styles.get(name);
-                    if (style === undefined) {
-                        style = new SubtitleStyle(name);
-                        if (first === null)
-                            first = style;
-                        else
-                            subs.styles.push(style);
-                        styles.set(name, style);
-                    } else {
-                        // warn
-                        console.warn('duplicate style definition:', name);
-                    }
-                    if (styleFieldMap.has('Fontname'))
-                        style.font = items[styleFieldMap.get('Fontname')!];
-                    if (styleFieldMap.has('Bold'))
-                        style.styles.bold = items[styleFieldMap.get('Bold')!] == '-1';
-                    if (styleFieldMap.has('Italic'))
-                        style.styles.italic = items[styleFieldMap.get('Italic')!] == '-1';
-                    if (styleFieldMap.has('Underline'))
-                        style.styles.underline = 
-                            items[styleFieldMap.get('Underline')!] == '-1';
-                    if (styleFieldMap.has('StrikeOut'))
-                        style.styles.strikethrough = 
-                            items[styleFieldMap.get('StrikeOut')!] == '-1';
-                    
-                    if (styleFieldMap.has('Fontsize')) {
-                        const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
-                        if (!Number.isNaN(n)) style.size = n;
-                    }
-                    if (styleFieldMap.has('Fontsize')) {
-                        const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
-                        if (!Number.isNaN(n)) style.size = n;
-                    }
-                    if (styleFieldMap.has('Outline')) {
-                        const n = Number.parseFloat(items[styleFieldMap.get('Outline')!]);
-                        if (!Number.isNaN(n)) style.outline = n;
-                    }
-                    if (styleFieldMap.has('Shadow')) {
-                        const n = Number.parseFloat(items[styleFieldMap.get('Shadow')!]);
-                        if (!Number.isNaN(n)) style.shadow = n;
-                    }
-                    if (styleFieldMap.has('PrimaryColor')) {
-                        const color = fromASSColor(items[styleFieldMap.get('PrimaryColor')!]);
-                        if (color !== null) style.color = color;
-                    }
-                    if (styleFieldMap.has('OutlineColor')) {
-                        const color = fromASSColor(items[styleFieldMap.get('OutlineColor')!]);
-                        if (color !== null) style.outlineColor = color;
-                    }
-    
-                    if (styleFieldMap.has('Alignment')) {
-                        const n = Number.parseFloat(items[styleFieldMap.get('Alignment')!]);
-                        if (n >= 1 && n <= 9) style.alignment = n as AlignMode;
-                    }
-                    if (styleFieldMap.has('MarginL')) {
-                        const n = Number.parseFloat(items[styleFieldMap.get('MarginL')!]);
-                        if (!Number.isNaN(n)) style.margin.left = n;
-                    }
-                    if (styleFieldMap.has('MarginR')) {
-                        const n = Number.parseFloat(items[styleFieldMap.get('MarginR')!]);
-                        if (!Number.isNaN(n)) style.margin.right = n;
-                    }
-                    if (styleFieldMap.has('MarginV')) {
-                        const n = Number.parseFloat(items[styleFieldMap.get('MarginV')!]);
-                        if (!Number.isNaN(n)) style.margin.top = style.margin.bottom = n;
-                    }
-                    console.log('imported style:', name, style);
-                } catch {
-                    console.log('erroe on importing style');
-                }
-            }
-            if (first == null) {
-                // no styles
-            } else {
-                subs.defaultStyle = first;
-            }
-        }
-
-        return subs;
-    },
-    ASSFragment(source: string, subs = new Subtitles()) {
-        const regex = /^Dialogue: \d+,([\d:.]+),([\d:.]+),(.+),,\d+,\d+,\d+,,(.+)$/gm;
-        let matches = [...source.matchAll(regex)];
-        if (matches.length == 0) return null;
-
-        let styles: Map<string, SubtitleStyle> = new Map(
-            subs.styles.map((x) => [x.name, x]));
-        styles.set(subs.defaultStyle.name, subs.defaultStyle);
-        for (const match of matches) {
-            let start = SubtitleUtil.parseTimestamp(match[1]),
-                end = SubtitleUtil.parseTimestamp(match[2]);
-            if (start === null || end === null) continue;
-            if (!styles.has(match[3])) {
-                let style = new SubtitleStyle(match[3]);
-                styles.set(match[3], style);
-                subs.styles.push(style);
-            }
-            subs.entries.push(new SubtitleEntry(start, end, {
-                style: styles.get(match[3])!, 
-                text: match[4].replaceAll('\\N', '\n').trimEnd()}))
-        }
+        parseASSScriptInfo(sections, subs);
+        parseASSStyles(sections, subs);
+        parseASSEvents(sections, subs);
         return subs;
     }
 }

@@ -7,7 +7,8 @@ export type AudioFeedbackData = {
     type: 'received' | 'playing',
     bufferLength: number,
     bufferCapacity: number,
-    averageFullness: number
+    averageFullness: number,
+    headPosition: number
 }
 
 const MaxBufferLength = 10;
@@ -33,6 +34,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
             type,
             bufferLength: this.#buffer.length,
             bufferCapacity: MaxBufferLength,
+            headPosition: this.#buffer[0]?.position,
             averageFullness: type == 'playing' 
                 ? this.#fullness.reduce((a, b) => a + b, 0) / MaxBufferLength 
                 : -1
@@ -51,6 +53,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
         this.#fullness.push(this.#buffer.length);
         if (this.#fullness.length > 100) this.#fullness.shift();
         this.#postFeedback('playing');
+        // if (Math.random() < 0.001) this.log(this.#buffer);
 
         try {
             const output = outputs[0];

@@ -35,7 +35,7 @@ export class Playback {
         assert(this.video == null);
         this.video = new VideoPlayer(cxt);
         this.video.setSubtitles(subs);
-        this.video.onPositionChange = () => {
+        this.video.onVideoPositionChange = () => {
             assert(this.video != null);
             if (this.#isPlaying)
                 this.#reportProgress(this.video.currentPosition!);

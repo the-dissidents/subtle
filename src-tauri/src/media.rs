@@ -426,8 +426,7 @@ pub fn get_current_audio_position(
             return send(&channel, MediaEvent::Position { value: x.position });
         }
     };
-    return send(&channel, MediaEvent::Position { value: -1 });
-    //return move_to_next_audio_frame(id, state, channel);
+    return move_to_next_audio_frame(id, state, channel);
 }
 
 /** 
@@ -450,14 +449,6 @@ pub fn send_current_video_frame(
             std::slice::from_raw_parts(data.as_ptr() as *const _, data.len() * 4)
         }
     }
-    // // per https://users.rust-lang.org/t/flattening-a-vector-of-tuples/11409/3
-    // fn flatten6(data: &[(u8, u8, u8, u8)]) -> Vec<u8> {
-    //     let mut result = data.to_vec();
-    //     unsafe {
-    //         result.set_len(data.len() * 4);
-    //         std::mem::transmute(result)
-    //     }
-    // }
 
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {

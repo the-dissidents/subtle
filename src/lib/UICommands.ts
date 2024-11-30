@@ -1,4 +1,4 @@
-import { Menu } from "@tauri-apps/api/menu";
+import { Menu, NativeIcon } from "@tauri-apps/api/menu";
 import { Basic, assert } from "./Basic";
 import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
 import { SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type SubtitleChannel } from "./Subtitles";
@@ -8,6 +8,7 @@ export class UIHelper {
 
     processGlobalKeydown(ev: KeyboardEvent) {
         let ctrlOrMeta = ev.getModifierState(Basic.ctrlKey());
+        let ctrl = ev.getModifierState("Control");
         let inModal = this.frontend.states.modalOpenCounter > 0;
         let isEditingList = this.frontend.states.tableHasFocus && !inModal;
         let altOrNotEditing = (this.frontend.states.tableHasFocus || ev.altKey) && !inModal;
@@ -65,12 +66,12 @@ export class UIHelper {
         else if (ev.key == 'ArrowUp' && ctrlOrMeta && isEditingList) {
             // move selection up
             ev.preventDefault();
-            this.#moveSelection(this.frontend.getSelection(), -1);
+            this.#moveSelectionContinuous(this.frontend.getSelection(), -1);
         }
         else if (ev.key == 'ArrowDown' && ctrlOrMeta && isEditingList) {
             // move selection down
             ev.preventDefault();
-            this.#moveSelection(this.frontend.getSelection(), 1);
+            this.#moveSelectionContinuous(this.frontend.getSelection(), 1);
         }
 
         else if (ev.key == 's' && ctrlOrMeta) {
@@ -95,6 +96,25 @@ export class UIHelper {
             ev.preventDefault();
         }
         else if (ev.key == 'ArrowLeft' && altOrNotEditing) {
+            // move backward 1s or 1 frame
+            if (ctrlOrMeta) {
+                
+            }
+            let skipTime = ctrlOrMeta
+                ? 1 / (this.frontend.playback.video?.framerate ?? 24)
+                : 1;
+            this.frontend.playback.setPosition(this.frontend.playback.position - skipTime);
+            ev.preventDefault();
+        }
+        else if (ev.key == 'ArrowRight' && altOrNotEditing) {
+            // move forward 1s or 1 frame
+            let skipTime = ctrlOrMeta
+            ? 1 / (this.frontend.playback.video?.framerate ?? 24)
+            : 1;
+        this.frontend.playback.setPosition(this.frontend.playback.position + skipTime);
+            ev.preventDefault();
+        }
+        else if (ev.key == 'ArrowLeft' && ctrlOrMeta && altOrNotEditing) {
             // move backward 1s
             this.frontend.playback.setPosition(this.frontend.playback.position - 1);
             ev.preventDefault();
@@ -128,7 +148,7 @@ export class UIHelper {
             items: [
                 {
                     text: 'JSON (internal)',
-                    accelerator: `${Basic.ctrlKey()}+c`,
+                    accelerator: `CmdOrCtrl+C`,
                     action: () => this.frontend.copySelection()
                 },
                 {
@@ -147,7 +167,7 @@ export class UIHelper {
         },
         {
             text: 'cut',
-            accelerator: `${Basic.ctrlKey()}+x`,
+            accelerator: `CmdOrCtrl+X`,
             action: () => {
                 this.frontend.copySelection();
                 this.frontend.deleteSelection();
@@ -155,19 +175,19 @@ export class UIHelper {
         },
         {
             text: 'paste',
-            accelerator: `${Basic.ctrlKey()}+v`,
+            accelerator: `${Basic.ctrlKey()}+V`,
             action: () => this.frontend.paste()
         },
         { item: 'Separator' },
         {
             text: 'delete',
-            accelerator: `${Basic.ctrlKey()}+backspace`,
+            accelerator: `CmdOrCtrl+Backspace`,
             action: () => this.frontend.deleteSelection()
         },
         { item: 'Separator' },
         {
             text: 'select all',
-            accelerator: `${Basic.ctrlKey()}+a`,
+            accelerator: `CmdOrCtrl+A`,
             action: () => this.#selectAll()
         },
         {
@@ -189,8 +209,34 @@ export class UIHelper {
         },
         {
             text: 'insert after',
-            accelerator: `${Basic.ctrlKey()}+enter`,
+            accelerator: `CmdOrCtrl+Enter`,
             action: () => this.frontend.insertEntryAfter(selection[0])
+        },
+        {
+            text: 'move',
+            enabled: selection.length > 0,
+            items: [
+                {
+                    text: 'up',
+                    enabled: !isDisjunct,
+                    accelerator: `CmdOrCtrl+Up`,
+                    action: () => this.#moveSelectionContinuous(selection, -1)
+                },
+                {
+                    text: 'down',
+                    enabled: !isDisjunct,
+                    accelerator: `CmdOrCtrl+Down`,
+                    action: () => this.#moveSelectionContinuous(selection, 1)
+                },
+                {
+                    text: 'to the beginning',
+                    action: () => this.#moveSelectionTo(selection, 'beginning')
+                },
+                {
+                    text: 'to the end',
+                    action: () => this.#moveSelectionTo(selection, 'end')
+                }
+            ]
         },
         { item: 'Separator' },
         {
@@ -407,8 +453,9 @@ export class UIHelper {
         this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
     }
 
-    #moveSelection(selection: SubtitleEntry[], direction: number) {
-        // assumes selection is not disjunct
+    #moveSelectionContinuous(selection: SubtitleEntry[], direction: number) {
+        if (this.frontend.isSelectionDisjunct()) return;
+        
         if (selection.length == 0 || direction == 0) return;
         let index = this.frontend.subs.entries.indexOf(selection[0]);
         if (index + direction < 0 || index + direction > this.frontend.subs.entries.length) return;
@@ -418,6 +465,20 @@ export class UIHelper {
         setTimeout(() => {
             this.frontend.keepEntryInView(direction > 0 ? selection.at(-1)! : selection[0]);
         }, 0);
+    }
+
+    #moveSelectionTo(selection: SubtitleEntry[], to: 'beginning' | 'end') {
+        if (selection.length == 0) return;
+        let selectionSet = new Set(selection);
+        let newEntries = this.frontend.subs.entries.filter((x) => !selectionSet.has(x));
+        switch (to) {
+        case "beginning":
+            newEntries = [...selection, ...newEntries]; break;
+        case "end":
+            newEntries = [...newEntries, ...selection]; break;
+        }
+        this.frontend.subs.entries = newEntries;
+        this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
     }
 
     #fixOverlap(selection: SubtitleEntry[], epsilon = 0.05) {

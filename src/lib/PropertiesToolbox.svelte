@@ -8,6 +8,20 @@ export let frontend: Frontend;
 export let show = false;
 
 $: show, frontend.subs.styles = frontend.subs.styles;
+
+function newStyle() {
+  let newStyle = new SubtitleStyle('new');
+  frontend.subs.styles = [...frontend.subs.styles, newStyle];
+  frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+}
+
+function removeUnusedStyles() {
+  let usedStyles = new Set<SubtitleStyle>();
+  frontend.subs.entries.forEach((x) => 
+    x.texts.forEach((t) => usedStyles.add(t.style)));
+  frontend.subs.styles = frontend.subs.styles.filter((x) => usedStyles.has(x));
+  frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+}
 </script>
 
 <table class="config">
@@ -42,11 +56,9 @@ $: show, frontend.subs.styles = frontend.subs.styles;
     <hr>
   {/each}
   <button style="width: 25px; height: 20px"
-    on:click={() => {
-      let newStyle = new SubtitleStyle('new');
-      frontend.subs.styles = [...frontend.subs.styles, newStyle];
-      frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-    }}>+</button>
+    on:click={() => newStyle()}>+</button>
+  <button style="height: 20px"
+    on:click={() => removeUnusedStyles()}>remove all unused</button>
 </Collapsible>
 
 
