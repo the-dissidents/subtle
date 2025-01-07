@@ -8,7 +8,6 @@ export class UIHelper {
 
     processGlobalKeydown(ev: KeyboardEvent) {
         let ctrlOrMeta = ev.getModifierState(Basic.ctrlKey());
-        let ctrl = ev.getModifierState("Control");
         let inModal = this.frontend.states.modalOpenCounter > 0;
         let isEditingList = this.frontend.states.tableHasFocus && !inModal;
         let altOrNotEditing = (this.frontend.states.tableHasFocus || ev.altKey) && !inModal;
@@ -142,6 +141,8 @@ export class UIHelper {
         if (selection.length == 0) return;
         let isDisjunct = this.frontend.isSelectionDisjunct();
         let allStyles = [this.frontend.subs.defaultStyle, ...this.frontend.subs.styles];
+        let maxLines = Math.max(...selection.map((x) => x.texts.length));
+
         let menu = await Menu.new({items: [
         {
             text: 'copy',
@@ -319,12 +320,34 @@ export class UIHelper {
                         text: x.name,
                         items: [{
                             text: 'by:',
-                            disabled: true,
+                            enabled: false,
                         }, ...allStyles.filter((y) => y != x).map((y) => ({
                             text: y.name,
                             action: () => {
                                 if (SubtitleTools.replaceStyle(selection, x, y)) 
                                     this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+                            }
+                        }))]
+                    }))
+                },
+                {
+                    text: 'replace channel by line',
+                    items: [...Array(maxLines).keys()].map((x) => ({
+                        text: (x+1).toString(),
+                        items: [{
+                            text: 'by:',
+                            enabled: false,
+                        }, ...allStyles.map((y) => ({
+                            text: y.name,
+                            action: () => {
+                                let changed = false;
+                                for (let ent of selection)
+                                    if (ent.texts.length > x) {
+                                        ent.texts[x].style = y;
+                                        changed = true;
+                                    }
+                                if (changed) this.frontend.markChanged(
+                                    ChangeType.TextOnly, ChangeCause.Action);
                             }
                         }))]
                     }))
