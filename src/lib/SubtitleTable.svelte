@@ -4,6 +4,7 @@ import type { Frontend } from "./Frontend";
 import { SubtitleEntry, SubtitleUtil } from "./Subtitles";
 
 export let frontend: Frontend;
+export let onFocus: (() => void) | undefined = undefined;
 export let isFocused = false;
 export let selection = new Set<SubtitleEntry>;
 
@@ -105,17 +106,20 @@ td.subtext {
   {#each ent.texts as line, j (`${i},${j}`)}
   <tr on:mousedown={(ev) => {
     isFocused = true;
+    if (onFocus) onFocus();
     if (ev.button == 0)
       frontend.toggleEntry(ent, 
-      ev.shiftKey, ev.getModifierState(Basic.ctrlKey()));
+        ev.shiftKey, ev.getModifierState(Basic.ctrlKey()));
     }}
     on:contextmenu={(ev) => {
       isFocused = true;
+      if (onFocus) onFocus();
       frontend.uiHelper.contextMenu();
       ev.preventDefault();
     }}
     on:dblclick={() => {
       isFocused = true;
+      if (onFocus) onFocus();
       frontend.startEditingFocusedEntry();
       frontend.playback.setPosition(ent.start);
     }}

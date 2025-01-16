@@ -96,12 +96,19 @@ export class Playback {
 
     async #handlePlayArea() {
         const playArea = this.playAreaOverride ?? this.playArea;
-        if (playArea.start !== undefined && this.position < playArea.start) {
-            await this.play(false);
-            await this.setPosition(playArea.start);
-            return;
-        }
+        // FIXME: media set position is still buggy, and if it jumps not to the precise
+        // position but slight before it, this will fail miserably. So commented out
+        // for now
+
+        // if (playArea.start !== undefined && this.position < playArea.start) {
+        //     console.log('jumping to in point from before', playArea, this.position);
+        //     // await this.play(false);
+        //     await this.setPosition(playArea.start);
+        //     return;
+        // }
         if (playArea.end !== undefined && this.position > playArea.end) {
+            console.log('jumping to in point from after out point', playArea, this.position);
+            this.playAreaOverride = undefined;
             if (!playArea.loop) await this.play(false);
             await this.setPosition(playArea.start ?? 0);
             return;

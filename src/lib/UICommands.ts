@@ -1,24 +1,27 @@
 import { Menu, NativeIcon } from "@tauri-apps/api/menu";
 import { Basic, assert } from "./Basic";
-import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
+import { ChangeCause, ChangeType, UIFocus, type Frontend } from "./Frontend";
 import { SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type SubtitleChannel } from "./Subtitles";
 
 export class UIHelper {
     constructor(public readonly frontend: Frontend) {}
 
     processGlobalKeydown(ev: KeyboardEvent) {
-        let ctrlOrMeta = ev.getModifierState(Basic.ctrlKey());
-        let inModal = this.frontend.states.modalOpenCounter > 0;
-        let isEditingList = this.frontend.states.tableHasFocus && !inModal;
-        let altOrNotEditing = (!this.frontend.states.tableHasFocus || ev.altKey) && !inModal;
-        console.log(ev, isEditingList, altOrNotEditing);
+        const ctrlOrMeta = ev.getModifierState(Basic.ctrlKey());
+        const inModal = this.frontend.states.modalOpenCounter > 0;
+        const focus = this.frontend.states.uiFocus;
+        const tableFocused = focus == UIFocus.Table && !inModal;
+        const altOrTableOrTimeline = 
+            (focus == UIFocus.Timeline || focus == UIFocus.Table || ev.altKey) && !inModal;
+        const altOrTimeline = 
+            (focus == UIFocus.Timeline || ev.altKey) && !inModal;
         
         if (ev.key == 'Enter' && ctrlOrMeta) {
             // insert after
             ev.preventDefault();
             this.frontend.insertEntryAfter(this.frontend.focused.entry ?? undefined);
         }
-        else if (ev.key == 'Enter' && isEditingList) {
+        else if (ev.key == 'Enter' && tableFocused) {
             // focus on this entry
             ev.preventDefault();
             if (this.frontend.states.virtualEntryHighlighted)
@@ -26,35 +29,35 @@ export class UIHelper {
             else
                 this.frontend.startEditingFocusedEntry();
         }
-        else if (ev.key == 'a' && ctrlOrMeta && isEditingList) {
+        else if (ev.key == 'a' && ctrlOrMeta && altOrTableOrTimeline) {
             // select all
             this.#selectAll();
             ev.preventDefault();
         }
-        else if ((ev.key == 'Delete' || (ev.key == 'Backspace' && ctrlOrMeta)) &&
-            isEditingList) 
+        else if ((ev.key == 'Delete' || (ev.key == 'Backspace' && ctrlOrMeta)) 
+            && altOrTableOrTimeline) 
         {
             // delete
             this.frontend.deleteSelection();
             ev.preventDefault();
         }
-        else if (ev.key == 'c' && ctrlOrMeta && isEditingList) {
+        else if (ev.key == 'c' && ctrlOrMeta && altOrTableOrTimeline) {
             // copy
             this.frontend.copySelection();
             ev.preventDefault();
         }
-        else if (ev.key == 'v' && ctrlOrMeta && isEditingList) {
+        else if (ev.key == 'v' && ctrlOrMeta && tableFocused) {
             // paste
             this.frontend.paste();
             ev.preventDefault();
         }
-        else if (ev.key == 'x' && ctrlOrMeta && isEditingList) {
+        else if (ev.key == 'x' && ctrlOrMeta && tableFocused) {
             // cut
             this.frontend.copySelection();
             this.frontend.deleteSelection();
             ev.preventDefault();
         }
-        else if (ev.key == 'z' && ctrlOrMeta && isEditingList) {
+        else if (ev.key == 'z' && ctrlOrMeta && altOrTableOrTimeline) {
             // undo
             ev.preventDefault();
             if (ev.shiftKey)
@@ -62,12 +65,12 @@ export class UIHelper {
             else
                 this.frontend.undo();
         }
-        else if (ev.key == 'ArrowUp' && ctrlOrMeta && isEditingList) {
+        else if (ev.key == 'ArrowUp' && ctrlOrMeta && tableFocused) {
             // move selection up
             ev.preventDefault();
             this.#moveSelectionContinuous(this.frontend.getSelection(), -1);
         }
-        else if (ev.key == 'ArrowDown' && ctrlOrMeta && isEditingList) {
+        else if (ev.key == 'ArrowDown' && ctrlOrMeta && tableFocused) {
             // move selection down
             ev.preventDefault();
             this.#moveSelectionContinuous(this.frontend.getSelection(), 1);
@@ -79,22 +82,22 @@ export class UIHelper {
             this.frontend.askSaveFile();
         }
 
-        else if (ev.key == 'ArrowUp' && altOrNotEditing && !ctrlOrMeta) {
+        else if (ev.key == 'ArrowUp' && altOrTableOrTimeline && !ctrlOrMeta) {
             // previous entry
             ev.preventDefault();
             this.frontend.offsetFocus(-1, ev.shiftKey, ctrlOrMeta);
         }
-        else if (ev.key == 'ArrowDown' && altOrNotEditing && !ctrlOrMeta) {
+        else if (ev.key == 'ArrowDown' && altOrTableOrTimeline && !ctrlOrMeta) {
             // next entry
             ev.preventDefault();
             this.frontend.offsetFocus(1, ev.shiftKey, ctrlOrMeta);
         }
-        else if (ev.code == 'Space' && altOrNotEditing) {
+        else if (ev.code == 'Space' && altOrTableOrTimeline) {
             // play/pause
             this.frontend.playback.toggle();
             ev.preventDefault();
         }
-        else if (ev.code == 'KeyI' && altOrNotEditing) {
+        else if (ev.code == 'KeyI' && altOrTimeline) {
             // in point
             if (this.frontend.playback.timeline === null) return;
             const pos = this.frontend.playback.timeline.cursorPos;
@@ -105,18 +108,33 @@ export class UIHelper {
             this.frontend.playback.timeline.requestRender();
             ev.preventDefault();
         }
-        else if (ev.code == 'KeyO' && altOrNotEditing) {
+        else if (ev.code == 'KeyO' && altOrTimeline) {
             // out point
             if (this.frontend.playback.timeline === null) return;
             const pos = this.frontend.playback.timeline.cursorPos;
             const area = this.frontend.playback.playArea;
-            this.frontend.playback.playArea.end = 
+            this.frontend.playback.playArea.end =
                 (area.end == pos || (area.start !== undefined && area.start >= pos)) 
                 ? undefined : pos;
             this.frontend.playback.timeline.requestRender();
             ev.preventDefault();
         }
-        else if (ev.key == 'ArrowLeft' && altOrNotEditing) {
+        else if (ev.code == 'KeyP' && altOrTableOrTimeline) {
+            // play selected entry
+            if (this.frontend.playback.timeline === null) return;
+            const current = this.frontend.selection.currentStart;
+            if (current === null) return;
+            this.frontend.playback.playAreaOverride = {
+                start: current.start,
+                end: current.end,
+                loop: false
+            };
+            // cf. comment at line 99 in Playback.ts
+            this.frontend.playback.setPosition(current.start)
+                .then(() => this.frontend.playback.play(true));
+            ev.preventDefault();
+        }
+        else if (ev.key == 'ArrowLeft' && altOrTimeline) {
             // move backward 1s or 1 frame
             let skipTime = ctrlOrMeta
                 ? 1 / (this.frontend.playback.video?.framerate ?? 24)
@@ -124,7 +142,7 @@ export class UIHelper {
             this.frontend.playback.setPosition(this.frontend.playback.position - skipTime);
             ev.preventDefault();
         }
-        else if (ev.key == 'ArrowRight' && altOrNotEditing) {
+        else if (ev.key == 'ArrowRight' && altOrTimeline) {
             // move forward 1s or 1 frame
             let skipTime = ctrlOrMeta
                 ? 1 / (this.frontend.playback.video?.framerate ?? 24)
@@ -132,17 +150,18 @@ export class UIHelper {
             this.frontend.playback.setPosition(this.frontend.playback.position + skipTime);
             ev.preventDefault();
         }
-        else if (ev.key == 'ArrowLeft' && ctrlOrMeta && altOrNotEditing) {
+        else if (ev.key == 'ArrowLeft' && ctrlOrMeta && altOrTimeline) {
             // move backward 1s
             this.frontend.playback.setPosition(this.frontend.playback.position - 1);
             ev.preventDefault();
         }
-        else if (ev.key == 'ArrowRight' && altOrNotEditing) {
+        else if (ev.key == 'ArrowRight' && altOrTimeline) {
             // move forward 1s
             this.frontend.playback.setPosition(this.frontend.playback.position + 1);
             ev.preventDefault();
         }
-        else if (ev.key == 'Enter' && !ev.shiftKey && this.frontend.states.isEditing){
+        else if (ev.key == 'Enter' && !ev.shiftKey 
+                && this.frontend.states.uiFocus == UIFocus.EditingField){
             // next entry
             ev.preventDefault();
             let focused = this.frontend.focused.entry;

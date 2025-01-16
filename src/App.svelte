@@ -8,7 +8,7 @@ import TimestampInput from './lib/TimestampInput.svelte';
 
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from './lib/Subtitles'
 import { assert, Basic } from './lib/Basic';
-import { ChangeCause, ChangeType, Frontend } from './lib/Frontend';
+import { ChangeCause, ChangeType, Frontend, UIFocus } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
 import { CanvasKeeper } from './lib/CanvasKeeper';
 import { Config } from './lib/Config';
@@ -28,9 +28,9 @@ const appWindow = getCurrentWebviewWindow()
 
 let frontend = new Frontend();
 let selection = new Set<SubtitleEntry>;
-let subsListFocused = false;
 
-$: frontend.states.tableHasFocus = subsListFocused;
+// let subsListFocused = false;
+// $: subsListFocused = frontend.states.uiFocus == UIFocus.Table;
 
 let leftPane: HTMLElement;
 let rightPane: HTMLElement;
@@ -95,7 +95,7 @@ function setupEditForm() {
   editingT1 = focused.end;
   editingDt = editingT1 - editingT0;
 
-  let isEditingNow = frontend.states.isEditing;
+  let isEditingNow = frontend.states.uiFocus == UIFocus.EditingField;
   setTimeout(() => {
     let col = document.getElementsByClassName('contentarea');
     for (const target of col) {
@@ -174,7 +174,7 @@ Config.init();
     if (frontend.fileChanged) ev.preventDefault();
   }}
   on:focusin={(ev) => {
-    subsListFocused = false;
+    frontend.states.uiFocus = UIFocus.Other;
   }}/>
 
 <!-- dialogs -->
@@ -366,18 +366,17 @@ Config.init();
                     on:keydown={(ev) => {
                       if (ev.key == "Escape") {
                         ev.currentTarget.blur();
-                        subsListFocused = true;
+                        frontend.states.uiFocus = UIFocus.Table;
                       }
                     }}
                     on:focus={() => {
-                      frontend.states.isEditing = true;
+                      frontend.states.uiFocus = UIFocus.EditingField;
                       frontend.focused.channel = line;
                       frontend.focused.style = line.style;
                     }}
                     on:blur={(x) => {
                       frontend.submitFocusedEntry();
                       frontend.focused.channel = null;
-                      frontend.states.isEditing = false;
                     }}
                     on:input={(x) => {
                       contentSelfAdjust(x.currentTarget); 
@@ -399,8 +398,12 @@ Config.init();
           <Resizer control={editTable} minValue={100}/>
         </div>
         <!-- table view -->
-        <div class='scrollable fixminheight subscontainer' class:subsfocused={subsListFocused} bind:this={frontend.ui.subscontainer}>
-          <SubtitleTable {frontend} bind:selection bind:isFocused={subsListFocused}/>
+        <div class='scrollable fixminheight subscontainer' 
+          class:subsfocused={frontend.states.uiFocus == UIFocus.Table} 
+          bind:this={frontend.ui.subscontainer}
+        >
+          <SubtitleTable {frontend} bind:selection 
+            onFocus={() => frontend.states.uiFocus = UIFocus.Table}/>
         </div>
       </div>
     </div>
@@ -412,6 +415,8 @@ Config.init();
   <!-- timeline -->
   <div>
     <canvas class="timeline" bind:this={timelineCanvas} 
+      on:click={() => frontend.states.uiFocus = UIFocus.Timeline}
+      class:timelinefocused={frontend.states.uiFocus == UIFocus.Timeline}
       style="height: 150px;"></canvas>
   </div>
 
@@ -429,6 +434,11 @@ Config.init();
 }
 
 .subsfocused {
+  /* border: 2px solid skyblue; */
+  box-shadow: 0 5px 10px gray;
+}
+
+.timelinefocused {
   /* border: 2px solid skyblue; */
   box-shadow: 0 5px 10px gray;
 }
@@ -468,6 +478,7 @@ Config.init();
 .timeline {
   width: 100%;
   height: 100%;
+  border-radius: 4px;
   display: block;
   background-color: gray;
   user-select: none; -webkit-user-select: none;

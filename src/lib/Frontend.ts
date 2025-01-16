@@ -33,6 +33,13 @@ type FocusState = {
     style: SubtitleStyle | null
 }
 
+export enum UIFocus {
+    Other,
+    Table,
+    EditingField,
+    Timeline
+}
+
 export enum ChangeCause {
     UIForm,
     UIList,
@@ -86,9 +93,9 @@ export class Frontend {
     } = {};
 
     states = {
-        isEditing: false,
+        // isEditing: false,
         isEditingVirtualEntry: false,
-        tableHasFocus: false,
+        uiFocus: UIFocus.Other,
         modalOpenCounter: 0,
         virtualEntryHighlighted: false,
         editChanged: false,
