@@ -30,10 +30,12 @@ const BOXSELECT_BACK = 'hsl(0deg 0% 80% / 40%)';
 const BOXSELECT_BORDER = 'hsl(0deg 0% 70%)';
 const BOXSELECT_WIDTH = 3;
 
+const INOUT_AREA_OUTSIDE = 'hsl(0deg 0% 80% / 40%)';
+
 const DRAG_RESIZE_MARGIN = 10;
 const SNAP_DISTANCE = 10;
-const AUXLINE_COLOR = 'hsl(0deg 0% 80%)';
-const AUXLINE_WIDTH = 3;
+const ALIGNLINE_COLOR = 'hsl(0deg 0% 80%)';
+const ALIGNLINE_WIDTH = 3;
 
 type Box = {
     x: number, y: number,
@@ -98,7 +100,7 @@ export class Timeline implements WithCanvas {
 
     #selectBox: Box | null = null;
     #selection = new Set<SubtitleEntry>;
-    #auxLine: number | null = null;
+    #alignmentLine: number | null = null;
     
     get viewScale() {return this.#scale;}
     get viewOffset() {return this.#offset;}
@@ -211,7 +213,7 @@ export class Timeline implements WithCanvas {
             snap(e.start);
             snap(e.end);
         }
-        this.#auxLine = pos !== null ? (pos - this.#offset) * this.#scale : null;
+        this.#alignmentLine = pos !== null ? (pos - this.#offset) * this.#scale : null;
         return newStart;
     }
 
@@ -235,7 +237,7 @@ export class Timeline implements WithCanvas {
             snap(e.start);
             snap(e.end);
         }
-        this.#auxLine = pos !== null ? (pos - this.#offset) * this.#scale : null;
+        this.#alignmentLine = pos !== null ? (pos - this.#offset) * this.#scale : null;
         return pos ?? desired;
     }
 
@@ -428,7 +430,7 @@ export class Timeline implements WithCanvas {
                             this.requestRender();
                         };
                         onUp = () => {
-                            this.#auxLine = null;
+                            this.#alignmentLine = null;
                             this.requestRender();
                             if (dragged) {
                                 this.#frontend.markChanged(
@@ -453,7 +455,7 @@ export class Timeline implements WithCanvas {
                             this.requestRender();
                         };
                         onUp = () => {
-                            this.#auxLine = null;
+                            this.#alignmentLine = null;
                             this.requestRender();
                             if (dragged) {
                                 this.#frontend.markChanged(
@@ -588,15 +590,19 @@ export class Timeline implements WithCanvas {
         this.#requestedSampler = true;
     }
 
-    async setCursorPos(pos: number, passive = false) {
+    setCursorPosPassive(pos: number) {
         if (pos == this.#cursorPos) return;
         if (pos < 0) pos = 0;
         pos = Math.min(pos, this.#maxPosition());
         this.#cursorPos = pos;
         this.#keepPosInSafeArea(pos);
         this.requestRender();
-        if (!passive)
-            await this.#frontend.playback.setPosition(pos);
+    }
+
+    async setCursorPos(pos: number) {
+        if (pos == this.#cursorPos) return;
+        this.setCursorPosPassive(pos);
+        await this.#frontend.playback.setPosition(pos);
     }
 
     setViewScale(v: number) {
@@ -642,7 +648,6 @@ export class Timeline implements WithCanvas {
             this.#cxt.fillStyle = `rgb(100 255 255)`;
             this.#cxt.fillRect(x, (this.#height - value) / 2, 
                 drawWidth, Math.max(value, 1));
-
         }
     }
 
@@ -652,8 +657,7 @@ export class Timeline implements WithCanvas {
             this.#cxt.moveTo(pos, 0);
             this.#cxt.lineTo(pos, height);
             this.#cxt.stroke();
-        }
-
+        };
         const [small, nMed, nBig] = getTick(this.#scale);
         const start = Math.floor(this.#offset / small / nBig) * small * nBig, 
               end = this.#offset + this.#width / this.#scale;
@@ -737,13 +741,24 @@ export class Timeline implements WithCanvas {
             this.#cxt.fill();
             this.#cxt.stroke();
         }
-        if (this.#auxLine) {
-            this.#cxt.strokeStyle = AUXLINE_COLOR;
-            this.#cxt.lineWidth = AUXLINE_WIDTH;
+        if (this.#alignmentLine) {
+            this.#cxt.strokeStyle = ALIGNLINE_COLOR;
+            this.#cxt.lineWidth = ALIGNLINE_WIDTH;
             this.#cxt.beginPath();
-            this.#cxt.moveTo(this.#auxLine, HEADER_HEIGHT);
-            this.#cxt.lineTo(this.#auxLine, this.#height);
+            this.#cxt.moveTo(this.#alignmentLine, HEADER_HEIGHT);
+            this.#cxt.lineTo(this.#alignmentLine, this.#height);
             this.#cxt.stroke();
+        }
+        const area = this.#frontend.playback.playArea;
+        if (area.start !== undefined) {
+            const start = (area.start - this.#offset) * this.#scale;
+            this.#cxt.fillStyle = INOUT_AREA_OUTSIDE;
+            this.#cxt.fillRect(0, 0, start, this.#height);
+        }
+        if (area.end !== undefined) {
+            const end = (area.end - this.#offset) * this.#scale;
+            this.#cxt.fillStyle = INOUT_AREA_OUTSIDE;
+            this.#cxt.fillRect(end, 0, this.#width - end, this.#height);
         }
 
         this.#cxt.fillStyle = CURSOR_COLOR;
@@ -769,13 +784,22 @@ export class Timeline implements WithCanvas {
         this.#renderTracks();
         this.#renderCursor();
 
-        this.#cxt.font = '15px sans-serif';
+        this.#cxt.font = 'bold 25px sans-serif';
+        this.#cxt.fillStyle = 'lightgreen';
         this.#cxt.textBaseline = 'top';
+        const area = this.#frontend.playback.playArea;
+        const status = (area.start === undefined ? '' : 'IN ')
+                     + (area.end === undefined ? '' : 'OUT ')
+                     + (area.loop ? 'LOOP ' : '');
+        const statusWidth = this.#cxt.measureText(status).width;
+        this.#cxt.fillText(status, this.#width - statusWidth - 5, 35);
+        
+        this.#cxt.font = '15px sans-serif';
         this.#cxt.fillStyle = 'white';
         this.#cxt.fillText(`offset=${this.#offset.toFixed(2)}`, 10, 30);
         this.#cxt.fillText(`scale=${this.#scale.toFixed(2)}`, 10, 50);
         this.#cxt.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 100, 30);
-        
+
         if (this.#animating)
             this.requestRender();
     }

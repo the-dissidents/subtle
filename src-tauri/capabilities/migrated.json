@@ -39,7 +39,6 @@
           "path": "**"
         }
       ]
-    },
-    "websocket:allow-connect"
+    }
   ]
 }

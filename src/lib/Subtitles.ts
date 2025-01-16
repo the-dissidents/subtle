@@ -422,7 +422,7 @@ function parseASSScriptInfo(sections: Map<string, string>, subs: Subtitles) {
     let text = sections.get('Script Info');
     if (text === undefined) return;
 
-    const entryRegex = /(?<=\n)([^;].+?):\s*(.*)/g;
+    const entryRegex = /(?<=\n)([^;].+?): *(.*)/g;
     const infos = new Map([...text.matchAll(entryRegex)]
         .map((x) => [x[1], x[2]]));
     subs.metadata.title = infos.get('Title') ?? subs.metadata.title;

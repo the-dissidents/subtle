@@ -4,6 +4,12 @@ import { VideoPlayer } from "./VideoPlayer";
 import { Timeline } from "./Timeline";
 import { ChangeType, Frontend } from "./Frontend";
 
+export type PlayArea = {
+    start: number | undefined,
+    end: number | undefined,
+    loop: boolean
+}
+
 export class Playback {
     #isLoaded = false;
     #isPlaying = false;
@@ -16,6 +22,14 @@ export class Playback {
 
     video: VideoPlayer | null = null;
     timeline: Timeline | null = null;
+
+    playArea: PlayArea = {
+        start: undefined,
+        end: undefined,
+        loop: false
+    };
+
+    playAreaOverride: PlayArea | undefined = undefined;
 
     onRefreshPlaybackControl = () => { };
 
@@ -37,8 +51,10 @@ export class Playback {
         this.video.setSubtitles(subs);
         this.video.onVideoPositionChange = () => {
             assert(this.video != null);
-            if (this.#isPlaying)
-                this.#reportProgress(this.video.currentPosition!);
+            if (this.#isPlaying) {
+                this.#updateProgress(this.video.currentPosition!);
+                this.#handlePlayArea();
+            }
             this.onRefreshPlaybackControl();
         };
         this.video.onPlayStateChange = () => {
@@ -67,21 +83,28 @@ export class Playback {
         this.onRefreshPlaybackControl();
     }
 
-    #reportProgress(pos: number) {
+    #updateProgress(pos: number) {
         this.#position = pos;
-        this.timeline?.setCursorPos(pos, true);
+        this.timeline?.setCursorPosPassive(pos);
         this.onRefreshPlaybackControl();
     }
 
     async setPosition(pos: number) {
-        if (!this.video) {
-            this.#position = pos;
-            await this.timeline?.setCursorPos(pos, true);
-        } else {
-            assert(this.timeline !== null);
-            await this.video.setPosition(pos);
-            this.#position = pos;
-            await this.timeline?.setCursorPos(pos, true);
+        this.#updateProgress(pos);
+        await this.video?.setPosition(pos);
+    }
+
+    async #handlePlayArea() {
+        const playArea = this.playAreaOverride ?? this.playArea;
+        if (playArea.start !== undefined && this.position < playArea.start) {
+            await this.play(false);
+            await this.setPosition(playArea.start);
+            return;
+        }
+        if (playArea.end !== undefined && this.position > playArea.end) {
+            if (!playArea.loop) await this.play(false);
+            await this.setPosition(playArea.start ?? 0);
+            return;
         }
     }
 

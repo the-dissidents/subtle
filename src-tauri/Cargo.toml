@@ -18,7 +18,6 @@ tauri-plugin-fs = "2"
 tauri-plugin-clipboard-manager = "2.0.1"
 tauri-plugin-dialog = "2"
 ffmpeg-next = "7.1.0"
-tauri-plugin-websocket = "2"
 rand = "0.8.5"
 pprof = { version = "0.14.0", features = ["flamegraph"] }
 ffmpeg-sys-next = "7.1.0"

@@ -18,7 +18,7 @@ fn main() {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_websocket::init())
+        // .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())

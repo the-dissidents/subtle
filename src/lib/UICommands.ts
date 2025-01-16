@@ -10,8 +10,8 @@ export class UIHelper {
         let ctrlOrMeta = ev.getModifierState(Basic.ctrlKey());
         let inModal = this.frontend.states.modalOpenCounter > 0;
         let isEditingList = this.frontend.states.tableHasFocus && !inModal;
-        let altOrNotEditing = (this.frontend.states.tableHasFocus || ev.altKey) && !inModal;
-        // console.log(ev, isEditing, isEditingList, isEditing);
+        let altOrNotEditing = (!this.frontend.states.tableHasFocus || ev.altKey) && !inModal;
+        console.log(ev, isEditingList, altOrNotEditing);
         
         if (ev.key == 'Enter' && ctrlOrMeta) {
             // insert after
@@ -94,11 +94,30 @@ export class UIHelper {
             this.frontend.playback.toggle();
             ev.preventDefault();
         }
+        else if (ev.code == 'KeyI' && altOrNotEditing) {
+            // in point
+            if (this.frontend.playback.timeline === null) return;
+            const pos = this.frontend.playback.timeline.cursorPos;
+            const area = this.frontend.playback.playArea;
+            this.frontend.playback.playArea.start = 
+                (area.start == pos || (area.end !== undefined && area.end <= pos)) 
+                ? undefined : pos;
+            this.frontend.playback.timeline.requestRender();
+            ev.preventDefault();
+        }
+        else if (ev.code == 'KeyO' && altOrNotEditing) {
+            // out point
+            if (this.frontend.playback.timeline === null) return;
+            const pos = this.frontend.playback.timeline.cursorPos;
+            const area = this.frontend.playback.playArea;
+            this.frontend.playback.playArea.end = 
+                (area.end == pos || (area.start !== undefined && area.start >= pos)) 
+                ? undefined : pos;
+            this.frontend.playback.timeline.requestRender();
+            ev.preventDefault();
+        }
         else if (ev.key == 'ArrowLeft' && altOrNotEditing) {
             // move backward 1s or 1 frame
-            if (ctrlOrMeta) {
-                
-            }
             let skipTime = ctrlOrMeta
                 ? 1 / (this.frontend.playback.video?.framerate ?? 24)
                 : 1;
@@ -108,9 +127,9 @@ export class UIHelper {
         else if (ev.key == 'ArrowRight' && altOrNotEditing) {
             // move forward 1s or 1 frame
             let skipTime = ctrlOrMeta
-            ? 1 / (this.frontend.playback.video?.framerate ?? 24)
-            : 1;
-        this.frontend.playback.setPosition(this.frontend.playback.position + skipTime);
+                ? 1 / (this.frontend.playback.video?.framerate ?? 24)
+                : 1;
+            this.frontend.playback.setPosition(this.frontend.playback.position + skipTime);
             ev.preventDefault();
         }
         else if (ev.key == 'ArrowLeft' && ctrlOrMeta && altOrNotEditing) {
