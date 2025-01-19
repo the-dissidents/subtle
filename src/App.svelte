@@ -158,6 +158,16 @@ appWindow.onCloseRequested(async (ev) => {
     return;
   }
 });
+
+appWindow.onDragDropEvent(async (ev) => {
+  if (ev.payload.type == 'drop') {
+    const path = ev.payload.paths.at(0);
+    if (!path) return;
+    if (!await frontend.warnIfNotSaved()) return;
+    await frontend.openDocument(path);
+  }
+});
+
 Config.init();
 </script>
 
@@ -483,5 +493,15 @@ Config.init();
   background-color: gray;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
+}
+
+.status {
+  text-align: left;
+  padding: 5px;
+  margin: 5px 0 0 0;
+  line-height: normal;
+  background-color: lightgray;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 </style>

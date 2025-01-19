@@ -205,14 +205,6 @@ h2 {
   box-sizing: border-box;
 }
 
-.status {
-  text-align: left;
-  padding: 5px;
-  margin: 5px 0 0 0;
-  line-height: normal;
-  background-color: lightgray;
-}
-
 .contentarea {
   width: 100%;
   resize: none;
