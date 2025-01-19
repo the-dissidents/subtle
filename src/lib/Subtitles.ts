@@ -291,7 +291,7 @@ export class Subtitles {
 
     static deserialize(o: ReturnType<Subtitles['toSerializable']>) {
         let subs = new Subtitles();
-        subs.metadata.width = subs.metadata?.width ?? 1920;
+        subs.metadata.width = o.metadata?.width ?? 1920;
         subs.metadata.height = o.metadata?.height ?? 1080;
         subs.metadata.title = o.metadata?.title ?? '';
         subs.metadata.language = o.metadata?.language ?? '';

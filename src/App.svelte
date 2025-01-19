@@ -168,6 +168,8 @@ appWindow.onDragDropEvent(async (ev) => {
   }
 });
 
+// $: console.log('UIFOCUS', UIFocus[frontend.states.uiFocus]);
+
 Config.init();
 </script>
 
@@ -184,7 +186,9 @@ Config.init();
     if (frontend.fileChanged) ev.preventDefault();
   }}
   on:focusin={(ev) => {
-    frontend.states.uiFocus = UIFocus.Other;
+    // TODO: this works but looks like nonsense
+    if (frontend.states.uiFocus != UIFocus.EditingField)
+      frontend.states.uiFocus = UIFocus.Other;
   }}/>
 
 <!-- dialogs -->
@@ -385,10 +389,14 @@ Config.init();
                       frontend.focused.style = line.style;
                     }}
                     on:blur={(x) => {
+                      // TODO: this works but looks like nonsense
+                      if (frontend.states.uiFocus == UIFocus.EditingField)
+                        frontend.states.uiFocus = UIFocus.Other;
                       frontend.submitFocusedEntry();
                       frontend.focused.channel = null;
                     }}
                     on:input={(x) => {
+                      frontend.states.uiFocus = UIFocus.EditingField;
                       contentSelfAdjust(x.currentTarget); 
                       frontend.states.editChanged = true;
                     }} />

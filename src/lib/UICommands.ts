@@ -15,6 +15,7 @@ export class UIHelper {
             (focus == UIFocus.Timeline || focus == UIFocus.Table || ev.altKey) && !inModal;
         const altOrTimeline = 
             (focus == UIFocus.Timeline || ev.altKey) && !inModal;
+        console.log('KEYDOWN', ev.key, ev.code, inModal, UIFocus[this.frontend.states.uiFocus]);
         
         if (ev.key == 'Enter' && ctrlOrMeta) {
             // insert after
