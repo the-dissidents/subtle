@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
+  import { ChangeCause, ChangeType, UIFocus, type Frontend } from "./Frontend";
   import Collapsible from "./ui/Collapsible.svelte";
   import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
   import * as dialog from "@tauri-apps/plugin-dialog"
@@ -171,7 +171,7 @@
     if (fuzzy.enabled) {
       if (ev.getModifierState(Basic.ctrlKey()) || ev.altKey) return;
       if (frontend.states.modalOpenCounter > 0) return;
-      if (document.activeElement !== textarea && !frontend.states.tableHasFocus) return;
+      if (document.activeElement !== textarea && frontend.states.uiFocus !== UIFocus.Table) return;
 
       if (ev.key == 'z') {
         textarea.selectionStart = offset(textarea.selectionStart, false);
