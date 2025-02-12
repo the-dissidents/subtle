@@ -59,6 +59,11 @@ type MediaEvent = {
 } | {
     event: 'invalidId',
     data: {}
+} | {
+    event: 'ffmpegVersion',
+    data: {
+        value: string
+    }
 };
 
 class MediaError extends Error {
@@ -447,9 +452,14 @@ export class MMedia {
 }
 
 export const MAPI = {
-    // async testSocket() {
-    //     await invoke('request_something', {});
-    // },
+    async version() {
+        return await new Promise<string>((resolve, reject) => {
+            let channel = createChannel({
+                ffmpegVersion: (data) => resolve(data.value)
+            });
+            invoke('media_version', {channel});
+        });
+    },
 
     async testResponse() {
         console.log(await invoke('test_response', {}));

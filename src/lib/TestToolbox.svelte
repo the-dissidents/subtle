@@ -1,11 +1,12 @@
 <script lang="ts">
-    import { cursorPosition } from "@tauri-apps/api/window";
     import { MAPI } from "./API";
     import { assert } from "./Basic";
     import type { Frontend } from "./Frontend";
 
 	export let frontend: Frontend;
     let result = "";
+
+    MAPI.version().then((x) => result = `ffmpeg version is ${x}`);
 </script>
 
 <button

@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+extern crate ffmpeg_next as ffmpeg;
 mod media;
 
 use std::sync::Mutex;
@@ -16,6 +17,7 @@ struct SetupState {
 
 fn main() {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
+    ffmpeg::init().unwrap();
 
     tauri::Builder::default()
         // .plugin(tauri_plugin_websocket::init())
@@ -33,6 +35,7 @@ fn main() {
         // }))
         .invoke_handler(tauri::generate_handler![
             init_complete,
+            media::media_version,
             media::media_status,
             media::audio_status,
             media::video_status,

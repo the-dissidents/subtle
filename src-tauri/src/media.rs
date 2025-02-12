@@ -71,6 +71,10 @@ pub enum MediaEvent<'a> {
     NoStream {},
     #[serde(rename_all = "camelCase")]
     InvalidId {},
+    #[serde(rename_all = "camelCase")]
+    FfmpegVersion {
+        value: String
+    },
 }
 
 fn send(channel: &Channel<MediaEvent>, what: MediaEvent) {
@@ -95,6 +99,13 @@ fn send_invalid_id(channel: &Channel<MediaEvent>) {
 
 fn send_done(channel: &Channel<MediaEvent>) {
     channel.send(MediaEvent::Done).expect("Error sending event");
+}
+
+#[tauri::command]
+pub fn media_version(channel: Channel<MediaEvent>) {
+    let c_buf = unsafe { ffmpeg::sys::av_version_info() };
+    let c_str = unsafe { std::ffi::CStr::from_ptr(c_buf) };
+    send(&channel, MediaEvent::FfmpegVersion { value: String::from(c_str.to_str().unwrap()) });
 }
 
 #[tauri::command]
