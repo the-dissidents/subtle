@@ -13,12 +13,20 @@ fi
 SCRIPT_DIR=$(dirname "$0")
 
 # Go to the bundle directory
-BUNDLE_DIR="$SCRIPT_DIR/src-tauri/target/release/bundle/macos"
+BUNDLE_DIR="$SCRIPT_DIR/src-tauri/target/universal-apple-darwin/release/bundle/macos"
 
 if [ ! -d "$BUNDLE_DIR" ]; then
   echo "Bundle directory not found: $BUNDLE_DIR"
-  exit 1
+
+  BUNDLE_DIR="$SCRIPT_DIR/src-tauri/target/release/bundle/macos"
+
+  if [ ! -d "$BUNDLE_DIR" ]; then
+    echo "Bundle directory not found: $BUNDLE_DIR"
+    exit 1
+  fi
 fi
+
+echo "Using bundle path $BUNDLE_DIR"
 
 cd "$BUNDLE_DIR" || { echo "Failed to cd to $BUNDLE_DIR"; exit 1; }
 
