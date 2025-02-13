@@ -6,12 +6,10 @@ import { Playback } from "./Playback";
 import { UIHelper } from "./UICommands";
 import { Config } from "./Config";
 import type CombineDialog from "./CombineDialog.svelte";
-import type SplitLanguagesDialog from "./SplitLanguagesDialog.svelte";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
 import * as dialog from "@tauri-apps/plugin-dialog"
 import * as fs from "@tauri-apps/plugin-fs"
 import { Menu } from "@tauri-apps/api/menu";
-import { convertFileSrc } from "@tauri-apps/api/core";
 
 type Snapshot = {
     archive: string,
@@ -89,7 +87,6 @@ export class Frontend {
         importOpt?: ImportOptionsDialog;
         timeTrans?: TimeTransformDialog;
         combine?: CombineDialog;
-        splitLanguages?: SplitLanguagesDialog;
     } = {};
 
     states = {

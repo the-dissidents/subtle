@@ -1,6 +1,5 @@
 <script lang="ts">
 import ImportOptionsDialog from './lib/ImportOptionsDialog.svelte';
-import SplitLanguagesDialog from './lib/SplitLanguagesDialog.svelte';
 import CombineDialog from "./lib/CombineDialog.svelte";
 import Resizer from './lib/ui/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
@@ -195,7 +194,6 @@ Config.init();
 <TimeAdjustmentDialog {frontend} bind:this={frontend.modalDialogs.timeTrans}/>
 <ImportOptionsDialog  {frontend} bind:this={frontend.modalDialogs.importOpt}/>
 <CombineDialog        {frontend} bind:this={frontend.modalDialogs.combine}/>
-<SplitLanguagesDialog {frontend} bind:this={frontend.modalDialogs.splitLanguages}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->

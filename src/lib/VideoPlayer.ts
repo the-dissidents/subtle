@@ -25,9 +25,8 @@ export class VideoPlayer implements WithCanvas {
 
     #requestedTime = 0;
     #lastRenderTime = 0;
-    #retrieveTime = 0;
+    #processingTime = 0;
     #frameTime = 0;
-    #latency = 0;
     #waitTimeCorrection = 0;
     #waitTime = 0;
     #audioFullness = 0;
@@ -223,46 +222,37 @@ export class VideoPlayer implements WithCanvas {
 
     calculateWaitTime(t0: number) {
         assert(this.#opened !== undefined);
-        const K = Math.exp(-LATENCY_DAMPING * (t0 - this.#lastRenderTime) / 1000);
-        this.#retrieveTime = 
-            this.#retrieveTime * K + (t0 - this.#requestedTime) * (1-K);
+        const Q = 0.2; // Math.exp(-LATENCY_DAMPING * (t0 - this.#lastRenderTime) / 1000);
+        this.#processingTime = 
+            this.#processingTime * Q + (t0 - this.#requestedTime) * (1-Q);
         this.#frameTime = 
-            this.#frameTime * K + (t0 - this.#lastRenderTime) * (1-K);
+            this.#frameTime * Q + (t0 - this.#lastRenderTime) * (1-Q);
         this.#lastRenderTime = t0;
 
-        /**
-         * assume: 
-         *  vpos0 + 1 / framerate = vpos1
-         *  apos0 + frame_time = apos1
-         *  retreive + wait + O(1) = frame_time
-         * goal: vpos1 = apos1
-         * solution:
-         *  O(1) = frame_time - retreive - wait
-         *  wait = vpos0 - apos0 + 1 / framerate - retreive - O(1)
-         */
-        let targetTime = 1000 / this.#opened.framerate!;
-        this.#waitTimeCorrection += targetTime - this.#frameTime;
+        // | Frame -----------------------------------------------|
+        // |----------- Processing -----------|------ Delay ------|
+        // | fill audio | read video | render | wait time | error |
+
+        const K = 0.5;
+        const targetTime = 1000 / this.#opened.framerate!;
+        this.#waitTimeCorrection = K * (targetTime - this.#frameTime);
         this.#waitTimeCorrection = Math.min(10, Math.max(-20, this.#waitTimeCorrection));
-        this.#latency = 
-            (this.#opened.pos / this.#opened.framerate 
-                - this.#opened.audioPos / this.#opened.sampleRate) * 1000;
-        this.#waitTime = this.#waitTime * K +
-            (1-K) * Math.min(50, Math.max(0, this.#latency 
-                + targetTime - this.#retrieveTime + this.#waitTimeCorrection));
+        this.#waitTime = Math.min(50, Math.max(0, 
+                targetTime - this.#processingTime + this.#waitTimeCorrection));
 
         // return;
         // for debug
         this.#ctxbuf.fillStyle = 'yellow';
         this.#ctxbuf.font='20px monospace';
-        this.#ctxbuf.fillText(`fps=${(1000 / this.#frameTime).toFixed(1)} [${this.framerate!.toFixed(1)}]`, 0, 20);
+        this.#ctxbuf.fillText(`fps=${(1000 / this.#frameTime).toFixed(1)} [${this.framerate!.toFixed(1)}; Q=${Q.toFixed(2)}]`, 0, 20);
         this.#ctxbuf.fillText(
             `fra=${this.#frameTime.toFixed(1)}`.padEnd(10) + 
-            `ret=${this.#retrieveTime.toFixed(1)}`, 0, 40);
+            `pro=${this.#processingTime.toFixed(1)}`, 0, 40);
         this.#ctxbuf.fillText(
             `wai=${this.#waitTime.toFixed(1)}`.padEnd(10) + 
             `cor=${this.#waitTimeCorrection.toFixed(1)}`, 0, 60);
-        this.#ctxbuf.fillText(`audio buffer: ${this.#audioFullness.toFixed(1)}%`, 0, 110);
-        this.#ctxbuf.fillText(`latency:      ${Math.floor(this.#latency)}ms`, 0, 130);
+        this.#ctxbuf.fillText(`audio buffer: ${this.#audioFullness.toFixed(1)}%`, 0, 80);
+        // this.#ctxbuf.fillText(`latency:      ${Math.floor(this.#latency)}ms`, 0, 130);
     }
 
     async #render() {
@@ -318,6 +308,7 @@ export class VideoPlayer implements WithCanvas {
             this.#opened.audioCxt?.resume();
             this.onPlayStateChange();
             this.#requestedTime = performance.now();
+            this.#lastRenderTime = this.#requestedTime;
             this.requestRender();
         }
     }

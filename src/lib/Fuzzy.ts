@@ -21,7 +21,6 @@ export class RegexTokenizer implements Tokenizer {
 export const DefaultTokenizer = new RegexTokenizer(
     [/(?<![\p{L}\d])|(?![\p{L}\d])|(?<=[\u4E00-\u9FFF])|(?=[\u4E00-\u9FFF])/u]);
 
-
 export const SyllableTokenizer = new RegexTokenizer(
     [/(?<![\p{L}\d])|(?![\p{L}\d])|(?<=[\u4E00-\u9FFF])|(?=[\u4E00-\u9FFF])/u,
     /(?<!^[bcdfghjklmnpqrstvwxzßñç])(?=[bcdfghjklmnpqrstvwxzßñç][^bcdfghjklmnpqrstvwxzßñç])/]);

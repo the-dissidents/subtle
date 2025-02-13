@@ -1,7 +1,7 @@
 {
   "name": "subtle",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,8 +15,7 @@
     "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
-    "@tauri-apps/plugin-os": "^2.0.0",
-    "eld": "^1.0.0"
+    "@tauri-apps/plugin-os": "^2.0.0"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.0.1",

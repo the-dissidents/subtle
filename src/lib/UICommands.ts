@@ -421,11 +421,6 @@ export class UIHelper {
                     action: () => this.#splitByNewline(selection)
                 },
                 {
-                    text: 'split by language...',
-                    action: () =>
-                        this.frontend.modalDialogs.splitLanguages?.$set({show: true})
-                },
-                {
                     text: 'fix erroneous overlapping',
                     action: () => this.#fixOverlap(selection)
                 }
