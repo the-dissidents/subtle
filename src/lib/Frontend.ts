@@ -10,6 +10,9 @@ import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
 import * as dialog from "@tauri-apps/plugin-dialog"
 import * as fs from "@tauri-apps/plugin-fs"
 import { Menu } from "@tauri-apps/api/menu";
+import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getVersion } from "@tauri-apps/api/app";
+import { arch, platform, version } from "@tauri-apps/plugin-os";
 
 type Snapshot = {
     archive: string,
@@ -132,7 +135,9 @@ export class Frontend {
     playback = new Playback(this);
     uiHelper = new UIHelper(this);
 
-    constructor() {
+    constructor(public readonly window: WebviewWindow) {
+        getVersion().then((x) => window.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
+
         //this.subs = new Subtitles();
         this.subs = SubtitleTools.makeTestSubtitles();
         this.markChanged(ChangeType.Times, ChangeCause.Action);

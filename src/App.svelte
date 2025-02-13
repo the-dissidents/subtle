@@ -24,8 +24,7 @@ import SearchToolbox from './lib/SearchToolbox.svelte';
 import TestToolbox from './lib/TestToolbox.svelte';
 
 const appWindow = getCurrentWebviewWindow()
-
-let frontend = new Frontend();
+let frontend = new Frontend(appWindow);
 let selection = new Set<SubtitleEntry>;
 
 // let subsListFocused = false;
