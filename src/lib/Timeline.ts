@@ -2,7 +2,7 @@ import { AudioSampler } from "./AudioSampler";
 import { Basic, assert } from "./Basic";
 import type { WithCanvas } from "./CanvasKeeper";
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./Subtitles";
-import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
+import { ChangeCause, ChangeType, SelectMode, type Frontend } from "./Frontend";
 import { MMedia } from "./API";
 
 const SCROLLER_HEIGHT = 15;
@@ -356,7 +356,7 @@ export class Timeline implements WithCanvas {
                     if (!ents.some((x) => this.#selection.has(x))) {
                         this.#frontend.clearSelection(ChangeCause.Timeline);
                         this.#frontend.selectEntry(ents[0], 
-                            false, false, ChangeCause.Action);
+                            SelectMode.Single, ChangeCause.Action);
                     }
                     // you can't drag in this case! no onMove.
                     // start context menu on mouse up
@@ -387,7 +387,7 @@ export class Timeline implements WithCanvas {
                                 this.#selection.clear();
                                 this.#selection.add(ents[0]);
                                 this.#frontend.selectEntry(ents[0], 
-                                    false, false, ChangeCause.Timeline);
+                                    SelectMode.Single, ChangeCause.Timeline);
                             };
                         } else {
                             // cycle through the overlapping entries under the cursor
@@ -396,7 +396,7 @@ export class Timeline implements WithCanvas {
                             this.#selection.clear();
                             this.#selection.add(ents[index]);
                             this.#frontend.selectEntry(ents[index], 
-                                false, false, ChangeCause.Timeline);
+                                SelectMode.Single, ChangeCause.Timeline);
                         }
                         this.requestRender();
                     }

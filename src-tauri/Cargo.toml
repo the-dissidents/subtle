@@ -1,6 +1,6 @@
 [package]
 name = "subtle"
-version = "0.2.3"
+version = "0.2.4"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -19,11 +19,13 @@ tauri-plugin-clipboard-manager = "2.0.1"
 tauri-plugin-dialog = "2"
 ffmpeg-next = { version = "7.1.0", features = ["build"] }
 rand = "0.8.5"
-pprof = { version = "0.14.0", features = ["flamegraph"] }
 ffmpeg-sys-next = "7.1.0"
 serde_json = "1.0.133"
 log = "0.4.22"
 simple_logger = "5.0.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+pprof = { version = "0.14.0", features = ["flamegraph"] }
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

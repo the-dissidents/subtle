@@ -1,6 +1,5 @@
 <script lang="ts">
-import { Basic } from "./Basic";
-import type { Frontend } from "./Frontend";
+import { getSelectMode, SelectMode, type Frontend } from "./Frontend";
 import { SubtitleEntry, SubtitleUtil } from "./Subtitles";
 
 export let frontend: Frontend;
@@ -108,8 +107,7 @@ td.subtext {
     isFocused = true;
     if (onFocus) onFocus();
     if (ev.button == 0)
-      frontend.toggleEntry(ent, 
-        ev.shiftKey, ev.getModifierState(Basic.ctrlKey()));
+      frontend.toggleEntry(ent, getSelectMode(ev));
     }}
     on:contextmenu={(ev) => {
       isFocused = true;
@@ -125,7 +123,7 @@ td.subtext {
     }}
     on:mousemove={(ev) => {
       if (ev.buttons == 1)
-        frontend.selectEntry(ent, true, ev.getModifierState(Basic.ctrlKey()));
+        frontend.selectEntry(ent, SelectMode.Sequence);
     }}
     class:focushlt={frontend.focused.entry == ent}
     class:sametime={frontend.focused.entry != ent 

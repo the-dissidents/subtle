@@ -1,6 +1,6 @@
-import { Menu, NativeIcon } from "@tauri-apps/api/menu";
+import { Menu } from "@tauri-apps/api/menu";
 import { Basic, assert } from "./Basic";
-import { ChangeCause, ChangeType, UIFocus, type Frontend } from "./Frontend";
+import { ChangeCause, ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
 import { SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type SubtitleChannel } from "./Subtitles";
 
 export class UIHelper {
@@ -86,12 +86,12 @@ export class UIHelper {
         else if (ev.key == 'ArrowUp' && altOrTableOrTimeline && !ctrlOrMeta) {
             // previous entry
             ev.preventDefault();
-            this.frontend.offsetFocus(-1, ev.shiftKey, ctrlOrMeta);
+            this.frontend.offsetFocus(-1, getSelectMode(ev));
         }
         else if (ev.key == 'ArrowDown' && altOrTableOrTimeline && !ctrlOrMeta) {
             // next entry
             ev.preventDefault();
-            this.frontend.offsetFocus(1, ev.shiftKey, ctrlOrMeta);
+            this.frontend.offsetFocus(1, getSelectMode(ev));
         }
         else if (ev.code == 'Space' && altOrTableOrTimeline) {
             // play/pause
@@ -171,7 +171,7 @@ export class UIHelper {
             if (i == this.frontend.subs.entries.length)
                 this.frontend.startEditingNewVirtualEntry();
             else
-                this.frontend.offsetFocus(1);
+                this.frontend.offsetFocus(1, SelectMode.Single);
         }
     }
 
@@ -241,6 +241,10 @@ export class UIHelper {
                     this.frontend.onSelectionChanged.dispatch(ChangeCause.Action);
                 }
             }))
+        },
+        {
+            text: 'invert selection',
+            action: () => this.#invertSelection()
         },
         { item: 'Separator' },
         {
@@ -483,6 +487,18 @@ export class UIHelper {
         this.frontend.onSelectionChanged.dispatch(ChangeCause.Action);
     }
 
+    #invertSelection() {
+        let newSelection = new Set<SubtitleEntry>;
+        let oldSelection = new Set(this.frontend.getSelection());
+        for (let e of this.frontend.subs.entries)
+            if (!oldSelection.has(e)) newSelection.add(e);
+        this.frontend.clearFocus();
+        this.frontend.selection.currentStart = null;
+        this.frontend.selection.currentGroup = [];
+        this.frontend.selection.submitted = newSelection;
+        this.frontend.onSelectionChanged.dispatch(ChangeCause.Action);
+    }
+
     #sortSelection(selection: SubtitleEntry[], byStyle: boolean) {
         // assumes selection is not disjunct
         if (selection.length == 0) return;
@@ -571,7 +587,7 @@ export class UIHelper {
             assert(index > 0);
             this.frontend.subs.entries.splice(index, 1);
         }
-        this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+        this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
         this.frontend.status = `combined ${selection.length} entries`;
     }
 
@@ -626,7 +642,7 @@ export class UIHelper {
         this.frontend.subs.entries.splice(
             this.frontend.subs.entries.indexOf(entry) + 1,
             selection.length - 1);
-        this.frontend.selectEntry(entry);
+        this.frontend.selectEntry(entry, SelectMode.Single);
         this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
     }
 
