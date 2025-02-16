@@ -26,7 +26,6 @@
 
 	let cx: number, cy: number, ox: number, oy: number;
 	let posx: number, posy: number;
-	let dragging = false;
 	makeCenter();
 
 	function makeCenter() {
