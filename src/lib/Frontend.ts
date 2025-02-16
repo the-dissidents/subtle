@@ -1,4 +1,4 @@
-import { assert } from "./Basic";
+import { assert, Basic } from "./Basic";
 import { SubtitleEntry, SubtitleStyle, SubtitleTools, Subtitles, type SubtitleChannel, SubtitleUtil, SubtitleImport, SubtitleExport, MergePosition, MergeStyleBehavior, type MergeOptions } from "./Subtitles";
 import type ImportOptionsDialog from "./ImportOptionsDialog.svelte";
 import type TimeTransformDialog from "./TimeTransformDialog.svelte";
@@ -54,6 +54,18 @@ export enum ChangeType {
     StyleDefinitions,
     General, // TODO: this is unclear
     Metadata
+}
+
+export enum SelectMode {
+    Single,
+    Multiple,
+    Sequence
+}
+
+export function getSelectMode(ev: MouseEvent | KeyboardEvent) {
+    if (ev.shiftKey) return SelectMode.Sequence;
+    if (ev.getModifierState(Basic.ctrlKey())) return SelectMode.Multiple;
+    return SelectMode.Single;
 }
 
 export class EventHost<T extends unknown[] = []> {
@@ -389,9 +401,14 @@ export class Frontend {
     }
 
     #mergeSubtitles(other: Subtitles, options: MergeOptions) {
-        this.subs.merge(other, options);
-        for (let ent of other.entries)
-            this.selection.submitted.add(ent);
+        let entries = this.subs.merge(other, options);
+        if (entries.length > 0) {
+            for (let ent of entries)
+                this.selection.submitted.add(ent);
+            this.selection.currentStart = entries[0];
+            this.selection.currentGroup = [entries[0]];
+            this.onSelectionChanged.dispatch(ChangeCause.Action);
+        }
         this.markChanged(ChangeType.General, ChangeCause.Action);
     }
 
@@ -451,7 +468,7 @@ export class Frontend {
             : new SubtitleEntry(start, end, { style: this.subs.defaultStyle, text: '' });
         this.subs.entries.splice(index, 0, entry);
         this.markChanged(ChangeType.Times, ChangeCause.Action);
-        setTimeout(() => this.selectEntry(entry), 0);
+        setTimeout(() => this.selectEntry(entry, SelectMode.Single), 0);
         return entry;
     }
 
@@ -467,7 +484,7 @@ export class Frontend {
 
         // focus on the new entry
         this.clearSelection();
-        this.selectEntry(entry);
+        this.selectEntry(entry, SelectMode.Single);
         this.focused.style = entry.texts[0].style;
         setTimeout(() => {
             this.keepEntryInView(entry);
@@ -539,7 +556,7 @@ export class Frontend {
             this.subs.entries.filter((x) => !selection.includes(x));
         this.subs.entries = newEntries;
         this.clearSelection();
-        if (next) this.selectEntry(next);
+        if (next) this.selectEntry(next, SelectMode.Single);
         else this.states.virtualEntryHighlighted = true;
 
         this.markChanged(ChangeType.Times, ChangeCause.Action);
@@ -560,8 +577,9 @@ export class Frontend {
     async paste() {
         const source = await clipboard.readText();
         if (!source) return;
-        let portion, _ = this.retrieveFromSource(source);
+        let [portion, _] = this.retrieveFromSource(source);
         if (!portion) {
+            console.log('error reading clipboard: ' + source);
             this.status = 'cannot read clipboard data as subtitles';
             return;
         }
@@ -581,7 +599,7 @@ export class Frontend {
         this.status = 'pasted';
     }
 
-    offsetFocus(n: number, sequence = false, multiple = false) {
+    offsetFocus(n: number, mode: SelectMode) {
         if (this.focused.entry == null) return;
         let focused = this.focused.entry;
         let i = this.subs.entries.indexOf(focused) + n;
@@ -589,14 +607,12 @@ export class Frontend {
             this.status = 'focusOffset out of range'
             return;
         }
-        this.selectEntry(this.subs.entries[i], sequence, multiple);
+        this.selectEntry(this.subs.entries[i], mode);
     }
 
-    toggleEntry(ent: SubtitleEntry, 
-        sequence = false, multiple = false, cause = ChangeCause.UIList) 
-    {
+    toggleEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {
         // it's only a 'toggle' when multiselecting; otherwise, just select it
-        if (multiple) {
+        if (mode === SelectMode.Multiple) {
             if (this.focused.entry == ent) {
                 this.clearFocus();
             }
@@ -615,36 +631,38 @@ export class Frontend {
                 return;
             }
         }
-        this.selectEntry(ent, sequence, multiple, cause);
+        this.selectEntry(ent, mode, cause);
     }
   
-    selectEntry(ent: SubtitleEntry, 
-        sequence = false, multiple = false, cause = ChangeCause.UIList) 
-    {
-        if (sequence) {
-            if (this.selection.currentStart == null) {
+    selectEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {
+        switch (mode) {
+            case SelectMode.Sequence:
+                if (this.selection.currentStart == null) {
+                    this.selection.currentStart = ent;
+                    this.selection.currentGroup = [ent];
+                    // this.#status = 'selection initiated';
+                } else {
+                    let a = this.subs.entries.indexOf(this.selection.currentStart);
+                    let b = this.subs.entries.indexOf(ent);
+                    assert(a >= 0 && b >= 0);
+                    this.selection.currentGroup = 
+                        this.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1);
+                    // this.#status = 'seqselect updated';
+                }
+                break;
+            case SelectMode.Multiple:
+                for (let e of this.selection.currentGroup)
+                    this.selection.submitted.add(e);
                 this.selection.currentStart = ent;
                 this.selection.currentGroup = [ent];
-                // this.#status = 'selection initiated';
-            } else {
-                let a = this.subs.entries.indexOf(this.selection.currentStart);
-                let b = this.subs.entries.indexOf(ent);
-                assert(a >= 0 && b >= 0);
-                this.selection.currentGroup = 
-                    this.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1);
-                // this.#status = 'seqselect updated';
-            }
-        } else if (multiple) {
-            for (let e of this.selection.currentGroup)
-                this.selection.submitted.add(e);
-            this.selection.currentStart = ent;
-            this.selection.currentGroup = [ent];
-            // this.#status = 'multiselect added item';
-        } else {
-            // clear selection
-            this.selection.submitted.clear();
-            this.selection.currentGroup = [ent];
-            this.selection.currentStart = ent;
+                // this.#status = 'multiselect added item';
+                break;
+            case SelectMode.Single:
+                // clear selection
+                this.selection.submitted.clear();
+                this.selection.currentGroup = [ent];
+                this.selection.currentStart = ent;
+                break;
         }
         if (this.focused.entry != ent) {
             this.states.isEditingVirtualEntry = false;

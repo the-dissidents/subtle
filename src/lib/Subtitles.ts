@@ -172,7 +172,7 @@ export class Subtitles {
     }
 
     /** Note: this method will use and modify the entries in `other` */ 
-    merge(other: Subtitles, options: MergeOptions) {
+    merge(other: Subtitles, options: MergeOptions): SubtitleEntry[] {
         if (options.overrideMetadata) {
             other.metadata = JSON.parse(JSON.stringify(this.metadata));
         }
@@ -223,7 +223,7 @@ export class Subtitles {
         }
 
         if (options.selection == MergeStyleSelection.OnlyStyles)
-            return;
+            return [];
 
         let position = options.position ?? MergePosition.After;
         if (position == MergePosition.Overwrite)
@@ -260,6 +260,7 @@ export class Subtitles {
             for (let channel of ent.texts)
                 channel.style = processStyle(channel.style);
         }
+        return other.entries;
     }
 
     // first scale, then offset
@@ -570,7 +571,8 @@ export const SubtitleImport = {
         try {
             let result = Subtitles.deserialize(JSON.parse(source));
             return result;
-        } catch {
+        } catch (e: any) {
+            console.log('note: failed importing json', e);
             return null;
         }
     },
