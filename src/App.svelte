@@ -5,7 +5,7 @@ import Resizer from './lib/ui/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 
-import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from './lib/Subtitles'
+import { LabelColors, SubtitleEntry, SubtitleUtil, type LabelColorsType, type SubtitleChannel } from './lib/Subtitles'
 import { assert, Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend, UIFocus } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
@@ -52,6 +52,7 @@ let keepDuration = false;
 let editingT0 = 0;
 let editingT1 = 0;
 let editingDt = 0;
+let editingLabel: LabelColorsType = 'none';
 
 frontend.onUndoBufferChanged.bind(() => {
   undoRedoUpdateCounter++;
@@ -92,6 +93,7 @@ function setupEditForm() {
   editingT0 = focused.start;
   editingT1 = focused.end;
   editingDt = editingT1 - editingT0;
+  editingLabel = focused.label;
 
   let isEditingNow = frontend.states.uiFocus == UIFocus.EditingField;
   setTimeout(() => {
@@ -109,6 +111,7 @@ function applyEditForm() {
   focused.start = editingT0;
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
+  focused.label = editingLabel;
   //frontend.markChanged(true);
 }
 
@@ -256,9 +259,11 @@ Config.init();
           <canvas width="0" height="0" bind:this={videoCanvas}/>
         </div>
         <!-- video playback controls -->
-        <div class='controls-container'>
-          <button on:click={() => frontend.playback.toggle()
-            .catch((e) => frontend.status = `Error playing video: ${e}`)}
+        <div class='hlayout'>
+          <button 
+            style="width: 30px; height: 20px"
+            on:click={() => frontend.playback.toggle()
+              .catch((e) => frontend.status = `Error playing video: ${e}`)}
           >{playIcon}</button>
           <input type='range' class='play-pointer flexgrow'
             step="any" max="1" min="0" disabled={sliderDisabled}
@@ -271,7 +276,6 @@ Config.init();
               frontend.playback.setPosition(playPos * frontend.playback.duration);
             }}/>
           <TimestampInput bind:timestamp={playPosInput}
-            stretchX={false}
             on:change={() => frontend.playback.setPosition(playPosInput)}/>
         </div>
         <!-- resizer -->
@@ -306,23 +310,22 @@ Config.init();
     <div bind:this={rightPane} class="flexgrow fixminheight">
       <div class='vlayout fill'>
         <!-- edit box -->
-        <div bind:this={editTable} class='hlayout' style="height: 100px;">
+        <div bind:this={editTable} class='hlayout' style="height: 125px;">
           <!-- timestamp fields -->
           {#key editFormUpdateCounter}
-          <div style="">
-            <select
-              on:input={(ev) => editMode = ev.currentTarget.selectedIndex}>
-              <option>anchor start</option>
-              <option>anchor end</option>
-            </select>
+          <div>
             <span>
+              <select
+                on:input={(ev) => editMode = ev.currentTarget.selectedIndex}>
+                <option>anchor start</option>
+                <option>anchor end</option>
+              </select>
               <input type='checkbox' id='keepd' bind:checked={keepDuration}/>
               <label for='keepd'>keep duration</label>
             </span>
             <br>
-            <TimestampInput
-              bind:timestamp={editingT0} 
-              stretchX={false}
+            <TimestampInput bind:timestamp={editingT0}
+              stretch={true}
               on:input={() => {
                 if (editMode == 0 && keepDuration)
                   editingT1 = editingT0 + editingDt;
@@ -331,8 +334,8 @@ Config.init();
               on:change={() => 
                 frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
             <br>
-            <TimestampInput bind:timestamp={editingT1} 
-              stretchX={false}
+            <TimestampInput bind:timestamp={editingT1}
+              stretch={true}
               on:input={() => {
                 if (editMode == 1 && keepDuration)
                   editingT0 = editingT1 - editingDt;
@@ -343,8 +346,8 @@ Config.init();
                 applyEditForm();
                 frontend.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
             <br>
-            <TimestampInput bind:timestamp={editingDt} 
-              stretchX={false}
+            <TimestampInput bind:timestamp={editingDt}
+              stretch={true}
               on:input={() => {
                 if (editMode == 0)
                   editingT1 = editingT0 + editingDt; 
@@ -354,6 +357,21 @@ Config.init();
                 frontend.states.editChanged = true;}}
               on:change={() => 
                 frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+            <hr>
+            <div class="hlayout">
+              <div style="height: auto; width: 25px; border: solid 1px; margin: 2px"
+                class={`label-${editingLabel}`}></div>
+              <select
+                bind:value={editingLabel}
+                class="flexgrow"
+                on:change={() => {
+                  applyEditForm();
+                  frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);}}>
+                {#each LabelColors as color}
+                  <option value={color}>{color}</option>
+                {/each}
+              </select>
+            </div>
           </div>
           <!-- channels view -->
           <div class="flexgrow scroll">
@@ -410,7 +428,7 @@ Config.init();
         </div>
         <!-- resizer -->
         <div>
-          <Resizer control={editTable} minValue={100}/>
+          <Resizer control={editTable} minValue={125}/>
         </div>
         <!-- table view -->
         <div class='scrollable fixminheight subscontainer' 
@@ -456,16 +474,6 @@ Config.init();
 .timelinefocused {
   /* border: 2px solid skyblue; */
   box-shadow: 0 5px 10px gray;
-}
-
-.controls-container {
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  padding: 5px;
-}
-.controls-container button {
-  width: 30px;
 }
 
 .player-container {

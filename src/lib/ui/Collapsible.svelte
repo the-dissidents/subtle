@@ -44,7 +44,7 @@
   display: none;
 }
 button.collapsible {
-  background-color: #eeeeee;
+  background-color: whitesmoke;
   padding: 5px;
   width: 100%;
   border: none;
@@ -54,14 +54,14 @@ button.collapsible {
   box-shadow: none;
 }
 button.checked {
-  background-color: lightblue !important;
+  background-color: var(--uchu-green-1) !important;
 }
 button.collapsible.active .caret::before {
   transform: rotate(90deg);
 }
 .caret::before {
   content: "\25B6";
-  color: black;
+  color: var(--uchu-yin);
   display: inline-block;
   margin-right: 6px;
 }

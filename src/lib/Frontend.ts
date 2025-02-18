@@ -49,7 +49,7 @@ export enum ChangeCause {
 }
 
 export enum ChangeType {
-    TextOnly,
+    TextOnly, // FIXME: meaning non-time?
     Times,
     StyleDefinitions,
     General, // TODO: this is unclear

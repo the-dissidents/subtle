@@ -1,7 +1,7 @@
 import { Menu } from "@tauri-apps/api/menu";
 import { Basic, assert } from "./Basic";
 import { ChangeCause, ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
-import { SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type SubtitleChannel } from "./Subtitles";
+import { LabelColors, SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type LabelColorsType, type SubtitleChannel } from "./Subtitles";
 
 export class UIHelper {
     constructor(public readonly frontend: Frontend) {}
@@ -181,6 +181,13 @@ export class UIHelper {
         let isDisjunct = this.frontend.isSelectionDisjunct();
         let allStyles = [this.frontend.subs.defaultStyle, ...this.frontend.subs.styles];
         let maxLines = Math.max(...selection.map((x) => x.texts.length));
+        let label: LabelColorsType | undefined = selection[0].label;
+        for (const entry of selection) {
+            if (entry.label != selection[0].label) {
+                label = undefined;
+                break;
+            }
+        }
 
         let menu = await Menu.new({items: [
         {
@@ -308,6 +315,19 @@ export class UIHelper {
         },
         { item: 'Separator' },
         {
+            text: 'label',
+            items: LabelColors.map((x) => ({
+                text: x,
+                checked: x === label,
+                action: () => {
+                    for (let entry of selection)
+                        entry.label = x;
+                    this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+                }
+            }))
+        },
+        { item: 'Separator' },
+        {
             text: 'utilities',
             items: [
                 {
@@ -374,7 +394,7 @@ export class UIHelper {
                     }))
                 },
                 {
-                    text: 'replace channel by line',
+                    text: 'replace n-th channel',
                     items: [...Array(maxLines).keys()].map((x) => ({
                         text: (x+1).toString(),
                         items: [{

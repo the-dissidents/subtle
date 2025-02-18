@@ -3,7 +3,7 @@
     import { SubtitleUtil } from './Subtitles';
 
 	export let timestamp = 0;
-    export let stretchX = false;
+    export let stretch = false;
     let value = '00:00:00.000';
     let changed = false;
     
@@ -24,7 +24,7 @@
 	const input = () => dispatch('input', timestamp);
 </script>
 
-<input class={'timestamp ' + (stretchX ? 'stretch' : '')} bind:value={value}
+<input class={'timestamp ' + (stretch ? 'stretch' : '')} bind:value={value}
     on:beforeinput={(ev) => {
         // Note: Safari fires beforeinput and input *before* keydown if the IME is on, so
         // we must handle numerical input here
@@ -70,10 +70,9 @@
         font-family: monospace;
 		text-align: center;
         box-sizing: border-box;
-        width: 120px;
+        min-width: 80px;
 	}
     .stretch {
         width: 100%;
-        height: 100%;
     }
 </style>

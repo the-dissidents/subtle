@@ -1,6 +1,9 @@
 import { assert } from "./Basic";
 import { CSSColors, parseCSSColor } from "./colorparser";
 
+export const LabelColors = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
+export type LabelColorsType = typeof LabelColors[number];
+
 export enum AlignMode {
     BottomLeft = 1, BottomCenter, BottomRight,
     CenterLeft, Center, CenterRight,
@@ -117,6 +120,7 @@ export type SubtitleChannel = {
 }
 
 export class SubtitleEntry {
+    label: LabelColorsType = 'none';
     texts: SubtitleChannel[] = [];
     // Same here
     gui?: HTMLElement;
@@ -138,14 +142,17 @@ export class SubtitleEntry {
         return {
             start: this.start,
             end: this.end,
+            label: this.label,
             texts: this.texts.map((x) => [x.style.name, x.text])
         }
     }
 
     static deserialize(o: ReturnType<SubtitleEntry['toSerializable']>, subs: Subtitles) {
-        return new SubtitleEntry(o.start, o.end, ...o.texts.map((x) => ({
+        let entry = new SubtitleEntry(o.start, o.end, ...o.texts.map((x) => ({
             style: subs.styles.find((s) => s.name == x[0]) ?? subs.defaultStyle, 
-            text: x[1]})))
+            text: x[1]})));
+        if (o.label) entry.label = o.label;
+        return entry;
     }
 }
 
@@ -342,7 +349,7 @@ export const SubtitleExport = {
         return JSON.stringify(subs.toSerializable());
     },
     SRT(subs: Subtitles) {
-        // assumes no overlapping entries
+        // FIXME: assumes no overlapping entries
         let result = '', i = 1;
         for (let entry of subs.entries) {
             result += `${i}\n${SubtitleUtil.formatTimestamp(entry.start, 3, ',')} --> ${SubtitleUtil.formatTimestamp(entry.end, 3, ',')}\n${entry.texts.map((x) => x.text).join('\n')}\n\n`;

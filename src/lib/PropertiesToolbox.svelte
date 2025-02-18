@@ -82,9 +82,4 @@ function changeResolution() {
 .txt {
   width: 100%;
 }
-
-hr {
-  border: 0.5px solid rgb(193, 193, 193);
-  border-radius: 0.5px;
-}
 </style>

@@ -75,6 +75,9 @@
 		color: #a6a6a6;
         font-size: 90%;
         text-wrap: nowrap;
+        &:not([disabled]):hover {
+           color: gray;
+        }
 	}
 	.selected {
 		border-bottom: 2px solid skyblue;

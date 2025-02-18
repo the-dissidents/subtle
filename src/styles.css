@@ -4,8 +4,8 @@
   line-height: 1.5em;
   font-weight: 400;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
+  color: var(--uchu-yin);
+  background-color: var(--uchu-yang);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -55,37 +55,18 @@ label:has(input[type='checkbox'].button) {
   padding-inline-start: 6px;
   line-height: normal;
 
-  &:hover {
-    filter: brightness(95%);
-    /* background-color: rgb(241, 241, 241); */
+  &:not([disabled]):hover {
+    filter: brightness(97%);
   }
 
   &:has(input[type='checkbox'].button:checked) {
-    background-color: lightblue;
+    background-color: var(--uchu-green-1);
   }
 }
 
-button.left {
-  border-radius: 3px 0 0 3px;
-  margin-right: 0;
-  border-right: none;
-}
-
-button.middle {
-  border-radius: 0;
-  border-right: none;
-  margin-left: 0;
-  margin-right: 0;
-}
-
-button.right {
-  border-radius: 0 3px 3px 0;
-  margin-left: 0;
-}
-
 button[disabled] {
-  background-color: rgb(250, 250, 250);
-  color: rgb(200, 200, 200);
+  background-color: var(--uchu-gray-1);
+  color: var(--uchu-gray-9);
 }
 
 input {
@@ -268,3 +249,15 @@ h2 {
   /* overflow-x: hidden; */
   overflow-y: scroll;
 }
+
+hr {
+  border: 0.5px solid rgb(193, 193, 193);
+  border-radius: 0.5px;
+}
+
+.label-red    { background-color: var(--uchu-red-2); }
+.label-orange { background-color: var(--uchu-orange-2); }
+.label-yellow { background-color: var(--uchu-yellow-2); }
+.label-green  { background-color: var(--uchu-green-2); }
+.label-blue   { background-color: var(--uchu-blue-2); }
+.label-purple { background-color: var(--uchu-purple-2); }

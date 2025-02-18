@@ -10,8 +10,9 @@ export let selection = new Set<SubtitleEntry>;
 function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
   entry.gui = node;
   return {
-  update: (entry: SubtitleEntry) => entry.gui = node,
-  destory: () => entry.gui = undefined};
+    update: (entry: SubtitleEntry) => entry.gui = node,
+    destory: () => entry.gui = undefined
+  };
 }
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
@@ -126,12 +127,13 @@ td.subtext {
         frontend.selectEntry(ent, SelectMode.Sequence);
     }}
     class:focushlt={frontend.focused.entry == ent}
-    class:sametime={frontend.focused.entry != ent 
-    && overlappingTime(frontend.focused.entry, ent)}
+    class:sametime={frontend.focused.entry != ent && overlappingTime(frontend.focused.entry, ent)}
     class:selected={selection.has(ent)}
   >
   {#if line === ent.texts[0]}
-    <td rowspan={ent.texts.length} use:setupEntryGUI={ent} class='right'>{i}</td>
+    <td rowspan={ent.texts.length}
+        class={`right label-${ent.label}`}
+        use:setupEntryGUI={ent}>{i}</td>
     <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
     <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
   {/if}
