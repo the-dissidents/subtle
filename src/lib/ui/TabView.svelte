@@ -61,7 +61,7 @@
         flex-direction: row;
         flex-wrap: nowrap;
         border-bottom: 1px solid skyblue;
-        overflow-x: scroll;
+        overflow-x: auto;
         scrollbar-width: thin;
         margin-bottom: 2px;
     }

@@ -431,7 +431,7 @@ Config.init();
           <Resizer control={editTable} minValue={125}/>
         </div>
         <!-- table view -->
-        <div class='scrollable fixminheight subscontainer' 
+        <div class='scrollable fixminheight subscontainer flexgrow' 
           class:subsfocused={frontend.states.uiFocus == UIFocus.Table} 
           bind:this={frontend.ui.subscontainer}
         >
@@ -479,7 +479,6 @@ Config.init();
 .player-container {
   height: 200px;
   padding: 3px;
-  overflow: scroll;
 }
 
 .player-container canvas {
@@ -491,7 +490,7 @@ Config.init();
 }
 
 .scroll {
-  overflow: scroll;
+  overflow: auto;
   box-shadow: gray 0px 0px 3px inset;
   margin-left: 3px;
   border-top: solid transparent 3px;

@@ -1,5 +1,5 @@
 :root {
-  font-family: Arial, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 14px;
   line-height: 1.5em;
   font-weight: 400;
@@ -78,6 +78,7 @@ select {
 }
 
 textarea {
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 14px;
   box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
   border: none;
@@ -242,12 +243,11 @@ h2 {
 }
 
 .scrollable {
-  height: 100%;
   max-height: 100%;
   text-align: start;
   box-sizing: border-box;
   /* overflow-x: hidden; */
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 hr {

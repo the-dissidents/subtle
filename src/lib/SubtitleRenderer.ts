@@ -92,7 +92,7 @@ export class SubtitleRenderer {
         this.#subs = subtitles;
         this.#canvas = new OffscreenCanvas(width, height);
         this.changeResolution();
-        let context = this.#canvas.getContext('2d', { alpha: false });
+        let context = this.#canvas.getContext('2d', { alpha: true });
         if (!context) throw new Error(
             'SubtitleRenderer: cannot create context for OffscreenCanvas');
         this.#cxt = context;

@@ -28,7 +28,8 @@
 .page {
     padding: 2px;
     flex: 1 0;
-    overflow: scroll;
+    overflow-x: hidden;
+    overflow-y: auto;
     display: none;
 }
 .active {

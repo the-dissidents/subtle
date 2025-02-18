@@ -7,8 +7,6 @@ import { assert } from "./Basic";
 import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 import type { AudioFeedbackData } from "./worker/DecodedAudioLoader";
 
-const LATENCY_DAMPING = 10;
-
 export class VideoPlayer implements WithCanvas {
     #ctx: CanvasRenderingContext2D;
     #canvas: OffscreenCanvas;
@@ -240,10 +238,9 @@ export class VideoPlayer implements WithCanvas {
         this.#waitTime = Math.min(50, Math.max(0, 
                 targetTime - this.#processingTime + this.#waitTimeCorrection));
 
-        // return;
         // for debug
         this.#ctxbuf.fillStyle = 'yellow';
-        this.#ctxbuf.font='20px monospace';
+        this.#ctxbuf.font= `${window.devicePixelRatio * 10}px Courier`;
         this.#ctxbuf.fillText(`fps=${(1000 / this.#frameTime).toFixed(1)} [${this.framerate!.toFixed(1)}; Q=${Q.toFixed(2)}]`, 0, 20);
         this.#ctxbuf.fillText(
             `fra=${this.#frameTime.toFixed(1)}`.padEnd(10) + 
@@ -252,7 +249,6 @@ export class VideoPlayer implements WithCanvas {
             `wai=${this.#waitTime.toFixed(1)}`.padEnd(10) + 
             `cor=${this.#waitTimeCorrection.toFixed(1)}`, 0, 60);
         this.#ctxbuf.fillText(`audio buffer: ${this.#audioFullness.toFixed(1)}%`, 0, 80);
-        // this.#ctxbuf.fillText(`latency:      ${Math.floor(this.#latency)}ms`, 0, 130);
     }
 
     async #render() {

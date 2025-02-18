@@ -81,6 +81,10 @@ function ellipsisText(cxt: CanvasRenderingContext2D, str: string, max: number) {
     return str.substring(0, index) + ellipsis;
 }
 
+function fontSize(size: number) {
+    return window.devicePixelRatio * size;
+}
+
 export class Timeline implements WithCanvas {
     #frontend: Frontend;
     #cxt: CanvasRenderingContext2D;
@@ -666,7 +670,7 @@ export class Timeline implements WithCanvas {
         this.#cxt.fillRect(0, 0, this.#width, HEADER_HEIGHT);
 
         this.#cxt.fillStyle = RULER_TEXT;
-        this.#cxt.font = '20px sans-serif';
+        this.#cxt.font = `${fontSize(10)}px sans-serif`;
         this.#cxt.textBaseline = 'bottom';
         this.#cxt.lineWidth = 1;
         for (let i = 0; i < n; i++) {
@@ -704,6 +708,7 @@ export class Timeline implements WithCanvas {
     #renderTracks() {
         ellipsisWidth = -1;
         this.#cxt.textBaseline = 'top';
+        this.#cxt.font = `${fontSize(12)}px sans-serif`;
         for (let ent of this.#getVisibleEntries()) {
             this.#getEntryPositions(ent).forEach((b) => {
                 this.#cxt.fillStyle = ENTRY_BACK;
@@ -784,7 +789,7 @@ export class Timeline implements WithCanvas {
         this.#renderTracks();
         this.#renderCursor();
 
-        this.#cxt.font = 'bold 25px sans-serif';
+        this.#cxt.font = `bold ${fontSize(12)}px sans-serif`;
         this.#cxt.fillStyle = 'lightgreen';
         this.#cxt.textBaseline = 'top';
         const area = this.#frontend.playback.playArea;
@@ -794,7 +799,7 @@ export class Timeline implements WithCanvas {
         const statusWidth = this.#cxt.measureText(status).width;
         this.#cxt.fillText(status, this.#width - statusWidth - 5, 35);
         
-        this.#cxt.font = '15px sans-serif';
+        this.#cxt.font = `${fontSize(8)}px sans-serif`;
         this.#cxt.fillStyle = 'white';
         this.#cxt.fillText(`offset=${this.#offset.toFixed(2)}`, 10, 30);
         this.#cxt.fillText(`scale=${this.#scale.toFixed(2)}`, 10, 50);
