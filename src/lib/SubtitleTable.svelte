@@ -10,7 +10,10 @@ export let selection = new Set<SubtitleEntry>;
 function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
   entry.gui = node;
   return {
-    update: (entry: SubtitleEntry) => entry.gui = node,
+    update: (entry: SubtitleEntry) => {
+      console.log('update:', entry.texts[0].text);
+      entry.gui = node;
+    },
     destory: () => entry.gui = undefined
   };
 }
@@ -103,7 +106,7 @@ td.subtext {
 <tbody>
   <!-- list all entries -->
   {#each frontend.subs.entries as ent, i (ent.uniqueID)}
-  {#each ent.texts as line, j (`${i},${j}`)}
+  {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
   <tr on:mousedown={(ev) => {
     isFocused = true;
     if (onFocus) onFocus();

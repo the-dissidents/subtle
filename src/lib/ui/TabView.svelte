@@ -75,7 +75,7 @@
 		color: #a6a6a6;
         font-size: 90%;
         text-wrap: nowrap;
-        &:not([disabled]):hover {
+        &:not([disabled], .selected):hover {
            color: gray;
         }
 	}
