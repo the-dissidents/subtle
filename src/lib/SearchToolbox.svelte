@@ -1,3 +1,5 @@
+<!-- @migration-task Error while migrating Svelte code: `<tr>` cannot be a child of `<table>`. `<table>` only allows these children: `<caption>`, `<colgroup>`, `<tbody>`, `<thead>`, `<tfoot>`, `<style>`, `<script>`, `<template>`. The browser will 'repair' the HTML (by moving, removing, or inserting elements) which breaks Svelte's assumptions about the structure of your components.
+https://svelte.dev/e/node_invalid_placement -->
 <script lang="ts">
 	import { LabelColors, SubtitleEntry, SubtitleStyle, type LabelColorsType } from './Subtitles'
 	import { ChangeCause, ChangeType, Frontend, SelectMode } from './Frontend';
@@ -112,18 +114,18 @@
 				frontend.status = `selected ${nDone} line${nDone > 1 ? 's' : ''}`;
 				// manually call this because we didn't use selectEntry etc.
 				frontend.onSelectionChanged.dispatch(ChangeCause.Action);
-			} else if (type == SearchAction.Replace) {
+			} else if (type == SearchAction.Replace || type === SearchAction.ReplaceStyleOnly) {
 				frontend.status = `replaced ${nDone} lines${nDone > 1 ? 's' : ''}`;
+				frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
 			} else {
 				frontend.status = `found ${nDone} line${nDone > 1 ? 's' : ''}`;
 			}
-			frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
 		} else {
 			frontend.status = `found nothing`;
 			currentEntry = null;
 			currentTextIndex = 0;
 			if (option != SearchOption.Global) {
-				frontend.focused.entry = null;
+				frontend.clearFocus();
 				frontend.onSelectionChanged.dispatch(ChangeCause.Action);
 			}
 		}
@@ -157,53 +159,55 @@
 		search only in style
 		<StyleSelect
 			on:submit={() => useStyle = true}
-			bind:subtitles={frontend.subs}
+			subtitles={frontend.subs}
 			bind:currentStyle={style1}/>
 	</label><br/>
 	<label><input type='checkbox' bind:checked={replaceStyle}/>
 		replace by style
 		<StyleSelect
 			on:submit={() => replaceStyle = true}
-			bind:subtitles={frontend.subs}
+			subtitles={frontend.subs}
 			bind:currentStyle={style2}/>
 	</label><br/>
 	
 	<table class="wfill">
-		<tr>
-			<td>
-				<button class="left wfill" disabled>find</button>
-			</td>
-			<td class="hlayout">
-				<button class="middle"
-					on:click={() => findAndReplace(SearchAction.Find, SearchOption.None)}
-				>next</button>
-				<button class="middle"
-					on:click={() => findAndReplace(SearchAction.Find, SearchOption.Reverse)}
-				>previous</button>
-				<button class="right flexgrow"
-					on:click={() => findAndReplace(SearchAction.Select, SearchOption.Global)}
-				>all</button>
-			</td>
-		</tr>
-		<tr>
-			<td>
-				<button class="left wfill" disabled>replace</button>
-			</td>
-			<td class="hlayout">
-				<button class="middle"
-					on:click={() => findAndReplace(SearchAction.Replace, SearchOption.None)}
-				>next</button>
-				<button class="middle"
-					on:click={() => findAndReplace(SearchAction.Replace, SearchOption.Reverse)}
-				>previous</button>
-				<button class="middle"
-					on:click={() => findAndReplace(SearchAction.Replace, SearchOption.Global)}
-				>all</button>
-				<button class="right flexgrow"
-					on:click={() => findAndReplace(SearchAction.ReplaceStyleOnly, SearchOption.Global)}
-				>only styles</button>
-			</td>
-		</tr>
+		<tbody>
+			<tr>
+				<td>
+					<button class="left wfill" disabled>find</button>
+				</td>
+				<td class="hlayout">
+					<button class="middle"
+						on:click={() => findAndReplace(SearchAction.Find, SearchOption.None)}
+					>next</button>
+					<button class="middle"
+						on:click={() => findAndReplace(SearchAction.Find, SearchOption.Reverse)}
+					>previous</button>
+					<button class="right flexgrow"
+						on:click={() => findAndReplace(SearchAction.Select, SearchOption.Global)}
+					>all</button>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<button class="left wfill" disabled>replace</button>
+				</td>
+				<td class="hlayout">
+					<button class="middle"
+						on:click={() => findAndReplace(SearchAction.Replace, SearchOption.None)}
+					>next</button>
+					<button class="middle"
+						on:click={() => findAndReplace(SearchAction.Replace, SearchOption.Reverse)}
+					>previous</button>
+					<button class="middle"
+						on:click={() => findAndReplace(SearchAction.Replace, SearchOption.Global)}
+					>all</button>
+					<button class="right flexgrow"
+						on:click={() => findAndReplace(SearchAction.ReplaceStyleOnly, SearchOption.Global)}
+					>only styles</button>
+				</td>
+			</tr>
+		</tbody>
 	</table>
 </div>
 

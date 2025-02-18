@@ -2,24 +2,33 @@
     import { createEventDispatcher } from "svelte";
     import type { SubtitleStyle, Subtitles } from "./Subtitles";
 
-    export let subtitles: Subtitles;
-    export let currentStyle: SubtitleStyle;
-    let refresh = 0;
+    interface Props {
+        subtitles: Subtitles;
+        currentStyle: SubtitleStyle;
+    }
+
+    let { subtitles, currentStyle = $bindable() }: Props = $props();
+    let refresh = $state(0);
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
+
+    export {
+    	subtitles,
+    	currentStyle,
+    }
 </script>
 
-<svelte:options accessors={true} />
+<!-- <svelte:options ={true} /> -->
 
 <select class='styleselect' tabindex='-1'
-    on:input={(ev) => {
+    oninput={(ev) => {
         let index = ev.currentTarget.selectedIndex;
         if (index <= 0) currentStyle = subtitles.defaultStyle;
         else currentStyle = subtitles.styles[index - 1];
         submit();
     }}
-    on:click={() => refresh++}
+    onclick={() => refresh++}
 >
     {#key refresh}
     <option selected={currentStyle == subtitles.defaultStyle}>

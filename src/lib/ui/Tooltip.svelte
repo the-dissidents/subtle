@@ -1,11 +1,16 @@
 <script lang="ts">
     type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
-    export let position: TooltipPosition = 'top';
-    export let text = '<Tooltip>'
+    interface Props {
+        position?: TooltipPosition;
+        text?: string;
+        children?: import('svelte').Snippet;
+    }
+
+    let { position = 'top', text = '<Tooltip>', children }: Props = $props();
 </script>
 
 <style>
-    :has(> .tooltip) {
+    :has(:global(> .tooltip)) {
         /* display: contents; */
         position: relative;
     }
@@ -48,7 +53,7 @@
 
 <div>
     <div>
-        <slot></slot>
+        {@render children?.()}
     </div>
     {#if text != ''}
     <span class='tooltip {position}'>{text}</span>

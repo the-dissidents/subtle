@@ -1,5 +1,6 @@
 import { assert } from "./Basic";
 import { CSSColors, parseCSSColor } from "./colorparser";
+import { EventHost } from "./Frontend";
 
 export const LabelColors = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelColorsType = typeof LabelColors[number];
@@ -127,6 +128,8 @@ export class SubtitleEntry {
 
     static #counter = 0;
     readonly uniqueID: number;
+
+    update = new EventHost<[]>();
 
     constructor(
         public start: number,

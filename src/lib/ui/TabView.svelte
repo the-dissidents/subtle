@@ -1,34 +1,47 @@
-<script lang="ts" context='module'>
+<script lang="ts" module>
     import { type Readable, type Writable } from "svelte/store";
 
     export type TabAPIType = {};
-    export type TabPageID = {name: Readable<string>};
+    export type TabPageData = {name: Readable<string>};
     export const TabAPIContext: TabAPIType = {};
 
     export type TabAPI = {
-        registerPage(id: TabPageID): void,
-        selected(): Writable<TabPageID>
+        registerPage(id: Symbol, data: TabPageData): void,
+        selected(): Writable<Symbol | undefined>
     };
 </script>
 
 <script lang="ts">
     import { onDestroy, setContext } from "svelte";
-    import { writable } from "svelte/store";
-    import { Subscribe } from 'svelte-subscribe';
+    import { writable, get } from "svelte/store";
+    import { SvelteMap } from "svelte/reactivity";
 
-    const Pages: TabPageID[] = [];
-    const Selected = writable<TabPageID>(undefined);
+    interface Props {
+        children: import('svelte').Snippet;
+    }
+
+    let { children }: Props = $props();
+
+    let Pages: [Symbol, TabPageData][] = [];
+    let Selected = writable<Symbol | undefined>(undefined);
+
+    let update = $state(0);
+    let selected: Symbol | undefined = $state();
+    Selected.subscribe((x) => { selected = x; });
 
     setContext<TabAPI>(TabAPIContext, {
-        registerPage(id) {
-            Pages.push(id);
+        registerPage(id, data) {
+            console.log('register page:', get(data.name));
+            Pages.push([id, data]);
             Selected.update((x) => x ?? id);
+            update++;
             onDestroy(() => {
-                const i = Pages.indexOf(id);
+                const i = Pages.findIndex((x) => x[0] === id);
                 if (i < 0) return;
                 Pages.splice(i, 1);
-                Selected.update((x) => x === id 
-                    ? (Pages[i] ?? Pages[Pages.length - 1]) : x);
+                if (Pages.length == 0) Selected.set(undefined);
+                else Selected.update((x) => x === id 
+                    ? (Pages[i] ?? Pages[Pages.length - 1])[0] : x);
             });
         },
         selected() {
@@ -39,16 +52,16 @@
 
 <div class='tabview vlayout'>
     <div class='header'>
-        {#each Pages as page}
-        <Subscribe pagename={page.name} let:pagename>
+        {#key update}
+        {#each Pages as [id, data]}
         <button 
-            class:selected="{$Selected === page}"
-            on:click={() => Selected.set(page)}>{pagename}</button>
-        </Subscribe>
+            class:selected="{selected === id}"
+            onclick={() => Selected.set(id)}>{get(data.name)}</button>
         {/each}
+        {/key}
     </div>
 
-    <slot></slot>
+    {@render children()}
 </div>
 
 <style>

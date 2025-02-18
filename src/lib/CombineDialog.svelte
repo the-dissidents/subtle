@@ -73,36 +73,39 @@
 
 <DialogBase bind:frontend bind:show>
     <table class="config">
-        <tr>
-            <td>start time threshold</td>
-            <td><input type='number' min='0' step="0.001" bind:value={start} /></td>
-        </tr>
-        <tr>
-            <td>end time threshold</td>
-            <td><input type='number' min='0' step="0.001" bind:value={end}/></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td><input type="checkbox" bind:checked={only}> selection only
-            <br><input type="checkbox" bind:checked={different}> different style only</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td><hr></td>
-        </tr>
-        <tr>
-            <td>{number[0]}<br><br>{number[1]}</td>
-            <td>{number[0] == 1 ? 'entry' : 'entries'}
-            <br>{hasbeen ? `${number[0] == 1 ? 'has' : 'have'} been` : 'will be'} combined in
-            <br>{number[1] == 1 ? 'group' : 'groups'}</td>
-        </tr>
-        <tr>
-            <td colspan="2"><button style="width: 100%;" 
-                on:click={() => run(true, start, end, only, different)}>combine</button></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td><hr></td>
-        </tr>
+        <tbody>
+
+            <tr>
+                <td>start time threshold</td>
+                <td><input type='number' min='0' step="0.001" bind:value={start} /></td>
+            </tr>
+            <tr>
+                <td>end time threshold</td>
+                <td><input type='number' min='0' step="0.001" bind:value={end}/></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td><input type="checkbox" bind:checked={only}> selection only
+                <br><input type="checkbox" bind:checked={different}> different style only</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td><hr></td>
+            </tr>
+            <tr>
+                <td>{number[0]}<br><br>{number[1]}</td>
+                <td>{number[0] == 1 ? 'entry' : 'entries'}
+                <br>{hasbeen ? `${number[0] == 1 ? 'has' : 'have'} been` : 'will be'} combined in
+                <br>{number[1] == 1 ? 'group' : 'groups'}</td>
+            </tr>
+            <tr>
+                <td colspan="2"><button style="width: 100%;" 
+                    on:click={() => run(true, start, end, only, different)}>combine</button></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td><hr></td>
+            </tr>
+        </tbody>
     </table>
 </DialogBase>

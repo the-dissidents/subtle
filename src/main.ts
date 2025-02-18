@@ -1,8 +1,9 @@
 import "./ochu.css";
 import "./styles.css";
 import App from "./App.svelte";
+import { mount } from "svelte";
 
-const app = new App({
+const app = mount(App, {
   target: document.getElementById("app")!,
 });
 

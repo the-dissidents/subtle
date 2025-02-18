@@ -3,14 +3,18 @@
     import { assert } from "./Basic";
     import type { Frontend } from "./Frontend";
 
-	export let frontend: Frontend;
-    let result = "";
+    interface Props {
+        frontend: Frontend;
+    }
+
+    let { frontend }: Props = $props();
+    let result = $state("");
 
     MAPI.version().then((x) => result = `ffmpeg version is ${x}`);
 </script>
 
 <button
-    on:click={async () => {
+    onclick={async () => {
         let video = frontend.playback.video;
         if (video == null) {
             result = "No video!";
@@ -29,7 +33,7 @@
     next video frame
 </button>
 <button
-    on:click={async () => {
+    onclick={async () => {
         let video = frontend.playback.video;
         if (video == null) {
             result = "No video!";

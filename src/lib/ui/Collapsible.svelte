@@ -1,16 +1,28 @@
 <script lang="ts">
     import Tooltip from "./Tooltip.svelte";
 
-  export let header = "";
-  export let helpText = "";
-  export let active = false;
-  export let showCheck = false;
-  export let checked = false;
+  interface Props {
+    header?: string;
+    helpText?: string;
+    active?: boolean;
+    showCheck?: boolean;
+    checked?: boolean;
+    children?: import('svelte').Snippet;
+  }
+
+  let {
+    header = "",
+    helpText = "",
+    active = $bindable(false),
+    showCheck = false,
+    checked = $bindable(false),
+    children
+  }: Props = $props();
 </script>
 
 <button type="button" class="collapsible hlayout"
   class:active class:checked
-  on:click={() => {active = !active}}
+  onclick={() => {active = !active}}
 >
   <span class='caret flexgrow'>{header}</span>
 
@@ -22,11 +34,11 @@
   
   <span class='check' class:hidden={!showCheck}>
     <input type='checkbox' bind:checked 
-      on:click={(e) => e.stopPropagation()}/>
+      onclick={(e) => e.stopPropagation()}/>
   </span>
 </button>
 <div class='content' class:active={active}>
-  <slot />
+  {@render children?.()}
 </div>
 
 <style>

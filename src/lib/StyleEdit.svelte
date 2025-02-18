@@ -1,3 +1,5 @@
+<!-- @migration-task Error while migrating Svelte code: `<tr>` cannot be a child of `<table>`. `<table>` only allows these children: `<caption>`, `<colgroup>`, `<tbody>`, `<thead>`, `<tfoot>`, `<style>`, `<script>`, `<template>`. The browser will 'repair' the HTML (by moving, removing, or inserting elements) which breaks Svelte's assumptions about the structure of your components.
+https://svelte.dev/e/node_invalid_placement -->
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { assert } from "./Basic";
@@ -130,98 +132,102 @@
   <div>
     <!-- basic -->
     <table class="stretch">
-      <tr>
-        <td><label for='name'>name:</label></td>
-        <td><input id='name' bind:value={style.name}
-          class={isDuplicate(style.name) ? 'duplicate' : ''}
-          on:change={() => frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action)}/></td>
-      </tr>
-      <tr>
-        <td><label for='font'>font:</label></td>
-        <td><input id='font' bind:value={style.font}/></td>
-      </tr>
-      <tr>
-        <td><label for='size'>size:</label></td>
-        <td><input id='size' type='number' bind:value={style.size}/></td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>
-          <div class="flex style">
-            <div>
-              <input type='checkbox' id='bold' bind:checked={style.styles.bold}/><label for="bold">B</label>
-            </div>
-            <div>
-              <input type='checkbox' id='italic' bind:checked={style.styles.italic}/><label for="italic">I</label>
-            </div>
-            <div>
-              <input type='checkbox' id='underline' bind:checked={style.styles.underline}/><label for="underline">U</label>
-            </div>
-            <div>
-              <input type='checkbox' id='strikethru' bind:checked={style.styles.strikethrough}/><label for="strikethru">S</label>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </table>
-    <!-- advanced -->
-    <Collapsible header='more'>
-      <table class="stretch">
+      <tbody>
         <tr>
-          <td><label for='color'>text color:</label></td>
-          <td><input id='color' bind:value={style.color}/></td>
+          <td><label for='name'>name:</label></td>
+          <td><input id='name' bind:value={style.name}
+            class={isDuplicate(style.name) ? 'duplicate' : ''}
+            on:change={() => frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action)}/></td>
         </tr>
         <tr>
-          <td><label for='ocolor'>line color:</label></td>
-          <td><input id='ocolor' bind:value={style.outlineColor}/></td>
+          <td><label for='font'>font:</label></td>
+          <td><input id='font' bind:value={style.font}/></td>
         </tr>
         <tr>
-          <td><label for='outline'>line size:</label></td>
-          <td><input id='outline' type='number' bind:value={style.outline}/></td>
+          <td><label for='size'>size:</label></td>
+          <td><input id='size' type='number' bind:value={style.size}/></td>
         </tr>
         <tr>
-          <td><label for='shadow'>shadow:</label></td>
-          <td><input id='shadow' type='number' bind:value={style.shadow}/></td>
-        </tr>
-        <tr>
-          <td><label for='align'>alignment:</label></td>
-          <td><select id='align'
-              bind:this={alignSelector}
-              on:input={() => style.alignment = alignSelector.selectedIndex + 1}>
-            <option value="BottomLeft">bottom left</option>
-            <option value="BottomCenter">bottom center</option>
-            <option value="BottomRight">bottom right</option>
-            <option value="CenterLeft">center left</option>
-            <option value="Center">center</option>
-            <option value="CenterRight">center right</option>
-            <option value="TopLeft">top left</option>
-            <option value="TopCenter">top center</option>
-            <option value="TopRight">top right</option>
-          </select></td>
-        </tr>
-        <tr>
-          <td>margins:</td>
+          <td></td>
           <td>
-            <div class="flex margin">
+            <div class="flex style">
               <div>
-                <label for='top'>top:</label>
-                <input id='top' type='number' bind:value={style.margin.top}/>
+                <input type='checkbox' id='bold' bind:checked={style.styles.bold}/><label for="bold">B</label>
               </div>
               <div>
-                <label for='bottom'>bottom:</label>
-                <input id='bottom' type='number' bind:value={style.margin.bottom}/>
+                <input type='checkbox' id='italic' bind:checked={style.styles.italic}/><label for="italic">I</label>
               </div>
               <div>
-                <label for='left'>left:</label>
-                <input id='left' type='number' bind:value={style.margin.left}/>
+                <input type='checkbox' id='underline' bind:checked={style.styles.underline}/><label for="underline">U</label>
               </div>
               <div>
-                <label for='right'>right:</label>
-                <input id='right' type='number' bind:value={style.margin.right}/>
+                <input type='checkbox' id='strikethru' bind:checked={style.styles.strikethrough}/><label for="strikethru">S</label>
               </div>
             </div>
           </td>
         </tr>
+      </tbody>
+    </table>
+    <!-- advanced -->
+    <Collapsible header='more'>
+      <table class="stretch">
+        <tbody>
+          <tr>
+            <td><label for='color'>text color:</label></td>
+            <td><input id='color' bind:value={style.color}/></td>
+          </tr>
+          <tr>
+            <td><label for='ocolor'>line color:</label></td>
+            <td><input id='ocolor' bind:value={style.outlineColor}/></td>
+          </tr>
+          <tr>
+            <td><label for='outline'>line size:</label></td>
+            <td><input id='outline' type='number' bind:value={style.outline}/></td>
+          </tr>
+          <tr>
+            <td><label for='shadow'>shadow:</label></td>
+            <td><input id='shadow' type='number' bind:value={style.shadow}/></td>
+          </tr>
+          <tr>
+            <td><label for='align'>alignment:</label></td>
+            <td><select id='align'
+                bind:this={alignSelector}
+                on:input={() => style.alignment = alignSelector.selectedIndex + 1}>
+              <option value="BottomLeft">bottom left</option>
+              <option value="BottomCenter">bottom center</option>
+              <option value="BottomRight">bottom right</option>
+              <option value="CenterLeft">center left</option>
+              <option value="Center">center</option>
+              <option value="CenterRight">center right</option>
+              <option value="TopLeft">top left</option>
+              <option value="TopCenter">top center</option>
+              <option value="TopRight">top right</option>
+            </select></td>
+          </tr>
+          <tr>
+            <td>margins:</td>
+            <td>
+              <div class="flex margin">
+                <div>
+                  <label for='top'>top:</label>
+                  <input id='top' type='number' bind:value={style.margin.top}/>
+                </div>
+                <div>
+                  <label for='bottom'>bottom:</label>
+                  <input id='bottom' type='number' bind:value={style.margin.bottom}/>
+                </div>
+                <div>
+                  <label for='left'>left:</label>
+                  <input id='left' type='number' bind:value={style.margin.left}/>
+                </div>
+                <div>
+                  <label for='right'>right:</label>
+                  <input id='right' type='number' bind:value={style.margin.right}/>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
       </table>
     </Collapsible>
   </div>

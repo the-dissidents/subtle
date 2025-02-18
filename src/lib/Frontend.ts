@@ -13,6 +13,7 @@ import { Menu } from "@tauri-apps/api/menu";
 import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getVersion } from "@tauri-apps/api/app";
 import { arch, platform, version } from "@tauri-apps/plugin-os";
+import { SvelteMap } from "svelte/reactivity";
 
 type Snapshot = {
     archive: string,
@@ -93,6 +94,8 @@ export class Frontend {
     redoStack: Snapshot[] = [];
     timeEpsilon = 0.01;
 
+    // entryKeys = new SvelteMap<number, number>;
+
     ui: {
         tableHeader?: HTMLElement;
         subscontainer?: HTMLElement;
@@ -143,6 +146,7 @@ export class Frontend {
     onSubtitlesChanged = new EventHost<[type: ChangeType, cause: ChangeCause]>();
     onSubtitleObjectReload = new EventHost();
     onSelectionChanged = new EventHost<[cause: ChangeCause]>();
+    onFocusedEntryChanged = new EventHost();
 
     playback = new Playback(this);
     uiHelper = new UIHelper(this);
@@ -672,6 +676,7 @@ export class Frontend {
             // TODO: focus on current style
             this.keepEntryInView(ent);
             this.onSelectionChanged.dispatch(cause);
+            this.onFocusedEntryChanged.dispatch();
         }
     }
 }

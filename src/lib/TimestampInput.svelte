@@ -2,30 +2,32 @@
 	import { createEventDispatcher } from 'svelte';
     import { SubtitleUtil } from './Subtitles';
 
-	export let timestamp = 0;
-    export let stretch = false;
-    let value = '00:00:00.000';
+    interface Props {
+        timestamp?: number;
+        stretch?: boolean;
+    }
+
+    let { timestamp = $bindable(0), stretch = false }: Props = $props();
+    let value = $state('00:00:00.000');
     let changed = false;
     
-    $: {
-        let newValue = SubtitleUtil.formatTimestamp(timestamp);
-        updateValueIfChanged(newValue);
-    }
-    function updateValueIfChanged(newValue: string) {
-        if (newValue != value) {
-            changed = true;
-            value = newValue;
-        }
-    }
 	const dispatch = createEventDispatcher<{
         change: number; input: number;
     }>();
 	const change = () => dispatch('change', timestamp);
 	const input = () => dispatch('input', timestamp);
+
+    $effect(() => {
+        let newValue = SubtitleUtil.formatTimestamp(timestamp);
+        if (newValue != value) {
+            changed = true;
+            value = newValue;
+        }
+    });
 </script>
 
 <input class={'timestamp ' + (stretch ? 'stretch' : '')} bind:value={value}
-    on:beforeinput={(ev) => {
+    onbeforeinput={(ev) => {
         // Note: Safari fires beforeinput and input *before* keydown if the IME is on, so
         // we must handle numerical input here
         let text = ev.currentTarget.value;
@@ -44,7 +46,7 @@
             input();
         } 
     }}
-    on:keydown={(ev) => {
+    onkeydown={(ev) => {
         let text = ev.currentTarget.value;
         let pos = ev.currentTarget.selectionStart ?? 0;
         if (ev.key == 'Backspace' && pos > 0) {
@@ -59,7 +61,7 @@
             input();
         };
     }}
-    on:blur={(ev) => {
+    onblur={(ev) => {
         if (!changed) return;
         timestamp = SubtitleUtil.parseTimestamp(ev.currentTarget.value) ?? 0;
         change();

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
 import ImportOptionsDialog from './lib/ImportOptionsDialog.svelte';
 import CombineDialog from "./lib/CombineDialog.svelte";
 import Resizer from './lib/ui/Resizer.svelte';
@@ -22,37 +24,39 @@ import PropertiesToolbox from './lib/PropertiesToolbox.svelte';
 import UntimedToolbox from './lib/UntimedToolbox.svelte';
 import SearchToolbox from './lib/SearchToolbox.svelte';
 import TestToolbox from './lib/TestToolbox.svelte';
+    import type { Action } from 'svelte/action';
 
 const appWindow = getCurrentWebviewWindow()
-let frontend = new Frontend(appWindow);
-let selection = new Set<SubtitleEntry>;
+let frontend = $state(new Frontend(appWindow));
+let selection = $state(new Set<SubtitleEntry>);
 
 // let subsListFocused = false;
 // $: subsListFocused = frontend.states.uiFocus == UIFocus.Table;
 
-let leftPane: HTMLElement;
-let rightPane: HTMLElement;
-let editTable: HTMLElement;
-let videoCanvasContainer: HTMLElement;
-let toolboxContainer: HTMLElement;
-let videoCanvas: HTMLCanvasElement;
-let timelineCanvas: HTMLCanvasElement;
+let leftPane: HTMLElement | undefined = $state();
+let rightPane: HTMLElement | undefined = $state();
+let editTable: HTMLElement | undefined = $state();
+let videoCanvasContainer: HTMLElement | undefined = $state();
+let toolboxContainer: HTMLElement | undefined = $state();
+let videoCanvas: HTMLCanvasElement | undefined = $state();
+let timelineCanvas: HTMLCanvasElement | undefined = $state();
 
-let playIcon = '▶';
-let sliderDisabled = true;
-let playPos = 0;
-let playPosInput = 0;
+let playIcon = $state('▶');
+let sliderDisabled = $state(true);
+let playPos = $state(0);
+let playPosInput = $state(0);
 
-let editFormUpdateCounter = 0;
-let undoRedoUpdateCounter = 0;
-let statusUpdateCounter = 0;
+let editFormUpdateCounter = $state(0);
+let undoRedoUpdateCounter = $state(0);
+let statusUpdateCounter = $state(0);
+let focusedUpdateCounter = $state(0);
 
-let editMode = 0;
-let keepDuration = false;
-let editingT0 = 0;
-let editingT1 = 0;
-let editingDt = 0;
-let editingLabel: LabelColorsType = 'none';
+let editMode = $state(0);
+let keepDuration = $state(false);
+let editingT0 = $state(0);
+let editingT1 = $state(0);
+let editingDt = $state(0);
+let editingLabel: LabelColorsType = $state('none');
 
 frontend.onUndoBufferChanged.bind(() => {
   undoRedoUpdateCounter++;
@@ -71,11 +75,13 @@ frontend.onSubtitlesChanged.bind((type: ChangeType, cause: ChangeCause) => {
 
 frontend.onSelectionChanged.bind(() => {
   selection = new Set(frontend.getSelection());
-  // this refreshes the reactive UI
-  frontend.focused.entry = frontend.focused.entry;
+});
+
+frontend.onFocusedEntryChanged.bind(() => {
+  // TODO
+  focusedUpdateCounter++;
   if (frontend.focused.entry !== null)
     setupEditForm();
-  // console.log('selection changed');
 });
 
 frontend.playback.onRefreshPlaybackControl = () => {
@@ -112,7 +118,7 @@ function applyEditForm() {
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
   focused.label = editingLabel;
-  //frontend.markChanged(true);
+  focused.update.dispatch();
 }
 
 function contentSelfAdjust(elem: HTMLTextAreaElement) {
@@ -136,22 +142,17 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
   };
 }
 
-let setupVideoView = () => {
-  if (videoCanvasContainer === undefined || videoCanvas === undefined) return;
-  setupVideoView = () => {};
+let setupVideoView: Action = () => {
+  assert(videoCanvasContainer !== undefined && videoCanvas !== undefined);
   let keeper = new CanvasKeeper(videoCanvas, videoCanvasContainer);
   keeper.bind(frontend.playback.createVideo(keeper.cxt, frontend.subs));
-}
+};
 
-let setupTimelineView = () => {
-  if (timelineCanvas === undefined) return;
-  setupTimelineView = () => {};
+let setupTimelineView: Action = () => {
+  assert(timelineCanvas !== undefined);
   let keeper = new CanvasKeeper(timelineCanvas, timelineCanvas);
   keeper.bind(frontend.playback.createTimeline(keeper.cxt, frontend));
-}
-
-$: videoCanvas, setupVideoView();
-$: timelineCanvas, setupTimelineView();
+};
 
 appWindow.onCloseRequested(async (ev) => {
   if (!await frontend.warnIfNotSaved()) {
@@ -175,18 +176,18 @@ Config.init();
 </script>
 
 <svelte:document 
-  on:keydown={(ev) => frontend.uiHelper.processGlobalKeydown(ev)}/>
+  onkeydown={(ev) => frontend.uiHelper.processGlobalKeydown(ev)}/>
 <svelte:window
-  on:load={() => {
+  onload={() => {
     let time = performance.now();
     console.log('load time:', time);
     // setTimeout(() => invoke('init_complete', {task: 'frontend'}), 
     //   Math.max(0, 200 - time));
   }}
-  on:beforeunload={(ev) => {
+  onbeforeunload={(ev) => {
     if (frontend.fileChanged) ev.preventDefault();
   }}
-  on:focusin={(ev) => {
+  onfocusin={(ev) => {
     // TODO: this works but looks like nonsense
     if (frontend.states.uiFocus != UIFocus.EditingField)
       frontend.states.uiFocus = UIFocus.Other;
@@ -201,7 +202,7 @@ Config.init();
   <!-- toolbar -->
   <div>
     <ul class='menu'>
-      <li><button on:click={async () => {
+      <li><button onclick={async () => {
         const paths = Config.get('paths');
         let openMenu = await Menu.new({ items: [
             {
@@ -229,20 +230,20 @@ Config.init();
         ]});
         openMenu.popup();
       }}>open</button></li>
-      <li><button on:click={() => frontend.askSaveFile(true)}>save as</button></li>
-      <li><button on:click={() => frontend.askImportFile()}>import</button></li>
-      <li><button on:click={() => frontend.askExportFile()}>export</button></li>
+      <li><button onclick={() => frontend.askSaveFile(true)}>save as</button></li>
+      <li><button onclick={() => frontend.askImportFile()}>import</button></li>
+      <li><button onclick={() => frontend.askExportFile()}>export</button></li>
       <li class='separator'></li>
       {#key undoRedoUpdateCounter}
       <li><button
-        on:click={() => frontend.undo()}
+        onclick={() => frontend.undo()} 
         disabled={frontend.undoStack.length <= 1}>undo</button></li>
       <li><button
-        on:click={() => frontend.redo()}
+        onclick={() => frontend.redo()}
         disabled={frontend.redoStack.length == 0}>redo</button></li>
       {/key}
       <li class='separator'></li>
-      <li><button on:click={() => frontend.askOpenVideo()}>open video</button></li>
+      <li><button onclick={() => frontend.askOpenVideo()}>open video</button></li>
       <li><div class='label'>
         {frontend.currentFile ? Basic.getFilename(frontend.currentFile) : '<untitled>'}
         {frontend.fileChanged ? '*' : ''}
@@ -255,20 +256,20 @@ Config.init();
     <div bind:this={leftPane} style="width: 300px;" class="fixminheight">
       <div class='vlayout fill'>
         <!-- video player -->
-        <div class='player-container' bind:this={videoCanvasContainer}>
-          <canvas width="0" height="0" bind:this={videoCanvas}/>
+        <div class='player-container' bind:this={videoCanvasContainer} use:setupVideoView>
+          <canvas width="0" height="0" bind:this={videoCanvas}></canvas>
         </div>
         <!-- video playback controls -->
         <div class='hlayout'>
           <button 
             style="width: 30px; height: 20px"
-            on:click={() => frontend.playback.toggle()
+            onclick={() => frontend.playback.toggle()
               .catch((e) => frontend.status = `Error playing video: ${e}`)}
           >{playIcon}</button>
           <input type='range' class='play-pointer flexgrow'
             step="any" max="1" min="0" disabled={sliderDisabled}
             bind:value={playPos}
-            on:input={() => {
+            oninput={() => {
               if (!frontend.playback.isLoaded) {
                 playPos = 0;
                 return;
@@ -286,6 +287,7 @@ Config.init();
         <div class="flexgrow fixminheight">
           <div class='scrollable fixminheight' bind:this={toolboxContainer}>
             <TabView>
+            {#snippet children()}
               <TabPage name="Properties">
                 <PropertiesToolbox {frontend}/>
               </TabPage>
@@ -298,6 +300,7 @@ Config.init();
               <TabPage name="Test">
                 <TestToolbox {frontend}/>
               </TabPage>
+            {/snippet}
             </TabView>
           </div>
         </div>
@@ -312,11 +315,11 @@ Config.init();
         <!-- edit box -->
         <div bind:this={editTable} class='hlayout' style="height: 125px;">
           <!-- timestamp fields -->
-          {#key editFormUpdateCounter}
+          {#key `${editFormUpdateCounter},${focusedUpdateCounter}`}
           <div>
             <span>
               <select
-                on:input={(ev) => editMode = ev.currentTarget.selectedIndex}>
+                oninput={(ev) => editMode = ev.currentTarget.selectedIndex}>
                 <option>anchor start</option>
                 <option>anchor end</option>
               </select>
@@ -364,7 +367,7 @@ Config.init();
               <select
                 bind:value={editingLabel}
                 class="flexgrow"
-                on:change={() => {
+                onchange={() => {
                   applyEditForm();
                   frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);}}>
                 {#each LabelColors as color}
@@ -377,47 +380,49 @@ Config.init();
           <div class="flexgrow scroll">
             {#if frontend.focused.entry !== null}
             <table class='fields'>
-              {#each frontend.focused.entry.texts as line, i}
-              <tr>
-                <td>
-                  <StyleSelect subtitles={frontend.subs} bind:currentStyle={line.style}
-                    on:submit={() => {
-                      frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm)}} />
-                  <button tabindex='-1'
-                    on:click={() => frontend.insertChannelAt(i)}>+</button>
-                  <button tabindex='-1'
-                    on:click={() => frontend.deleteChannelAt(i)}
-                    disabled={frontend.focused.entry.texts.length == 1}>-</button>
-                </td>
-                <td style='width:100%'>
-                  <textarea class='contentarea' tabindex=0
-                    use:setupTextEditGUI={line}
-                    on:keydown={(ev) => {
-                      if (ev.key == "Escape") {
-                        ev.currentTarget.blur();
-                        frontend.states.uiFocus = UIFocus.Table;
-                      }
-                    }}
-                    on:focus={() => {
-                      frontend.states.uiFocus = UIFocus.EditingField;
-                      frontend.focused.channel = line;
-                      frontend.focused.style = line.style;
-                    }}
-                    on:blur={(x) => {
-                      // TODO: this works but looks like nonsense
-                      if (frontend.states.uiFocus == UIFocus.EditingField)
-                        frontend.states.uiFocus = UIFocus.Other;
-                      frontend.submitFocusedEntry();
-                      frontend.focused.channel = null;
-                    }}
-                    on:input={(x) => {
-                      frontend.states.uiFocus = UIFocus.EditingField;
-                      contentSelfAdjust(x.currentTarget); 
-                      frontend.states.editChanged = true;
-                    }} />
-                </td>
-              </tr>
-              {/each}
+              <tbody>
+                {#each frontend.focused.entry.texts as line, i}
+                <tr>
+                  <td>
+                    <StyleSelect subtitles={frontend.subs} currentStyle={line.style}
+                      on:submit={() => {
+                        frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm)}} />
+                    <button tabindex='-1'
+                      onclick={() => frontend.insertChannelAt(i)}>+</button>
+                    <button tabindex='-1'
+                      onclick={() => frontend.deleteChannelAt(i)}
+                      disabled={frontend.focused.entry.texts.length == 1}>-</button>
+                  </td>
+                  <td style='width:100%'>
+                    <textarea class='contentarea' tabindex=0
+                      use:setupTextEditGUI={line}
+                      onkeydown={(ev) => {
+                        if (ev.key == "Escape") {
+                          ev.currentTarget.blur();
+                          frontend.states.uiFocus = UIFocus.Table;
+                        }
+                      }}
+                      onfocus={() => {
+                        frontend.states.uiFocus = UIFocus.EditingField;
+                        frontend.focused.channel = line;
+                        frontend.focused.style = line.style;
+                      }}
+                      onblur={(x) => {
+                        // TODO: this works but looks like nonsense
+                        if (frontend.states.uiFocus == UIFocus.EditingField)
+                          frontend.states.uiFocus = UIFocus.Other;
+                        frontend.submitFocusedEntry();
+                        frontend.focused.channel = null;
+                      }}
+                      oninput={(x) => {
+                        frontend.states.uiFocus = UIFocus.EditingField;
+                        contentSelfAdjust(x.currentTarget); 
+                        frontend.states.editChanged = true;
+                      }}></textarea>
+                  </td>
+                </tr>
+                {/each}
+              </tbody>
             </table>
             {:else}<i>{frontend.states.virtualEntryHighlighted
               ? 'double-click or press enter to append new entry'
@@ -443,12 +448,13 @@ Config.init();
   </div>
   <!-- resizer -->
   <div>
-    <Resizer control={timelineCanvas} reverse={true}/>
+    <Resizer control={timelineCanvas!} reverse={true}/>
   </div>
   <!-- timeline -->
   <div>
-    <canvas class="timeline" bind:this={timelineCanvas} 
-      on:click={() => frontend.states.uiFocus = UIFocus.Timeline}
+    <canvas class="timeline" bind:this={timelineCanvas}
+      use:setupTimelineView
+      onclick={() => frontend.states.uiFocus = UIFocus.Timeline}
       class:timelinefocused={frontend.states.uiFocus == UIFocus.Timeline}
       style="height: 150px;"></canvas>
   </div>

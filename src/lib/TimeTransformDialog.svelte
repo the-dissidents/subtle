@@ -16,8 +16,8 @@
   let anchorOption = 'zero';
   let fpsBefore = 1, fpsAfter = 1;
 
-  let transStart: number;
-  let transEnd: number;
+  let transStart: number = 0;
+  let transEnd: number = 0;
 
   const dispatch = createEventDispatcher<{submit: TimeShiftOptions}>();
   const submit = (options: TimeShiftOptions) => dispatch('submit', options);
@@ -88,70 +88,72 @@
   });
 }}><form bind:this={form}>
   <table class='config'>
-    <tr>
-      <td>shift times</td>
-      <td>
-        <input type="radio" id="st1" value="forward" bind:group={shiftOption}/>
-        <label for="st1">forward</label>
-        <input type="radio" id="st2" value="backward" bind:group={shiftOption}/>
-        <label for="st2">backward</label><br/>
-        by: <TimestampInput
-          bind:timestamp={offsetInput}
-          on:input={(ev) => updateWidgets()}/><br/>
-        <input type='checkbox' id="st" bind:checked={check}/>
-        <label for="st">modify everything after this</label><br/>
-      </td>
-    </tr>
-    <tr>
-      <td></td>
-      <td><hr/></td>
-    </tr>
-    <tr>
-      <td>FPS before:after</td>
-      <td>
-        <input type="number" class="number" 
-          bind:value={fpsBefore}
-          on:input={() => setTransformedRange()}/>
-        :
-        <input type="number" class="number" 
-          bind:value={fpsAfter}
-          on:input={() => setTransformedRange()}/>
-      </td>
-    </tr>
-    <tr>
-      <td>scaling anchor</td>
-      <td>
-        <input type="radio" id="anc0" value="zero" bind:group={anchorOption}/>
-        <label for="anc0">zero time</label><br/>
-        <input type="radio" id="anc1" value="start" bind:group={anchorOption}/>
-        <label for="anc1">start of selection</label><br/>
-        <input type="radio" id="anc2" value="end" bind:group={anchorOption}/>
-        <label for="anc2">end of selection</label><br/>
-        <input type="radio" id="anc3" value="custom"  bind:group={anchorOption}/>
-        <TimestampInput
-          bind:timestamp={customAnchor}
-          on:input={() => setTransformedRange()}/>
-      </td>
-    </tr>
-    <tr>
-      <td></td>
-      <td><hr/></td>
-    </tr>
-    <tr>
-      <td>range</td>
-      <td>
-        {SubtitleUtil.formatTimestamp(selectionStart)}
-        →
-        <TimestampInput bind:timestamp={transStart}
-          on:input={(ev) => updateWidgets()}/>
-        <br/>
-        {SubtitleUtil.formatTimestamp(selectionEnd)}
-        →
-        <TimestampInput bind:timestamp={transEnd}
-          on:input={(ev) => updateWidgets()}
-          on:change={() => fpsAfter = fpsAfter}/>
-      </td>
-    </tr>
+    <tbody>
+      <tr>
+        <td>shift times</td>
+        <td>
+          <input type="radio" id="st1" value="forward" bind:group={shiftOption}/>
+          <label for="st1">forward</label>
+          <input type="radio" id="st2" value="backward" bind:group={shiftOption}/>
+          <label for="st2">backward</label><br/>
+          by: <TimestampInput
+            bind:timestamp={offsetInput}
+            on:input={(ev) => updateWidgets()}/><br/>
+          <input type='checkbox' id="st" bind:checked={check}/>
+          <label for="st">modify everything after this</label><br/>
+        </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><hr/></td>
+      </tr>
+      <tr>
+        <td>FPS before:after</td>
+        <td>
+          <input type="number" class="number" 
+            bind:value={fpsBefore}
+            on:input={() => setTransformedRange()}/>
+          :
+          <input type="number" class="number" 
+            bind:value={fpsAfter}
+            on:input={() => setTransformedRange()}/>
+        </td>
+      </tr>
+      <tr>
+        <td>scaling anchor</td>
+        <td>
+          <input type="radio" id="anc0" value="zero" bind:group={anchorOption}/>
+          <label for="anc0">zero time</label><br/>
+          <input type="radio" id="anc1" value="start" bind:group={anchorOption}/>
+          <label for="anc1">start of selection</label><br/>
+          <input type="radio" id="anc2" value="end" bind:group={anchorOption}/>
+          <label for="anc2">end of selection</label><br/>
+          <input type="radio" id="anc3" value="custom"  bind:group={anchorOption}/>
+          <TimestampInput
+            bind:timestamp={customAnchor}
+            on:input={() => setTransformedRange()}/>
+        </td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><hr/></td>
+      </tr>
+      <tr>
+        <td>range</td>
+        <td>
+          {SubtitleUtil.formatTimestamp(selectionStart)}
+          →
+          <TimestampInput bind:timestamp={transStart}
+            on:input={(ev) => updateWidgets()}/>
+          <br/>
+          {SubtitleUtil.formatTimestamp(selectionEnd)}
+          →
+          <TimestampInput bind:timestamp={transEnd}
+            on:input={(ev) => updateWidgets()}
+            on:change={() => fpsAfter = fpsAfter}/>
+        </td>
+      </tr>
+    </tbody>
   </table>
 </form></DialogBase>
 

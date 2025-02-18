@@ -1,3 +1,5 @@
+<!-- @migration-task Error while migrating Svelte code: `<tr>` cannot be a child of `<table>`. `<table>` only allows these children: `<caption>`, `<colgroup>`, `<tbody>`, `<thead>`, `<tfoot>`, `<style>`, `<script>`, `<template>`. The browser will 'repair' the HTML (by moving, removing, or inserting elements) which breaks Svelte's assumptions about the structure of your components.
+https://svelte.dev/e/node_invalid_placement -->
 <script lang="ts">
   import { onDestroy } from "svelte";
   import { ChangeCause, ChangeType, UIFocus, type Frontend } from "./Frontend";
@@ -201,6 +203,7 @@
         setTimeout(() => {
           frontend.focused.entry = fuzzy.currentEntry;
           frontend.focused.style = fuzzy.channel;
+          frontend.onFocusedEntryChanged.dispatch();
           frontend.startEditingFocusedEntry();
         }, 0);
       } 
@@ -220,18 +223,20 @@
     readonly={locked}
     style="min-height: 150px; font-size: {textsize}px"
     on:blur={() => updateToSubs()}
-    bind:this={textarea}/>
+    bind:this={textarea}></textarea>
   <div>
     <Collapsible header='Display'>
       <table class="config">
-        <tr>
-          <td>text size</td>
-          <td><input id='size' type='number' bind:value={textsize}/></td>
-        </tr>
-        <tr>
-          <td>justify</td>
-          <td><input id='just' type='checkbox' bind:checked={justify}/></td>
-        </tr>
+        <tbody>
+          <tr>
+            <td>text size</td>
+            <td><input id='size' type='number' bind:value={textsize}/></td>
+          </tr>
+          <tr>
+            <td>justify</td>
+            <td><input id='just' type='checkbox' bind:checked={justify}/></td>
+          </tr>
+        </tbody>
       </table>
     </Collapsible>
   </div>
@@ -242,48 +247,49 @@
     >
       <fieldset disabled={!fuzzy.enabled}>
         <table class="config">
-          <tr>
-            <td>channel</td>
-            <td><StyleSelect subtitles={frontend.subs} 
-              bind:currentStyle={fuzzy.channel} /></td>
-          </tr>
-          <tr>
-            <td>tokenizer</td>
-            <td>
-              <select name="tokenizer" on:change={(x) => {
-                if (x.currentTarget.value != fuzzy.tokenizer) {
-                  fuzzy.tokenizer = x.currentTarget.value;
-                  fuzzy.engine = null;
-                  fuzzyMatch();
-                }
-              }} >
-                <option value="default">word / CJK character</option>
-                <option value="syllable">syllable / CJK character</option>
-                <option value="regexb">regex \b</option>
-                <!-- <option value="custom">custom</option> -->
-              </select>
-            </td>
-          </tr>
-          <tr>
-            <td>max skip</td>
-            <td><input type='number' bind:value={fuzzy.maxSkip} min='0' step='1'/></td>
-          </tr>
-          <tr>
-            <td>threshold</td>
-            <td><input type='number' bind:value={fuzzy.minScore} min='0' max='1'/></td>
-          </tr>
-          <tr>
-            <td>
-              <input id='snap' type='checkbox' bind:checked={justify}/>
-            </td>
-            <td>
-              <label for='snap'>snap to following punctuation</label>
-            </td>
-          </tr>
+          <tbody>
+            <tr>
+              <td>channel</td>
+              <td><StyleSelect subtitles={frontend.subs} 
+                bind:currentStyle={fuzzy.channel} /></td>
+            </tr>
+            <tr>
+              <td>tokenizer</td>
+              <td>
+                <select name="tokenizer" on:change={(x) => {
+                  if (x.currentTarget.value != fuzzy.tokenizer) {
+                    fuzzy.tokenizer = x.currentTarget.value;
+                    fuzzy.engine = null;
+                    fuzzyMatch();
+                  }
+                }} >
+                  <option value="default">word / CJK character</option>
+                  <option value="syllable">syllable / CJK character</option>
+                  <option value="regexb">regex \b</option>
+                  <!-- <option value="custom">custom</option> -->
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>max skip</td>
+              <td><input type='number' bind:value={fuzzy.maxSkip} min='0' step='1'/></td>
+            </tr>
+            <tr>
+              <td>threshold</td>
+              <td><input type='number' bind:value={fuzzy.minScore} min='0' max='1'/></td>
+            </tr>
+            <tr>
+              <td>
+                <input id='snap' type='checkbox' bind:checked={justify}/>
+              </td>
+              <td>
+                <label for='snap'>snap to following punctuation</label>
+              </td>
+            </tr>
+          </tbody>
         </table>
       </fieldset>
       <!-- <i></i> -->
-      
     </Collapsible>
   </div>
 </div>

@@ -35,30 +35,32 @@ function changeResolution() {
 </script>
 
 <table class="config">
-  <tr>
-    <td>title</td>
-    <td>
-      <input class='txt' bind:value={frontend.subs.metadata.title}
-        on:change={() => markMetadataChange()} />
-    </td>
-  </tr>
-  <tr>
-    <td>language</td>
-    <td>
-      <input class='txt' bind:value={frontend.subs.metadata.language}
-        on:change={() => markMetadataChange()} />
-    </td>
-  </tr>
-  <tr>
-    <td>resolution</td>
-    <td>
-      <input type='number' class='res' bind:value={frontend.subs.metadata.width}
-        on:change={() => changeResolution()}/>
-      ×
-      <input type='number' class='res' bind:value={frontend.subs.metadata.height}
-        on:change={() => changeResolution()}/>
-    </td>
-  </tr>
+  <tbody>
+    <tr>
+      <td>title</td>
+      <td>
+        <input class='txt' bind:value={frontend.subs.metadata.title}
+          on:change={() => markMetadataChange()} />
+      </td>
+    </tr>
+    <tr>
+      <td>language</td>
+      <td>
+        <input class='txt' bind:value={frontend.subs.metadata.language}
+          on:change={() => markMetadataChange()} />
+      </td>
+    </tr>
+    <tr>
+      <td>resolution</td>
+      <td>
+        <input type='number' class='res' bind:value={frontend.subs.metadata.width}
+          on:change={() => changeResolution()}/>
+        ×
+        <input type='number' class='res' bind:value={frontend.subs.metadata.height}
+          on:change={() => changeResolution()}/>
+      </td>
+    </tr>
+  </tbody>
 </table>
 <Collapsible header="STYLES" active={true}>
   <StyleEdit {frontend} style={frontend.subs.defaultStyle} subtitles={frontend.subs} />

@@ -1,27 +1,35 @@
 <script lang="ts">
     import { getContext } from "svelte";
-    import { TabAPIContext, type TabAPI, type TabPageID } from "./TabView.svelte";
-    import { writable } from "svelte/store";
+    import { TabAPIContext, type TabAPI, type TabPageData } from "./TabView.svelte";
+    import { writable, get } from "svelte/store";
 
-    export let name = "Tab";
-    export let active = false;
+    interface Props {
+        name?: string;
+        active?: boolean;
+        children?: import('svelte').Snippet;
+    }
+
+    let { name = $bindable("Tab"), active = $bindable(false), children }: Props = $props();
 
     const tabApi: TabAPI = getContext(TabAPIContext);
     const writableName = writable(name);
-    const page: TabPageID = {name: writableName}
-    tabApi.registerPage(page);
-    const selection = tabApi.selected()
-    $: writableName.set(name);
+    const page: TabPageData = {name: writableName}
+    const id = Symbol();
 
-    // TODO: is this usable at all?
-    $: if (active) {
-        selection.set(page);
-    }
-    $: active = $selection === page;
+    tabApi.registerPage(id, page);
+    const selection = tabApi.selected();
+
+    $effect(() => { writableName.set(name); });
+
+    selection.subscribe((x) => {
+        active = x === id;
+    });
+
+    $effect(() => { if (active) selection.set(id); });
 </script>
 
 <div class='page' class:active>
-<slot></slot>
+{@render children?.()}
 </div>
 
 <style>

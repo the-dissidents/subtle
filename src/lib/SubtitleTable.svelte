@@ -1,21 +1,46 @@
 <script lang="ts">
-import { getSelectMode, SelectMode, type Frontend } from "./Frontend";
+import { SvelteMap } from "svelte/reactivity";
+import { ChangeType, getSelectMode, SelectMode, type Frontend } from "./Frontend";
 import { SubtitleEntry, SubtitleUtil } from "./Subtitles";
 
-export let frontend: Frontend;
-export let onFocus: (() => void) | undefined = undefined;
-export let isFocused = false;
-export let selection = new Set<SubtitleEntry>;
+interface Props {
+  frontend: Frontend;
+  onFocus?: (() => void) | undefined;
+  isFocused?: boolean;
+  selection?: Set<SubtitleEntry>;
+}
+
+let {
+  frontend = $bindable(),
+  onFocus = undefined,
+  isFocused = $bindable(false),
+  selection =  $bindable(new Set<SubtitleEntry>)
+}: Props = $props();
+
+let entries = $state(frontend.subs.entries);
+let entryKeys = new SvelteMap<number, number>;
+
+frontend.onSubtitlesChanged.bind((t) => {
+  if (t == ChangeType.General || t == ChangeType.Times)
+    entries = frontend.subs.entries;
+});
 
 function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
-  entry.gui = node;
-  return {
-    update: (entry: SubtitleEntry) => {
-      console.log('update:', entry.texts[0].text);
-      entry.gui = node;
-    },
-    destory: () => entry.gui = undefined
+  let update = () => {
+    console.log('update:', entry.texts[0].text);
+    if (!entryKeys.has(entry.uniqueID))
+      entryKeys.set(entry.uniqueID, 0);
+    else
+      entryKeys.set(entry.uniqueID, entryKeys.get(entry.uniqueID)! + 1);
   };
+  console.log('create:', entry.texts[0].text);
+  $effect(() => {
+    entry.update.bind(update);
+    return () => {
+      entryKeys.delete(entry.uniqueID);
+      entry.update.unbind(update);
+    };
+  });
 }
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
@@ -105,61 +130,63 @@ td.subtext {
 </thead>
 <tbody>
   <!-- list all entries -->
-  {#each frontend.subs.entries as ent, i (ent.uniqueID)}
-  {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
-  <tr on:mousedown={(ev) => {
-    isFocused = true;
-    if (onFocus) onFocus();
-    if (ev.button == 0)
-      frontend.toggleEntry(ent, getSelectMode(ev));
-    }}
-    on:contextmenu={(ev) => {
+  {#each entries as ent, i (`${ent.uniqueID}`)}
+  {#key entryKeys.get(ent.uniqueID)}
+    {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
+    <tr onmousedown={(ev) => {
       isFocused = true;
       if (onFocus) onFocus();
-      frontend.uiHelper.contextMenu();
-      ev.preventDefault();
-    }}
-    on:dblclick={() => {
-      isFocused = true;
-      if (onFocus) onFocus();
-      frontend.startEditingFocusedEntry();
-      frontend.playback.setPosition(ent.start);
-    }}
-    on:mousemove={(ev) => {
-      if (ev.buttons == 1)
-        frontend.selectEntry(ent, SelectMode.Sequence);
-    }}
-    class:focushlt={frontend.focused.entry == ent}
-    class:sametime={frontend.focused.entry != ent && overlappingTime(frontend.focused.entry, ent)}
-    class:selected={selection.has(ent)}
-  >
-  {#if line === ent.texts[0]}
-    <td rowspan={ent.texts.length}
-        class={`right label-${ent.label}`}
-        use:setupEntryGUI={ent}>{i}</td>
-    <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
-    <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
-  {/if}
-  <td>{line.style.name}</td>
-  <td>{(() => {
-    let num = SubtitleUtil.getTextLength(line.text) / (ent.end - ent.start);
-    return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
-  })()}</td>
-  <td class='subtext'>{line.text}</td>
-  </tr>
-  {/each}
+      if (ev.button == 0)
+        frontend.toggleEntry(ent, getSelectMode(ev));
+      }}
+      oncontextmenu={(ev) => {
+        isFocused = true;
+        if (onFocus) onFocus();
+        frontend.uiHelper.contextMenu();
+        ev.preventDefault();
+      }}
+      ondblclick={() => {
+        isFocused = true;
+        if (onFocus) onFocus();
+        frontend.startEditingFocusedEntry();
+        frontend.playback.setPosition(ent.start);
+      }}
+      onmousemove={(ev) => {
+        if (ev.buttons == 1)
+          frontend.selectEntry(ent, SelectMode.Sequence);
+      }}
+      class:focushlt={frontend.focused.entry == ent}
+      class:sametime={frontend.focused.entry != ent && overlappingTime(frontend.focused.entry, ent)}
+      class:selected={selection.has(ent)}
+    >
+    {#if line === ent.texts[0]}
+      <td rowspan={ent.texts.length}
+          class={`right label-${ent.label}`}
+          use:setupEntryGUI={ent}>{i}</td>
+      <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
+      <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
+    {/if}
+    <td>{line.style.name}</td>
+    <td>{(() => {
+      let num = SubtitleUtil.getTextLength(line.text) / (ent.end - ent.start);
+      return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
+    })()}</td>
+    <td class='subtext'>{line.text}</td>
+    </tr>
+    {/each}
+  {/key}
   {/each}
 
   <!-- virtual entry at the end -->
   {#if !frontend.states.isEditingVirtualEntry}
-  <tr on:dblclick={() => {frontend.startEditingNewVirtualEntry();}}
-    on:mousedown={() => {
+  <tr ondblclick={() => {frontend.startEditingNewVirtualEntry();}}
+    onmousedown={() => {
     frontend.states.virtualEntryHighlighted = true;
     frontend.clearSelection();
     }}
     class={frontend.states.virtualEntryHighlighted ? 'focushlt' : ''}>
   <td>﹡</td>
-  <td colspan="5"/>
+  <td colspan="5"></td>
   </tr>
   {/if}
 </tbody>

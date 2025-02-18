@@ -500,13 +500,14 @@ export class Timeline implements WithCanvas {
     }
 
     #dispatchSelectionChanged() {
-        this.#frontend.focused.entry = null;
+        this.#frontend.clearFocus();
         this.#frontend.selection.submitted = new Set(this.#selection);
         if (this.#selection.size == 1) {
             let array = [...this.#selection.values()];
             this.#frontend.selection.currentGroup = array;
             this.#frontend.selection.currentStart = array[0];
             this.#frontend.focused.entry = array[0];
+            this.#frontend.onFocusedEntryChanged.dispatch();
         } else {
             this.#frontend.selection.currentGroup = [];
             this.#frontend.selection.currentStart = null;

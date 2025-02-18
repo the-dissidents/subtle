@@ -1,31 +1,33 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
     import { createEventDispatcher } from "svelte";
     import type { Frontend } from "./Frontend";
 
-	export let show = false;
-	export let modal = true;
-	export let centerWhenOpen = true;
-	export let frontend: Frontend;
-
-	let dialog: HTMLDialogElement;
-	$: if (dialog && show && !dialog.open) {
-		if (centerWhenOpen) makeCenter();
-		if (modal) {
-			frontend.states.modalOpenCounter++;
-			dialog.showModal();
-		}
-		else dialog.show();
+	interface Props {
+		show?: boolean;
+		modal?: boolean;
+		centerWhenOpen?: boolean;
+		frontend: Frontend;
+		header?: import('svelte').Snippet;
+		children?: import('svelte').Snippet;
 	}
 
-	$: if (dialog && !show && dialog.open) {
-		dialog.close();
-	}
+	let {
+		show = $bindable(false),
+		modal = true,
+		centerWhenOpen = true,
+		frontend = $bindable(),
+		header,
+		children
+	}: Props = $props();
+
+	let dialog: HTMLDialogElement | undefined = $state();
 	
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
 
 	let cx: number, cy: number, ox: number, oy: number;
-	let posx: number, posy: number;
+	let posx: number = $state(0), posy: number = $state(0);
 	makeCenter();
 
 	function makeCenter() {
@@ -48,32 +50,47 @@
 		document.addEventListener('mousemove', handler1);
 		document.addEventListener('mouseup', handler2);
 	}
+	run(() => {
+		if (dialog && show && !dialog.open) {
+			if (centerWhenOpen) makeCenter();
+			if (modal) {
+				frontend.states.modalOpenCounter++;
+				dialog.showModal();
+			}
+			else dialog.show();
+		}
+	});
+	run(() => {
+		if (dialog && !show && dialog.open) {
+			dialog.close();
+		}
+	});
 </script>
 	
-<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <dialog
 	bind:this={dialog}
 	class={modal ? 'modal' : ''}
 	style="top: {posy}px; left: {posx}px;"
 	
-	on:close={() => {
+	onclose={() => {
 		if (modal)
 			frontend.states.modalOpenCounter--;
 		show = false;
 	}}
 >
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<header on:mousedown={(ev) => startDrag(ev)}>
-		<slot name="header" />
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<header onmousedown={(ev) => startDrag(ev)}>
+		{@render header?.()}
 		<hr/>
 	</header>
 	<div>
-		<slot />
+		{@render children?.()}
 	</div>
 	<footer>
-		<!-- svelte-ignore a11y-autofocus -->
+		<!-- svelte-ignore a11y_autofocus -->
 		<button class='submit' autofocus 
-			on:click={() => {show = false; submit()}}>done</button>
+			onclick={() => {show = false; submit()}}>done</button>
 	</footer>
 </dialog>
 
