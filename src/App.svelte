@@ -33,7 +33,6 @@ let leftPane: HTMLElement | undefined = $state();
 let rightPane: HTMLElement | undefined = $state();
 let editTable: HTMLElement | undefined = $state();
 let videoCanvasContainer: HTMLElement | undefined = $state();
-let toolboxContainer: HTMLElement | undefined = $state();
 let videoCanvas: HTMLCanvasElement | undefined = $state();
 let timelineCanvas: HTMLCanvasElement | undefined = $state();
 
@@ -71,8 +70,21 @@ frontend.onSubtitlesChanged.bind((type: ChangeType, cause: ChangeCause) => {
 
 frontend.onSelectionChanged.bind(() => {
   editFormUpdateCounter++;
-  if (frontend.getFocusedEntry() !== null)
-    setupEditForm();
+  let focused = frontend.getFocusedEntry();
+  if (focused instanceof SubtitleEntry) {
+    editingT0 = focused.start;
+    editingT1 = focused.end;
+    editingDt = editingT1 - editingT0;
+    editingLabel = focused.label;
+    let isEditingNow = frontend.getUIFocus() == UIFocus.EditingField;
+    setTimeout(() => {
+      let col = document.getElementsByClassName('contentarea');
+      for (const target of col) {
+        contentSelfAdjust(target as HTMLTextAreaElement);
+      }
+      if (isEditingNow) frontend.startEditingFocusedEntry();
+    }, 0);
+  }
 });
 
 frontend.playback.onRefreshPlaybackControl = () => {
@@ -82,24 +94,6 @@ frontend.playback.onRefreshPlaybackControl = () => {
   playPosInput = playback.position ?? 0;
   playPos = playback.isLoaded 
     ? playback.position / playback.duration : 0;
-};
-
-function setupEditForm() {
-  let focused = frontend.getFocusedEntry();
-  assert(focused instanceof SubtitleEntry);
-  editingT0 = focused.start;
-  editingT1 = focused.end;
-  editingDt = editingT1 - editingT0;
-  editingLabel = focused.label;
-
-  let isEditingNow = frontend.getUIFocus() == UIFocus.EditingField;
-  setTimeout(() => {
-    let col = document.getElementsByClassName('contentarea');
-    for (const target of col) {
-      contentSelfAdjust(target as HTMLTextAreaElement);
-    }
-    if (isEditingNow) frontend.startEditingFocusedEntry();
-  }, 0);
 };
 
 function applyEditForm() {
@@ -273,24 +267,22 @@ Config.init();
         </div>
         <!-- toolbox -->
         <div class="flexgrow fixminheight">
-          <div class='scrollable fixminheight' bind:this={toolboxContainer}>
-            <TabView>
-            {#snippet children()}
-              <TabPage name="Properties">
-                <PropertiesToolbox {frontend}/>
-              </TabPage>
-              <TabPage name="Untimed text" active={true}>
-                <UntimedToolbox {frontend}/>
-              </TabPage>
-              <TabPage name="Search/Replace">
-                <SearchToolbox {frontend}/>
-              </TabPage>
-              <TabPage name="Test">
-                <TestToolbox {frontend}/>
-              </TabPage>
-            {/snippet}
-            </TabView>
-          </div>
+          <TabView>
+          {#snippet children()}
+            <TabPage name="Properties">
+              <PropertiesToolbox {frontend}/>
+            </TabPage>
+            <TabPage name="Untimed text" active={true}>
+              <UntimedToolbox {frontend}/>
+            </TabPage>
+            <TabPage name="Search/Replace">
+              <SearchToolbox {frontend}/>
+            </TabPage>
+            <TabPage name="Test">
+              <TestToolbox {frontend}/>
+            </TabPage>
+          {/snippet}
+          </TabView>
         </div>
       </div>
     </div>

@@ -26,7 +26,7 @@ export class UIHelper {
             this.frontend.insertEntryAfter(focused);
         }
         else if (ev.key == 'Enter' && tableFocused) {
-            // focus on this entry
+            // edit this entry
             ev.preventDefault();
             if (focusedEntry == 'virtual')
                 this.frontend.startEditingNewVirtualEntry();
@@ -168,6 +168,7 @@ export class UIHelper {
             // next entry
             ev.preventDefault();
             if (!(focusedEntry instanceof SubtitleEntry)) return;
+            this.frontend.submitFocusedEntry();
             let i = this.frontend.subs.entries.indexOf(focusedEntry) + 1;
             if (i == this.frontend.subs.entries.length)
                 this.frontend.startEditingNewVirtualEntry();
@@ -321,8 +322,10 @@ export class UIHelper {
                 text: x,
                 checked: x === label,
                 action: () => {
-                    for (let entry of selection)
+                    for (let entry of selection) {
                         entry.label = x;
+                        entry.update.dispatch();
+                    }
                     this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
                 }
             }))
@@ -368,6 +371,7 @@ export class UIHelper {
                             for (let ent of selection)
                                 if (!ent.texts.find((t) => t.style == x)) {
                                     ent.texts.push({style: x, text: ''});
+                                    ent.update.dispatch();
                                     done = true;
                                 }
                             if (done)
@@ -406,6 +410,7 @@ export class UIHelper {
                                 for (let ent of selection)
                                     if (ent.texts.length > x) {
                                         ent.texts[x].style = y;
+                                        ent.update.dispatch();
                                         changed = true;
                                     }
                                 if (changed) this.frontend.markChanged(
@@ -482,6 +487,7 @@ export class UIHelper {
                 if (ent.texts.length > 0) newSelection.push(ent);
                 else this.frontend.subs.entries.splice(
                     this.frontend.subs.entries.indexOf(ent), 1);
+                ent.update.dispatch();
                 done++;
             }
         if (done > 0) {
@@ -537,6 +543,7 @@ export class UIHelper {
         for (let ent of selection) {
             ent.texts.sort((a, b) => 
                 (indices.get(a.style) ?? 0) - (indices.get(b.style) ?? 0));
+            ent.update.dispatch();
         }
         this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
     }
@@ -584,6 +591,7 @@ export class UIHelper {
                     count++;
                 }
             }
+            entry.update.dispatch();
         }
         if (count > 0) {
             this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
@@ -597,11 +605,11 @@ export class UIHelper {
         for (let i = 1; i < selection.length; i++) {
             let other = selection[i];
             main.texts.push(...other.texts);
-
             const index = this.frontend.subs.entries.indexOf(other);
             assert(index > 0);
             this.frontend.subs.entries.splice(index, 1);
         }
+        main.update.dispatch();
         this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
         this.frontend.status.set(`combined ${selection.length} entries`);
     }
@@ -612,23 +620,21 @@ export class UIHelper {
             let entry = selection[i];
             if (deletion.has(entry) || entry.texts.length > 1) continue;
             
-            while (true) {
-                for (let j = 0; j < selection.length; j++) {
-                    if (i == j) continue;
-                    let other = selection[j];
-                    if (deletion.has(other) || other.texts.length > 1) continue;
-                    if (other.texts[0].text != entry.texts[0].text) continue;
+            for (let j = 0; j < selection.length; j++) {
+                if (i == j) continue;
+                let other = selection[j];
+                if (deletion.has(other) || other.texts.length > 1) continue;
+                if (other.texts[0].text != entry.texts[0].text) continue;
 
-                    if (Math.abs(other.start - entry.end) < this.frontend.timeEpsilon 
-                        || Math.abs(other.end - entry.start) < this.frontend.timeEpsilon) 
-                    {
-                        entry.start = Math.min(entry.start, other.start);
-                        entry.end = Math.max(entry.end, other.end);
-                        deletion.add(other);
-                        break;
-                    }
+                if (Math.abs(other.start - entry.end) < this.frontend.timeEpsilon 
+                    || Math.abs(other.end - entry.start) < this.frontend.timeEpsilon) 
+                {
+                    entry.start = Math.min(entry.start, other.start);
+                    entry.end = Math.max(entry.end, other.end);
+                    entry.update.dispatch();
+                    deletion.add(other);
+                    break;
                 }
-                break;
             }
         }
         for (const entry of deletion) {
@@ -654,6 +660,7 @@ export class UIHelper {
         }
         entry.start = start;
         entry.end = end;
+        entry.update.dispatch();
         this.frontend.subs.entries.splice(
             this.frontend.subs.entries.indexOf(entry) + 1,
             selection.length - 1);
@@ -672,6 +679,7 @@ export class UIHelper {
                 } else newChannels.push(channel);
             }
             entry.texts = newChannels;
+            entry.update.dispatch();
         }
         this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
     }
@@ -690,6 +698,7 @@ export class UIHelper {
                 newSelection.push(newEntry);
             }
             entry.texts = [entry.texts[0]];
+            entry.update.dispatch();
         }
         if (newSelection.length != selection.length) {
             this.frontend.clearSelection();

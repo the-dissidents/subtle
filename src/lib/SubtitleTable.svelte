@@ -28,7 +28,7 @@ frontend.onSelectionChanged.bind(() => {
 
 function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
   let update = () => {
-    console.log('update:', entry.texts[0].text);
+    // console.log('update:', entry.texts[0].text);
     frontend.entryRows.set(entry, node);
     if (!entryKeys.has(entry.uniqueID))
       entryKeys.set(entry.uniqueID, 0);
@@ -40,6 +40,7 @@ function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
   $effect(() => {
     entry.update.bind(update);
     return () => {
+      // console.log('unbind:', entry.texts[0].text);
       entryKeys.delete(entry.uniqueID);
       entry.update.unbind(update);
     };
@@ -145,7 +146,8 @@ td.subtext {
   {#each entries as ent, i (`${ent.uniqueID}`)}
   {#key entryKeys.get(ent.uniqueID)}
     {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
-    <tr onmousedown={(ev) => {
+    <tr
+      onmousedown={(ev) => {
         onFocus();
         if (ev.button == 0)
           frontend.toggleEntry(ent, getSelectMode(ev));

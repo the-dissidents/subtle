@@ -409,10 +409,10 @@ export class Timeline implements WithCanvas {
                     const origL = Math.min(...sels.map((x) => x.start)),
                           origR = Math.max(...sels.map((x) => x.end));
                     const distL = origPos - origL, distR = origR - origPos;
-                    console.log(distL * this.#scale, distR * this.#scale);
+                    // console.log(distL * this.#scale, distR * this.#scale);
                     if (this.#selection.size > 1 
                         || (distL * this.#scale > DRAG_RESIZE_MARGIN 
-                         && distR * this.#scale > DRAG_RESIZE_MARGIN))
+                        &&  distR * this.#scale > DRAG_RESIZE_MARGIN))
                     {
                         // dragging the whole
                         const one = ents.find((x) => this.#selection.has(x));
@@ -437,8 +437,9 @@ export class Timeline implements WithCanvas {
                             this.#alignmentLine = null;
                             this.requestRender();
                             if (dragged) {
-                                this.#frontend.markChanged(
-                                    ChangeType.Times, ChangeCause.Timeline);
+                                for (let entry of sels) 
+                                    entry.update.dispatch();
+                                this.#frontend.markChanged(ChangeType.Times, ChangeCause.Timeline);
                             } else afterUp();
                         };
                     } else {
@@ -462,8 +463,8 @@ export class Timeline implements WithCanvas {
                             this.#alignmentLine = null;
                             this.requestRender();
                             if (dragged) {
-                                this.#frontend.markChanged(
-                                    ChangeType.Times, ChangeCause.Timeline);
+                                entry.update.dispatch();
+                                this.#frontend.markChanged(ChangeType.Times, ChangeCause.Timeline);
                             } else afterUp();
                         };
                     }

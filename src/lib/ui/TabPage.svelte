@@ -28,7 +28,7 @@
     $effect(() => { if (active) selection.set(id); });
 </script>
 
-<div class='page' class:active>
+<div class='page fill' class:active>
 {@render children?.()}
 </div>
 

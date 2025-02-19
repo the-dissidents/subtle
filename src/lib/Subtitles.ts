@@ -284,6 +284,7 @@ export class Subtitles {
             if (set.has(ent) || (ent.start >= start && modifySince)) {
                 ent.start = Math.max(0, ent.start * scale + offset);
                 ent.end = Math.max(0, ent.end * scale + offset);
+                ent.update.dispatch();
             }
         }
         return true;
@@ -627,12 +628,18 @@ export const SubtitleTools = {
     },
     replaceStyle: (entries: SubtitleEntry[], from: SubtitleStyle, to: SubtitleStyle) => {
         let changed = false;
-        for (let ent of entries)
+        for (let ent of entries) {
+            let thisChanged = false;
             for (let channel of ent.texts)
                 if (channel.style.uniqueID == from.uniqueID) {
                     channel.style = to;
-                    changed = true;
+                    thisChanged = true;
                 }
+            if (thisChanged) {
+                changed = true;
+                ent.update.dispatch();
+            }
+        }
         return changed;
     },
     makeTestSubtitles: () => {
