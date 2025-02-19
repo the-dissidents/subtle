@@ -12,14 +12,7 @@
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
-
-    export {
-    	subtitles,
-    	currentStyle,
-    }
 </script>
-
-<!-- <svelte:options ={true} /> -->
 
 <select class='styleselect' tabindex='-1'
     oninput={(ev) => {

@@ -56,7 +56,7 @@ https://svelte.dev/e/node_invalid_placement -->
   function fuzzyMatch() {
     if (!fuzzy.enabled) return;
 
-    let current = frontend.selection.currentStart?.texts.find(
+    let current = frontend.selection.focused?.texts.find(
       (x) => x.style.uniqueID == fuzzy.channel.uniqueID);
     if (!current || current.text == '' || textarea.value == '') {
       console.log('no current', frontend.selection)
@@ -67,7 +67,7 @@ https://svelte.dev/e/node_invalid_placement -->
     }
     if (current.text == fuzzy.currentChannel?.text) return;
     fuzzy.currentChannel = current;
-    fuzzy.currentEntry = frontend.selection.currentStart;
+    fuzzy.currentEntry = frontend.selection.focused;
 
     // create engine if necessary
     if (fuzzy.engine === null) {
@@ -87,8 +87,7 @@ https://svelte.dev/e/node_invalid_placement -->
     // perform search
     const fail = () => {
       textarea.selectionEnd = textarea.selectionStart;
-      frontend.status = 'fuzzy search failed to find anything';
-      frontend.onStatusChanged.dispatch();
+      frontend.status.set('fuzzy search failed to find anything');
     };
     let result = fuzzy.engine.search(current.text, fuzzy.maxSkip);
     if (!result) {
@@ -109,8 +108,7 @@ https://svelte.dev/e/node_invalid_placement -->
     // display
     if (i0 >= i1) fail(); else {
       setSelectionAndScroll(i0, i1);
-      frontend.status = `fuzzy match found (${(n / m * 100).toFixed(0)}%)`;
-      frontend.onStatusChanged.dispatch();
+      frontend.status.set(`fuzzy match found (${(n / m * 100).toFixed(0)}%)`);
     }
   }
 
@@ -173,7 +171,7 @@ https://svelte.dev/e/node_invalid_placement -->
     if (fuzzy.enabled) {
       if (ev.getModifierState(Basic.ctrlKey()) || ev.altKey) return;
       if (frontend.states.modalOpenCounter > 0) return;
-      if (document.activeElement !== textarea && frontend.states.uiFocus !== UIFocus.Table) return;
+      if (document.activeElement !== textarea && frontend.getUIFocus() !== UIFocus.Table) return;
 
       if (ev.key == 'z') {
         textarea.selectionStart = offset(textarea.selectionStart, false);
@@ -184,9 +182,9 @@ https://svelte.dev/e/node_invalid_placement -->
       } else if (ev.key == 'c') {
         textarea.selectionEnd = offset(textarea.selectionEnd, false);
       } else if (ev.key == 'a') {
-        if (fuzzy.currentEntry !== frontend.focused.entry) {
-          console.warn('current entry is not fuzzy.currentEntry, but', 
-            frontend.focused.entry);
+        let focused = frontend.getFocusedEntry();
+        if (fuzzy.currentEntry !== focused) {
+          console.warn('current entry is not fuzzy.currentEntry, but', focused);
           return;
         }
 
@@ -201,9 +199,9 @@ https://svelte.dev/e/node_invalid_placement -->
         }
         // the above causes the UI to refresh, so we delay a bit
         setTimeout(() => {
-          frontend.focused.entry = fuzzy.currentEntry;
+          frontend.selection.focused = fuzzy.currentEntry;
           frontend.focused.style = fuzzy.channel;
-          frontend.onFocusedEntryChanged.dispatch();
+          frontend.onSelectionChanged.dispatch(ChangeCause.Action);
           frontend.startEditingFocusedEntry();
         }, 0);
       } 

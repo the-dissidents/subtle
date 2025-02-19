@@ -87,6 +87,40 @@ textarea {
   margin: 1px;
 }
 
+input[type=range] {
+  appearance: none;
+  -webkit-appearance: none; /* Hides the slider so that custom slider can be made */
+  width: 100%; /* Specific width is required for Firefox. */
+  background: transparent; /* Otherwise white in Chrome */
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px;
+    margin-top: -1px;
+    width: 16px;
+    border-radius: 2px;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
+  }
+
+  &::-webkit-slider-thumb:hover {
+    filter: brightness(97%);
+  }
+
+  &::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 12px;
+    cursor: pointer;
+    background: var(--uchu-yin-2);
+    border-radius: 2px;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
 ul.menu {
   flex: none;
   list-style-type: none;

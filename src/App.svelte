@@ -25,13 +25,10 @@ import UntimedToolbox from './lib/UntimedToolbox.svelte';
 import SearchToolbox from './lib/SearchToolbox.svelte';
 import TestToolbox from './lib/TestToolbox.svelte';
     import type { Action } from 'svelte/action';
+    import { derived } from 'svelte/store';
 
 const appWindow = getCurrentWebviewWindow()
 let frontend = $state(new Frontend(appWindow));
-let selection = $state(new Set<SubtitleEntry>);
-
-// let subsListFocused = false;
-// $: subsListFocused = frontend.states.uiFocus == UIFocus.Table;
 
 let leftPane: HTMLElement | undefined = $state();
 let rightPane: HTMLElement | undefined = $state();
@@ -48,8 +45,6 @@ let playPosInput = $state(0);
 
 let editFormUpdateCounter = $state(0);
 let undoRedoUpdateCounter = $state(0);
-let statusUpdateCounter = $state(0);
-let focusedUpdateCounter = $state(0);
 
 let editMode = $state(0);
 let keepDuration = $state(false);
@@ -58,29 +53,26 @@ let editingT1 = $state(0);
 let editingDt = $state(0);
 let editingLabel: LabelColorsType = $state('none');
 
+let status = frontend.status;
+let uiFocus = frontend.uiFocus;
+let filenameDisplay = 
+  derived([frontend.currentFile, frontend.fileChanged], 
+    ([x, y]) => `${x ? Basic.getFilename(x) : '<untitled>'}${y ? '*' : ''}`);
+
 frontend.onUndoBufferChanged.bind(() => {
   undoRedoUpdateCounter++;
-});
-frontend.onStatusChanged.bind(() => {
-  statusUpdateCounter++;
 });
 
 frontend.onSubtitlesChanged.bind((type: ChangeType, cause: ChangeCause) => {
   // for toolbar
-  frontend.fileChanged = frontend.fileChanged;
   if (cause != ChangeCause.UIForm)
     editFormUpdateCounter++;
   console.log('changed', ChangeType[type], ChangeCause[cause]);
 });
 
 frontend.onSelectionChanged.bind(() => {
-  selection = new Set(frontend.getSelection());
-});
-
-frontend.onFocusedEntryChanged.bind(() => {
-  // TODO
-  focusedUpdateCounter++;
-  if (frontend.focused.entry !== null)
+  editFormUpdateCounter++;
+  if (frontend.getFocusedEntry() !== null)
     setupEditForm();
 });
 
@@ -94,14 +86,14 @@ frontend.playback.onRefreshPlaybackControl = () => {
 };
 
 function setupEditForm() {
-  assert(frontend.focused.entry !== null);
-  let focused = frontend.focused.entry;
+  let focused = frontend.getFocusedEntry();
+  assert(focused instanceof SubtitleEntry);
   editingT0 = focused.start;
   editingT1 = focused.end;
   editingDt = editingT1 - editingT0;
   editingLabel = focused.label;
 
-  let isEditingNow = frontend.states.uiFocus == UIFocus.EditingField;
+  let isEditingNow = frontend.getUIFocus() == UIFocus.EditingField;
   setTimeout(() => {
     let col = document.getElementsByClassName('contentarea');
     for (const target of col) {
@@ -112,8 +104,8 @@ function setupEditForm() {
 };
 
 function applyEditForm() {
-  if (!frontend.focused.entry) return;
-  let focused = frontend.focused.entry;
+  let focused = frontend.getFocusedEntry();
+  assert(focused instanceof SubtitleEntry);
   focused.start = editingT0;
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
@@ -189,14 +181,14 @@ Config.init();
   }}
   onfocusin={(ev) => {
     // TODO: this works but looks like nonsense
-    if (frontend.states.uiFocus != UIFocus.EditingField)
-      frontend.states.uiFocus = UIFocus.Other;
+    if ($uiFocus != UIFocus.EditingField)
+      $uiFocus = UIFocus.Other;
   }}/>
 
 <!-- dialogs -->
-<TimeAdjustmentDialog {frontend} bind:this={frontend.modalDialogs.timeTrans}/>
-<ImportOptionsDialog  {frontend} bind:this={frontend.modalDialogs.importOpt}/>
-<CombineDialog        {frontend} bind:this={frontend.modalDialogs.combine}/>
+<TimeAdjustmentDialog {frontend} handler={frontend.modalDialogs.timeTrans}/>
+<ImportOptionsDialog  {frontend} handler={frontend.modalDialogs.importOpt}/>
+<CombineDialog        {frontend} handler={frontend.modalDialogs.combine}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->
@@ -244,10 +236,7 @@ Config.init();
       {/key}
       <li class='separator'></li>
       <li><button onclick={() => frontend.askOpenVideo()}>open video</button></li>
-      <li><div class='label'>
-        {frontend.currentFile ? Basic.getFilename(frontend.currentFile) : '<untitled>'}
-        {frontend.fileChanged ? '*' : ''}
-      </div></li>
+      <li><div class='label'>{$filenameDisplay}</div></li>
     </ul>
   </div>
 
@@ -264,7 +253,7 @@ Config.init();
           <button 
             style="width: 30px; height: 20px"
             onclick={() => frontend.playback.toggle()
-              .catch((e) => frontend.status = `Error playing video: ${e}`)}
+              .catch((e) => $status = `Error playing video: ${e}`)}
           >{playIcon}</button>
           <input type='range' class='play-pointer flexgrow'
             step="any" max="1" min="0" disabled={sliderDisabled}
@@ -313,9 +302,9 @@ Config.init();
     <div bind:this={rightPane} class="flexgrow fixminheight">
       <div class='vlayout fill'>
         <!-- edit box -->
-        <div bind:this={editTable} class='hlayout' style="height: 125px;">
+        <div bind:this={editTable} class='hlayout editbox' style="height: 125px;">
           <!-- timestamp fields -->
-          {#key `${editFormUpdateCounter},${focusedUpdateCounter}`}
+          {#key `${editFormUpdateCounter}`}
           <div>
             <span>
               <select
@@ -377,11 +366,12 @@ Config.init();
             </div>
           </div>
           <!-- channels view -->
-          <div class="flexgrow scroll">
-            {#if frontend.focused.entry !== null}
+          <div class="channels flexgrow">
+            {#if frontend.getFocusedEntry() instanceof SubtitleEntry}
+            {@const focused = frontend.getFocusedEntry() as SubtitleEntry}
             <table class='fields'>
               <tbody>
-                {#each frontend.focused.entry.texts as line, i}
+                {#each focused.texts as line, i}
                 <tr>
                   <td>
                     <StyleSelect subtitles={frontend.subs} currentStyle={line.style}
@@ -391,7 +381,7 @@ Config.init();
                       onclick={() => frontend.insertChannelAt(i)}>+</button>
                     <button tabindex='-1'
                       onclick={() => frontend.deleteChannelAt(i)}
-                      disabled={frontend.focused.entry.texts.length == 1}>-</button>
+                      disabled={focused.texts.length == 1}>-</button>
                   </td>
                   <td style='width:100%'>
                     <textarea class='contentarea' tabindex=0
@@ -399,23 +389,23 @@ Config.init();
                       onkeydown={(ev) => {
                         if (ev.key == "Escape") {
                           ev.currentTarget.blur();
-                          frontend.states.uiFocus = UIFocus.Table;
+                          $uiFocus = UIFocus.Table;
                         }
                       }}
                       onfocus={() => {
-                        frontend.states.uiFocus = UIFocus.EditingField;
+                        $uiFocus = UIFocus.EditingField;
                         frontend.focused.channel = line;
                         frontend.focused.style = line.style;
                       }}
                       onblur={(x) => {
                         // TODO: this works but looks like nonsense
-                        if (frontend.states.uiFocus == UIFocus.EditingField)
-                          frontend.states.uiFocus = UIFocus.Other;
+                        if ($uiFocus === UIFocus.EditingField)
+                          $uiFocus = UIFocus.Other;
                         frontend.submitFocusedEntry();
                         frontend.focused.channel = null;
                       }}
                       oninput={(x) => {
-                        frontend.states.uiFocus = UIFocus.EditingField;
+                        $uiFocus = UIFocus.EditingField;
                         contentSelfAdjust(x.currentTarget); 
                         frontend.states.editChanged = true;
                       }}></textarea>
@@ -424,7 +414,7 @@ Config.init();
                 {/each}
               </tbody>
             </table>
-            {:else}<i>{frontend.states.virtualEntryHighlighted
+            {:else}<i>{frontend.getFocusedEntry() == 'virtual'
               ? 'double-click or press enter to append new entry'
               : 'select a line to start editing'}</i>
             {/if}
@@ -437,11 +427,10 @@ Config.init();
         </div>
         <!-- table view -->
         <div class='scrollable fixminheight subscontainer flexgrow' 
-          class:subsfocused={frontend.states.uiFocus == UIFocus.Table} 
+          class:subsfocused={$uiFocus === UIFocus.Table} 
           bind:this={frontend.ui.subscontainer}
         >
-          <SubtitleTable {frontend} bind:selection 
-            onFocus={() => frontend.states.uiFocus = UIFocus.Table}/>
+          <SubtitleTable {frontend} />
         </div>
       </div>
     </div>
@@ -454,15 +443,13 @@ Config.init();
   <div>
     <canvas class="timeline" bind:this={timelineCanvas}
       use:setupTimelineView
-      onclick={() => frontend.states.uiFocus = UIFocus.Timeline}
-      class:timelinefocused={frontend.states.uiFocus == UIFocus.Timeline}
+      onclick={() => $uiFocus = UIFocus.Timeline}
+      class:timelinefocused={$uiFocus === UIFocus.Timeline}
       style="height: 150px;"></canvas>
   </div>
 
   <!-- status bar -->
-  {#key statusUpdateCounter}
-  <div class='status'>{frontend.status}</div>
-  {/key}
+  <div class='status'>{$status}</div>
 </main>
 
 <style>
@@ -495,12 +482,16 @@ Config.init();
   background-color: lightgray;
 }
 
-.scroll {
+.editbox {
+  padding: 3px 0;
+}
+
+.channels {
   overflow: auto;
   box-shadow: gray 0px 0px 3px inset;
+  border-radius: 3px;
+  padding: 0 3px;
   margin-left: 3px;
-  border-top: solid transparent 3px;
-  /* padding: 3px; */
 }
 
 .timeline {

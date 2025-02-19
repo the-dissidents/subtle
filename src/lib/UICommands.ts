@@ -9,23 +9,26 @@ export class UIHelper {
     processGlobalKeydown(ev: KeyboardEvent) {
         const ctrlOrMeta = ev.getModifierState(Basic.ctrlKey());
         const inModal = this.frontend.states.modalOpenCounter > 0;
-        const focus = this.frontend.states.uiFocus;
+        const focus = this.frontend.getUIFocus();
+        const focusedEntry = this.frontend.getFocusedEntry();
+
         const tableFocused = focus == UIFocus.Table && !inModal;
         const altOrTableOrTimeline = 
             (focus == UIFocus.Timeline || focus == UIFocus.Table || ev.altKey) && !inModal;
         const altOrTimeline = 
             (focus == UIFocus.Timeline || ev.altKey) && !inModal;
-        console.log('KEYDOWN', ev.key, ev.code, inModal, UIFocus[this.frontend.states.uiFocus]);
+        // console.log('KEYDOWN', ev.key, ev.code, inModal, UIFocus[focus]);
         
         if (ev.key == 'Enter' && ctrlOrMeta) {
             // insert after
             ev.preventDefault();
-            this.frontend.insertEntryAfter(this.frontend.focused.entry ?? undefined);
+            let focused = focusedEntry instanceof SubtitleEntry ? focusedEntry : undefined;
+            this.frontend.insertEntryAfter(focused);
         }
         else if (ev.key == 'Enter' && tableFocused) {
             // focus on this entry
             ev.preventDefault();
-            if (this.frontend.states.virtualEntryHighlighted)
+            if (focusedEntry == 'virtual')
                 this.frontend.startEditingNewVirtualEntry();
             else
                 this.frontend.startEditingFocusedEntry();
@@ -123,7 +126,7 @@ export class UIHelper {
         else if (ev.code == 'KeyP' && altOrTableOrTimeline) {
             // play selected entry
             if (this.frontend.playback.timeline === null) return;
-            const current = this.frontend.selection.currentStart;
+            const current = this.frontend.selection.focused;
             if (current === null) return;
             this.frontend.playback.playAreaOverride = {
                 start: current.start,
@@ -161,13 +164,11 @@ export class UIHelper {
             this.frontend.playback.setPosition(this.frontend.playback.position + 1);
             ev.preventDefault();
         }
-        else if (ev.key == 'Enter' && !ev.shiftKey 
-                && this.frontend.states.uiFocus == UIFocus.EditingField){
+        else if (ev.key == 'Enter' && !ev.shiftKey && focus == UIFocus.EditingField){
             // next entry
             ev.preventDefault();
-            let focused = this.frontend.focused.entry;
-            if (!focused) return;
-            let i = this.frontend.subs.entries.indexOf(focused) + 1;
+            if (!(focusedEntry instanceof SubtitleEntry)) return;
+            let i = this.frontend.subs.entries.indexOf(focusedEntry) + 1;
             if (i == this.frontend.subs.entries.length)
                 this.frontend.startEditingNewVirtualEntry();
             else
@@ -243,7 +244,7 @@ export class UIHelper {
                 text: x.name,
                 action: () => {
                     this.frontend.selection.currentGroup = [];
-                    this.frontend.selection.currentStart = null;
+                    this.frontend.selection.focused = null;
                     this.frontend.selection.submitted = new Set(this.frontend.subs.entries.filter((e) => e.texts.some((c) => c.style == x)));
                     this.frontend.onSelectionChanged.dispatch(ChangeCause.Action);
                 }
@@ -334,14 +335,12 @@ export class UIHelper {
                     text: 'transform times...',
                     action: () => {
                         if (!this.frontend.modalDialogs.timeTrans) return;
-                        let off = this.frontend.modalDialogs.timeTrans.$on('submit', 
-                            (ev) => {
-                                if (this.frontend.subs.shiftTimes(ev.detail))
-                                    this.frontend.markChanged(
-                                        ChangeType.Times, ChangeCause.Action);
-                                off();
-                            });
-                        this.frontend.modalDialogs.timeTrans.$set({show: true});
+                        this.frontend.modalDialogs.timeTrans.onSubmit = (opt) => {
+                            if (this.frontend.subs.shiftTimes(opt))
+                                this.frontend.markChanged(
+                                    ChangeType.Times, ChangeCause.Action);
+                        };
+                        this.frontend.modalDialogs.timeTrans.show.set(true);
                     }
                 },
                 { item: 'Separator' },
@@ -437,7 +436,7 @@ export class UIHelper {
                     text: 'combine by matching time...',
                     enabled: selection.length > 1,
                     action: () =>
-                        this.frontend.modalDialogs.combine?.$set({show: true})
+                        this.frontend.modalDialogs.combine?.show.set(true)
                 },
                 {
                     text: 'split by line',
@@ -486,21 +485,17 @@ export class UIHelper {
                 done++;
             }
         if (done > 0) {
-            let focus: SubtitleEntry | null = null;
-            if (this.frontend.focused.entry
-                && newSelection.indexOf(this.frontend.focused.entry) >= 0)
-                focus = this.frontend.focused.entry;
             this.frontend.clearSelection();
             this.frontend.selection.submitted = new Set(newSelection);
             this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
-            this.frontend.status = `changed ${done} entrie${done > 1 ? 's' : ''}`;
+            this.frontend.status.set(`changed ${done} entrie${done > 1 ? 's' : ''}`);
         } else {
-            this.frontend.status = `changed nothing`;
+            this.frontend.status.set(`changed nothing`);
         }
     }
 
     #selectAll() {
-        this.frontend.selection.currentStart = null;
+        this.frontend.selection.focused = null;
         this.frontend.selection.currentGroup = [];
         for (let e of this.frontend.subs.entries)
             this.frontend.selection.submitted.add(e);
@@ -513,7 +508,7 @@ export class UIHelper {
         for (let e of this.frontend.subs.entries)
             if (!oldSelection.has(e)) newSelection.add(e);
         this.frontend.clearFocus();
-        this.frontend.selection.currentStart = null;
+        this.frontend.selection.focused = null;
         this.frontend.selection.currentGroup = [];
         this.frontend.selection.submitted = newSelection;
         this.frontend.onSelectionChanged.dispatch(ChangeCause.Action);
@@ -592,8 +587,8 @@ export class UIHelper {
         }
         if (count > 0) {
             this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
-            this.frontend.status = `changed ${count} entrie${count > 1 ? 's' : ''}`;
-        } else this.frontend.status = `changed nothing`;
+            this.frontend.status.set(`changed ${count} entrie${count > 1 ? 's' : ''}`);
+        } else this.frontend.status.set(`changed nothing`);
     }
 
     #combineSelection(selection: SubtitleEntry[]) {
@@ -608,7 +603,7 @@ export class UIHelper {
             this.frontend.subs.entries.splice(index, 1);
         }
         this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
-        this.frontend.status = `combined ${selection.length} entries`;
+        this.frontend.status.set(`combined ${selection.length} entries`);
     }
 
     #mergeDuplicate(selection: SubtitleEntry[]) {

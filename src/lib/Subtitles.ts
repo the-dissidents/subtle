@@ -123,8 +123,6 @@ export type SubtitleChannel = {
 export class SubtitleEntry {
     label: LabelColorsType = 'none';
     texts: SubtitleChannel[] = [];
-    // Same here
-    gui?: HTMLElement;
 
     static #counter = 0;
     readonly uniqueID: number;

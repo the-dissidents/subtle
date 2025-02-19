@@ -1,39 +1,47 @@
-<!-- @migration-task Error while migrating Svelte code: `<tr>` cannot be a child of `<table>`. `<table>` only allows these children: `<caption>`, `<colgroup>`, `<tbody>`, `<thead>`, `<tfoot>`, `<style>`, `<script>`, `<template>`. The browser will 'repair' the HTML (by moving, removing, or inserting elements) which breaks Svelte's assumptions about the structure of your components.
-https://svelte.dev/e/node_invalid_placement -->
 <script lang="ts">
-  import DialogBase from './DialogBase.svelte';
+  import DialogBase, { type DialogHandler } from './DialogBase.svelte';
   import { Frontend } from './Frontend';
   import StyleSelect from './StyleSelect.svelte';
-  import { createEventDispatcher } from 'svelte';
   import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from './Subtitles';
 
-  export let frontend: Frontend;
-  export let show = false;
+  interface Props {
+		handler: DialogHandler<MergeOptions>;
+		frontend: Frontend;
+	}
 
+  let {
+		handler = $bindable(),
+		frontend = $bindable()
+  }: Props = $props();
+
+  let inner: DialogHandler<void> = {
+    show: handler.show, 
+    onSubmit: () => {
+      handler.onSubmit?.({
+        // @ts-ignore
+        style: MergeStyleBehavior[styleOption],
+        overrideStyle: overrideStyle,
+        // @ts-ignore
+        position: MergePosition[posOption],
+        // @ts-ignore
+        selection: MergeStyleSelection[selectOption],
+        overrideMetadata: overrideMetadata
+      });
+    }
+  };
+  
   let form: HTMLFormElement;
   let select: StyleSelect;
-  let overrideStyle = frontend.subs.defaultStyle;
-  let styleOption = 'KeepDifferent';
-  let selectOption = 'UsedOnly';
-  let posOption = 'After';
-  let overrideMetadata = false;
+  let overrideStyle = $state(frontend.subs.defaultStyle);
+  let styleOption = $state('KeepDifferent');
+  let selectOption = $state('UsedOnly');
+  let posOption = $state('After');
+  let overrideMetadata = $state(false);
 
-	const dispatch = createEventDispatcher<{submit: MergeOptions}>();
-	const submit = (options: MergeOptions) => dispatch('submit', options);
+  
 </script>
 
-<DialogBase bind:frontend bind:show on:submit={() => {
-  submit({
-    // @ts-ignore
-    style: MergeStyleBehavior[styleOption],
-    overrideStyle: overrideStyle,
-    // @ts-ignore
-    position: MergePosition[posOption],
-    // @ts-ignore
-    selection: MergeStyleSelection[selectOption],
-    overrideMetadata: overrideMetadata
-  })
-}}><form bind:this={form}>
+<DialogBase bind:frontend handler={inner}><form bind:this={form}>
   <table class='config'>
     <tbody>
       <tr>

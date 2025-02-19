@@ -1,10 +1,18 @@
+<script lang="ts" module>
+	export class DialogHandler<T> {
+		show = writable<boolean>(false);
+		onSubmit: ((arg: T) => void) | undefined = undefined;
+	}
+</script>
+
 <script lang="ts">
-	import { run } from 'svelte/legacy';
-    import { createEventDispatcher } from "svelte";
+    import { assert } from "./Basic";
+
     import type { Frontend } from "./Frontend";
+    import { writable, type Writable } from "svelte/store";
 
 	interface Props {
-		show?: boolean;
+		handler: DialogHandler<void>;
 		modal?: boolean;
 		centerWhenOpen?: boolean;
 		frontend: Frontend;
@@ -13,7 +21,7 @@
 	}
 
 	let {
-		show = $bindable(false),
+		handler = $bindable(),
 		modal = true,
 		centerWhenOpen = true,
 		frontend = $bindable(),
@@ -22,10 +30,6 @@
 	}: Props = $props();
 
 	let dialog: HTMLDialogElement | undefined = $state();
-	
-	const dispatch = createEventDispatcher();
-	const submit = () => dispatch('submit');
-
 	let cx: number, cy: number, ox: number, oy: number;
 	let posx: number = $state(0), posy: number = $state(0);
 	makeCenter();
@@ -50,18 +54,21 @@
 		document.addEventListener('mousemove', handler1);
 		document.addEventListener('mouseup', handler2);
 	}
-	run(() => {
-		if (dialog && show && !dialog.open) {
-			if (centerWhenOpen) makeCenter();
-			if (modal) {
-				frontend.states.modalOpenCounter++;
-				dialog.showModal();
+
+	handler?.show.subscribe((x) => {
+		if (dialog === undefined) return;
+		// console.log('show:', x);
+		if (x && !dialog.open) {
+			if (!dialog.open) {
+				if (centerWhenOpen) makeCenter();
+				if (modal) {
+					frontend.states.modalOpenCounter++;
+					dialog.showModal();
+				}
+				else dialog.show();
 			}
-			else dialog.show();
 		}
-	});
-	run(() => {
-		if (dialog && !show && dialog.open) {
+		if (!x && dialog.open){
 			dialog.close();
 		}
 	});
@@ -76,7 +83,7 @@
 	onclose={() => {
 		if (modal)
 			frontend.states.modalOpenCounter--;
-		show = false;
+		handler.show.set(false);
 	}}
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -90,7 +97,10 @@
 	<footer>
 		<!-- svelte-ignore a11y_autofocus -->
 		<button class='submit' autofocus 
-			onclick={() => {show = false; submit()}}>done</button>
+			onclick={() => {
+				handler.show.set(false); 
+				handler.onSubmit?.();
+			}}>done</button>
 	</footer>
 </dialog>
 

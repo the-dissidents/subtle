@@ -1,15 +1,27 @@
 <script lang="ts">
-    import DialogBase from './DialogBase.svelte';
+    import DialogBase, { type DialogHandler } from './DialogBase.svelte';
     import { SubtitleStyle, type SubtitleEntry } from './Subtitles';
     import { ChangeCause, ChangeType, Frontend } from './Frontend';
 
-    export let frontend: Frontend;
-	export let show = false;
+    interface Props {
+		handler: DialogHandler<void>;
+		frontend: Frontend;
+	}
 
-    let start = 0.005;
-    let end = 0.005;
-    let number = [0, 0];
-    let only = true, different = false, hasbeen = false;
+    let {
+        handler = $bindable(),
+        frontend = $bindable()
+    }: Props = $props();
+
+    let inner: DialogHandler<void> = {
+        show: handler.show, 
+        onSubmit: () => {}
+    }
+
+    let start = $state(0.005);
+    let end = $state(0.005);
+    let number = $state([0, 0]);
+    let only = $state(true), different = $state(false), hasbeen = $state(false);
     
     function run(doit: boolean, s: number, e: number, 
             selectionOnly: boolean, differentOnly: boolean) 
@@ -64,17 +76,17 @@
                     frontend.selection.submitted.add(ent);
                 frontend.markChanged(ChangeType.Times, ChangeCause.Action);
             }
-        }
+        } else
+            hasbeen = false;
     }
-
-    $: start, end, only, different, hasbeen = false;
-    $: run(false, start, end, only, different);
+    $effect(() => {
+        run(false, start, end, only, different);
+    });
 </script>
 
-<DialogBase bind:frontend bind:show>
+<DialogBase bind:frontend handler={inner}>
     <table class="config">
         <tbody>
-
             <tr>
                 <td>start time threshold</td>
                 <td><input type='number' min='0' step="0.001" bind:value={start} /></td>
@@ -100,7 +112,7 @@
             </tr>
             <tr>
                 <td colspan="2"><button style="width: 100%;" 
-                    on:click={() => run(true, start, end, only, different)}>combine</button></td>
+                    onclick={() => run(true, start, end, only, different)}>combine</button></td>
             </tr>
             <tr>
                 <td></td>

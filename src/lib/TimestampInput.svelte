@@ -72,7 +72,7 @@
         font-family: Menlo, Consolas, 'Courier New', Courier, monospace;
 		text-align: center;
         box-sizing: border-box;
-        min-width: 80px;
+        width: 110px;
 	}
     .stretch {
         width: 100%;

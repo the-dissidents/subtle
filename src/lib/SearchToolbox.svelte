@@ -35,7 +35,8 @@ https://svelte.dev/e/node_invalid_placement -->
 		const selection = frontend.getSelection();
 		const selectionSet = new Set(selection);
 
-		let focus = frontend.focused.entry ?? entries[0];
+		const focusedEntry = frontend.getFocusedEntry();
+		let focus = focusedEntry instanceof SubtitleEntry ? focusedEntry : entries[0];
 		if (selectionOnly) focus = selection.at(0) ?? focus;
 
 		if (focus !== currentEntry || option == SearchOption.Global) {
@@ -52,14 +53,14 @@ https://svelte.dev/e/node_invalid_placement -->
 					`g${caseSensitive ? '' : 'i'}`);
 			} catch (e) {
 				assert(e instanceof Error);
-				frontend.status = `search failed: ${e.message}`;
+				frontend.status.set(`search failed: ${e.message}`);
 				return;
 			}
 		} else if (useLabel || useStyle) {
 			expr = /.*/;
 			usingEmptyTerm = true;
 		} else {
-			frontend.status = `search expression is empty`;
+			frontend.status.set(`search expression is empty`);
 			return;
 		}
 
@@ -109,19 +110,20 @@ https://svelte.dev/e/node_invalid_placement -->
 			}
 			if (option == SearchOption.Reverse) i--; else i++;
 		}
+		let status: string;
 		if (nDone > 0) {
 			if (type == SearchAction.Select) {
-				frontend.status = `selected ${nDone} line${nDone > 1 ? 's' : ''}`;
+				status = `selected ${nDone} line${nDone > 1 ? 's' : ''}`;
 				// manually call this because we didn't use selectEntry etc.
 				frontend.onSelectionChanged.dispatch(ChangeCause.Action);
 			} else if (type == SearchAction.Replace || type === SearchAction.ReplaceStyleOnly) {
-				frontend.status = `replaced ${nDone} lines${nDone > 1 ? 's' : ''}`;
+				status = `replaced ${nDone} lines${nDone > 1 ? 's' : ''}`;
 				frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
 			} else {
-				frontend.status = `found ${nDone} line${nDone > 1 ? 's' : ''}`;
+				status = `found ${nDone} line${nDone > 1 ? 's' : ''}`;
 			}
 		} else {
-			frontend.status = `found nothing`;
+			status = `found nothing`;
 			currentEntry = null;
 			currentTextIndex = 0;
 			if (option != SearchOption.Global) {
@@ -129,6 +131,7 @@ https://svelte.dev/e/node_invalid_placement -->
 				frontend.onSelectionChanged.dispatch(ChangeCause.Action);
 			}
 		}
+		frontend.status.set(status);
 	}
 </script>
 

@@ -140,8 +140,8 @@ export class Timeline implements WithCanvas {
         f.onSelectionChanged.bind((cause) => {
             if (cause != ChangeCause.Timeline) {
                 this.#selection = new Set(this.#frontend.getSelection());
-                if (this.#frontend.focused.entry)
-                    this.#keepEntryInView(this.#frontend.focused.entry);
+                let focused = this.#frontend.getFocusedEntry();
+                if (focused instanceof SubtitleEntry) this.#keepEntryInView(focused);
                 this.requestRender();
             }
         });
@@ -483,7 +483,7 @@ export class Timeline implements WithCanvas {
     #precessDoubleClick() {
         if (this.#selection.size == 1) {
             let one = [...this.#selection][0];
-            if (this.#frontend.focused.entry == one)
+            if (this.#frontend.getFocusedEntry() == one)
                 this.#frontend.startEditingFocusedEntry();
         }
     }
@@ -505,12 +505,10 @@ export class Timeline implements WithCanvas {
         if (this.#selection.size == 1) {
             let array = [...this.#selection.values()];
             this.#frontend.selection.currentGroup = array;
-            this.#frontend.selection.currentStart = array[0];
-            this.#frontend.focused.entry = array[0];
-            this.#frontend.onFocusedEntryChanged.dispatch();
+            this.#frontend.selection.focused = array[0];
         } else {
             this.#frontend.selection.currentGroup = [];
-            this.#frontend.selection.currentStart = null;
+            this.#frontend.selection.focused = null;
         }
         this.#frontend.onSelectionChanged.dispatch(ChangeCause.Timeline);
     }

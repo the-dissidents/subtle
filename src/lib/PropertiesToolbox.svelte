@@ -1,18 +1,35 @@
 <script lang="ts">
-import { SubtitleStyle } from './Subtitles'
+import { Subtitles, SubtitleStyle } from './Subtitles'
 import StyleEdit from './StyleEdit.svelte';
 import { ChangeCause, ChangeType, Frontend } from './Frontend';
 import Collapsible from './ui/Collapsible.svelte';
-    import CombineDialog from './CombineDialog.svelte';
 
-export let frontend: Frontend;
-export let show = false;
+interface Props {
+  frontend: Frontend
+}
 
-$: show, frontend.subs.styles = frontend.subs.styles;
+let { frontend }: Props = $props();
+
+let metadata = $state(frontend.subs.metadata);
+let styles = $state(frontend.subs.styles);
+let defaultStyle = $state(frontend.subs.defaultStyle);
+let subtitles = $state(frontend.subs);
+
+frontend.onSubtitlesChanged.bind((t, c) => {
+  if (t == ChangeType.StyleDefinitions)
+    styles = frontend.subs.styles;
+})
+
+frontend.onSubtitleObjectReload.bind(() => {
+  metadata = frontend.subs.metadata;
+  styles = frontend.subs.styles;
+  defaultStyle = frontend.subs.defaultStyle;
+  subtitles = frontend.subs;
+});
 
 function newStyle() {
   let newStyle = new SubtitleStyle('new');
-  frontend.subs.styles = [...frontend.subs.styles, newStyle];
+  frontend.subs.styles.push(newStyle);
   frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
 }
 
@@ -39,41 +56,43 @@ function changeResolution() {
     <tr>
       <td>title</td>
       <td>
-        <input class='txt' bind:value={frontend.subs.metadata.title}
-          on:change={() => markMetadataChange()} />
+        <input class='txt' bind:value={metadata.title}
+          onchange={() => markMetadataChange()} />
       </td>
     </tr>
     <tr>
       <td>language</td>
       <td>
-        <input class='txt' bind:value={frontend.subs.metadata.language}
-          on:change={() => markMetadataChange()} />
+        <input class='txt' bind:value={metadata.language}
+          onchange={() => markMetadataChange()} />
       </td>
     </tr>
     <tr>
       <td>resolution</td>
       <td>
-        <input type='number' class='res' bind:value={frontend.subs.metadata.width}
-          on:change={() => changeResolution()}/>
+        <input type='number' class='res' bind:value={metadata.width}
+          onchange={() => changeResolution()}/>
         ×
-        <input type='number' class='res' bind:value={frontend.subs.metadata.height}
-          on:change={() => changeResolution()}/>
+        <input type='number' class='res' bind:value={metadata.height}
+          onchange={() => changeResolution()}/>
       </td>
     </tr>
   </tbody>
 </table>
 <Collapsible header="STYLES" active={true}>
-  <StyleEdit {frontend} style={frontend.subs.defaultStyle} subtitles={frontend.subs} />
-  <hr><hr>
-  {#each frontend.subs.styles as style (style.uniqueID)}
-    <StyleEdit {frontend} style={style} subtitles={frontend.subs}
-      on:submit={() => frontend.subs.styles = frontend.subs.styles}/>
-    <hr>
-  {/each}
+  {#key subtitles}
+    <StyleEdit {frontend} style={defaultStyle} {subtitles} />
+    <hr><hr>
+    {#each styles as style (style.uniqueID)}
+      <StyleEdit {frontend} style={style} {subtitles}
+        on:submit={() => styles = frontend.subs.styles}/>
+      <hr>
+    {/each}
+  {/key}
   <button style="width: 25px; height: 20px"
-    on:click={() => newStyle()}>+</button>
+    onclick={() => newStyle()}>+</button>
   <button style="height: 20px"
-    on:click={() => removeUnusedStyles()}>remove all unused</button>
+    onclick={() => removeUnusedStyles()}>remove all unused</button>
 </Collapsible>
 
 

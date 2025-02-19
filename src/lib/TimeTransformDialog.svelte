@@ -1,106 +1,114 @@
 <script lang="ts">
-  import DialogBase from './DialogBase.svelte';
+  import DialogBase, { type DialogHandler } from './DialogBase.svelte';
   import { Frontend } from './Frontend';
-  import { createEventDispatcher } from 'svelte';
   import { SubtitleEntry, SubtitleUtil, type TimeShiftOptions } from './Subtitles';
   import TimestampInput from './TimestampInput.svelte';
 
-  export let frontend: Frontend;
-  export let show = false;
-
   let form: HTMLFormElement;
-  let offsetInput = 0;
-  let customAnchor = 0;
-  let check = false;
-  let shiftOption = 'forward';
-  let anchorOption = 'zero';
-  let fpsBefore = 1, fpsAfter = 1;
 
-  let transStart: number = 0;
-  let transEnd: number = 0;
+  interface Props {
+		handler: DialogHandler<TimeShiftOptions>;
+		frontend: Frontend;
+	}
 
-  const dispatch = createEventDispatcher<{submit: TimeShiftOptions}>();
-  const submit = (options: TimeShiftOptions) => dispatch('submit', options);
+  let {
+		handler = $bindable(),
+		frontend = $bindable()
+  }: Props = $props();
 
-  let cpOffset: number, 
-      cpScale: number, 
-      cpAnchor: number,
-      selectionStart: number,
-      selectionEnd: number;
+  // constants
+  let selectionStart = $state(0),
+      selectionEnd = $state(0);
+    
+  // variables
+  let offset  = $state(0),
+      fpsBefore    = $state(1),
+      fpsAfter     = $state(1),
+      transStart   = $state(0),
+      transEnd     = $state(0);
+
+  // options
+  let check = $state(false);
+  let shiftOption: 'forward' | 'backward' = $state('forward');
+  let customAnchor = $state(0);
+  let anchorOption: 'zero' | 'start' | 'end' | 'custom' = $state('start');
+
+  let inner: DialogHandler<void> = {
+    show: handler.show, 
+    onSubmit: () => handler.onSubmit?.({
+      // t = (t0 - anchor) * scale + anchor + offset
+      // t = t0 * scale + anchor + offset - anchor * scale
+      selection: frontend.getSelection(),
+      offset: cpAnchor + cpOffset - cpAnchor * cpScale,
+      modifySince: check,
+      scale: cpScale
+    })
+  };
+
+  // deriveds
+  let cpOffset = $derived(offset * (shiftOption == 'forward' ? 1 : -1));
+  let cpScale = $derived.by(() => {
+    let x = fpsAfter / fpsBefore;
+    if (!isFinite(x) || isNaN(x) || x < 0) return 1;
+    return x;
+  });
+  let cpAnchor = $derived.by(() => {
+    if (anchorOption == 'start')
+      return selectionStart;
+    if (anchorOption == 'end')
+      return selectionEnd;
+    if (anchorOption == 'custom')
+      return customAnchor;
+    return 0;
+  });
+
   let selection: SubtitleEntry[];
   
   function updateSelection() {
     selection = frontend.getSelection();
     selectionStart = Math.min(...selection.map((x) => x.start));
     selectionEnd = Math.max(...selection.map((x) => x.end));
-    setTransformedRange();
   }
 
-  $: show, updateSelection();
-  $: shiftOption, setTransformedRange();
-  $: anchorOption, setTransformedRange();
-
-  $: cpOffset = offsetInput * (shiftOption == 'forward' ? 1 : -1);
-  $: {
-    cpScale = fpsAfter / fpsBefore;
-    if (!isFinite(cpScale) || isNaN(cpScale) || cpScale < 0)
-      cpScale = 1;
-  }
-  $: {
-    cpAnchor = 0;
-    if (anchorOption == 'start')
-      cpAnchor = selectionStart;
-    if (anchorOption == 'end')
-      cpAnchor = selectionEnd;
-    if (anchorOption == 'custom')
-      cpAnchor = customAnchor;
+  function toTransformed() {
+    transStart = Math.max(0, (selectionStart - cpAnchor) * cpScale + cpAnchor + cpOffset);
+    transEnd = Math.max(0, (selectionEnd - cpAnchor) * cpScale + cpAnchor + cpOffset);
   }
 
-  function setTransformedRange() {
-    setTimeout(() => {
-      transStart = Math.max(0, 
-        (selectionStart - cpAnchor) * cpScale + cpAnchor + cpOffset);
-      transEnd = Math.max(0, 
-        (selectionEnd - cpAnchor) * cpScale + cpAnchor + cpOffset);
-    }, 0)
-  }
-
-  function updateWidgets() {
+  function fromTransformed() {
     let scale = (transEnd - transStart) / (selectionEnd - selectionStart);
     if (!isFinite(scale) || scale < 0) scale = 1;
     fpsBefore = 1;
     fpsAfter = scale;
-    cpScale = scale;
-    cpOffset = transStart - cpAnchor - (selectionStart - cpAnchor) * scale;
-    shiftOption = cpOffset < 0 ? 'backward' : 'forward';
-    offsetInput = Math.abs(cpOffset);
+
+    let offset = transStart - cpAnchor - (selectionStart - cpAnchor) * scale;
+    offset = Math.abs(offset);
+    shiftOption = offset < 0 ? 'backward' : 'forward';
   }
+
+  handler.show.subscribe((x) => {
+    updateSelection();
+    toTransformed();
+  });
 </script>
 
-<DialogBase bind:frontend bind:show on:submit={() => {
-  // t = (t0 - anchor) * scale + anchor + offset
-  // t = t0 * scale + anchor + offset - anchor * scale
-  submit({
-      selection: frontend.getSelection(),
-      offset: cpAnchor + cpOffset - cpAnchor * cpScale,
-      modifySince: check,
-      scale: cpScale
-  });
-}}><form bind:this={form}>
+<DialogBase bind:frontend handler={inner}><form bind:this={form}>
   <table class='config'>
     <tbody>
       <tr>
         <td>shift times</td>
         <td>
-          <input type="radio" id="st1" value="forward" bind:group={shiftOption}/>
-          <label for="st1">forward</label>
-          <input type="radio" id="st2" value="backward" bind:group={shiftOption}/>
-          <label for="st2">backward</label><br/>
-          by: <TimestampInput
-            bind:timestamp={offsetInput}
-            on:input={(ev) => updateWidgets()}/><br/>
-          <input type='checkbox' id="st" bind:checked={check}/>
-          <label for="st">modify everything after this</label><br/>
+          <label><input type="radio" value="forward"
+              bind:group={shiftOption} onchange={() => toTransformed()}/>
+            forward</label>
+          <label><input type="radio" value="backward"
+              bind:group={shiftOption} onchange={() => toTransformed()}/>
+            backward</label><br/>
+          <label>by: <TimestampInput
+            bind:timestamp={offset}
+            on:input={() => toTransformed()}/></label><br/>
+          <label><input type='checkbox' bind:checked={check}/>
+            modify everything after this</label><br/>
         </td>
       </tr>
       <tr>
@@ -112,26 +120,32 @@
         <td>
           <input type="number" class="number" 
             bind:value={fpsBefore}
-            on:input={() => setTransformedRange()}/>
+            oninput={() => toTransformed()}/>
           :
           <input type="number" class="number" 
             bind:value={fpsAfter}
-            on:input={() => setTransformedRange()}/>
+            oninput={() => toTransformed()}/>
         </td>
       </tr>
       <tr>
         <td>scaling anchor</td>
         <td>
-          <input type="radio" id="anc0" value="zero" bind:group={anchorOption}/>
-          <label for="anc0">zero time</label><br/>
-          <input type="radio" id="anc1" value="start" bind:group={anchorOption}/>
-          <label for="anc1">start of selection</label><br/>
-          <input type="radio" id="anc2" value="end" bind:group={anchorOption}/>
-          <label for="anc2">end of selection</label><br/>
-          <input type="radio" id="anc3" value="custom"  bind:group={anchorOption}/>
-          <TimestampInput
-            bind:timestamp={customAnchor}
-            on:input={() => setTransformedRange()}/>
+          <label><input type="radio" value="zero"
+              bind:group={anchorOption} onchange={() => toTransformed()}/>
+            zero time</label><br/>
+          <label><input type="radio" value="start"
+              bind:group={anchorOption} onchange={() => toTransformed()}/>
+            start of selection</label><br/>
+          <label><input type="radio" value="end"
+              bind:group={anchorOption} onchange={() => toTransformed()}/>
+            end of selection</label><br/>
+          <label>
+            <input type="radio" value="custom"
+              bind:group={anchorOption} onchange={() => toTransformed()}/>
+            <TimestampInput
+              bind:timestamp={customAnchor}
+              on:input={() => toTransformed()}/>
+          </label>
         </td>
       </tr>
       <tr>
@@ -144,13 +158,12 @@
           {SubtitleUtil.formatTimestamp(selectionStart)}
           →
           <TimestampInput bind:timestamp={transStart}
-            on:input={(ev) => updateWidgets()}/>
+            on:input={() => fromTransformed()}/>
           <br/>
           {SubtitleUtil.formatTimestamp(selectionEnd)}
           →
           <TimestampInput bind:timestamp={transEnd}
-            on:input={(ev) => updateWidgets()}
-            on:change={() => fpsAfter = fpsAfter}/>
+            on:input={() => fromTransformed()}/>
         </td>
       </tr>
     </tbody>

@@ -1,38 +1,43 @@
-<!-- @migration-task Error while migrating Svelte code: `<tr>` cannot be a child of `<table>`. `<table>` only allows these children: `<caption>`, `<colgroup>`, `<tbody>`, `<thead>`, `<tfoot>`, `<style>`, `<script>`, `<template>`. The browser will 'repair' the HTML (by moving, removing, or inserting elements) which breaks Svelte's assumptions about the structure of your components.
-https://svelte.dev/e/node_invalid_placement -->
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { createEventDispatcher } from "svelte";
   import { assert } from "./Basic";
-  import { SubtitleStyle, SubtitleTools, type Subtitles } from "./Subtitles";
+  import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./Subtitles";
   import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
   import { Menu } from "@tauri-apps/api/menu";
   import Collapsible from "./ui/Collapsible.svelte";
+    import { writable } from 'svelte/store';
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
 
-  export let style: SubtitleStyle;
-  export let subtitles: Subtitles;
-  export let frontend: Frontend;
-  let alignSelector: HTMLSelectElement;
-  let button: HTMLButtonElement;
+  interface Props {
+    style: SubtitleStyle;
+    subtitles: Subtitles;
+    frontend: Frontend;
+  }
 
-  $: if (alignSelector) alignSelector.selectedIndex = style.alignment - 1;
+  let { style: _style, subtitles = $bindable(), frontend }: Props = $props();
+  let alignSelector: HTMLSelectElement | undefined = $state();
+  let button: HTMLButtonElement | undefined = $state();
+
+  let style = writable(_style);
 
   function isDuplicate(name: string) {
     for (let s of [...subtitles.styles, subtitles.defaultStyle]) {
-      if (s === style) continue;
+      if (s === _style) continue;
       if (s.name == name) return true;
     }
     return false;
   }
 
   async function contextMenu() {
-    let isDefault = style == subtitles.defaultStyle;
+    let isDefault = $style == subtitles.defaultStyle;
     let used = subtitles.entries.filter(
-      (x) => x.texts.find((c) => c.style == style) !== undefined);
+      (x) => x.texts.find((c) => c.style == $style) !== undefined);
     let withoutThis = isDefault ? [] : [subtitles.defaultStyle];
-    withoutThis.push(...subtitles.styles.filter((x) => x !== style));
+    withoutThis.push(...subtitles.styles.filter((x) => x !== $style));
     
     let menu = await Menu.new({
       items: [
@@ -40,7 +45,7 @@ https://svelte.dev/e/node_invalid_placement -->
         text: 'delete',
         enabled: used.length == 0 && !isDefault,
         action() {
-          let i = subtitles.styles.indexOf(style);
+          let i = subtitles.styles.indexOf($style);
           if (i < 0) return;
           subtitles.styles.splice(i, 1);
           frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
@@ -50,8 +55,8 @@ https://svelte.dev/e/node_invalid_placement -->
       {
         text: 'duplicate',
         action() {
-          let clone = style.clone();
-          clone.name = SubtitleTools.getUniqueStyleName(subtitles, style.name);
+          let clone = $style.clone();
+          clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
           subtitles.styles.push(clone);
           subtitles.styles = subtitles.styles;
           frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
@@ -67,18 +72,18 @@ https://svelte.dev/e/node_invalid_placement -->
           action(id) {
             let n = Number.parseInt(id);
             let other = withoutThis[n];
-            if (SubtitleTools.replaceStyle(subtitles.entries, style, other))
+            if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
                 frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
           }
         }))
       },
       {
         text: 'set as default',
-        enabled: subtitles.defaultStyle != style,
+        enabled: subtitles.defaultStyle != $style,
         action() {
           let oldDefault = subtitles.defaultStyle;
-          subtitles.defaultStyle = style;
-          const index = subtitles.styles.indexOf(style);
+          subtitles.defaultStyle = $style;
+          const index = subtitles.styles.indexOf($style);
           subtitles.styles.splice(index, 1);
           subtitles.styles.splice(0, 0, oldDefault);
           frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
@@ -93,40 +98,43 @@ https://svelte.dev/e/node_invalid_placement -->
 <div class='split'>
   <!-- toolbar -->
   <div class="toolbar">
-    <button disabled={style == subtitles.defaultStyle}
-      on:click={() => {
-        let i = subtitles.styles.indexOf(style);
+    <!-- add style -->
+    <button disabled={$style == subtitles.defaultStyle}
+      onclick={() => {
+        let i = subtitles.styles.indexOf($style);
         assert(i >= 0);
         let newStyle = new SubtitleStyle('new');
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
         frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>+</button><br/>
-    <button disabled={style == subtitles.defaultStyle || style == subtitles.styles[0]}
-      on:click={() => {
-        let i = subtitles.styles.indexOf(style);
+    <!-- move up -->
+    <button disabled={$style == subtitles.defaultStyle || $style == subtitles.styles[0]}
+      onclick={() => {
+        let i = subtitles.styles.indexOf($style);
         assert(i >= 0);
         subtitles.styles = [
           ...subtitles.styles.slice(0, i-1), 
-          style, 
+          $style, 
           subtitles.styles[i-1],
           ...subtitles.styles.slice(i+1)];
         frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>↑</button><br/>
-    <button disabled={style == subtitles.defaultStyle || style == subtitles.styles.at(-1)}
-      on:click={() => {
-        let i = subtitles.styles.indexOf(style);
+    <!-- move down -->
+    <button disabled={$style == subtitles.defaultStyle || $style == subtitles.styles.at(-1)}
+      onclick={() => {
+        let i = subtitles.styles.indexOf($style);
         assert(i >= 0);
         subtitles.styles = [
           ...subtitles.styles.slice(0, i), 
           subtitles.styles[i+1],
-          style, 
+          $style, 
           ...subtitles.styles.slice(i+2)];
         frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>↓</button><br/>
-    <button bind:this={button} on:click={() => contextMenu()}>...</button>
+    <button bind:this={button} onclick={() => contextMenu()}>...</button>
   </div>
   <!-- properties -->
   <div>
@@ -135,33 +143,34 @@ https://svelte.dev/e/node_invalid_placement -->
       <tbody>
         <tr>
           <td><label for='name'>name:</label></td>
-          <td><input id='name' bind:value={style.name}
-            class={isDuplicate(style.name) ? 'duplicate' : ''}
-            on:change={() => frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action)}/></td>
+          <td><input id='name' bind:value={$style.name}
+            class={isDuplicate($style.name) ? 'duplicate' : ''}
+            onchange={() => 
+              frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action)}/></td>
         </tr>
         <tr>
           <td><label for='font'>font:</label></td>
-          <td><input id='font' bind:value={style.font}/></td>
+          <td><input id='font' bind:value={$style.font}/></td>
         </tr>
         <tr>
           <td><label for='size'>size:</label></td>
-          <td><input id='size' type='number' bind:value={style.size}/></td>
+          <td><input id='size' type='number' bind:value={$style.size}/></td>
         </tr>
         <tr>
           <td></td>
           <td>
             <div class="flex style">
               <div>
-                <input type='checkbox' id='bold' bind:checked={style.styles.bold}/><label for="bold">B</label>
+                <input type='checkbox' id='bold' bind:checked={$style.styles.bold}/><label for="bold">B</label>
               </div>
               <div>
-                <input type='checkbox' id='italic' bind:checked={style.styles.italic}/><label for="italic">I</label>
+                <input type='checkbox' id='italic' bind:checked={$style.styles.italic}/><label for="italic">I</label>
               </div>
               <div>
-                <input type='checkbox' id='underline' bind:checked={style.styles.underline}/><label for="underline">U</label>
+                <input type='checkbox' id='underline' bind:checked={$style.styles.underline}/><label for="underline">U</label>
               </div>
               <div>
-                <input type='checkbox' id='strikethru' bind:checked={style.styles.strikethrough}/><label for="strikethru">S</label>
+                <input type='checkbox' id='strikethru' bind:checked={$style.styles.strikethrough}/><label for="strikethru">S</label>
               </div>
             </div>
           </td>
@@ -174,25 +183,26 @@ https://svelte.dev/e/node_invalid_placement -->
         <tbody>
           <tr>
             <td><label for='color'>text color:</label></td>
-            <td><input id='color' bind:value={style.color}/></td>
+            <td><input id='color' bind:value={$style.color}/></td>
           </tr>
           <tr>
             <td><label for='ocolor'>line color:</label></td>
-            <td><input id='ocolor' bind:value={style.outlineColor}/></td>
+            <td><input id='ocolor' bind:value={$style.outlineColor}/></td>
           </tr>
           <tr>
             <td><label for='outline'>line size:</label></td>
-            <td><input id='outline' type='number' bind:value={style.outline}/></td>
+            <td><input id='outline' type='number' bind:value={$style.outline}/></td>
           </tr>
           <tr>
             <td><label for='shadow'>shadow:</label></td>
-            <td><input id='shadow' type='number' bind:value={style.shadow}/></td>
+            <td><input id='shadow' type='number' bind:value={$style.shadow}/></td>
           </tr>
           <tr>
             <td><label for='align'>alignment:</label></td>
             <td><select id='align'
                 bind:this={alignSelector}
-                on:input={() => style.alignment = alignSelector.selectedIndex + 1}>
+                value={AlignMode[$style.alignment]}
+                oninput={() => $style.alignment = alignSelector!.selectedIndex + 1}>
               <option value="BottomLeft">bottom left</option>
               <option value="BottomCenter">bottom center</option>
               <option value="BottomRight">bottom right</option>
@@ -210,19 +220,19 @@ https://svelte.dev/e/node_invalid_placement -->
               <div class="flex margin">
                 <div>
                   <label for='top'>top:</label>
-                  <input id='top' type='number' bind:value={style.margin.top}/>
+                  <input id='top' type='number' bind:value={$style.margin.top}/>
                 </div>
                 <div>
                   <label for='bottom'>bottom:</label>
-                  <input id='bottom' type='number' bind:value={style.margin.bottom}/>
+                  <input id='bottom' type='number' bind:value={$style.margin.bottom}/>
                 </div>
                 <div>
                   <label for='left'>left:</label>
-                  <input id='left' type='number' bind:value={style.margin.left}/>
+                  <input id='left' type='number' bind:value={$style.margin.left}/>
                 </div>
                 <div>
                   <label for='right'>right:</label>
-                  <input id='right' type='number' bind:value={style.margin.right}/>
+                  <input id='right' type='number' bind:value={$style.margin.right}/>
                 </div>
               </div>
             </td>

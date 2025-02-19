@@ -1,5 +1,5 @@
 import { assert, Basic } from "./Basic";
-import { SubtitleEntry, SubtitleStyle, SubtitleTools, Subtitles, type SubtitleChannel, SubtitleUtil, SubtitleImport, SubtitleExport, MergePosition, MergeStyleBehavior, type MergeOptions } from "./Subtitles";
+import { SubtitleEntry, SubtitleStyle, SubtitleTools, Subtitles, type SubtitleChannel, SubtitleUtil, SubtitleImport, SubtitleExport, MergePosition, MergeStyleBehavior, type MergeOptions, type TimeShiftOptions } from "./Subtitles";
 import type ImportOptionsDialog from "./ImportOptionsDialog.svelte";
 import type TimeTransformDialog from "./TimeTransformDialog.svelte";
 import { Playback } from "./Playback";
@@ -14,6 +14,8 @@ import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getVersion } from "@tauri-apps/api/app";
 import { arch, platform, version } from "@tauri-apps/plugin-os";
 import { SvelteMap } from "svelte/reactivity";
+import { writable, type Writable, get } from "svelte/store";
+import { DialogHandler } from "./DialogBase.svelte";
 
 type Snapshot = {
     archive: string,
@@ -24,11 +26,11 @@ type Snapshot = {
 type SelectionState = {
     submitted: Set<SubtitleEntry>,
     currentGroup: SubtitleEntry[],
-    currentStart: SubtitleEntry | null
+    focused: SubtitleEntry | null
 };
 
 type FocusState = {
-    entry: SubtitleEntry | null,
+    entry: Writable<SubtitleEntry | null | 'virtual'>,
     channel: SubtitleChannel | null,
     control: HTMLTextAreaElement | null,
     // TODO: maybe separate this, it's not really part of the focus, but a kind of current default
@@ -101,55 +103,56 @@ export class Frontend {
         subscontainer?: HTMLElement;
     } = {};
 
-    modalDialogs: {
-        importOpt?: ImportOptionsDialog;
-        timeTrans?: TimeTransformDialog;
-        combine?: CombineDialog;
-    } = {};
+    modalDialogs = {
+        importOpt: new DialogHandler<MergeOptions>,
+        timeTrans: new DialogHandler<TimeShiftOptions>,
+        combine: new DialogHandler<void>
+    };
 
     states = {
-        // isEditing: false,
-        isEditingVirtualEntry: false,
-        uiFocus: UIFocus.Other,
+        isEditingVirtualEntry: writable(false),
         modalOpenCounter: 0,
-        virtualEntryHighlighted: false,
         editChanged: false,
     };
 
     selection: SelectionState = {
         submitted: new Set(),
         currentGroup: [],
-        currentStart: null
+        focused: null
     };
     
     // TODO: make it more private to prevent direct editing
     focused: FocusState = {
-        entry: null,
+        entry: writable(null),
         channel: null,
         control: null,
         style: null
     };
 
-    currentFile = '';
-    fileChanged = false;
-
-    #status = 'ok';
-    get status() {return this.#status;}
-    set status(x: string) {
-        this.#status = x;
-        this.onStatusChanged.dispatch();
-    }
+    currentFile = writable('');
+    fileChanged = writable(false);
+    status = writable('ok');
 
     onUndoBufferChanged = new EventHost();
-    onStatusChanged = new EventHost();
     onBeforeSaving = new EventHost();
+    onUIFocusChanged = new EventHost();
     onSubtitlesChanged = new EventHost<[type: ChangeType, cause: ChangeCause]>();
     onSubtitleObjectReload = new EventHost();
     onSelectionChanged = new EventHost<[cause: ChangeCause]>();
-    onFocusedEntryChanged = new EventHost();
+
+    uiFocus = writable(UIFocus.Other);
+    getUIFocus() {
+        return get(this.uiFocus);
+    }
+
+    getFocusedEntry() {
+        return get(this.focused.entry);
+    }
 
     playback = new Playback(this);
     uiHelper = new UIHelper(this);
+
+    entryRows = new WeakMap<SubtitleEntry, HTMLElement>;
 
     constructor(public readonly window: WebviewWindow) {
         getVersion().then((x) => window.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
@@ -157,15 +160,15 @@ export class Frontend {
         //this.subs = new Subtitles();
         this.subs = SubtitleTools.makeTestSubtitles();
         this.markChanged(ChangeType.Times, ChangeCause.Action);
-        this.fileChanged = false;
+        this.fileChanged.set(false);
     }
 
     // common utilities
 
     markChanged(type: ChangeType, cause: ChangeCause) {
-        this.fileChanged = true;
+        this.fileChanged.set(true);
         this.states.editChanged = false;
-        this.states.isEditingVirtualEntry = false;
+        this.states.isEditingVirtualEntry.set(false);
         this.undoStack.push({
             archive: JSON.stringify(this.subs.toSerializable()), 
             change: type,
@@ -201,7 +204,7 @@ export class Frontend {
         this.clearSelection();
         this.focused.style = null;
         this.subs = Subtitles.deserialize(JSON.parse(s.archive));
-        this.fileChanged = !s.saved;
+        this.fileChanged.set(!s.saved);
         this.onSubtitleObjectReload.dispatch();
         this.onSubtitlesChanged.dispatch(s.change, ChangeCause.Action);
     }
@@ -244,15 +247,14 @@ export class Frontend {
         const text = await fs.readTextFile(selected);
         let [newSubs, _] = this.retrieveFromSource(text);
         if (!newSubs) {
-            this.status = `import failed for ${selected}`;
+            this.status.set(`import failed for ${selected}`);
             return;
         }
-        let off = this.modalDialogs.importOpt.$on('submit', (ev) => {
+        this.modalDialogs.importOpt.onSubmit = (opt) => {
             assert(newSubs !== null);
-            this.#mergeSubtitles(newSubs, ev.detail);
-            off();
-        });
-        this.modalDialogs.importOpt.$set({show: true});
+            this.#mergeSubtitles(newSubs, opt);
+        };
+        this.modalDialogs.importOpt.show.set(true);
     }
   
     async askOpenFile() {
@@ -269,7 +271,7 @@ export class Frontend {
     }
   
     async askSaveFile(saveAs = false) {
-        let file = this.currentFile;
+        let file = get(this.currentFile);
         if (file == '' || saveAs) {
             const selected = await dialog.save({
                 filters: [{name: 'subtle archive', extensions: ['json']}]});
@@ -312,57 +314,58 @@ export class Frontend {
             [newSubs, isJSON] = this.retrieveFromSource(text);
             if (!newSubs) throw 'file is unparsable';
         } catch (ex) {
-            this.status = `error when reading ${path}: ${ex}`;
+            this.status.set(`error when reading ${path}: ${ex}`);
             return;
         }
-
         console.log(newSubs);
 
         const video = Config.getVideo(path);
         Config.pushRecent(path);
 
         this.subs = newSubs;
-        this.focused.entry = null;
+        this.clearFocus(false);
+        this.clearSelection();
         this.focused.style = newSubs.defaultStyle;
-        this.currentFile = isJSON ? path : '';
+        this.currentFile.set(isJSON ? path : '');
 
-        this.status = 'opened: ' + path;
+        this.status.set('opened: ' + path);
         this.onSubtitleObjectReload.dispatch();
         this.clearUndoRedo();
-        this.fileChanged = false;
+        this.fileChanged.set(false);
         this.onSubtitlesChanged.dispatch(ChangeType.General, ChangeCause.Action);
         this.onSubtitlesChanged.dispatch(ChangeType.StyleDefinitions, ChangeCause.Action);
         if (video) await this.openVideo(video);
     }
 
-    async openVideo(file: string) {
+    async openVideo(videoFile: string) {
         try {
-            await this.playback.load(file);
+            await this.playback.load(videoFile);
         } catch (x) {
-            this.status = `error opening video '${file}': ${x}`;
+            this.status.set(`error opening video '${videoFile}': ${x}`);
         };
-        if (this.currentFile != '')
-            Config.rememberVideo(this.currentFile, file);
+        let source = get(this.currentFile);
+        if (source != '')
+            Config.rememberVideo(source, videoFile);
     }
 
     async saveTo(file: string, text: string, isExport = false) {
         try {
             await fs.writeTextFile(file, text);
             if (isExport) {
-                this.status = 'exported to ' + file;
+                this.status.set('exported to ' + file);
             } else {
-                this.status = 'saved to ' + file;
-                this.fileChanged = false;
-                if (file != this.currentFile) {
+                this.status.set('saved to ' + file);
+                this.fileChanged.set(false);
+                if (file != get(this.currentFile)) {
                     Config.pushRecent(file);
                     if (this.playback.video?.source)
                         Config.rememberVideo(file, this.playback.video.source);
-                    this.currentFile = file;
+                    this.currentFile.set(file);
                 }
             }
             return true;
         } catch (error) {
-            this.status = `error when writing to ${file}: ${error}`;
+            this.status.set(`error when writing to ${file}: ${error}`);
         }
         return false;
     }
@@ -380,8 +383,8 @@ export class Frontend {
     // UI actions
 
     startEditingFocusedEntry() {
-        if (!this.focused.entry) return;
-        let focused = this.focused.entry;
+        let focused = this.getFocusedEntry();
+        assert(focused instanceof SubtitleEntry);
         let channel = focused.texts.find((x) => x.style == this.focused.style);
         if (!channel) {
             channel = focused!.texts[0];
@@ -395,13 +398,15 @@ export class Frontend {
     }
 
     keepEntryInView(ent: SubtitleEntry) {
-        if (!ent.gui) return;
         if (!this.ui.subscontainer) return;
         if (!this.ui.tableHeader) return;
-        ent.gui.scrollIntoView({ block: "nearest" });
+
+        const row = this.entryRows.get(ent);
+        if (!row) return;
+        row.scrollIntoView({ block: "nearest" });
         let top = this.ui.subscontainer.scrollTop + this.ui.tableHeader.offsetHeight;
-        if (ent.gui.offsetTop < top) this.ui.subscontainer.scroll(
-            0, ent.gui.offsetTop - this.ui.tableHeader.offsetHeight);
+        if (row.offsetTop < top) this.ui.subscontainer.scroll(
+            0, row.offsetTop - this.ui.tableHeader.offsetHeight);
     }
 
     #mergeSubtitles(other: Subtitles, options: MergeOptions) {
@@ -409,7 +414,7 @@ export class Frontend {
         if (entries.length > 0) {
             for (let ent of entries)
                 this.selection.submitted.add(ent);
-            this.selection.currentStart = entries[0];
+            this.selection.focused = entries[0];
             this.selection.currentGroup = [entries[0]];
             this.onSelectionChanged.dispatch(ChangeCause.Action);
         }
@@ -477,7 +482,7 @@ export class Frontend {
     }
 
     startEditingNewVirtualEntry() {
-        this.status = 'new entry appended';
+        this.status.set('new entry appended');
         let last = this.subs.entries.at(-1);
         let entry = last 
             ? new SubtitleEntry(last.end, last.end + 2, 
@@ -494,13 +499,12 @@ export class Frontend {
             this.keepEntryInView(entry);
             this.startEditingFocusedEntry();
         }, 0);
-        this.states.isEditingVirtualEntry = true;
-        this.states.virtualEntryHighlighted = false;
+        this.states.isEditingVirtualEntry.set(true);
     }
 
     insertChannelAt(index: number) {
-        assert(this.focused.entry !== null);
-        let focused = this.focused.entry;
+        let focused = this.getFocusedEntry();
+        assert(focused instanceof SubtitleEntry);
         let newChannel: SubtitleChannel = {style: focused.texts[index].style, text: ''};
         focused.texts = focused.texts.toSpliced(index + 1, 0, newChannel);
         this.markChanged(ChangeType.TextOnly, ChangeCause.Action);
@@ -512,8 +516,8 @@ export class Frontend {
     }
 
     deleteChannelAt(index: number) {
-        assert(this.focused.entry !== null);
-        let focused = this.focused.entry;
+        let focused = this.getFocusedEntry();
+        assert(focused instanceof SubtitleEntry);
         let channel = focused.texts[index];
         if (channel == this.focused.channel)
             this.clearFocus(false); // don't try to submit since we're deleting it
@@ -522,7 +526,7 @@ export class Frontend {
     }
 
     submitFocusedEntry() {
-        assert(this.focused.entry !== null);
+        assert(this.getFocusedEntry() !== null);
         if (!this.states.editChanged) return;
 
         let channel = this.focused.channel;
@@ -536,18 +540,17 @@ export class Frontend {
     }
 
     clearFocus(trySubmit = true) {
-        if(this.focused.entry == null) return;
-
+        if(this.getFocusedEntry() == null) return;
         if (trySubmit && this.focused.channel !== null)
             this.submitFocusedEntry();
-        this.focused.entry = null;
+        this.focused.entry.set(null);
         this.focused.channel = null;
     }
 
     clearSelection(cause = ChangeCause.UIList) {
         this.selection.submitted.clear();
         this.selection.currentGroup = [];
-        this.selection.currentStart = null;
+        this.selection.focused = null;
         this.clearFocus();
         this.onSelectionChanged.dispatch(cause);
     }
@@ -561,7 +564,7 @@ export class Frontend {
         this.subs.entries = newEntries;
         this.clearSelection();
         if (next) this.selectEntry(next, SelectMode.Single);
-        else this.states.virtualEntryHighlighted = true;
+        else this.selectVirtualEntry();
 
         this.markChanged(ChangeType.Times, ChangeCause.Action);
         this.onSelectionChanged.dispatch(cause);
@@ -575,7 +578,7 @@ export class Frontend {
         let temp = new Subtitles(this.subs);
         temp.entries = sorted;
         clipboard.writeText(transform(temp));
-        this.status = 'copied';
+        this.status.set('copied');
     }
 
     async paste() {
@@ -584,11 +587,11 @@ export class Frontend {
         let [portion, _] = this.retrieveFromSource(source);
         if (!portion) {
             console.log('error reading clipboard: ' + source);
-            this.status = 'cannot read clipboard data as subtitles';
+            this.status.set('cannot read clipboard data as subtitles');
             return;
         }
         let position: number;
-        if (this.selection.submitted.size > 0 || this.selection.currentStart) {
+        if (this.selection.submitted.size > 0 || this.selection.focused) {
             position = this.subs.entries.findIndex(
                 (x) => this.selection.submitted.has(x) || 
                     this.selection.currentGroup.includes(x));
@@ -600,15 +603,15 @@ export class Frontend {
             customPosition: position,
             style: MergeStyleBehavior.KeepDifferent
         });
-        this.status = 'pasted';
+        this.status.set('pasted');
     }
 
     offsetFocus(n: number, mode: SelectMode) {
-        if (this.focused.entry == null) return;
-        let focused = this.focused.entry;
+        let focused = this.getFocusedEntry();
+        if (!(focused instanceof SubtitleEntry)) return;
         let i = this.subs.entries.indexOf(focused) + n;
         if (i < 0 || i >= this.subs.entries.length) {
-            this.status = 'focusOffset out of range'
+            this.status.set('focusOffset out of range');
             return;
         }
         this.selectEntry(this.subs.entries[i], mode);
@@ -617,36 +620,39 @@ export class Frontend {
     toggleEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {
         // it's only a 'toggle' when multiselecting; otherwise, just select it
         if (mode === SelectMode.Multiple) {
-            if (this.focused.entry == ent) {
+            this.states.isEditingVirtualEntry.set(false);
+            if (this.getFocusedEntry() == ent) {
                 this.clearFocus();
             }
             if (this.selection.currentGroup.includes(ent)) {
                 for (let e of this.selection.currentGroup)
                     this.selection.submitted.add(e);
-                this.selection.currentStart = null;
+                this.selection.focused = null;
                 this.selection.currentGroup = [];
             }
             if (this.selection.submitted.has(ent)) {
                 this.selection.submitted.delete(ent);
-                this.states.isEditingVirtualEntry = false;
-                this.states.virtualEntryHighlighted = false;
-                this.status = 'multiselect removed item';
                 this.onSelectionChanged.dispatch(cause);
                 return;
             }
         }
         this.selectEntry(ent, mode, cause);
     }
+
+    selectVirtualEntry() {
+        this.clearSelection();
+        this.focused.entry.set("virtual");
+    }
   
     selectEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {
         switch (mode) {
             case SelectMode.Sequence:
-                if (this.selection.currentStart == null) {
-                    this.selection.currentStart = ent;
+                if (this.selection.focused == null) {
+                    this.selection.focused = ent;
                     this.selection.currentGroup = [ent];
                     // this.#status = 'selection initiated';
                 } else {
-                    let a = this.subs.entries.indexOf(this.selection.currentStart);
+                    let a = this.subs.entries.indexOf(this.selection.focused);
                     let b = this.subs.entries.indexOf(ent);
                     assert(a >= 0 && b >= 0);
                     this.selection.currentGroup = 
@@ -657,7 +663,7 @@ export class Frontend {
             case SelectMode.Multiple:
                 for (let e of this.selection.currentGroup)
                     this.selection.submitted.add(e);
-                this.selection.currentStart = ent;
+                this.selection.focused = ent;
                 this.selection.currentGroup = [ent];
                 // this.#status = 'multiselect added item';
                 break;
@@ -665,18 +671,16 @@ export class Frontend {
                 // clear selection
                 this.selection.submitted.clear();
                 this.selection.currentGroup = [ent];
-                this.selection.currentStart = ent;
+                this.selection.focused = ent;
                 break;
         }
-        if (this.focused.entry != ent) {
-            this.states.isEditingVirtualEntry = false;
-            this.states.virtualEntryHighlighted = false;
+        if (this.getFocusedEntry() != ent) {
+            this.states.isEditingVirtualEntry.set(false);
             this.clearFocus();
-            this.focused.entry = ent;
+            this.focused.entry.set(ent);
             // TODO: focus on current style
             this.keepEntryInView(ent);
             this.onSelectionChanged.dispatch(cause);
-            this.onFocusedEntryChanged.dispatch();
         }
     }
 }
