@@ -1,4 +1,4 @@
-import { MAPI, MMedia } from "./API";
+import { MMedia } from "./API";
 import { assert } from "./Basic";
 
 export class AudioSampler {

@@ -5,12 +5,10 @@ import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from "./Subtitles";
 
 interface Props {
   frontend: Frontend;
-  isFocused?: boolean;
 }
 
 let {
-  frontend = $bindable(),
-  isFocused = $bindable(false)
+  frontend = $bindable()
 }: Props = $props();
 
 let entries = $state(frontend.subs.entries);
@@ -20,7 +18,7 @@ let focus = frontend.focused.entry;
 let editingVirtual = frontend.states.isEditingVirtualEntry;
 
 frontend.onSubtitlesChanged.bind((t) => {
-  if (t == ChangeType.General || t == ChangeType.Times)
+  if (t == ChangeType.General || t == ChangeType.Times || t == ChangeType.Order)
     entries = frontend.subs.entries;
 });
 
@@ -148,19 +146,16 @@ td.subtext {
   {#key entryKeys.get(ent.uniqueID)}
     {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
     <tr onmousedown={(ev) => {
-        isFocused = true;
         onFocus();
         if (ev.button == 0)
           frontend.toggleEntry(ent, getSelectMode(ev));
       }}
       oncontextmenu={(ev) => {
-        isFocused = true;
         onFocus();
         frontend.uiHelper.contextMenu();
         ev.preventDefault();
       }}
       ondblclick={() => {
-        isFocused = true;
         onFocus();
         frontend.startEditingFocusedEntry();
         frontend.playback.setPosition(ent.start);

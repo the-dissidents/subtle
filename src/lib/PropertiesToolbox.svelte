@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Subtitles, SubtitleStyle } from './Subtitles'
+import { SubtitleStyle } from './Subtitles'
 import StyleEdit from './StyleEdit.svelte';
 import { ChangeCause, ChangeType, Frontend } from './Frontend';
 import Collapsible from './ui/Collapsible.svelte';
@@ -81,8 +81,10 @@ function changeResolution() {
 </table>
 <Collapsible header="STYLES" active={true}>
   {#key subtitles}
+    <h5>default</h5>
     <StyleEdit {frontend} style={defaultStyle} {subtitles} />
-    <hr><hr>
+    <hr>
+    <h5>other</h5>
     {#each styles as style (style.uniqueID)}
       <StyleEdit {frontend} style={style} {subtitles}
         on:submit={() => styles = frontend.subs.styles}/>

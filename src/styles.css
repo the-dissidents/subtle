@@ -69,6 +69,26 @@ button[disabled] {
   color: var(--uchu-gray-9);
 }
 
+button.left {
+  border-radius: 3px 0 0 3px;
+  margin-right: 0;
+  border-right: none;
+  text-align: right;
+}
+
+button.middle {
+  border-radius: 0;
+  border-right: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+button.right {
+  border-radius: 0 3px 3px 0;
+  margin-left: 0;
+  text-align: left;
+}
+
 input {
   font-size: 12px;
 }
@@ -112,13 +132,23 @@ input[type=range] {
     width: 100%;
     height: 12px;
     cursor: pointer;
-    background: var(--uchu-yin-2);
+    background: var(--uchu-yin-1);
     border-radius: 2px;
   }
 
   &:focus {
     outline: none;
   }
+}
+
+h5 {
+  margin: 0 1px 3px 1px;
+  padding-top: 6px;
+  color: var(--uchu-yin-6);
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-bottom: 1px solid gray;
 }
 
 ul.menu {
@@ -285,8 +315,11 @@ h2 {
 }
 
 hr {
-  border: 0.5px solid rgb(193, 193, 193);
-  border-radius: 0.5px;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 1px solid var(--uchu-yin-2);
+  /* border-radius: 0.5px; */
 }
 
 .label-red    { background-color: var(--uchu-red-2); }

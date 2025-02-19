@@ -323,7 +323,7 @@ export class UIHelper {
                 action: () => {
                     for (let entry of selection)
                         entry.label = x;
-                    this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+                    this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
                 }
             }))
         },
@@ -371,7 +371,7 @@ export class UIHelper {
                                     done = true;
                                 }
                             if (done)
-                                this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+                                this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
                         }
                     }))
                 },
@@ -387,7 +387,7 @@ export class UIHelper {
                             text: y.name,
                             action: () => {
                                 if (SubtitleTools.replaceStyle(selection, x, y)) 
-                                    this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+                                    this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
                             }
                         }))]
                     }))
@@ -409,7 +409,7 @@ export class UIHelper {
                                         changed = true;
                                     }
                                 if (changed) this.frontend.markChanged(
-                                    ChangeType.TextOnly, ChangeCause.Action);
+                                    ChangeType.InPlace, ChangeCause.Action);
                             }
                         }))]
                     }))
@@ -487,7 +487,7 @@ export class UIHelper {
         if (done > 0) {
             this.frontend.clearSelection();
             this.frontend.selection.submitted = new Set(newSelection);
-            this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+            this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
             this.frontend.status.set(`changed ${done} entrie${done > 1 ? 's' : ''}`);
         } else {
             this.frontend.status.set(`changed nothing`);
@@ -526,7 +526,7 @@ export class UIHelper {
             a.texts[0].style.name.localeCompare(b.texts[0].style.name)); 
         else selection.sort((a, b) => a.start - b.start);
         this.frontend.subs.entries.splice(start, selection.length, ...selection);
-        this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+        this.frontend.markChanged(ChangeType.Order, ChangeCause.Action);
     }
 
     #sortChannels(selection: SubtitleEntry[]) {
@@ -538,7 +538,7 @@ export class UIHelper {
             ent.texts.sort((a, b) => 
                 (indices.get(a.style) ?? 0) - (indices.get(b.style) ?? 0));
         }
-        this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+        this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
     }
 
     #moveSelectionContinuous(selection: SubtitleEntry[], direction: number) {
@@ -549,7 +549,7 @@ export class UIHelper {
         if (index + direction < 0 || index + direction > this.frontend.subs.entries.length) return;
         this.frontend.subs.entries.splice(index, selection.length);
         this.frontend.subs.entries.splice(index + direction, 0, ...selection);
-        this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+        this.frontend.markChanged(ChangeType.Order, ChangeCause.Action);
         setTimeout(() => {
             this.frontend.keepEntryInView(direction > 0 ? selection.at(-1)! : selection[0]);
         }, 0);
@@ -566,7 +566,7 @@ export class UIHelper {
             newEntries = [...newEntries, ...selection]; break;
         }
         this.frontend.subs.entries = newEntries;
-        this.frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+        this.frontend.markChanged(ChangeType.Order, ChangeCause.Action);
     }
 
     #fixOverlap(selection: SubtitleEntry[], epsilon = 0.05) {

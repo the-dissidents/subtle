@@ -1,13 +1,11 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
 import ImportOptionsDialog from './lib/ImportOptionsDialog.svelte';
 import CombineDialog from "./lib/CombineDialog.svelte";
 import Resizer from './lib/ui/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 
-import { LabelColors, SubtitleEntry, SubtitleUtil, type LabelColorsType, type SubtitleChannel } from './lib/Subtitles'
+import { LabelColors, SubtitleEntry, type LabelColorsType, type SubtitleChannel } from './lib/Subtitles'
 import { assert, Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend, UIFocus } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
@@ -24,8 +22,9 @@ import PropertiesToolbox from './lib/PropertiesToolbox.svelte';
 import UntimedToolbox from './lib/UntimedToolbox.svelte';
 import SearchToolbox from './lib/SearchToolbox.svelte';
 import TestToolbox from './lib/TestToolbox.svelte';
-    import type { Action } from 'svelte/action';
-    import { derived } from 'svelte/store';
+
+import type { Action } from 'svelte/action';
+import { derived } from 'svelte/store';
 
 const appWindow = getCurrentWebviewWindow()
 let frontend = $state(new Frontend(appWindow));
@@ -358,7 +357,7 @@ Config.init();
                 class="flexgrow"
                 onchange={() => {
                   applyEditForm();
-                  frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm);}}>
+                  frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm);}}>
                 {#each LabelColors as color}
                   <option value={color}>{color}</option>
                 {/each}
@@ -373,15 +372,17 @@ Config.init();
               <tbody>
                 {#each focused.texts as line, i}
                 <tr>
-                  <td>
+                  <td class="vlayout">
                     <StyleSelect subtitles={frontend.subs} currentStyle={line.style}
                       on:submit={() => {
-                        frontend.markChanged(ChangeType.TextOnly, ChangeCause.UIForm)}} />
-                    <button tabindex='-1'
-                      onclick={() => frontend.insertChannelAt(i)}>+</button>
-                    <button tabindex='-1'
-                      onclick={() => frontend.deleteChannelAt(i)}
-                      disabled={focused.texts.length == 1}>-</button>
+                        frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm)}} />
+                    <div class="hlayout">
+                      <button tabindex='-1' class="flexgrow"
+                        onclick={() => frontend.insertChannelAt(i)}>+</button>
+                      <button tabindex='-1' class="flexgrow"
+                        onclick={() => frontend.deleteChannelAt(i)}
+                        disabled={focused.texts.length == 1}>-</button>
+                    </div>
                   </td>
                   <td style='width:100%'>
                     <textarea class='contentarea' tabindex=0
@@ -414,9 +415,12 @@ Config.init();
                 {/each}
               </tbody>
             </table>
-            {:else}<i>{frontend.getFocusedEntry() == 'virtual'
-              ? 'double-click or press enter to append new entry'
-              : 'select a line to start editing'}</i>
+            {:else}
+            <div class="fill hlayout" style="justify-content: center; align-items: center;">
+              <i>{frontend.getFocusedEntry() == 'virtual'
+                ? 'double-click or press enter to append new entry'
+                : 'select a line to start editing'}</i>
+            </div>
             {/if}
           </div>
           {/key}

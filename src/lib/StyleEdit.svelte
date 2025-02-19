@@ -73,7 +73,7 @@
             let n = Number.parseInt(id);
             let other = withoutThis[n];
             if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
-                frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+                frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
           }
         }))
       },

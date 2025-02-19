@@ -195,7 +195,7 @@ https://svelte.dev/e/node_invalid_placement -->
         assert(fuzzy.currentChannel !== null);
         if (fuzzy.currentChannel.text != str) {
           fuzzy.currentChannel.text = str;
-          frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+          frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
         }
         // the above causes the UI to refresh, so we delay a bit
         setTimeout(() => {

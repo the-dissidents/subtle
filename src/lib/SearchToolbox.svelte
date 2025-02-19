@@ -1,7 +1,5 @@
-<!-- @migration-task Error while migrating Svelte code: `<tr>` cannot be a child of `<table>`. `<table>` only allows these children: `<caption>`, `<colgroup>`, `<tbody>`, `<thead>`, `<tfoot>`, `<style>`, `<script>`, `<template>`. The browser will 'repair' the HTML (by moving, removing, or inserting elements) which breaks Svelte's assumptions about the structure of your components.
-https://svelte.dev/e/node_invalid_placement -->
 <script lang="ts">
-	import { LabelColors, SubtitleEntry, SubtitleStyle, type LabelColorsType } from './Subtitles'
+	import { LabelColors, SubtitleEntry, type LabelColorsType } from './Subtitles'
 	import { ChangeCause, ChangeType, Frontend, SelectMode } from './Frontend';
 	import StyleSelect from './StyleSelect.svelte';
 	import { assert, Basic } from './Basic';
@@ -118,7 +116,7 @@ https://svelte.dev/e/node_invalid_placement -->
 				frontend.onSelectionChanged.dispatch(ChangeCause.Action);
 			} else if (type == SearchAction.Replace || type === SearchAction.ReplaceStyleOnly) {
 				status = `replaced ${nDone} lines${nDone > 1 ? 's' : ''}`;
-				frontend.markChanged(ChangeType.TextOnly, ChangeCause.Action);
+				frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
 			} else {
 				status = `found ${nDone} line${nDone > 1 ? 's' : ''}`;
 			}
@@ -137,13 +135,24 @@ https://svelte.dev/e/node_invalid_placement -->
 
 <input class='wfill' bind:value={searchTerm} id='expr' placeholder="expression"/>
 <input class='wfill' bind:value={replaceTerm} id='repl' placeholder="replace term"/>
+
 <div class='form'>
+	<h5>options</h5>
 	<label><input type='checkbox' bind:checked={useRegex}/>
 		use regular expressions
 	</label><br/>
 	<label><input type='checkbox' bind:checked={caseSensitive}/>
 		case sensitive
 	</label><br/>
+	<label><input type='checkbox' bind:checked={replaceStyle}/>
+		replace by style
+		<StyleSelect
+			on:submit={() => replaceStyle = true}
+			subtitles={frontend.subs}
+			bind:currentStyle={style2}/>
+	</label><br/>
+
+	<h5>range</h5>
 	<label><input type='checkbox' bind:checked={selectionOnly}/>
 		search only in selected entries
 	</label><br/>
@@ -164,15 +173,8 @@ https://svelte.dev/e/node_invalid_placement -->
 			on:submit={() => useStyle = true}
 			subtitles={frontend.subs}
 			bind:currentStyle={style1}/>
-	</label><br/>
-	<label><input type='checkbox' bind:checked={replaceStyle}/>
-		replace by style
-		<StyleSelect
-			on:submit={() => replaceStyle = true}
-			subtitles={frontend.subs}
-			bind:currentStyle={style2}/>
-	</label><br/>
-	
+	</label>
+	<br>
 	<table class="wfill">
 		<tbody>
 			<tr>
@@ -230,25 +232,5 @@ https://svelte.dev/e/node_invalid_placement -->
 	button[disabled] {
 		background-color: var(--uchu-gray-1);
 		color: black;
-	}
-
-	button.left {
-		border-radius: 3px 0 0 3px;
-		margin-right: 0;
-		border-right: none;
-		text-align: right;
-	}
-
-	button.middle {
-		border-radius: 0;
-		border-right: none;
-		margin-left: 0;
-		margin-right: 0;
-	}
-
-	button.right {
-		border-radius: 0 3px 3px 0;
-		margin-left: 0;
-		text-align: left;
 	}
 </style>
