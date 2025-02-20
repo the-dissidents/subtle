@@ -4,6 +4,7 @@ import type { WithCanvas } from "./CanvasKeeper";
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./Subtitles";
 import { ChangeCause, ChangeType, SelectMode, type Frontend } from "./Frontend";
 import { MMedia } from "./API";
+import { LabelColor } from "./Theming";
 
 const SCROLLER_HEIGHT = 15;
 const HEADER_HEIGHT = 30;
@@ -20,7 +21,8 @@ const TRACK_AREA_MARGIN = 40;
 
 const ENTRY_WIDTH = 1;
 const ENTRY_BORDER = 'hsl(0deg 0% 60%)';
-const ENTRY_BACK = 'hsl(0deg 0% 40% / 60%)';
+const ENTRY_BACK_NOLABEL = 'hsl(0deg 0% 40% / 60%)';
+const ENTRY_BACK_OPACITY = 0.6;
 const ENTRY_TEXT = 'hsl(0deg 0% 80%)';
 const ENTRY_BORDER_FOCUS = 'goldenrod';
 const ENTRY_WIDTH_FOCUS = 4;
@@ -711,7 +713,9 @@ export class Timeline implements WithCanvas {
         this.#cxt.font = `${fontSize(12)}px sans-serif`;
         for (let ent of this.#getVisibleEntries()) {
             this.#getEntryPositions(ent).forEach((b) => {
-                this.#cxt.fillStyle = ENTRY_BACK;
+                this.#cxt.fillStyle = ent.label === 'none' 
+                    ? ENTRY_BACK_NOLABEL 
+                    : LabelColor(ent.label, ENTRY_BACK_OPACITY);
                 if (this.#selection.has(ent)) {
                     this.#cxt.strokeStyle = ENTRY_BORDER_FOCUS;
                     this.#cxt.lineWidth = ENTRY_WIDTH_FOCUS;

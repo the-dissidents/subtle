@@ -1,7 +1,7 @@
 import { Menu } from "@tauri-apps/api/menu";
 import { Basic, assert } from "./Basic";
 import { ChangeCause, ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
-import { LabelColors, SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type LabelColorsType, type SubtitleChannel } from "./Subtitles";
+import { Labels, SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type LabelTypes, type SubtitleChannel } from "./Subtitles";
 
 export class UIHelper {
     constructor(public readonly frontend: Frontend) {}
@@ -183,7 +183,7 @@ export class UIHelper {
         let isDisjunct = this.frontend.isSelectionDisjunct();
         let allStyles = [this.frontend.subs.defaultStyle, ...this.frontend.subs.styles];
         let maxLines = Math.max(...selection.map((x) => x.texts.length));
-        let label: LabelColorsType | undefined = selection[0].label;
+        let label: LabelTypes | undefined = selection[0].label;
         for (const entry of selection) {
             if (entry.label != selection[0].label) {
                 label = undefined;
@@ -318,7 +318,7 @@ export class UIHelper {
         { item: 'Separator' },
         {
             text: 'label',
-            items: LabelColors.map((x) => ({
+            items: Labels.map((x) => ({
                 text: x,
                 checked: x === label,
                 action: () => {

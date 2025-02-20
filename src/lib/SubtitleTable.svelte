@@ -2,6 +2,7 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from "./Subtitles";
+import { LabelColor } from "./Theming";
 
 interface Props {
   frontend: Frontend;
@@ -173,7 +174,8 @@ td.subtext {
     >
     {#if line === ent.texts[0]}
       <td rowspan={ent.texts.length}
-          class={`right label-${ent.label}`}
+          class="right"
+          style={`background-color: ${LabelColor(ent.label)}`}
           use:setupEntryGUI={ent}>{i}</td>
       <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
       <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>

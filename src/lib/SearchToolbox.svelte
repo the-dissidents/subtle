@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { LabelColors, SubtitleEntry, type LabelColorsType } from './Subtitles'
+	import { Labels, SubtitleEntry, type LabelTypes } from './Subtitles'
 	import { ChangeCause, ChangeType, Frontend, SelectMode } from './Frontend';
 	import StyleSelect from './StyleSelect.svelte';
 	import { assert, Basic } from './Basic';
@@ -13,7 +13,7 @@
 	let style2 = frontend.subs.defaultStyle;
 
 	let useLabel = false;
-	let label: LabelColorsType = 'none';
+	let label: LabelTypes = 'none';
 
 	let currentEntry: SubtitleEntry | null = null;
 	let currentTextIndex = 0;
@@ -162,7 +162,7 @@
 			bind:value={label}
 			on:input={() => useLabel = true}
 		>
-			{#each LabelColors as color}
+			{#each Labels as color}
 			<option value={color}>{color}</option>
 			{/each}
 		</select>

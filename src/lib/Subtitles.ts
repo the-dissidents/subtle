@@ -2,8 +2,8 @@ import { assert } from "./Basic";
 import { CSSColors, parseCSSColor } from "./colorparser";
 import { EventHost } from "./Frontend";
 
-export const LabelColors = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
-export type LabelColorsType = typeof LabelColors[number];
+export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
+export type LabelTypes = typeof Labels[number];
 
 export enum AlignMode {
     BottomLeft = 1, BottomCenter, BottomRight,
@@ -121,7 +121,7 @@ export type SubtitleChannel = {
 }
 
 export class SubtitleEntry {
-    label: LabelColorsType = 'none';
+    label: LabelTypes = 'none';
     texts: SubtitleChannel[] = [];
 
     static #counter = 0;

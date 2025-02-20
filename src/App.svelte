@@ -5,12 +5,13 @@ import Resizer from './lib/ui/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 
-import { LabelColors, SubtitleEntry, type LabelColorsType, type SubtitleChannel } from './lib/Subtitles'
+import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/Subtitles'
 import { assert, Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend, UIFocus } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
 import { CanvasKeeper } from './lib/CanvasKeeper';
 import { Config } from './lib/Config';
+import { LabelColor } from './lib/Theming';
 
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Menu } from '@tauri-apps/api/menu';
@@ -49,7 +50,7 @@ let keepDuration = $state(false);
 let editingT0 = $state(0);
 let editingT1 = $state(0);
 let editingDt = $state(0);
-let editingLabel: LabelColorsType = $state('none');
+let editingLabel: LabelTypes = $state('none');
 
 let status = frontend.status;
 let uiFocus = frontend.uiFocus;
@@ -342,15 +343,15 @@ Config.init();
                 frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
             <hr>
             <div class="hlayout">
-              <div style="height: auto; width: 25px; border: solid 1px; margin: 2px"
-                class={`label-${editingLabel}`}></div>
+              <div style={`height: auto; width: 25px; border: solid 1px;
+                margin: 2px; background-color: ${LabelColor(editingLabel)}`}></div>
               <select
                 bind:value={editingLabel}
                 class="flexgrow"
                 onchange={() => {
                   applyEditForm();
                   frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm);}}>
-                {#each LabelColors as color}
+                {#each Labels as color}
                   <option value={color}>{color}</option>
                 {/each}
               </select>
