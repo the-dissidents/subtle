@@ -291,7 +291,7 @@ export class Subtitles {
             if (set.has(ent) || (ent.start >= start && modifySince)) {
                 ent.start = Math.max(0, ent.start * scale + offset);
                 ent.end = Math.max(0, ent.end * scale + offset);
-                ent.update.dispatch();
+                // ent.update.dispatch();
             }
         }
         return true;
@@ -644,7 +644,7 @@ export const SubtitleTools = {
                 }
             if (thisChanged) {
                 changed = true;
-                ent.update.dispatch();
+                // ent.update.dispatch();
             }
         }
         return changed;

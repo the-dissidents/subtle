@@ -5,7 +5,7 @@
   import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
   import { Menu } from "@tauri-apps/api/menu";
   import Collapsible from "./ui/Collapsible.svelte";
-    import { writable } from 'svelte/store';
+  import { writable } from 'svelte/store';
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');

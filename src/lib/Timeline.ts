@@ -6,18 +6,18 @@ import { ChangeCause, ChangeType, SelectMode, type Frontend } from "./Frontend";
 import { MMedia } from "./API";
 import { LabelColor } from "./Theming";
 
-const SCROLLER_HEIGHT = 15;
-const HEADER_HEIGHT = 30;
+const SCROLLER_HEIGHT = 7 * devicePixelRatio;
+const HEADER_HEIGHT = 15 * devicePixelRatio;
 const HEADER_BACK = 'hsl(0deg 0% 20%)';
 const TICK_COLOR = 'white';
 const LINE_BIG_COLOR = 'hsl(0deg 0% 60%)';
 const LINE_MED_COLOR = 'hsl(0deg 0% 30%)';
 const RULER_TEXT = 'white';
 
-const PRELOAD_MARGIN = 5;
-const PRELOAD_MARGIN_2 = 0.1;
-const CURSOR_AREA_MARGIN = 100;
-const TRACK_AREA_MARGIN = 40;
+const PRELOAD_MARGIN = 3 * devicePixelRatio;
+const PRELOAD_MARGIN_FACTOR = 0.1;
+const CURSOR_AREA_MARGIN = 50 * devicePixelRatio;
+const TRACK_AREA_MARGIN = 20 * devicePixelRatio;
 
 const ENTRY_WIDTH = 1;
 const ENTRY_BORDER = 'hsl(0deg 0% 60%)';
@@ -25,19 +25,19 @@ const ENTRY_BACK_NOLABEL = 'hsl(0deg 0% 40% / 60%)';
 const ENTRY_BACK_OPACITY = 0.6;
 const ENTRY_TEXT = 'hsl(0deg 0% 80%)';
 const ENTRY_BORDER_FOCUS = 'goldenrod';
-const ENTRY_WIDTH_FOCUS = 4;
+const ENTRY_WIDTH_FOCUS = 2 * devicePixelRatio;
 
 const CURSOR_COLOR = 'pink';
 const BOXSELECT_BACK = 'hsl(0deg 0% 80% / 40%)';
 const BOXSELECT_BORDER = 'hsl(0deg 0% 70%)';
-const BOXSELECT_WIDTH = 3;
+const BOXSELECT_WIDTH = 1.5 * devicePixelRatio;
 
 const INOUT_AREA_OUTSIDE = 'hsl(0deg 0% 80% / 40%)';
 
-const DRAG_RESIZE_MARGIN = 10;
-const SNAP_DISTANCE = 10;
+const DRAG_RESIZE_MARGIN = 5 * devicePixelRatio;
+const SNAP_DISTANCE = 5 * devicePixelRatio;
 const ALIGNLINE_COLOR = 'hsl(0deg 0% 80%)';
-const ALIGNLINE_WIDTH = 3;
+const ALIGNLINE_WIDTH = 1.5 * devicePixelRatio;
 
 type Box = {
     x: number, y: number,
@@ -439,8 +439,8 @@ export class Timeline implements WithCanvas {
                             this.#alignmentLine = null;
                             this.requestRender();
                             if (dragged) {
-                                for (let entry of sels) 
-                                    entry.update.dispatch();
+                                // for (let entry of sels) 
+                                //     entry.update.dispatch();
                                 this.#frontend.markChanged(ChangeType.Times, ChangeCause.Timeline);
                             } else afterUp();
                         };
@@ -465,7 +465,7 @@ export class Timeline implements WithCanvas {
                             this.#alignmentLine = null;
                             this.requestRender();
                             if (dragged) {
-                                entry.update.dispatch();
+                                // entry.update.dispatch();
                                 this.#frontend.markChanged(ChangeType.Times, ChangeCause.Timeline);
                             } else afterUp();
                         };
@@ -543,7 +543,7 @@ export class Timeline implements WithCanvas {
 
         let start = this.#offset;
         let end = this.#offset + this.#width / this.#scale;
-        const preload = Math.min(PRELOAD_MARGIN, (end - start) * PRELOAD_MARGIN_2);
+        const preload = Math.min(PRELOAD_MARGIN, (end - start) * PRELOAD_MARGIN_FACTOR);
         if (this.#sampler.isSampling) {
             if (this.#sampler.sampleProgress + preload < this.#offset 
                 || this.#sampler.sampleProgress > end + preload) 
@@ -807,7 +807,8 @@ export class Timeline implements WithCanvas {
         this.#cxt.fillStyle = 'white';
         this.#cxt.fillText(`offset=${this.#offset.toFixed(2)}`, 10, 30);
         this.#cxt.fillText(`scale=${this.#scale.toFixed(2)}`, 10, 50);
-        this.#cxt.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 100, 30);
+        this.#cxt.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 150, 30);
+        this.#cxt.fillText(`dpr=${devicePixelRatio}`, 150, 50);
 
         if (this.#animating)
             this.requestRender();
