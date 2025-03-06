@@ -13,10 +13,13 @@ let {
 }: Props = $props();
 
 let entries = $state(frontend.subs.entries);
-let entryKeys = new SvelteMap<number, number>;
 let selection = $state(new SvelteSet<SubtitleEntry>);
 let focus = frontend.focused.entry;
 let editingVirtual = frontend.states.isEditingVirtualEntry;
+
+frontend.onSubtitleObjectReload.bind(() => {
+  entries = frontend.subs.entries;
+});
 
 frontend.onSubtitlesChanged.bind((t) => {
   if (t == ChangeType.General || t == ChangeType.Times || t == ChangeType.Order)
@@ -28,25 +31,7 @@ frontend.onSelectionChanged.bind(() => {
 });
 
 function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
-  let update = () => {
-    console.warn('update is deprecated');
-    // console.log('update:', entry.texts[0].text);
-    frontend.entryRows.set(entry, node);
-    if (!entryKeys.has(entry.uniqueID))
-      entryKeys.set(entry.uniqueID, 0);
-    else
-      entryKeys.set(entry.uniqueID, entryKeys.get(entry.uniqueID)! + 1);
-  };
   frontend.entryRows.set(entry, node);
-  // console.log('create:', entry.texts[0].text);
-  $effect(() => {
-    entry.update.bind(update);
-    return () => {
-      // console.log('unbind:', entry.texts[0].text);
-      entryKeys.delete(entry.uniqueID);
-      entry.update.unbind(update);
-    };
-  });
 }
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
@@ -146,48 +131,46 @@ td.subtext {
 <tbody>
   <!-- list all entries -->
   {#each entries as ent, i (`${ent.uniqueID}`)}
-  {#key entryKeys.get(ent.uniqueID)}
-    {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
-    <!-- svelte-ignore a11y_mouse_events_have_key_events -->
-    <tr
-      onmousedown={(ev) => {
-        onFocus();
-        if (ev.button == 0)
-          frontend.toggleEntry(ent, getSelectMode(ev));
-      }}
-      oncontextmenu={(ev) => {
-        onFocus();
-        frontend.uiHelper.contextMenu();
-        ev.preventDefault();
-      }}
-      ondblclick={() => {
-        onFocus();
-        frontend.startEditingFocusedEntry();
-        frontend.playback.setPosition(ent.start);
-      }}
-      onmouseover={(ev) => {
-        if (ev.buttons == 1)
-          frontend.selectEntry(ent, SelectMode.Sequence);
-      }}
-      class:focushlt={$focus === ent}
-      class:sametime={$focus instanceof SubtitleEntry 
-        && $focus !== ent && overlappingTime($focus, ent)}
-      class:selected={selection.has(ent)}
-    >
-    {#if line === ent.texts[0]}
-      <td rowspan={ent.texts.length}
-          class="right"
-          style={`background-color: ${LabelColor(ent.label)}`}
-          use:setupEntryGUI={ent}>{i}</td>
-      <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
-      <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
-    {/if}
-    <td>{line.style.name}</td>
-    <td>{getNpS(ent, line.text)}</td>
-    <td class='subtext'>{line.text}</td>
-    </tr>
-    {/each}
-  {/key}
+  {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
+  <!-- svelte-ignore a11y_mouse_events_have_key_events -->
+  <tr
+    onmousedown={(ev) => {
+      onFocus();
+      if (ev.button == 0)
+        frontend.toggleEntry(ent, getSelectMode(ev));
+    }}
+    oncontextmenu={(ev) => {
+      onFocus();
+      frontend.uiHelper.contextMenu();
+      ev.preventDefault();
+    }}
+    ondblclick={() => {
+      onFocus();
+      frontend.startEditingFocusedEntry();
+      frontend.playback.setPosition(ent.start);
+    }}
+    onmouseover={(ev) => {
+      if (ev.buttons == 1)
+        frontend.selectEntry(ent, SelectMode.Sequence);
+    }}
+    class:focushlt={$focus === ent}
+    class:sametime={$focus instanceof SubtitleEntry 
+      && $focus !== ent && overlappingTime($focus, ent)}
+    class:selected={selection.has(ent)}
+  >
+  {#if line === ent.texts[0]}
+    <td rowspan={ent.texts.length}
+        class="right"
+        style={`background-color: ${LabelColor(ent.label)}`}
+        use:setupEntryGUI={ent}>{i}</td>
+    <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
+    <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
+  {/if}
+  <td>{line.style.name}</td>
+  <td>{getNpS(ent, line.text)}</td>
+  <td class='subtext'>{line.text}</td>
+  </tr>
+  {/each}
   {/each}
 
   <!-- virtual entry at the end -->

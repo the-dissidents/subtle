@@ -18,7 +18,7 @@
   },
   "productName": "subtle",
   "mainBinaryName": "subtle",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "identifier": "com.haha.subtle",
   "plugins": {},
   "app": {

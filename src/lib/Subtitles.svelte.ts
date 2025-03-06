@@ -131,9 +131,6 @@ export class SubtitleEntry {
     static #counter = 0;
     readonly uniqueID: number;
 
-    /** @deprecated */
-    update = new EventHost<[]>();
-
     constructor(
         start: number,
         end: number,

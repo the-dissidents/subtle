@@ -805,10 +805,10 @@ export class Timeline implements WithCanvas {
         
         this.#cxt.font = `${fontSize(8)}px sans-serif`;
         this.#cxt.fillStyle = 'white';
-        this.#cxt.fillText(`offset=${this.#offset.toFixed(2)}`, 10, 30);
-        this.#cxt.fillText(`scale=${this.#scale.toFixed(2)}`, 10, 50);
-        this.#cxt.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 150, 30);
-        this.#cxt.fillText(`dpr=${devicePixelRatio}`, 150, 50);
+        this.#cxt.fillText(`offset=${this.#offset.toFixed(2)}`, 5 * devicePixelRatio, 15 * devicePixelRatio);
+        this.#cxt.fillText(`scale=${this.#scale.toFixed(2)}`, 5 * devicePixelRatio, 25 * devicePixelRatio);
+        this.#cxt.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 80 * devicePixelRatio, 15 * devicePixelRatio);
+        this.#cxt.fillText(`dpr=${devicePixelRatio}`, 80 * devicePixelRatio, 25 * devicePixelRatio);
 
         if (this.#animating)
             this.requestRender();
