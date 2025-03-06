@@ -1,5 +1,5 @@
 import { SubtitleRenderer } from "./SubtitleRenderer";
-import type { Subtitles } from "./Subtitles";
+import type { Subtitles } from "./Subtitles.svelte";
 import type { WithCanvas } from "./CanvasKeeper";
 import { MMedia, type VideoFrameData } from "./API";
 import { assert } from "./Basic";

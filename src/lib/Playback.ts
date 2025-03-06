@@ -1,5 +1,5 @@
 import { assert } from "./Basic";
-import { Subtitles } from "./Subtitles";
+import { Subtitles } from "./Subtitles.svelte";
 import { VideoPlayer } from "./VideoPlayer";
 import { Timeline } from "./Timeline";
 import { ChangeType, Frontend } from "./Frontend";
@@ -39,6 +39,7 @@ export class Playback {
             if (times == ChangeType.Times || times == ChangeType.General)
                 this.video.subRenderer.updateTimes();
             this.video.subRenderer.requireRerender();
+            this.video.requestRender();
         });
         frontend.onSubtitleObjectReload.bind(() => {
             this.video?.setSubtitles(frontend.subs);

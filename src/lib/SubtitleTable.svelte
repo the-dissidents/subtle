@@ -1,7 +1,7 @@
 <script lang="ts">
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
-import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from "./Subtitles";
+import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from "./Subtitles.svelte";
 import { LabelColor } from "./Theming";
 
 interface Props {
@@ -29,6 +29,7 @@ frontend.onSelectionChanged.bind(() => {
 
 function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
   let update = () => {
+    console.warn('update is deprecated');
     // console.log('update:', entry.texts[0].text);
     frontend.entryRows.set(entry, node);
     if (!entryKeys.has(entry.uniqueID))
@@ -74,7 +75,7 @@ table.subs {
   cursor: default;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
-  overflow-wrap: break-word;
+  /* overflow-wrap: break-word; */
 }
 
 table.subs thead {
@@ -147,6 +148,7 @@ td.subtext {
   {#each entries as ent, i (`${ent.uniqueID}`)}
   {#key entryKeys.get(ent.uniqueID)}
     {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
+    <!-- svelte-ignore a11y_mouse_events_have_key_events -->
     <tr
       onmousedown={(ev) => {
         onFocus();
@@ -163,7 +165,7 @@ td.subtext {
         frontend.startEditingFocusedEntry();
         frontend.playback.setPosition(ent.start);
       }}
-      onmousemove={(ev) => {
+      onmouseover={(ev) => {
         if (ev.buttons == 1)
           frontend.selectEntry(ent, SelectMode.Sequence);
       }}

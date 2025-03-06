@@ -1,6 +1,6 @@
 <script lang='ts'>
 	import { createEventDispatcher } from 'svelte';
-    import { SubtitleUtil } from './Subtitles';
+    import { SubtitleUtil } from './Subtitles.svelte';
 
     interface Props {
         timestamp?: number;

@@ -1,7 +1,7 @@
 import { AudioSampler } from "./AudioSampler";
 import { Basic, assert } from "./Basic";
 import type { WithCanvas } from "./CanvasKeeper";
-import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./Subtitles";
+import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./Subtitles.svelte";
 import { ChangeCause, ChangeType, SelectMode, type Frontend } from "./Frontend";
 import { MMedia } from "./API";
 import { LabelColor } from "./Theming";

@@ -2,7 +2,7 @@
   import DialogBase, { type DialogHandler } from './DialogBase.svelte';
   import { Frontend } from './Frontend';
   import StyleSelect from './StyleSelect.svelte';
-  import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from './Subtitles';
+  import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from './Subtitles.svelte';
 
   interface Props {
 		handler: DialogHandler<MergeOptions>;
@@ -64,8 +64,7 @@
           <label for="is4">overwrite local styles when names match</label><br/>
           <input type="radio" id="is5" value="UseOverrideForAll" bind:group={styleOption}/>
           <label for="is5">use <StyleSelect bind:this={select}
-            subtitles={frontend.subs}
-            bind:currentStyle={overrideStyle}/> for all</label><br/>
+            {frontend} bind:currentStyle={overrideStyle}/> for all</label><br/>
         </td>
       </tr>
       <tr>

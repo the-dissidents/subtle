@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SubtitleStyle } from './Subtitles'
+import { SubtitleStyle } from './Subtitles.svelte'
 import StyleEdit from './StyleEdit.svelte';
 import { ChangeCause, ChangeType, Frontend } from './Frontend';
 import Collapsible from './ui/Collapsible.svelte';
@@ -16,9 +16,9 @@ let defaultStyle = $state(frontend.subs.defaultStyle);
 let subtitles = $state(frontend.subs);
 
 frontend.onSubtitlesChanged.bind((t, c) => {
-  if (t == ChangeType.StyleDefinitions)
+  if (t == ChangeType.StyleDefinitions || t == ChangeType.General)
     styles = frontend.subs.styles;
-})
+});
 
 frontend.onSubtitleObjectReload.bind(() => {
   metadata = frontend.subs.metadata;

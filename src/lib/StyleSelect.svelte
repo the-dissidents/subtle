@@ -1,14 +1,21 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
-    import type { SubtitleStyle, Subtitles } from "./Subtitles";
+    import type { SubtitleStyle, Subtitles } from "./Subtitles.svelte";
+    import { ChangeType, type Frontend } from "./Frontend";
 
     interface Props {
-        subtitles: Subtitles;
+        frontend: Frontend;
         currentStyle: SubtitleStyle;
     }
 
-    let { subtitles, currentStyle = $bindable() }: Props = $props();
+    let { frontend, currentStyle = $bindable() }: Props = $props();
     let refresh = $state(0);
+    let styles = $state(frontend.subs.styles);
+
+    frontend.onSubtitlesChanged.bind((t, c) => {
+    if (t == ChangeType.StyleDefinitions || t == ChangeType.General)
+        styles = frontend.subs.styles;
+    });
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
@@ -17,17 +24,17 @@
 <select class='styleselect' tabindex='-1'
     oninput={(ev) => {
         let index = ev.currentTarget.selectedIndex;
-        if (index <= 0) currentStyle = subtitles.defaultStyle;
-        else currentStyle = subtitles.styles[index - 1];
+        if (index <= 0) currentStyle = frontend.subs.defaultStyle;
+        else currentStyle = styles[index - 1];
         submit();
     }}
     onclick={() => refresh++}
 >
     {#key refresh}
-    <option selected={currentStyle == subtitles.defaultStyle}>
-        {subtitles.defaultStyle.name}
+    <option selected={currentStyle == frontend.subs.defaultStyle}>
+        {frontend.subs.defaultStyle.name}
     </option>
-    {#each subtitles.styles as style}
+    {#each styles as style (style.uniqueID)}
     <option selected={currentStyle == style}>{style.name}</option>
     {/each}
     {/key}

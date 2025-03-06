@@ -5,7 +5,7 @@ import Resizer from './lib/ui/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 
-import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/Subtitles'
+import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/Subtitles.svelte'
 import { assert, Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend, UIFocus } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
@@ -26,12 +26,12 @@ import TestToolbox from './lib/TestToolbox.svelte';
 
 import type { Action } from 'svelte/action';
 import { derived } from 'svelte/store';
+    import { tick } from 'svelte';
 
 const appWindow = getCurrentWebviewWindow()
 let frontend = $state(new Frontend(appWindow));
 
 let leftPane: HTMLElement | undefined = $state();
-let rightPane: HTMLElement | undefined = $state();
 let editTable: HTMLElement | undefined = $state();
 let videoCanvasContainer: HTMLElement | undefined = $state();
 let videoCanvas: HTMLCanvasElement | undefined = $state();
@@ -78,13 +78,13 @@ frontend.onSelectionChanged.bind(() => {
     editingDt = editingT1 - editingT0;
     editingLabel = focused.label;
     let isEditingNow = frontend.getUIFocus() == UIFocus.EditingField;
-    setTimeout(() => {
+    tick().then(() => {
       let col = document.getElementsByClassName('contentarea');
       for (const target of col) {
         contentSelfAdjust(target as HTMLTextAreaElement);
       }
       if (isEditingNow) frontend.startEditingFocusedEntry();
-    }, 0);
+    });
   }
 });
 
@@ -104,12 +104,11 @@ function applyEditForm() {
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
   focused.label = editingLabel;
-  focused.update.dispatch();
 }
 
 function contentSelfAdjust(elem: HTMLTextAreaElement) {
-  elem.style.height = "calc(2.5lh)";
-  elem.style.height = `${elem.scrollHeight + 3}px`;
+  elem.style.height = "auto";
+  elem.style.height = `${elem.scrollHeight + 3}px`; // grows to fit content
 }
 
 function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
@@ -167,8 +166,6 @@ Config.init();
   onload={() => {
     let time = performance.now();
     console.log('load time:', time);
-    // setTimeout(() => invoke('init_complete', {task: 'frontend'}), 
-    //   Math.max(0, 200 - time));
   }}
   onbeforeunload={(ev) => {
     if (frontend.fileChanged) ev.preventDefault();
@@ -236,199 +233,194 @@ Config.init();
 
   <!-- body -->
   <div class='hlayout flexgrow fixminheight'>
-    <div bind:this={leftPane} style="width: 300px;" class="fixminheight">
-      <div class='vlayout fill'>
-        <!-- video player -->
-        <div class='player-container' bind:this={videoCanvasContainer} use:setupVideoView>
-          <canvas width="0" height="0" bind:this={videoCanvas}></canvas>
-        </div>
-        <!-- video playback controls -->
-        <div class='hlayout'>
-          <button 
-            style="width: 30px; height: 20px"
-            onclick={() => frontend.playback.toggle()
-              .catch((e) => $status = `Error playing video: ${e}`)}
-          >{playIcon}</button>
-          <input type='range' class='play-pointer flexgrow'
-            step="any" max="1" min="0" disabled={sliderDisabled}
-            bind:value={playPos}
-            oninput={() => {
-              if (!frontend.playback.isLoaded) {
-                playPos = 0;
-                return;
-              }
-              frontend.playback.setPosition(playPos * frontend.playback.duration);
-            }}/>
-          <TimestampInput bind:timestamp={playPosInput}
-            on:change={() => frontend.playback.setPosition(playPosInput)}/>
-        </div>
-        <!-- resizer -->
-        <div>
-          <Resizer control={videoCanvasContainer} minValue={100}/>
-        </div>
-        <!-- toolbox -->
-        <div class="flexgrow fixminheight">
-          <TabView>
-          {#snippet children()}
-            <TabPage name="Properties">
-              <PropertiesToolbox {frontend}/>
-            </TabPage>
-            <TabPage name="Untimed text" active={true}>
-              <UntimedToolbox {frontend}/>
-            </TabPage>
-            <TabPage name="Search/Replace">
-              <SearchToolbox {frontend}/>
-            </TabPage>
-            <TabPage name="Test">
-              <TestToolbox {frontend}/>
-            </TabPage>
-          {/snippet}
-          </TabView>
-        </div>
+    <div bind:this={leftPane} style="width: 300px;" class="fixminheight vlayout isolated">
+      <!-- video player -->
+      <div class='player-container' bind:this={videoCanvasContainer} use:setupVideoView>
+        <canvas width="0" height="0" bind:this={videoCanvas}></canvas>
+      </div>
+      <!-- video playback controls -->
+      <div class='hlayout'>
+        <button 
+          style="width: 30px; height: 20px"
+          onclick={() => frontend.playback.toggle()
+            .catch((e) => $status = `Error playing video: ${e}`)}
+        >{playIcon}</button>
+        <input type='range' class='play-pointer flexgrow'
+          step="any" max="1" min="0" disabled={sliderDisabled}
+          bind:value={playPos}
+          oninput={() => {
+            if (!frontend.playback.isLoaded) {
+              playPos = 0;
+              return;
+            }
+            frontend.playback.setPosition(playPos * frontend.playback.duration);
+          }}/>
+        <TimestampInput bind:timestamp={playPosInput}
+          on:change={() => frontend.playback.setPosition(playPosInput)}/>
+      </div>
+      <!-- resizer -->
+      <div>
+        <Resizer control={videoCanvasContainer} minValue={100}/>
+      </div>
+      <!-- toolbox -->
+      <div class="flexgrow fixminheight">
+        <TabView>
+        {#snippet children()}
+          <TabPage name="Properties">
+            <PropertiesToolbox {frontend}/>
+          </TabPage>
+          <TabPage name="Untimed text" active={true}>
+            <UntimedToolbox {frontend}/>
+          </TabPage>
+          <TabPage name="Search/Replace">
+            <SearchToolbox {frontend}/>
+          </TabPage>
+          <TabPage name="Test">
+            <TestToolbox {frontend}/>
+          </TabPage>
+        {/snippet}
+        </TabView>
       </div>
     </div>
     <div style="width: 10px;">
-      <Resizer vertical={true} minValue={300}
-        control={leftPane}/>
+      <Resizer vertical={true} minValue={200} control={leftPane}/>
     </div>
-    <div bind:this={rightPane} class="flexgrow fixminheight">
-      <div class='vlayout fill'>
-        <!-- edit box -->
-        <div bind:this={editTable} class='hlayout editbox' style="height: 125px;">
-          <!-- timestamp fields -->
-          {#key `${editFormUpdateCounter}`}
-          <div>
-            <span>
-              <select
-                oninput={(ev) => editMode = ev.currentTarget.selectedIndex}>
-                <option>anchor start</option>
-                <option>anchor end</option>
-              </select>
-              <input type='checkbox' id='keepd' bind:checked={keepDuration}/>
-              <label for='keepd'>keep duration</label>
-            </span>
-            <br>
-            <TimestampInput bind:timestamp={editingT0}
-              stretch={true}
-              on:input={() => {
-                if (editMode == 0 && keepDuration)
-                  editingT1 = editingT0 + editingDt;
-                applyEditForm(); 
-                frontend.states.editChanged = true;}} 
-              on:change={() => 
-                frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
-            <br>
-            <TimestampInput bind:timestamp={editingT1}
-              stretch={true}
-              on:input={() => {
-                if (editMode == 1 && keepDuration)
-                  editingT0 = editingT1 - editingDt;
-                applyEditForm(); 
-                frontend.states.editChanged = true;}} 
-              on:change={() => {
-                if (editingT1 < editingT0) editingT1 = editingT0;
-                applyEditForm();
-                frontend.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
-            <br>
-            <TimestampInput bind:timestamp={editingDt}
-              stretch={true}
-              on:input={() => {
-                if (editMode == 0)
-                  editingT1 = editingT0 + editingDt; 
-                else if (editMode == 1)
-                  editingT0 = editingT1 - editingDt; 
-                applyEditForm();
-                frontend.states.editChanged = true;}}
-              on:change={() => 
-                frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
-            <hr>
-            <div class="hlayout">
-              <div style={`height: auto; width: 25px; border: solid 1px;
-                margin: 2px; background-color: ${LabelColor(editingLabel)}`}></div>
-              <select
-                bind:value={editingLabel}
-                class="flexgrow"
-                onchange={() => {
-                  applyEditForm();
-                  frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm);}}>
-                {#each Labels as color}
-                  <option value={color}>{color}</option>
-                {/each}
-              </select>
-            </div>
-          </div>
-          <!-- channels view -->
-          <div class="channels flexgrow">
-            {#if frontend.getFocusedEntry() instanceof SubtitleEntry}
-            {@const focused = frontend.getFocusedEntry() as SubtitleEntry}
-            <table class='fields'>
-              <tbody>
-                {#each focused.texts as line, i}
-                <tr>
-                  <td class="vlayout">
-                    <StyleSelect subtitles={frontend.subs} currentStyle={line.style}
-                      on:submit={() => {
-                        frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm)}} />
-                    <div class="hlayout">
-                      <button tabindex='-1' class="flexgrow"
-                        onclick={() => frontend.insertChannelAt(i)}>+</button>
-                      <button tabindex='-1' class="flexgrow"
-                        onclick={() => frontend.deleteChannelAt(i)}
-                        disabled={focused.texts.length == 1}>-</button>
-                    </div>
-                  </td>
-                  <td style='width:100%'>
-                    <textarea class='contentarea' tabindex=0
-                      use:setupTextEditGUI={line}
-                      onkeydown={(ev) => {
-                        if (ev.key == "Escape") {
-                          ev.currentTarget.blur();
-                          $uiFocus = UIFocus.Table;
-                        }
-                      }}
-                      onfocus={() => {
-                        $uiFocus = UIFocus.EditingField;
-                        frontend.focused.channel = line;
-                        frontend.focused.style = line.style;
-                      }}
-                      onblur={(x) => {
-                        // TODO: this works but looks like nonsense
-                        if ($uiFocus === UIFocus.EditingField)
-                          $uiFocus = UIFocus.Other;
-                        frontend.submitFocusedEntry();
-                        frontend.focused.channel = null;
-                      }}
-                      oninput={(x) => {
-                        $uiFocus = UIFocus.EditingField;
-                        contentSelfAdjust(x.currentTarget); 
-                        frontend.states.editChanged = true;
-                      }}></textarea>
-                  </td>
-                </tr>
-                {/each}
-              </tbody>
-            </table>
-            {:else}
-            <div class="fill hlayout" style="justify-content: center; align-items: center;">
-              <i>{frontend.getFocusedEntry() == 'virtual'
-                ? 'double-click or press enter to append new entry'
-                : 'select a line to start editing'}</i>
-            </div>
-            {/if}
-          </div>
-          {/key}
-        </div>
-        <!-- resizer -->
+    <div class="flexgrow fixminheight vlayout isolated">
+      <!-- edit box -->
+      <div bind:this={editTable} class='hlayout editbox' style="height: 125px;">
+        <!-- timestamp fields -->
+        {#key `${editFormUpdateCounter}`}
         <div>
-          <Resizer control={editTable} minValue={125}/>
+          <span>
+            <select
+              oninput={(ev) => editMode = ev.currentTarget.selectedIndex}>
+              <option>anchor start</option>
+              <option>anchor end</option>
+            </select>
+            <input type='checkbox' id='keepd' bind:checked={keepDuration}/>
+            <label for='keepd'>keep duration</label>
+          </span>
+          <br>
+          <TimestampInput bind:timestamp={editingT0}
+            stretch={true}
+            on:input={() => {
+              if (editMode == 0 && keepDuration)
+                editingT1 = editingT0 + editingDt;
+              applyEditForm(); 
+              frontend.states.editChanged = true;}} 
+            on:change={() => 
+              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+          <br>
+          <TimestampInput bind:timestamp={editingT1}
+            stretch={true}
+            on:input={() => {
+              if (editMode == 1 && keepDuration)
+                editingT0 = editingT1 - editingDt;
+              applyEditForm(); 
+              frontend.states.editChanged = true;}} 
+            on:change={() => {
+              if (editingT1 < editingT0) editingT1 = editingT0;
+              applyEditForm();
+              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
+          <br>
+          <TimestampInput bind:timestamp={editingDt}
+            stretch={true}
+            on:input={() => {
+              if (editMode == 0)
+                editingT1 = editingT0 + editingDt; 
+              else if (editMode == 1)
+                editingT0 = editingT1 - editingDt; 
+              applyEditForm();
+              frontend.states.editChanged = true;}}
+            on:change={() => 
+              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+          <hr>
+          <div class="hlayout">
+            <div style={`height: auto; width: 25px; border: solid 1px;
+              margin: 2px; background-color: ${LabelColor(editingLabel)}`}></div>
+            <select
+              bind:value={editingLabel}
+              class="flexgrow"
+              onchange={() => {
+                applyEditForm();
+                frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm);}}>
+              {#each Labels as color}
+                <option value={color}>{color}</option>
+              {/each}
+            </select>
+          </div>
         </div>
-        <!-- table view -->
-        <div class='scrollable fixminheight subscontainer flexgrow' 
-          class:subsfocused={$uiFocus === UIFocus.Table} 
-          bind:this={frontend.ui.subscontainer}
-        >
-          <SubtitleTable {frontend} />
+        <!-- channels view -->
+        <div class="channels flexgrow isolated">
+          {#if frontend.getFocusedEntry() instanceof SubtitleEntry}
+          {@const focused = frontend.getFocusedEntry() as SubtitleEntry}
+          <table class='fields'>
+            <tbody>
+              {#each focused.texts as line, i}
+              <tr>
+                <td class="vlayout">
+                  <StyleSelect {frontend} bind:currentStyle={line.style}
+                    on:submit={() => {
+                      frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm)}} />
+                  <div class="hlayout">
+                    <button tabindex='-1' class="flexgrow"
+                      onclick={() => frontend.insertChannelAt(i)}>+</button>
+                    <button tabindex='-1' class="flexgrow"
+                      onclick={() => frontend.deleteChannelAt(i)}
+                      disabled={focused.texts.length == 1}>-</button>
+                  </div>
+                </td>
+                <td style='width:100%'>
+                  <textarea class='contentarea' tabindex=0
+                    use:setupTextEditGUI={line}
+                    onkeydown={(ev) => {
+                      if (ev.key == "Escape") {
+                        ev.currentTarget.blur();
+                        $uiFocus = UIFocus.Table;
+                      }
+                    }}
+                    onfocus={() => {
+                      $uiFocus = UIFocus.EditingField;
+                      frontend.focused.channel = line;
+                      frontend.focused.style = line.style;
+                    }}
+                    onblur={(x) => {
+                      // TODO: this works but looks like nonsense
+                      if ($uiFocus === UIFocus.EditingField)
+                        $uiFocus = UIFocus.Other;
+                      frontend.submitFocusedEntry();
+                      frontend.focused.channel = null;
+                    }}
+                    oninput={(x) => {
+                      $uiFocus = UIFocus.EditingField;
+                      contentSelfAdjust(x.currentTarget); 
+                      frontend.states.editChanged = true;
+                    }}></textarea>
+                </td>
+              </tr>
+              {/each}
+            </tbody>
+          </table>
+          {:else}
+          <div class="fill hlayout" style="justify-content: center; align-items: center;">
+            <i>{frontend.getFocusedEntry() == 'virtual'
+              ? 'double-click or press enter to append new entry'
+              : 'select a line to start editing'}</i>
+          </div>
+          {/if}
         </div>
+        {/key}
+      </div>
+      <!-- resizer -->
+      <div>
+        <Resizer control={editTable} minValue={125}/>
+      </div>
+      <!-- table view -->
+      <div class='scrollable fixminheight subscontainer flexgrow isolated' 
+        class:subsfocused={$uiFocus === UIFocus.Table} 
+        bind:this={frontend.ui.subscontainer}
+      >
+        <SubtitleTable {frontend} />
       </div>
     </div>
   </div>
@@ -489,6 +481,16 @@ Config.init();
   border-radius: 3px;
   padding: 0 3px;
   margin-left: 3px;
+}
+
+.contentarea {
+  width: 100%;
+  resize: none;
+  overflow: visible;
+  border-radius: 2px;
+  border: 1px solid gray;
+  padding: 5px;
+  box-sizing: border-box;
 }
 
 .timeline {

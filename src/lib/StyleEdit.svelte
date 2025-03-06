@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
   import { createEventDispatcher } from "svelte";
   import { assert } from "./Basic";
-  import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./Subtitles";
+  import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./Subtitles.svelte";
   import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
   import { Menu } from "@tauri-apps/api/menu";
   import Collapsible from "./ui/Collapsible.svelte";
@@ -146,7 +144,7 @@
           <td><input id='name' bind:value={$style.name}
             class={isDuplicate($style.name) ? 'duplicate' : ''}
             onchange={() => 
-              frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action)}/></td>
+              frontend.markChanged(ChangeType.InPlace, ChangeCause.Action)}/></td>
         </tr>
         <tr>
           <td><label for='font'>font:</label></td>

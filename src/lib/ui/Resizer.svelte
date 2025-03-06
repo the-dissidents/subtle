@@ -17,27 +17,21 @@
     children
   }: Props = $props();
   let cx = $state(0), cy = $state(0), orig = $state(0), orig2 = $state(0);
-  let dragging = $state(false);
+
+  function ondrag(ev: MouseEvent) {
+    let f = reverse ? -1 : 1;
+    if (vertical) {
+      let val = Math.max(orig + (ev.clientX - cx) * f, minValue);
+      if (control2) control2.style.width = (orig2 + val - orig) + 'px';
+      control.style.width = val + 'px';
+    } else {
+      let val = Math.max(orig + (ev.clientY - cy) * f, minValue);
+      if (control2) control2.style.height = (orig2 + val - orig) + 'px';
+      control.style.height = val + 'px';
+    }
+  }
 </script>
 
-<svelte:document 
-  onmousemove={(ev) => {
-    if (dragging) {
-      let f = reverse ? -1 : 1;
-      if (vertical) {
-        let val = Math.max(orig + (ev.clientX - cx) * f, minValue);
-        if (control2) control2.style.width = (orig2 + val - orig) + 'px';
-        control.style.width = val + 'px';
-      } else {
-        let val = Math.max(orig + (ev.clientY - cy) * f, minValue);
-        if (control2) control2.style.height = (orig2 + val - orig) + 'px';
-        control.style.height = val + 'px';
-      }
-    }
-  }}
-  onmouseup={() => {
-    dragging = false;
-  }}/>
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class={vertical ? 'resizerV' : 'resizerH'} 
   style='cursor: {vertical ? 'ew-resize' : 'ns-resize'}'
@@ -48,7 +42,10 @@
     if (control2) {
       orig2 = vertical ? control2.offsetWidth : control2.offsetHeight;
     }
-    dragging = true;
+    document.addEventListener('mousemove', ondrag);
+    document.addEventListener('mouseup', () => {
+      document.removeEventListener('mousemove', ondrag);
+    }, {once: true});
   }}>
 <div class='inside'></div>
 {@render children?.()}

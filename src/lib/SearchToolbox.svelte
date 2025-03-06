@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Labels, SubtitleEntry, type LabelTypes } from './Subtitles'
+	import { Labels, SubtitleEntry, type LabelTypes } from './Subtitles.svelte'
 	import { ChangeCause, ChangeType, Frontend, SelectMode } from './Frontend';
 	import StyleSelect from './StyleSelect.svelte';
 	import { assert, Basic } from './Basic';
@@ -146,9 +146,8 @@
 	</label><br/>
 	<label><input type='checkbox' bind:checked={replaceStyle}/>
 		replace by style
-		<StyleSelect
+		<StyleSelect {frontend}
 			on:submit={() => replaceStyle = true}
-			subtitles={frontend.subs}
 			bind:currentStyle={style2}/>
 	</label><br/>
 
@@ -169,9 +168,8 @@
 	</label><br/>
 	<label><input type='checkbox' bind:checked={useStyle}/>
 		search only in style
-		<StyleSelect
+		<StyleSelect {frontend}
 			on:submit={() => useStyle = true}
-			subtitles={frontend.subs}
 			bind:currentStyle={style1}/>
 	</label>
 	<br>

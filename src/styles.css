@@ -249,14 +249,8 @@ h2 {
   box-sizing: border-box;
 }
 
-.contentarea {
-  width: 100%;
-  resize: none;
-  overflow: visible;
-  border-radius: 2px;
-  border: 1px solid gray;
-  padding: 5px;
-  box-sizing: border-box;
+.isolated {
+  contain: layout size style;
 }
 
 .styleselect {

@@ -47,6 +47,7 @@ export type TimeShiftOptions = {
 }
 
 export class SubtitleStyle {
+    name: string = $state('');
     font: string = '';
     size: number = 72;
     color: string = 'white';
@@ -65,7 +66,8 @@ export class SubtitleStyle {
     readonly uniqueID: number;
     static #counter = 0;
 
-    constructor(public name: string) {
+    constructor(name: string) {
+        this.name = name;
         this.uniqueID = SubtitleStyle.#counter;
         SubtitleStyle.#counter++;
     }
@@ -121,19 +123,24 @@ export type SubtitleChannel = {
 }
 
 export class SubtitleEntry {
-    label: LabelTypes = 'none';
-    texts: SubtitleChannel[] = [];
+    label: LabelTypes = $state('none');
+    texts: SubtitleChannel[] = $state([]);
+    start: number = $state(0);
+    end: number = $state(0);
 
     static #counter = 0;
     readonly uniqueID: number;
 
+    /** @deprecated */
     update = new EventHost<[]>();
 
     constructor(
-        public start: number,
-        public end: number,
+        start: number,
+        end: number,
         ...text: SubtitleChannel[]) 
     {
+        this.start = start;
+        this.end = end;
         this.texts = text;
         this.uniqueID = SubtitleEntry.#counter;
         SubtitleEntry.#counter++;

@@ -1,16 +1,17 @@
-import {  path } from "@tauri-apps/api";
+import { path } from "@tauri-apps/api";
 import { BaseDirectory } from "@tauri-apps/plugin-fs";
 import { assert } from "./Basic";
 import * as fs from "@tauri-apps/plugin-fs"
 
 const configPath = 'config.json';
 let configData = {
+    maxRecent: 10,
+    paths: [] as {name: string, video?: string}[],
+    // TODO: these are no-nps for now
     windowsW: 1000,
     windowsH: 800,
     editorH: 200,
     timelineH: 150,
-    maxRecent: 10,
-    paths: [] as {name: string, video?: string}[],
 };
 
 type ConfigType = typeof configData;

@@ -1,5 +1,5 @@
 import { Basic } from "./Basic";
-import { SubtitleEntry, SubtitleStyle, Subtitles, AlignMode } from "./Subtitles";
+import { SubtitleEntry, SubtitleStyle, Subtitles, AlignMode } from "./Subtitles.svelte";
 
 type WrappedEntry = {
     oldIndex: number,
@@ -269,22 +269,6 @@ export class SubtitleRenderer {
 
     setTime(time: number) {
         if (time == this.currentTime) return;
-        // if (time > this.#currentTime
-        //     && (!this.#nextUpdateEntry || time < this.#nextUpdateEntry.entry.start))
-        // {
-        //     this.#currentTime = time;
-        //     if (time >= this.#nextStopTime) {
-        //         this.#nextStopTime = Infinity;
-        //         this.#currentEntries = this.#currentEntries.filter((x) => {
-        //             if (x.entry.end <= time) return false;
-        //             this.#nextStopTime = Math.min(this.#nextStopTime, x.entry.end);
-        //             return true;
-        //         });
-        //         this.#needsRender = true;
-        //         return;
-        //     }
-        //     return;
-        // }
 
         this.#currentTime = time;
         this.#searchCurrentEntries();

@@ -9,7 +9,7 @@ https://svelte.dev/e/node_invalid_placement -->
   import StyleSelect from "./StyleSelect.svelte";
   import * as fuzzyAlgorithm from "./Fuzzy";
   import { assert, Basic } from "./Basic";
-    import type { SubtitleChannel, SubtitleEntry } from "./Subtitles";
+    import type { SubtitleChannel, SubtitleEntry } from "./Subtitles.svelte";
 
   export let frontend: Frontend;
   export let locked = false;
@@ -248,8 +248,7 @@ https://svelte.dev/e/node_invalid_placement -->
           <tbody>
             <tr>
               <td>channel</td>
-              <td><StyleSelect subtitles={frontend.subs} 
-                bind:currentStyle={fuzzy.channel} /></td>
+              <td><StyleSelect {frontend} bind:currentStyle={fuzzy.channel} /></td>
             </tr>
             <tr>
               <td>tokenizer</td>

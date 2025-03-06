@@ -1,7 +1,7 @@
 import { Menu } from "@tauri-apps/api/menu";
 import { Basic, assert } from "./Basic";
 import { ChangeCause, ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
-import { Labels, SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type LabelTypes, type SubtitleChannel } from "./Subtitles";
+import { Labels, SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type LabelTypes, type SubtitleChannel } from "./Subtitles.svelte";
 
 export class UIHelper {
     constructor(public readonly frontend: Frontend) {}
@@ -324,7 +324,7 @@ export class UIHelper {
                 action: () => {
                     for (let entry of selection) {
                         entry.label = x;
-                        entry.update.dispatch();
+                        // entry.update.dispatch();
                     }
                     this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
                 }
@@ -371,7 +371,7 @@ export class UIHelper {
                             for (let ent of selection)
                                 if (!ent.texts.find((t) => t.style == x)) {
                                     ent.texts.push({style: x, text: ''});
-                                    ent.update.dispatch();
+                                    // ent.update.dispatch();
                                     done = true;
                                 }
                             if (done)
@@ -410,7 +410,7 @@ export class UIHelper {
                                 for (let ent of selection)
                                     if (ent.texts.length > x) {
                                         ent.texts[x].style = y;
-                                        ent.update.dispatch();
+                                        // ent.update.dispatch();
                                         changed = true;
                                     }
                                 if (changed) this.frontend.markChanged(
@@ -445,7 +445,7 @@ export class UIHelper {
                 },
                 {
                     text: 'split by line',
-                    enabled: selection.length > 1,
+                    enabled: selection.length >= 1,
                     action: () => this.#splitByNewline(selection)
                 },
                 {
@@ -487,7 +487,7 @@ export class UIHelper {
                 if (ent.texts.length > 0) newSelection.push(ent);
                 else this.frontend.subs.entries.splice(
                     this.frontend.subs.entries.indexOf(ent), 1);
-                ent.update.dispatch();
+                // ent.update.dispatch();
                 done++;
             }
         if (done > 0) {
@@ -543,7 +543,7 @@ export class UIHelper {
         for (let ent of selection) {
             ent.texts.sort((a, b) => 
                 (indices.get(a.style) ?? 0) - (indices.get(b.style) ?? 0));
-            ent.update.dispatch();
+            // ent.update.dispatch();
         }
         this.frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
     }
@@ -591,7 +591,7 @@ export class UIHelper {
                     count++;
                 }
             }
-            entry.update.dispatch();
+            // entry.update.dispatch();
         }
         if (count > 0) {
             this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
@@ -609,7 +609,7 @@ export class UIHelper {
             assert(index > 0);
             this.frontend.subs.entries.splice(index, 1);
         }
-        main.update.dispatch();
+        // main.update.dispatch();
         this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
         this.frontend.status.set(`combined ${selection.length} entries`);
     }
@@ -631,7 +631,7 @@ export class UIHelper {
                 {
                     entry.start = Math.min(entry.start, other.start);
                     entry.end = Math.max(entry.end, other.end);
-                    entry.update.dispatch();
+                    // entry.update.dispatch();
                     deletion.add(other);
                     break;
                 }
@@ -660,7 +660,7 @@ export class UIHelper {
         }
         entry.start = start;
         entry.end = end;
-        entry.update.dispatch();
+        // entry.update.dispatch();
         this.frontend.subs.entries.splice(
             this.frontend.subs.entries.indexOf(entry) + 1,
             selection.length - 1);
@@ -679,7 +679,7 @@ export class UIHelper {
                 } else newChannels.push(channel);
             }
             entry.texts = newChannels;
-            entry.update.dispatch();
+            // entry.update.dispatch();
         }
         this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
     }
@@ -698,7 +698,7 @@ export class UIHelper {
                 newSelection.push(newEntry);
             }
             entry.texts = [entry.texts[0]];
-            entry.update.dispatch();
+            // entry.update.dispatch();
         }
         if (newSelection.length != selection.length) {
             this.frontend.clearSelection();
