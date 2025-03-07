@@ -1,7 +1,7 @@
 <script lang="ts">
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
-import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from "./Subtitles.svelte";
+import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from "./core/Subtitles.svelte";
 import { LabelColor } from "./Theming";
 
 interface Props {

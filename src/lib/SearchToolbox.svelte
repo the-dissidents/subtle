@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Labels, SubtitleEntry, type LabelTypes } from './Subtitles.svelte'
+	import { Labels, SubtitleEntry, type LabelTypes } from './core/Subtitles.svelte'
 	import { ChangeCause, ChangeType, Frontend, SelectMode } from './Frontend';
 	import StyleSelect from './StyleSelect.svelte';
 	import { assert, Basic } from './Basic';

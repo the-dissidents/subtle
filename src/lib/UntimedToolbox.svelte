@@ -9,7 +9,7 @@ https://svelte.dev/e/node_invalid_placement -->
   import StyleSelect from "./StyleSelect.svelte";
   import * as fuzzyAlgorithm from "./Fuzzy";
   import { assert, Basic } from "./Basic";
-    import type { SubtitleChannel, SubtitleEntry } from "./Subtitles.svelte";
+    import type { SubtitleChannel, SubtitleEntry } from "./core/Subtitles.svelte";
 
   export let frontend: Frontend;
   export let locked = false;

@@ -1,5 +1,5 @@
 import { assert } from "./Basic";
-import { Subtitles } from "./Subtitles.svelte";
+import { Subtitles } from "./core/Subtitles.svelte";
 import { VideoPlayer } from "./VideoPlayer";
 import { Timeline } from "./Timeline";
 import { ChangeType, Frontend } from "./Frontend";

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
-    import type { SubtitleStyle, Subtitles } from "./Subtitles.svelte";
+    import type { SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
     import { ChangeType, type Frontend } from "./Frontend";
 
     interface Props {

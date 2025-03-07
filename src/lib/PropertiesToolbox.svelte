@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SubtitleStyle } from './Subtitles.svelte'
+import { SubtitleStyle } from './core/Subtitles.svelte'
 import StyleEdit from './StyleEdit.svelte';
 import { ChangeCause, ChangeType, Frontend } from './Frontend';
 import Collapsible from './ui/Collapsible.svelte';

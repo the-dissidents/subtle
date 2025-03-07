@@ -1,7 +1,8 @@
 import { Menu } from "@tauri-apps/api/menu";
 import { Basic, assert } from "./Basic";
 import { ChangeCause, ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
-import { Labels, SubtitleEntry, SubtitleExport, SubtitleStyle, SubtitleTools, type LabelTypes, type SubtitleChannel } from "./Subtitles.svelte";
+import { Labels, SubtitleEntry, SubtitleStyle, SubtitleTools, type LabelTypes, type SubtitleChannel } from "./core/Subtitles.svelte";
+import { ASS } from "./core/ASS";
 
 export class UIHelper {
     constructor(public readonly frontend: Frontend) {}
@@ -202,15 +203,15 @@ export class UIHelper {
                 },
                 {
                     text: 'SRT',
-                    action: () => this.frontend.copySelection(SubtitleExport.SRT)
+                    action: () => this.frontend.copySelection((x) => this.frontend.toSRT(x))
                 },
                 {
                     text: 'ASS fragment',
-                    action: () => this.frontend.copySelection(SubtitleExport.ASSFragment)
+                    action: () => this.frontend.copySelection(ASS.exportFragment)
                 },
                 {
                     text: 'plain text',
-                    action: () => this.frontend.copySelection(SubtitleExport.plaintext)
+                    action: () => this.frontend.copySelection((x) => this.frontend.toPlaintext(x))
                 }
             ]
         },

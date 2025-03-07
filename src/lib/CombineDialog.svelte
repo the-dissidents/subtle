@@ -1,6 +1,6 @@
 <script lang="ts">
     import DialogBase, { type DialogHandler } from './DialogBase.svelte';
-    import { type SubtitleEntry } from './Subtitles.svelte';
+    import { type SubtitleEntry } from './core/Subtitles.svelte';
     import { ChangeCause, ChangeType, Frontend } from './Frontend';
 
     interface Props {

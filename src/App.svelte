@@ -5,7 +5,7 @@ import Resizer from './lib/ui/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 
-import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/Subtitles.svelte'
+import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/core/Subtitles.svelte'
 import { assert, Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend, UIFocus } from './lib/Frontend';
 import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';

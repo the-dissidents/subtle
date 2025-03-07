@@ -1,5 +1,5 @@
 import { Basic } from "./Basic";
-import { SubtitleEntry, SubtitleStyle, Subtitles, AlignMode } from "./Subtitles.svelte";
+import { SubtitleEntry, SubtitleStyle, Subtitles, AlignMode } from "./core/Subtitles.svelte";
 
 type WrappedEntry = {
     oldIndex: number,

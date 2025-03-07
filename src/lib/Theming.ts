@@ -1,4 +1,4 @@
-import type { LabelTypes } from "./Subtitles.svelte";
+import type { LabelTypes } from "./core/Subtitles.svelte";
 
 export const LabelColorOklch = {
     'none':     '', 

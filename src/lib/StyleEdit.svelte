@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { assert } from "./Basic";
-  import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./Subtitles.svelte";
+  import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./core/Subtitles.svelte";
   import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
   import { Menu } from "@tauri-apps/api/menu";
   import Collapsible from "./ui/Collapsible.svelte";

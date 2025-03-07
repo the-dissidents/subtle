@@ -1,5 +1,5 @@
 import { assert, Basic } from "./Basic";
-import { SubtitleEntry, SubtitleStyle, SubtitleTools, Subtitles, type SubtitleChannel, SubtitleUtil, SubtitleImport, SubtitleExport, MergePosition, MergeStyleBehavior, type MergeOptions, type TimeShiftOptions } from "./Subtitles.svelte";
+import { SubtitleEntry, SubtitleStyle, SubtitleTools, Subtitles, type SubtitleChannel, SubtitleUtil, MergePosition, MergeStyleBehavior, type MergeOptions, type TimeShiftOptions } from "./core/Subtitles.svelte";
 import { Playback } from "./Playback";
 import { UIHelper } from "./UICommands";
 import { Config } from "./Config";
@@ -12,6 +12,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import { arch, platform, version } from "@tauri-apps/plugin-os";
 import { writable, type Writable, get } from "svelte/store";
 import { DialogHandler } from "./DialogBase.svelte";
+import { ASS } from "./core/ASS";
+import { LinearFormatCombineStrategy, SimpleFormats } from "./core/SimpleFormats";
 
 type Snapshot = {
     archive: string,
@@ -82,6 +84,7 @@ export class EventHost<T extends unknown[] = []> {
 }
 
 const IMPORT_FILTERS = [
+    { name: 'All supported formats', extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },
     { name: 'SRT subtitles', extensions: ['srt'] },
     { name: 'VTT subtitles', extensions: ['vtt'] },
     { name: 'SSA subtitles', extensions: ['ssa', 'ass'] },
@@ -275,6 +278,11 @@ export class Frontend {
         await this.saveTo(file, text);
     }
 
+    toSRT = (x: Subtitles) => 
+        SimpleFormats.export.SRT(x, LinearFormatCombineStrategy.Recombine);
+    toPlaintext = (x: Subtitles) => 
+        SimpleFormats.export.plaintext(x, LinearFormatCombineStrategy.KeepOrder);
+
     async askExportFile() {
         let ask = async (ext: string, func: (s: Subtitles) => string) => {
             const selected = await dialog.save({
@@ -285,15 +293,15 @@ export class Frontend {
         let menu = await Menu.new({items: [
             {
                 text: 'SRT',
-                action: () => ask('srt', SubtitleExport.SRT)
+                action: () => ask('srt', (x) => this.toSRT(x))
             },
             {
                 text: 'ASS',
-                action: () => ask('ass', SubtitleExport.ASS)
+                action: () => ask('ass', ASS.export)
             },
             {
                 text: 'plain text',
-                action: () => ask('txt', SubtitleExport.plaintext)
+                action: () => ask('txt', (x) => this.toPlaintext(x))
             }
         ]});
         menu.popup();
@@ -364,12 +372,12 @@ export class Frontend {
     }
 
     retrieveFromSource(source: string): [Subtitles | null, boolean] {
-        let newSub = SubtitleImport.JSON(source);
+        let newSub = SimpleFormats.parse.JSON(source);
         if (newSub) return [newSub, true];
         source = SubtitleUtil.normalizeNewlines(source);
-        newSub = SubtitleImport.SRT_VTT(source);
+        newSub = SimpleFormats.parse.SRT_VTT(source);
         if (newSub) return [newSub, false];
-        newSub = SubtitleImport.ASS(source);
+        newSub = ASS.parse(source);
         return [newSub, false];
     }
 
@@ -566,7 +574,7 @@ export class Frontend {
         this.onSelectionChanged.dispatch(cause);
     }
 
-    copySelection(transform = SubtitleExport.JSON) {
+    copySelection(transform = SimpleFormats.export.JSON) {
         let selection = new Set(
             [...this.selection.currentGroup, ...this.selection.submitted]);
         if (selection.size == 0) return;

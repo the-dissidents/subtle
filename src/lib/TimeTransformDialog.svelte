@@ -1,7 +1,7 @@
 <script lang="ts">
   import DialogBase, { type DialogHandler } from './DialogBase.svelte';
   import { Frontend } from './Frontend';
-  import { SubtitleEntry, SubtitleUtil, type TimeShiftOptions } from './Subtitles.svelte';
+  import { SubtitleEntry, SubtitleUtil, type TimeShiftOptions } from './core/Subtitles.svelte';
   import TimestampInput from './TimestampInput.svelte';
 
   let form: HTMLFormElement;
