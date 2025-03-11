@@ -1,8 +1,10 @@
 <script lang="ts">
-import { SvelteMap, SvelteSet } from "svelte/reactivity";
+import { SvelteSet } from "svelte/reactivity";
 import { ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
-import { SubtitleEntry, SubtitleUtil, type SubtitleChannel } from "./core/Subtitles.svelte";
+import { SubtitleEntry, SubtitleUtil } from "./core/Subtitles.svelte";
 import { LabelColor } from "./Theming";
+import { Basic } from "./Basic";
+    import { onMount } from "svelte";
 
 interface Props {
   frontend: Frontend;
@@ -17,6 +19,13 @@ let selection = $state(new SvelteSet<SubtitleEntry>);
 let focus = frontend.focused.entry;
 let editingVirtual = frontend.states.isEditingVirtualEntry;
 
+let scale = $state(1);
+let headerOffset = $state('0');
+let outer = $state<HTMLDivElement>();
+
+let centerX: number | undefined;
+let centerY: number | undefined;
+
 frontend.onSubtitleObjectReload.bind(() => {
   entries = frontend.subs.entries;
 });
@@ -28,6 +37,10 @@ frontend.onSubtitlesChanged.bind((t) => {
 
 frontend.onSelectionChanged.bind(() => {
   selection = new SvelteSet(frontend.getSelection());
+});
+
+onMount(() => {
+  frontend.ui.subscontainer = outer;
 });
 
 function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
@@ -46,10 +59,14 @@ function getNpS(ent: SubtitleEntry, text: string) {
 function onFocus() {
   frontend.uiFocus.set(UIFocus.Table);
 }
+
+function setHeaderOffset() {
+  headerOffset = (outer!.scrollTop * (1 / scale - 1)) + 'px';
+}
 </script>
 
 <style>
-table.subs {
+table {
   border-collapse: collapse;
   border-style: hidden;
   line-height: 1;
@@ -61,27 +78,30 @@ table.subs {
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
   /* overflow-wrap: break-word; */
+
+  transform-origin: 0 0;
 }
 
-table.subs thead {
+table thead {
   background-color: #f6f6f6;
   width: 100%;
+  /* z-index: 5; */
   position: sticky;
   top: 0;
 }
 
-table.subs tbody {
+table tbody {
   border: none;
   background-color: #f6f6f6;
   width: 100%;
   box-sizing: border-box;
 }
 
-table.subs th {
+table th {
   padding: 5px;
 }
 
-table.subs thead th:nth-child(6) {
+table thead th:nth-child(6) {
   width: 100%;
   text-align: left;
   padding-left: 10px;
@@ -91,7 +111,7 @@ table.subs thead th:nth-child(6) {
   text-align: right;
 }
 
-table.subs tbody td {
+table tbody td {
   padding: 5px;
   border: 1px solid gray;
   white-space: pre-wrap;
@@ -100,7 +120,7 @@ table.subs tbody td {
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
 }
-table.subs tbody tr {
+table tbody tr {
   background-color: white;
 }
 tr.selected {
@@ -115,10 +135,43 @@ tr.sametime {
 td.subtext {
   text-align: left;
 }
+
+.outer {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  position: relative;
+}
 </style>
 
-<table class='subs'>
-<thead bind:this={frontend.ui.tableHeader}>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="outer" bind:this={outer} 
+  onwheel={(ev) => {
+    const tr = Basic.translateWheelEvent(ev);
+    let box = ev.currentTarget.getBoundingClientRect();
+    let offsetX = ev.clientX - box.left;
+    let offsetY = ev.clientY - box.top;
+    if (tr.isZoom) {
+      ev.preventDefault();
+      if (ev.movementX || ev.movementY || !centerX || !centerY) {
+        centerX = (offsetX + ev.currentTarget.scrollLeft) / scale;
+        centerY = (offsetY + ev.currentTarget.scrollTop) / scale;
+      }
+      scale = Math.min(2, Math.max(1, scale / Math.pow(1.01, tr.amount)));
+      ev.currentTarget.scrollTo({
+        left: centerX * scale - offsetX,
+        top: centerY * scale - offsetY,
+        behavior: 'instant'
+      });
+      setHeaderOffset();
+    }
+  }}
+  onmousemove={() => centerX = undefined}
+  onscroll={() => setHeaderOffset()}
+>
+
+<table class='subs' style="transform: scale({scale})">
+<thead bind:this={frontend.ui.tableHeader} style="top: {headerOffset}">
   <tr>
   <th scope="col">#</th>
   <th scope="col">start</th>
@@ -187,3 +240,5 @@ td.subtext {
   {/if}
 </tbody>
 </table>
+
+</div>

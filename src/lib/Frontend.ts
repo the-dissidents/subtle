@@ -428,16 +428,31 @@ export class Frontend {
         channel.gui.scrollIntoView();
     }
 
-    keepEntryInView(ent: SubtitleEntry) {
+    keepEntryInView(ent: SubtitleEntry | "virtual") {
         if (!this.ui.subscontainer) return;
         if (!this.ui.tableHeader) return;
 
-        const row = this.entryRows.get(ent);
-        if (!row) return;
-        row.scrollIntoView({ block: "nearest" });
-        let top = this.ui.subscontainer.scrollTop + this.ui.tableHeader.offsetHeight;
-        if (row.offsetTop < top) this.ui.subscontainer.scroll(
-            0, row.offsetTop - this.ui.tableHeader.offsetHeight);
+        if (ent instanceof SubtitleEntry) {
+            const row = this.entryRows.get(ent);
+            if (!row) {
+                console.warn('?!row', ent);
+                return;
+            }
+            const left = this.ui.subscontainer.scrollLeft;
+            row.scrollIntoView({ block: "nearest" });
+            this.ui.subscontainer.scrollLeft = left;
+
+            // FIXME: extremely hacky!!
+            const headerHeight = this.ui.tableHeader.getBoundingClientRect().height;
+            const top = this.ui.subscontainer.scrollTop + headerHeight;
+            const zoom = headerHeight / this.ui.tableHeader.clientHeight;
+            const rowtop = row.offsetTop * zoom;
+            if (rowtop < top)
+                this.ui.subscontainer.scrollTop = rowtop - headerHeight;
+        } else {
+            if (this.subs.entries.length == 0) return;
+            this.ui.subscontainer.scroll({top: this.ui.subscontainer.scrollHeight});
+        }
     }
 
     #mergeSubtitles(other: Subtitles, options: MergeOptions) {
@@ -681,6 +696,7 @@ export class Frontend {
     selectVirtualEntry() {
         this.clearSelection();
         this.focused.entry.set("virtual");
+        this.keepEntryInView("virtual");
     }
   
     selectEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {

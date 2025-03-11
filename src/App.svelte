@@ -417,9 +417,7 @@ Config.init();
       </div>
       <!-- table view -->
       <div class='scrollable fixminheight subscontainer flexgrow isolated' 
-        class:subsfocused={$uiFocus === UIFocus.Table} 
-        bind:this={frontend.ui.subscontainer}
-      >
+        class:subsfocused={$uiFocus === UIFocus.Table}>
         <SubtitleTable {frontend} />
       </div>
     </div>
