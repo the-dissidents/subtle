@@ -7,6 +7,12 @@ const configPath = 'config.json';
 let configData = {
     maxRecent: 10,
     paths: [] as {name: string, video?: string}[],
+
+    mouseScrollSensitivity: 1,
+    trackpadScrollSensitivity: 10,
+    mouseZoomSensitivity: 0.05,
+    trackpadZoomSensitivity: 1,
+
     // TODO: these are no-nps for now
     windowsW: 1000,
     windowsH: 800,
@@ -37,8 +43,8 @@ export const Config = {
         if (!await fs.exists(configPath, {baseDir: BaseDirectory.AppConfig}))
             return;
         try {
-            configData = JSON.parse(await fs.readTextFile(
-                configPath, {baseDir: BaseDirectory.AppConfig}));
+            configData = Object.assign(configData, 
+                JSON.parse(await fs.readTextFile(configPath, {baseDir: BaseDirectory.AppConfig})));
         } catch (e) {
             console.error('error reading config file:', e);
         }

@@ -492,13 +492,17 @@ export class Timeline implements WithCanvas {
     }
 
     #processWheel(e: WheelEvent) {
-        if (e.deltaX != 0)
-            this.setViewOffset(this.#offset + 10 * e.deltaX / this.#scale);
-        else if (e.deltaY % 1 != 0) {
+        const tr = Basic.translateWheelEvent(e);
+        if (tr.isZoom) {
             const ratio = window.devicePixelRatio;
             const origPos = this.#offset + e.offsetX / this.#scale * ratio;
-            this.setViewScale(this.#scale / Math.pow(1.03, e.deltaY));
+            this.setViewScale(this.#scale / Math.pow(1.03, tr.amount));
             this.setViewOffset(origPos - e.offsetX / this.#scale * ratio);
+        } else {
+            const amount = 
+                tr.isTrackpad ? tr.amountX :
+                tr.amountX == 0 ? tr.amountY : tr.amountX;
+            this.setViewOffset(this.#offset + amount / this.#scale);
         }
     }
 

@@ -5,7 +5,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [
-    nodePolyfills({include: ['buffer']}),
+    nodePolyfills({include: ['buffer', 'stream', 'util']}),
     svelte()
   ],
 
