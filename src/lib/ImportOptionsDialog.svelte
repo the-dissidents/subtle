@@ -1,11 +1,12 @@
 <script lang="ts">
+    import { assert } from './Basic';
   import DialogBase, { type DialogHandler } from './DialogBase.svelte';
   import { Frontend } from './Frontend';
   import StyleSelect from './StyleSelect.svelte';
   import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from './core/Subtitles.svelte';
 
   interface Props {
-		handler: DialogHandler<MergeOptions>;
+		handler: DialogHandler<void, MergeOptions | null>;
 		frontend: Frontend;
 	}
 
@@ -14,21 +15,22 @@
 		frontend = $bindable()
   }: Props = $props();
 
-  let inner: DialogHandler<void> = {
-    show: handler.show, 
-    onSubmit: () => {
-      handler.onSubmit?.({
-        // @ts-ignore
-        style: MergeStyleBehavior[styleOption],
-        overrideStyle: overrideStyle,
-        // @ts-ignore
-        position: MergePosition[posOption],
-        // @ts-ignore
-        selection: MergeStyleSelection[selectOption],
-        overrideMetadata: overrideMetadata
-      });
-    }
-  };
+  let inner: DialogHandler<void> = {};
+  handler.showModal = async () => {
+    assert(inner !== undefined);
+    let btn = await inner.showModal!();
+    if (btn !== 'ok') return null;
+    return {
+      // @ts-ignore
+      style: MergeStyleBehavior[styleOption],
+      overrideStyle: overrideStyle,
+      // @ts-ignore
+      position: MergePosition[posOption],
+      // @ts-ignore
+      selection: MergeStyleSelection[selectOption],
+      overrideMetadata: overrideMetadata
+    };
+  }
   
   let form: HTMLFormElement;
   let select: StyleSelect;
@@ -37,8 +39,6 @@
   let selectOption = $state('UsedOnly');
   let posOption = $state('After');
   let overrideMetadata = $state(false);
-
-  
 </script>
 
 <DialogBase bind:frontend handler={inner}><form bind:this={form}>

@@ -2,6 +2,9 @@
     import { MAPI } from "./API";
     import { assert } from "./Basic";
     import type { Frontend } from "./Frontend";
+    import chardet from 'chardet';
+    import * as dialog from "@tauri-apps/plugin-dialog";
+    import * as fs from "@tauri-apps/plugin-fs";
 
     interface Props {
         frontend: Frontend;
@@ -53,6 +56,16 @@
         result = `done: t=${performance.now() - t0}\n`;
     }}>
     previous video frame
+</button>
+<button
+    onclick={async () => {
+        let path = await dialog.open();
+        if (!path) return;
+        let file = await fs.readFile(path);
+        let detected = chardet.analyse(file);
+        result = detected.map((x) => `${x.name} -- ${x.confidence}`).join('\n');
+    }}>
+    detect encoding
 </button>
 <br>
 <span>{result}</span>

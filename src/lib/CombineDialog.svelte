@@ -2,9 +2,10 @@
     import DialogBase, { type DialogHandler } from './DialogBase.svelte';
     import { type SubtitleEntry } from './core/Subtitles.svelte';
     import { ChangeCause, ChangeType, Frontend } from './Frontend';
+    import { assert } from './Basic';
 
     interface Props {
-		handler: DialogHandler<void>;
+		handler: DialogHandler<void, void>;
 		frontend: Frontend;
 	}
 
@@ -13,16 +14,17 @@
         frontend = $bindable()
     }: Props = $props();
 
-    let inner: DialogHandler<void> = {
-        show: handler.show, 
-        onSubmit: () => {}
-    }
-
+    let inner: DialogHandler<void> = {}
     let start = $state(0.005);
     let end = $state(0.005);
     let number = $state([0, 0]);
     let only = $state(true), different = $state(false), hasbeen = $state(false);
     
+    handler.showModal = async () => {
+        assert(inner !== undefined);
+        await inner.showModal!();
+    }
+
     function run(doit: boolean, s: number, e: number, 
             selectionOnly: boolean, differentOnly: boolean) 
     {

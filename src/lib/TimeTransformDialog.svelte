@@ -3,11 +3,12 @@
   import { Frontend } from './Frontend';
   import { SubtitleEntry, SubtitleUtil, type TimeShiftOptions } from './core/Subtitles.svelte';
   import TimestampInput from './TimestampInput.svelte';
+    import { assert } from './Basic';
 
   let form: HTMLFormElement;
 
   interface Props {
-		handler: DialogHandler<TimeShiftOptions>;
+		handler: DialogHandler<void, TimeShiftOptions | null>;
 		frontend: Frontend;
 	}
 
@@ -33,17 +34,22 @@
   let customAnchor = $state(0);
   let anchorOption: 'zero' | 'start' | 'end' | 'custom' = $state('start');
 
-  let inner: DialogHandler<void> = {
-    show: handler.show, 
-    onSubmit: () => handler.onSubmit?.({
+  let inner: DialogHandler<void> = {};
+  handler.showModal = async () => {
+    assert(inner !== undefined);
+    updateSelection();
+    toTransformed();
+    let btn = await inner.showModal!();
+    if (btn !== 'ok') return null;
+    return {
       // t = (t0 - anchor) * scale + anchor + offset
       // t = t0 * scale + anchor + offset - anchor * scale
       selection: frontend.getSelection(),
       offset: cpAnchor + cpOffset - cpAnchor * cpScale,
       modifySince: check,
       scale: cpScale
-    })
-  };
+    };
+  }
 
   // deriveds
   let cpOffset = $derived(offset * (shiftOption == 'forward' ? 1 : -1));
@@ -85,11 +91,6 @@
     offset = Math.abs(offset);
     shiftOption = offset < 0 ? 'backward' : 'forward';
   }
-
-  handler.show.subscribe((x) => {
-    updateSelection();
-    toTransformed();
-  });
 </script>
 
 <DialogBase bind:frontend handler={inner}><form bind:this={form}>

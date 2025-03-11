@@ -4,8 +4,9 @@ import { AlignMode, SubtitleEntry, Subtitles, SubtitleStyle, SubtitleUtil } from
 export const ASS = {
     parse(source: string) {
         const sections = getASSSections(source);
+        if (sections.size == 0) return null;
         let subs = new Subtitles();
-        parseASSScriptInfo(sections, subs);
+        if (!parseASSScriptInfo(sections, subs)) return null;
         parseASSStyles(sections, subs);
         parseASSEvents(sections, subs);
         return subs;
@@ -106,7 +107,7 @@ function getASSFormatFieldMap(section: string) {
 
 function parseASSScriptInfo(sections: Map<string, string>, subs: Subtitles) {
     let text = sections.get('Script Info');
-    if (text === undefined) return;
+    if (text === undefined) return false;
 
     const entryRegex = /(?<=\n)([^;].+?): *(.*)/g;
     const infos = new Map([...text.matchAll(entryRegex)]
@@ -120,6 +121,7 @@ function parseASSScriptInfo(sections: Map<string, string>, subs: Subtitles) {
         const n = Number.parseInt(infos.get('PlayResY')!);
         if (!Number.isNaN(n)) subs.metadata.height = n;
     }
+    return true;
 }
 
 function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {

@@ -337,14 +337,10 @@ export class UIHelper {
             items: [
                 {
                     text: 'transform times...',
-                    action: () => {
-                        if (!this.frontend.modalDialogs.timeTrans) return;
-                        this.frontend.modalDialogs.timeTrans.onSubmit = (opt) => {
-                            if (this.frontend.subs.shiftTimes(opt))
-                                this.frontend.markChanged(
-                                    ChangeType.Times, ChangeCause.Action);
-                        };
-                        this.frontend.modalDialogs.timeTrans.show.set(true);
+                    action: async () => {
+                        let options = await this.frontend.modalDialogs.timeTransform.showModal!();
+                        if (options && this.frontend.subs.shiftTimes(options))
+                            this.frontend.markChanged(ChangeType.Times, ChangeCause.Action);
                     }
                 },
                 { item: 'Separator' },
@@ -442,7 +438,7 @@ export class UIHelper {
                     text: 'combine by matching time...',
                     enabled: selection.length > 1,
                     action: () =>
-                        this.frontend.modalDialogs.combine?.show.set(true)
+                        this.frontend.modalDialogs.combine.showModal!()
                 },
                 {
                     text: 'split by line',

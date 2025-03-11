@@ -26,7 +26,8 @@ import TestToolbox from './lib/TestToolbox.svelte';
 
 import type { Action } from 'svelte/action';
 import { derived } from 'svelte/store';
-    import { tick } from 'svelte';
+import { tick } from 'svelte';
+import EncodingDialog from './lib/EncodingDialog.svelte';
 
 const appWindow = getCurrentWebviewWindow()
 let frontend = $state(new Frontend(appWindow));
@@ -155,8 +156,6 @@ appWindow.onDragDropEvent(async (ev) => {
   }
 });
 
-// $: console.log('UIFOCUS', UIFocus[frontend.states.uiFocus]);
-
 Config.init();
 </script>
 
@@ -177,9 +176,10 @@ Config.init();
   }}/>
 
 <!-- dialogs -->
-<TimeAdjustmentDialog {frontend} handler={frontend.modalDialogs.timeTrans}/>
-<ImportOptionsDialog  {frontend} handler={frontend.modalDialogs.importOpt}/>
+<TimeAdjustmentDialog {frontend} handler={frontend.modalDialogs.timeTransform}/>
+<ImportOptionsDialog  {frontend} handler={frontend.modalDialogs.importOptions}/>
 <CombineDialog        {frontend} handler={frontend.modalDialogs.combine}/>
+<EncodingDialog       {frontend} handler={frontend.modalDialogs.encoding}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->

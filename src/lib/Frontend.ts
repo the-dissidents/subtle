@@ -14,6 +14,8 @@ import { writable, type Writable, get } from "svelte/store";
 import { DialogHandler } from "./DialogBase.svelte";
 import { ASS } from "./core/ASS";
 import { LinearFormatCombineStrategy, SimpleFormats } from "./core/SimpleFormats";
+import chardet, { type AnalyseResult, type EncodingName } from 'chardet';
+import * as iconv from 'iconv-lite';
 
 type Snapshot = {
     archive: string,
@@ -102,9 +104,12 @@ export class Frontend {
     } = {};
 
     modalDialogs = {
-        importOpt: new DialogHandler<MergeOptions>,
-        timeTrans: new DialogHandler<TimeShiftOptions>,
-        combine: new DialogHandler<void>
+        importOptions: new DialogHandler<void, MergeOptions | null>(),
+        timeTransform: new DialogHandler<void, TimeShiftOptions | null>(),
+        combine: new DialogHandler<void, void>(),
+        encoding: new DialogHandler<
+            {source: Uint8Array, result: AnalyseResult}, 
+            {decoded: string, encoding: EncodingName} | null>()
     };
 
     states = {
@@ -236,21 +241,48 @@ export class Frontend {
         return !get(this.fileChanged) || await dialog.confirm('Proceed without saving?');
     }
 
-    async askImportFile() {
-        assert(this.modalDialogs.importOpt !== undefined);
-        const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
-        if (typeof selected != 'string') return;
-        const text = await fs.readTextFile(selected);
-        let [newSubs, _] = this.retrieveFromSource(text);
-        if (!newSubs) {
-            this.status.set(`import failed for ${selected}`);
+    async readTextFile(path: string) {
+        try {
+            const stats = await fs.stat(path);
+            if (!stats.isFile) {
+                this.status.set(`not a file: ${path}`);
+                return;
+            }
+            if (stats.size > 1024*1024*5 && !await dialog.ask("The file you're opening is very large and likely not a supported subtitle file. Do you really want to proceed? This may crash the application.", {kind: 'warning'})) return null;
+        } catch {
+            this.status.set(`does not exist: ${path}`);
             return;
         }
-        this.modalDialogs.importOpt.onSubmit = (opt) => {
-            assert(newSubs !== null);
-            this.#mergeSubtitles(newSubs, opt);
-        };
-        this.modalDialogs.importOpt.show.set(true);
+        try {
+            const file = await fs.readFile(path);
+            const result = chardet.analyse(file);
+            if (result[0].confidence == 100 && result[0].name == 'UTF-8') {
+                return iconv.decode(file, 'UTF-8');
+            } else {
+                const out = await this.modalDialogs.encoding.showModal!({source: file, result});
+                if (!out) return null;
+                return out.decoded;
+            }
+        } catch (e) {
+            this.status.set(`unable to read file ${path}: ${e}`);
+            return;
+        }
+    }
+
+    async askImportFile() {
+        const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
+        if (typeof selected != 'string') return;
+        const text = await this.readTextFile(selected);
+        if (!text) return;
+        let [newSubs, _] = this.retrieveFromSource(text);
+        if (!newSubs) {
+            this.status.set(`failed to parse as subtitles: ${selected}`);
+            return;
+        }
+        const options = await this.modalDialogs.importOptions.showModal!();
+        if (options) {
+            this.#mergeSubtitles(newSubs, options);
+        }
     }
   
     async askOpenFile() {
@@ -310,15 +342,13 @@ export class Frontend {
     async openDocument(path: string) {
         let newSubs: Subtitles | null;
         let isJSON: boolean;
-        try {
-            const text = await fs.readTextFile(path);
-            [newSubs, isJSON] = this.retrieveFromSource(text);
-            if (!newSubs) throw 'file is unparsable';
-        } catch (ex) {
-            this.status.set(`error when reading ${path}: ${ex}`);
+        const text = await this.readTextFile(path);
+        if (!text) return;
+        [newSubs, isJSON] = this.retrieveFromSource(text);
+        if (!newSubs) {
+            this.status.set(`failed to parse as subtitles: ${path}`);
             return;
         }
-        console.log(newSubs);
 
         const video = Config.getVideo(path);
         Config.pushRecent(path);
@@ -591,7 +621,7 @@ export class Frontend {
         let [portion, _] = this.retrieveFromSource(source);
         if (!portion) {
             console.log('error reading clipboard: ' + source);
-            this.status.set('cannot read clipboard data as subtitles');
+            this.status.set('failed to parse clipboard data as subtitles');
             return;
         }
         let position: number;

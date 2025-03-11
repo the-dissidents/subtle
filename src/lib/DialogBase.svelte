@@ -1,32 +1,36 @@
 <script lang="ts" module>
-	export class DialogHandler<T> {
-		show = writable<boolean>(false);
-		onSubmit: ((arg: T) => void) | undefined = undefined;
+	export class DialogHandler<TInput = void, TOutput = string> {
+		showModal?: (i: TInput) => Promise<TOutput>;
 	}
 </script>
 
 <script lang="ts">
     import { assert } from "./Basic";
-
     import type { Frontend } from "./Frontend";
-    import { writable, type Writable } from "svelte/store";
+
+	export type DialogButton = {
+		name: string,
+		enabled: boolean
+	} | string;
 
 	interface Props {
-		handler: DialogHandler<void>;
-		modal?: boolean;
+		handler: DialogHandler<void, string>;
 		centerWhenOpen?: boolean;
+		maxWidth?: string;
 		frontend: Frontend;
 		header?: import('svelte').Snippet;
 		children?: import('svelte').Snippet;
+		buttons?: DialogButton[];
 	}
 
 	let {
 		handler = $bindable(),
-		modal = true,
 		centerWhenOpen = true,
+		maxWidth = '32em',
 		frontend = $bindable(),
 		header,
-		children
+		children,
+		buttons = ['cancel', 'ok'],
 	}: Props = $props();
 
 	let dialog: HTMLDialogElement | undefined = $state();
@@ -55,62 +59,67 @@
 		document.addEventListener('mouseup', handler2);
 	}
 
-	handler?.show.subscribe((x) => {
-		if (dialog === undefined) return;
-		// console.log('show:', x);
-		if (x && !dialog.open) {
-			if (!dialog.open) {
-				if (centerWhenOpen) makeCenter();
-				if (modal) {
-					frontend.states.modalOpenCounter++;
-					dialog.showModal();
-				}
-				else dialog.show();
-			}
-		}
-		if (!x && dialog.open){
-			dialog.close();
-		}
-	});
+	let resolve: ((btn: string) => void) | undefined;
+	assert(handler !== null);
+	handler.showModal = async () => {
+		if (centerWhenOpen) makeCenter();
+		return new Promise((r) => {
+			resolve = (btn) => {
+				r(btn);
+				dialog?.close();
+				resolve = undefined;
+			};
+			assert(dialog !== undefined);
+			assert(!dialog.open);
+			dialog.showModal();
+			frontend.states.modalOpenCounter++;
+		});
+	}
 </script>
 	
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <dialog
 	bind:this={dialog}
-	class={modal ? 'modal' : ''}
-	style="top: {posy}px; left: {posx}px;"
-	
-	onclose={() => {
-		if (modal)
-			frontend.states.modalOpenCounter--;
-		handler.show.set(false);
-	}}
+	class='modal'
+	style="top: {posy}px; left: {posx}px; max-width: {maxWidth};"
+	onclose={() => frontend.states.modalOpenCounter--}
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<header onmousedown={(ev) => startDrag(ev)}>
 		{@render header?.()}
-		<hr/>
 	</header>
 	<div>
 		{@render children?.()}
 	</div>
 	<footer>
-		<!-- svelte-ignore a11y_autofocus -->
-		<button class='submit' autofocus 
-			onclick={() => {
-				handler.show.set(false); 
-				handler.onSubmit?.();
-			}}>done</button>
+		{#each buttons as btn}
+		{#if typeof btn == 'string'}
+			<button 
+				class='submit' 
+				onclick={() => {
+					assert(resolve !== undefined);
+					resolve(btn);
+				}}
+			>{btn}</button>
+		{:else}
+			<button 
+				class='submit'
+				disabled={!btn.enabled}
+				onclick={() => {
+					assert(resolve !== undefined);
+					resolve(btn.name);
+				}}
+			>{btn.name}</button>
+		{/if}
+		{/each}
 	</footer>
 </dialog>
 
 <style>
 	dialog {
-		max-width: 32em;
 		border-radius: 0.3em;
 		border: none;
-		padding: 0;
 		margin: 0;
+		padding: 0;
 		box-shadow: 0 0 10px gray;
 		position: absolute;
 		transform: translate(-50%, -50%);
@@ -118,9 +127,6 @@
 	}
 	dialog.modal::backdrop {
 		background: rgba(0, 0, 0, 0.3);
-	}
-	dialog > div {
-		padding: 1em 1em 1em;
 	}
 	dialog[open] {
 		animation: zoom 0.2s ease-out;
@@ -136,22 +142,26 @@
 		from { opacity: 0; }
 		to { opacity: 1; }
 	}
-	hr {
+	/* hr {
 		border: 1px solid gray;
 		margin: 10px 0 10px 0;
-	}
+	} */
 	header {
 		/* cursor: move; */
-		padding: 0.5em 1em 1px;
+		padding: 1em 1.5em 1px;
 		/* box-shadow: 0 -10px 10px 10px gray; */
 	}
+	dialog > div {
+		padding: 0 1.5em 1em;
+	}
 	footer {
-		padding: 1em 1em 1em;
+		padding: 1em 1.5em 1em;
 		text-align: right;
 		background-color: rgb(226, 226, 226);
 	}
 	.submit {
 		/* position: absolute; */
-		padding: 6px;
+		padding: 4px 6px;
+		margin-left: 5px;
 	}
 </style>

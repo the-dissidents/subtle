@@ -18,6 +18,14 @@
     "fs:allow-appconfig-read-recursive",
     "fs:allow-appconfig-write-recursive",
     {
+      "identifier": "fs:allow-size",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    {
       "identifier": "fs:allow-create",
       "allow": [
         {
