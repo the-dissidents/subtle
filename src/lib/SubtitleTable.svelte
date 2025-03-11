@@ -22,6 +22,7 @@ let editingVirtual = frontend.states.isEditingVirtualEntry;
 let scale = $state(1);
 let headerOffset = $state('0');
 let outer = $state<HTMLDivElement>();
+let table = $state<HTMLTableElement>();
 
 let centerX: number | undefined;
 let centerY: number | undefined;
@@ -62,6 +63,28 @@ function onFocus() {
 
 function setHeaderOffset() {
   headerOffset = (outer!.scrollTop * (1 / scale - 1)) + 'px';
+}
+
+function processWheel(ev: WheelEvent) {
+  const tr = Basic.translateWheelEvent(ev);
+  let box = outer!.getBoundingClientRect();
+  let offsetX = ev.clientX - box.left;
+  let offsetY = ev.clientY - box.top;
+  if (tr.isZoom) {
+    // ev.preventDefault();
+    if (ev.movementX || ev.movementY || !centerX || !centerY) {
+      centerX = (offsetX + outer!.scrollLeft) / scale;
+      centerY = (offsetY + outer!.scrollTop) / scale;
+    }
+    scale = Math.min(2, Math.max(1, scale / Math.pow(1.01, tr.amount)));
+    outer!.scrollTo({
+      left: centerX * scale - offsetX,
+      top: centerY * scale - offsetY,
+      behavior: 'instant'
+    });
+    table!.style.border = 'none';
+    setHeaderOffset();
+  }
 }
 </script>
 
@@ -146,31 +169,12 @@ td.subtext {
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="outer" bind:this={outer} 
-  onwheel={(ev) => {
-    const tr = Basic.translateWheelEvent(ev);
-    let box = ev.currentTarget.getBoundingClientRect();
-    let offsetX = ev.clientX - box.left;
-    let offsetY = ev.clientY - box.top;
-    if (tr.isZoom) {
-      ev.preventDefault();
-      if (ev.movementX || ev.movementY || !centerX || !centerY) {
-        centerX = (offsetX + ev.currentTarget.scrollLeft) / scale;
-        centerY = (offsetY + ev.currentTarget.scrollTop) / scale;
-      }
-      scale = Math.min(2, Math.max(1, scale / Math.pow(1.01, tr.amount)));
-      ev.currentTarget.scrollTo({
-        left: centerX * scale - offsetX,
-        top: centerY * scale - offsetY,
-        behavior: 'instant'
-      });
-      setHeaderOffset();
-    }
-  }}
+  onwheel={(ev) => processWheel(ev)}
   onmousemove={() => centerX = undefined}
   onscroll={() => setHeaderOffset()}
 >
 
-<table class='subs' style="transform: scale({scale})">
+<table class='subs' style="transform: scale({scale})" bind:this={table}>
 <thead bind:this={frontend.ui.tableHeader} style="top: {headerOffset}">
   <tr>
   <th scope="col">#</th>

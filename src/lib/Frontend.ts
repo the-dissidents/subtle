@@ -442,13 +442,12 @@ export class Frontend {
             row.scrollIntoView({ block: "nearest" });
             this.ui.subscontainer.scrollLeft = left;
 
-            // FIXME: extremely hacky!!
             const headerHeight = this.ui.tableHeader.getBoundingClientRect().height;
-            const top = this.ui.subscontainer.scrollTop + headerHeight;
-            const zoom = headerHeight / this.ui.tableHeader.clientHeight;
-            const rowtop = row.offsetTop * zoom;
-            if (rowtop < top)
-                this.ui.subscontainer.scrollTop = rowtop - headerHeight;
+            const rowToTop = 
+                row.getBoundingClientRect().top - this.ui.subscontainer.getBoundingClientRect().top;
+            if (rowToTop < headerHeight)
+                this.ui.subscontainer.scrollTop = 
+                    this.ui.subscontainer.scrollTop + rowToTop - headerHeight;
         } else {
             if (this.subs.entries.length == 0) return;
             this.ui.subscontainer.scroll({top: this.ui.subscontainer.scrollHeight});
