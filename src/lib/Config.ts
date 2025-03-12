@@ -13,12 +13,16 @@ let configData = {
     mouseZoomSensitivity: 0.05,
     trackpadZoomSensitivity: 1,
 
-    // TODO: these are no-nps for now
-    windowsW: 1000,
-    windowsH: 800,
-    editorH: 200,
+    windowW: 1000,
+    windowH: 800,
+    editorH: 125,
     timelineH: 150,
+    leftPaneW: 300,
+    videoH: 200
 };
+
+let initialized = false;
+let onInitCallbacks: (() => void)[] = [];
 
 type ConfigType = typeof configData;
 type ConfigKey = keyof ConfigType;
@@ -40,23 +44,39 @@ async function saveConfig() {
 export const Config = {
     async init() {
         console.log(await path.appConfigDir(), configPath);
-        if (!await fs.exists(configPath, {baseDir: BaseDirectory.AppConfig}))
-            return;
         try {
-            configData = Object.assign(configData, 
-                JSON.parse(await fs.readTextFile(configPath, {baseDir: BaseDirectory.AppConfig})));
+            if (!await fs.exists(configPath, {baseDir: BaseDirectory.AppConfig})) {
+                console.log('no config file found');
+                return;
+            }
+            let obj = JSON.parse(await fs.readTextFile(
+                configPath, {baseDir: BaseDirectory.AppConfig}));
+            configData = Object.assign(configData, obj);
+            console.log(configData);
         } catch (e) {
             console.error('error reading config file:', e);
+        } finally {
+            initialized = true;
+            for (const callback of onInitCallbacks)
+                callback();
         }
     },
-    set<prop extends ConfigKey>(key: prop, value: ConfigType[prop]) {
+    onInitialized(callback: () => void) {
+        if (!initialized) onInitCallbacks.push(callback);
+        else callback();
+    },
+
+    async set<prop extends ConfigKey>(key: prop, value: ConfigType[prop]) {
+        assert(initialized);
         configData[key] = value;
-        saveConfig();
+        await saveConfig();
     },
     get<prop extends ConfigKey>(key: prop): ConfigType[prop] {
+        assert(initialized);
         return configData[key];
     },
     pushRecent(file: string) {
+        assert(initialized);
         const i = configData.paths.findIndex((x) => x.name == file);
         if (i >= 0)
             configData.paths.unshift(...configData.paths.splice(i, 1));
@@ -67,9 +87,11 @@ export const Config = {
         saveConfig();
     },
     getVideo(file: string): string | undefined {
+        assert(initialized);
         return configData.paths.find((x) => x.name == file)?.video;
     },
     rememberVideo(file: string, video: string) {
+        assert(initialized);
         assert(configData.paths.length > 0 && configData.paths[0].name == file);
         configData.paths[0].video = video;
         saveConfig();

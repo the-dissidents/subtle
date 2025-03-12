@@ -3,6 +3,7 @@ import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
 import CombineDialog from "./lib/dialog/CombineDialog.svelte";
 import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import EncodingDialog from './lib/dialog/EncodingDialog.svelte';
+import ExportDialog from './lib/dialog/ExportDialog.svelte';
 
 import TabView from './lib/ui/TabView.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
@@ -25,10 +26,10 @@ import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Menu } from '@tauri-apps/api/menu';
+import { LogicalSize } from '@tauri-apps/api/window';
 import type { Action } from 'svelte/action';
 import { derived } from 'svelte/store';
 import { tick } from 'svelte';
-    import ExportDialog from './lib/dialog/ExportDialog.svelte';
 
 const appWindow = getCurrentWebviewWindow()
 let frontend = $state(new Frontend(appWindow));
@@ -141,11 +142,31 @@ let setupTimelineView: Action = () => {
   keeper.bind(frontend.playback.createTimeline(keeper.cxt, frontend));
 };
 
+Config.init();
+Config.onInitialized(() => {
+  appWindow.setSize(new LogicalSize(
+    Config.get('windowW'), 
+    Config.get('windowH')));
+  videoCanvasContainer!.style.height = `${Config.get('videoH')}px`;
+  timelineCanvas!.style.height = `${Config.get('timelineH')}px`;
+  editTable!.style.height = `${Config.get('editorH')}px`;
+  leftPane!.style.width = `${Config.get('leftPaneW')}px`;
+});
+
 appWindow.onCloseRequested(async (ev) => {
   if (!await frontend.warnIfNotSaved()) {
     ev.preventDefault();
     return;
   }
+
+  const factor = await appWindow.scaleFactor();
+  const size = (await appWindow.innerSize()).toLogical(factor);
+  await Config.set('windowW', size.width);
+  await Config.set('windowH', size.height);
+  await Config.set('videoH', videoCanvasContainer!.clientHeight);
+  await Config.set('timelineH', timelineCanvas!.clientHeight);
+  await Config.set('editorH', editTable!.clientHeight);
+  await Config.set('leftPaneW', leftPane!.clientWidth);
 });
 
 appWindow.onDragDropEvent(async (ev) => {
@@ -156,8 +177,6 @@ appWindow.onDragDropEvent(async (ev) => {
     await frontend.openDocument(path);
   }
 });
-
-Config.init();
 </script>
 
 <svelte:document 
