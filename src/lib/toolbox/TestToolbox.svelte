@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { MAPI } from "./API";
-    import { assert } from "./Basic";
-    import type { Frontend } from "./Frontend";
+    import { MAPI } from "../API";
+    import { assert } from "../Basic";
+    import type { Frontend } from "../Frontend";
     import chardet from 'chardet';
     import * as dialog from "@tauri-apps/plugin-dialog";
     import * as fs from "@tauri-apps/plugin-fs";
@@ -66,6 +66,12 @@
         result = detected.map((x) => `${x.name} -- ${x.confidence}`).join('\n');
     }}>
     detect encoding
+</button>
+<button
+    onclick={async () => {
+        await frontend.modalDialogs.export.showModal!();
+    }}>
+    export
 </button>
 <br>
 <span>{result}</span>

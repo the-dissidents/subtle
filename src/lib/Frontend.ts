@@ -107,6 +107,7 @@ export class Frontend {
         importOptions: new DialogHandler<void, MergeOptions | null>(),
         timeTransform: new DialogHandler<void, TimeShiftOptions | null>(),
         combine: new DialogHandler<void, void>(),
+        export: new DialogHandler<void, {content: string, ext: string} | null>(),
         encoding: new DialogHandler<
             {source: Uint8Array, result: AnalyseResult}, 
             {decoded: string, encoding: EncodingName} | null>()
@@ -256,7 +257,9 @@ export class Frontend {
         try {
             const file = await fs.readFile(path);
             const result = chardet.analyse(file);
-            if (result[0].confidence == 100 && result[0].name == 'UTF-8') {
+            if (result[0].confidence == 100 
+            && (result[0].name == 'UTF-8' || result[0].name == 'ASCII'))
+            {
                 return iconv.decode(file, 'UTF-8');
             } else {
                 const out = await this.modalDialogs.encoding.showModal!({source: file, result});
@@ -311,9 +314,9 @@ export class Frontend {
     }
 
     toSRT = (x: Subtitles) => 
-        SimpleFormats.export.SRT(x, LinearFormatCombineStrategy.Recombine);
+        SimpleFormats.export.SRT(x.entries, LinearFormatCombineStrategy.Recombine);
     toPlaintext = (x: Subtitles) => 
-        SimpleFormats.export.plaintext(x, LinearFormatCombineStrategy.KeepOrder);
+        SimpleFormats.export.plaintext(x.entries, LinearFormatCombineStrategy.KeepOrder);
 
     async askExportFile() {
         let ask = async (ext: string, func: (s: Subtitles) => string) => {
@@ -324,16 +327,16 @@ export class Frontend {
         }
         let menu = await Menu.new({items: [
             {
-                text: 'SRT',
-                action: () => ask('srt', (x) => this.toSRT(x))
-            },
-            {
                 text: 'ASS',
                 action: () => ask('ass', ASS.export)
             },
             {
-                text: 'plain text',
-                action: () => ask('txt', (x) => this.toPlaintext(x))
+                text: 'SRT/plaintext/...',
+                action: async () => {
+                    const result = await this.modalDialogs.export.showModal!();
+                    if (!result) return;
+                    ask(result.ext, () => result.content);
+                }
             }
         ]});
         menu.popup();

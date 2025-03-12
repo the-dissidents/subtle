@@ -52,7 +52,7 @@ export const Basic = {
                     ? 'trackpadZoomSensitivity' 
                     : 'mouseZoomSensitivity')
             };
-        } else if (Math.abs(e.deltaX) < 20 && Math.abs(e.deltaY) < 20) {
+        } else if (Math.abs(e.deltaX) < 100 && Math.abs(e.deltaY) < 100) {
             // trackpad scroll
             return {
                 isZoom: false,

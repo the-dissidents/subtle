@@ -36,11 +36,10 @@
 	let dialog: HTMLDialogElement | undefined = $state();
 	let cx: number, cy: number, ox: number, oy: number;
 	let posx: number = $state(0), posy: number = $state(0);
-	makeCenter();
 
 	function makeCenter() {
-		posx = window.innerWidth / 2;
-		posy = window.innerHeight / 2;
+		posx = (window.innerWidth - dialog!.clientWidth) / 2;
+		posy = (window.innerHeight - dialog!.clientHeight) / 2;
 	}
 
 	function startDrag(ev: MouseEvent) {
@@ -62,7 +61,6 @@
 	let resolve: ((btn: string) => void) | undefined;
 	assert(handler !== null);
 	handler.showModal = async () => {
-		if (centerWhenOpen) makeCenter();
 		return new Promise((r) => {
 			resolve = (btn) => {
 				r(btn);
@@ -72,6 +70,7 @@
 			assert(dialog !== undefined);
 			assert(!dialog.open);
 			dialog.showModal();
+			if (centerWhenOpen) makeCenter();
 			frontend.states.modalOpenCounter++;
 		});
 	}
@@ -122,8 +121,9 @@
 		padding: 0;
 		box-shadow: 0 0 10px gray;
 		position: absolute;
-		transform: translate(-50%, -50%);
+		/* transform: translate(-50%, -50%); */
 		z-index: 100;
+		max-height: 80vh;
 	}
 	dialog.modal::backdrop {
 		background: rgba(0, 0, 0, 0.3);
@@ -132,8 +132,8 @@
 		animation: zoom 0.2s ease-out;
 	}
 	@keyframes zoom {
-		from { transform: translate(-50%, -50%) scale(0.95); }
-		to { transform: translate(-50%, -50%) scale(1); }
+		from { transform: scale(0.95); }
+		to { transform: scale(1); }
 	}
 	dialog.modal[open]::backdrop {
 		animation: fade 0.2s ease-out;

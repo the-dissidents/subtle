@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { assert } from './Basic';
-  import DialogBase, { type DialogHandler } from './DialogBase.svelte';
-  import { Frontend } from './Frontend';
-  import StyleSelect from './StyleSelect.svelte';
-  import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from './core/Subtitles.svelte';
+    import { assert } from '../Basic';
+  import DialogBase, { type DialogHandler } from '../DialogBase.svelte';
+  import { Frontend } from '../Frontend';
+  import StyleSelect from '../StyleSelect.svelte';
+  import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from '../core/Subtitles.svelte';
 
   interface Props {
 		handler: DialogHandler<void, MergeOptions | null>;

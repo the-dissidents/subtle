@@ -1,8 +1,8 @@
 <script lang="ts">
-    import DialogBase, { type DialogHandler } from './DialogBase.svelte';
-    import type { Frontend } from './Frontend';
-    import { assert } from './Basic';
-    import chardet, { type AnalyseResult, type EncodingName } from 'chardet';
+    import DialogBase, { type DialogHandler } from '../DialogBase.svelte';
+    import type { Frontend } from '../Frontend';
+    import { assert } from '../Basic';
+    import { type AnalyseResult, type EncodingName } from 'chardet';
     import * as iconv from 'iconv-lite';
 
     interface Props {
@@ -17,7 +17,7 @@
         frontend = $bindable()
     }: Props = $props();
 
-    let inner: DialogHandler<void, string> = {}
+    let inner: DialogHandler<void, string> = {};
     handler.showModal = async ({source: s, result}) => {
         assert(inner !== undefined);
         source = s;

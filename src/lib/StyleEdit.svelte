@@ -19,7 +19,6 @@
   let { style: _style, subtitles = $bindable(), frontend }: Props = $props();
   let alignSelector: HTMLSelectElement | undefined = $state();
   let button: HTMLButtonElement | undefined = $state();
-
   let style = writable(_style);
 
   function isDuplicate(name: string) {
@@ -96,8 +95,9 @@
 <div class='split'>
   <!-- toolbar -->
   <div class="toolbar">
+    {#if $style !== subtitles.defaultStyle}
     <!-- add style -->
-    <button disabled={$style == subtitles.defaultStyle}
+    <button
       onclick={() => {
         let i = subtitles.styles.indexOf($style);
         assert(i >= 0);
@@ -107,7 +107,7 @@
         submit();
       }}>+</button><br/>
     <!-- move up -->
-    <button disabled={$style == subtitles.defaultStyle || $style == subtitles.styles[0]}
+    <button disabled={$style === subtitles.styles[0]}
       onclick={() => {
         let i = subtitles.styles.indexOf($style);
         assert(i >= 0);
@@ -119,8 +119,9 @@
         frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>↑</button><br/>
+
     <!-- move down -->
-    <button disabled={$style == subtitles.defaultStyle || $style == subtitles.styles.at(-1)}
+    <button disabled={$style === subtitles.styles.at(-1)}
       onclick={() => {
         let i = subtitles.styles.indexOf($style);
         assert(i >= 0);
@@ -132,6 +133,7 @@
         frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>↓</button><br/>
+    {/if}
     <button bind:this={button} onclick={() => contextMenu()}>...</button>
   </div>
   <!-- properties -->

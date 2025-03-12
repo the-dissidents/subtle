@@ -1,33 +1,34 @@
 <script lang="ts">
-import ImportOptionsDialog from './lib/ImportOptionsDialog.svelte';
-import CombineDialog from "./lib/CombineDialog.svelte";
+import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
+import CombineDialog from "./lib/dialog/CombineDialog.svelte";
+import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
+import EncodingDialog from './lib/dialog/EncodingDialog.svelte';
+
+import TabView from './lib/ui/TabView.svelte';
+import TabPage from './lib/ui/TabPage.svelte';
 import Resizer from './lib/ui/Resizer.svelte';
 import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
+import SubtitleTable from './lib/SubtitleTable.svelte';
 
 import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/core/Subtitles.svelte'
 import { assert, Basic } from './lib/Basic';
 import { ChangeCause, ChangeType, Frontend, UIFocus } from './lib/Frontend';
-import TimeAdjustmentDialog from './lib/TimeTransformDialog.svelte';
 import { CanvasKeeper } from './lib/CanvasKeeper';
 import { Config } from './lib/Config';
 import { LabelColor } from './lib/Theming';
 
+import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
+import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
+import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
+import TestToolbox from './lib/toolbox/TestToolbox.svelte';
+
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Menu } from '@tauri-apps/api/menu';
-import TabView from './lib/ui/TabView.svelte';
-import TabPage from './lib/ui/TabPage.svelte';
-import SubtitleTable from './lib/SubtitleTable.svelte';
-
-import PropertiesToolbox from './lib/PropertiesToolbox.svelte';
-import UntimedToolbox from './lib/UntimedToolbox.svelte';
-import SearchToolbox from './lib/SearchToolbox.svelte';
-import TestToolbox from './lib/TestToolbox.svelte';
-
 import type { Action } from 'svelte/action';
 import { derived } from 'svelte/store';
 import { tick } from 'svelte';
-import EncodingDialog from './lib/EncodingDialog.svelte';
+    import ExportDialog from './lib/dialog/ExportDialog.svelte';
 
 const appWindow = getCurrentWebviewWindow()
 let frontend = $state(new Frontend(appWindow));
@@ -180,6 +181,7 @@ Config.init();
 <ImportOptionsDialog  {frontend} handler={frontend.modalDialogs.importOptions}/>
 <CombineDialog        {frontend} handler={frontend.modalDialogs.combine}/>
 <EncodingDialog       {frontend} handler={frontend.modalDialogs.encoding}/>
+<ExportDialog         {frontend} handler={frontend.modalDialogs.export}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->

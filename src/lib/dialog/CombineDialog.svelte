@@ -1,8 +1,8 @@
 <script lang="ts">
-    import DialogBase, { type DialogHandler } from './DialogBase.svelte';
-    import { type SubtitleEntry } from './core/Subtitles.svelte';
-    import { ChangeCause, ChangeType, Frontend } from './Frontend';
-    import { assert } from './Basic';
+    import DialogBase, { type DialogHandler } from '../DialogBase.svelte';
+    import { type SubtitleEntry } from '../core/Subtitles.svelte';
+    import { ChangeCause, ChangeType, Frontend } from '../Frontend';
+    import { assert } from '../Basic';
 
     interface Props {
 		handler: DialogHandler<void, void>;

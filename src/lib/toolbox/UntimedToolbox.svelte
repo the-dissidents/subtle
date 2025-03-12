@@ -2,14 +2,14 @@
 https://svelte.dev/e/node_invalid_placement -->
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { ChangeCause, ChangeType, UIFocus, type Frontend } from "./Frontend";
-  import Collapsible from "./ui/Collapsible.svelte";
+  import { ChangeCause, ChangeType, UIFocus, type Frontend } from "../Frontend";
+  import Collapsible from "../ui/Collapsible.svelte";
   import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
   import * as dialog from "@tauri-apps/plugin-dialog"
-  import StyleSelect from "./StyleSelect.svelte";
-  import * as fuzzyAlgorithm from "./Fuzzy";
-  import { assert, Basic } from "./Basic";
-    import type { SubtitleChannel, SubtitleEntry } from "./core/Subtitles.svelte";
+  import StyleSelect from "../StyleSelect.svelte";
+  import * as fuzzyAlgorithm from "../Fuzzy";
+  import { assert, Basic } from "../Basic";
+    import type { SubtitleChannel, SubtitleEntry } from "../core/Subtitles.svelte";
 
   export let frontend: Frontend;
   export let locked = false;

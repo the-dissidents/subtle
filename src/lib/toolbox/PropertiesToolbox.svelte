@@ -1,8 +1,8 @@
 <script lang="ts">
-import { SubtitleStyle } from './core/Subtitles.svelte'
-import StyleEdit from './StyleEdit.svelte';
-import { ChangeCause, ChangeType, Frontend } from './Frontend';
-import Collapsible from './ui/Collapsible.svelte';
+import { SubtitleStyle } from '../core/Subtitles.svelte'
+import StyleEdit from '../StyleEdit.svelte';
+import { ChangeCause, ChangeType, Frontend } from '../Frontend';
+import Collapsible from '../ui/Collapsible.svelte';
 
 interface Props {
   frontend: Frontend
@@ -14,10 +14,13 @@ let metadata = $state(frontend.subs.metadata);
 let styles = $state(frontend.subs.styles);
 let defaultStyle = $state(frontend.subs.defaultStyle);
 let subtitles = $state(frontend.subs);
+let updateCounter = $state(0);
 
 frontend.onSubtitlesChanged.bind((t, c) => {
-  if (t == ChangeType.StyleDefinitions || t == ChangeType.General)
+  if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
     styles = frontend.subs.styles;
+    updateCounter += 1;
+  }
 });
 
 frontend.onSubtitleObjectReload.bind(() => {
@@ -85,7 +88,7 @@ function changeResolution() {
     <StyleEdit {frontend} style={defaultStyle} {subtitles} />
     <hr>
     <h5>other</h5>
-    {#each styles as style (style.uniqueID)}
+    {#each styles as style (`${style.uniqueID},${updateCounter}`)}
       <StyleEdit {frontend} style={style} {subtitles}
         on:submit={() => styles = frontend.subs.styles}/>
       <hr>
@@ -96,7 +99,6 @@ function changeResolution() {
   <button style="height: 20px"
     onclick={() => removeUnusedStyles()}>remove all unused</button>
 </Collapsible>
-
 
 <style>
 .res {

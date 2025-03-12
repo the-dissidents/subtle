@@ -42,6 +42,7 @@ const ToLinearFormat = {
                 events.push({ type: 'end', pos: end, i });
             });
             events.sort((a, b) => a.pos - b.pos);
+            if (events.length == 0) return [];
 
             let activeTexts: {i: number, text: string}[] = [];
             let result: LinearEntry[] = [];
@@ -62,7 +63,7 @@ const ToLinearFormat = {
                     if (i == events.length) break outer;
                 }
                 const pos2 = events[i].pos;
-                result.push({
+                if (activeTexts.length > 0) result.push({
                     start: pos, end: pos2, 
                     text: activeTexts.map((x) => x.text).join('\n')
                 });
@@ -103,8 +104,8 @@ export const SimpleFormats = {
         JSON(subs: Subtitles) {
             return JSON.stringify(subs.toSerializable());
         },
-        SRT(subs: Subtitles, strategy: LinearFormatCombineStrategy) {
-            const linear = ToLinearFormat[strategy](subs.entries);
+        SRT(subs: SubtitleEntry[], strategy: LinearFormatCombineStrategy) {
+            const linear = ToLinearFormat[strategy](subs);
             let result = '', i = 1;
             for (let entry of linear) {
                 result += `${i}\n${SubtitleUtil.formatTimestamp(entry.start, 3, ',')} --> ${SubtitleUtil.formatTimestamp(entry.end, 3, ',')}\n${entry.text}\n\n`;
@@ -112,11 +113,25 @@ export const SimpleFormats = {
             }
             return result;
         },
+        tabDelimited(subs: SubtitleEntry[], strategy: LinearFormatCombineStrategy) {
+            const linear = ToLinearFormat[strategy](subs);
+            let result = '', i = 1;
+            for (let entry of linear) {
+                result += `${
+                    SubtitleUtil.formatTimestamp(entry.start, 3, '.')}\t${
+                    SubtitleUtil.formatTimestamp(entry.end, 3, '.')}\t${
+                    entry.text
+                        .replace('\n', '\\N')
+                        .replace('\t', '\\T')}\n`;
+                i += 1;
+            }
+            return result;
+        },
         /**
          * Plain text of lines, without times.
          */
-        plaintext(subs: Subtitles, strategy: LinearFormatCombineStrategy) {
-            const linear = ToLinearFormat[strategy](subs.entries);
+        plaintext(subs: SubtitleEntry[], strategy: LinearFormatCombineStrategy) {
+            const linear = ToLinearFormat[strategy](subs);
             return linear.map((x) => x.text).join('\n');
         }
     } as const
