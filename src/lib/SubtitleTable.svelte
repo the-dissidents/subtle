@@ -1,51 +1,78 @@
 <script lang="ts">
+import { onDestroy } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
-import { ChangeType, getSelectMode, SelectMode, UIFocus, type Frontend } from "./Frontend";
+
 import { SubtitleEntry, SubtitleUtil } from "./core/Subtitles.svelte";
 import { LabelColor } from "./Theming";
-import { Basic } from "./Basic";
-    import { onMount } from "svelte";
+import { assert, Basic } from "./Basic";
 
-interface Props {
-  frontend: Frontend;
-}
+import { ChangeType, Source } from "./frontend/Source";
+import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
+import { Interface, UIFocus } from "./frontend/Interface";
+import { Playback } from "./frontend/Playback";
+import { Actions } from "./frontend/Actions";
+import { EventHost } from "./frontend/Frontend";
 
-let {
-  frontend = $bindable()
-}: Props = $props();
-
-let entries = $state(frontend.subs.entries);
+let entries = $state(Source.subs.entries);
 let selection = $state(new SvelteSet<SubtitleEntry>);
-let focus = frontend.focused.entry;
-let editingVirtual = frontend.states.isEditingVirtualEntry;
+
+let entryRows = new WeakMap<SubtitleEntry, HTMLElement>;
+
+let focus = Editing.focused.entry;
+let editingVirtual = Editing.isEditingVirtualEntry;
 
 let scale = $state(1);
 let headerOffset = $state('0');
 let outer = $state<HTMLDivElement>();
 let table = $state<HTMLTableElement>();
+let tableHeader = $state<HTMLElement>();
 
 let centerX: number | undefined;
 let centerY: number | undefined;
 
-frontend.onSubtitleObjectReload.bind(() => {
-  entries = frontend.subs.entries;
+const me = {};
+onDestroy(() => EventHost.unbind(me));
+
+Source.onSubtitleObjectReload.bind(me, () => {
+  entries = Source.subs.entries;
 });
 
-frontend.onSubtitlesChanged.bind((t) => {
+Source.onSubtitlesChanged.bind(me, (t) => {
   if (t == ChangeType.General || t == ChangeType.Times || t == ChangeType.Order)
-    entries = frontend.subs.entries;
+    entries = Source.subs.entries;
 });
 
-frontend.onSelectionChanged.bind(() => {
-  selection = new SvelteSet(frontend.getSelection());
+Editing.onSelectionChanged.bind(me, () => {
+  selection = new SvelteSet(Editing.getSelection());
 });
 
-onMount(() => {
-  frontend.ui.subscontainer = outer;
+Editing.onKeepEntryInView.bind(me, (ent) => {
+  assert(outer !== undefined);
+  assert(tableHeader !== undefined);
+
+  if (ent instanceof SubtitleEntry) {
+    const row = entryRows.get(ent);
+    if (!row) {
+        console.warn('?!row', ent);
+        return;
+    }
+    const rowRect = row.getBoundingClientRect();
+    const outerRect = outer.getBoundingClientRect();
+    const headerHeight = tableHeader.getBoundingClientRect().height;
+    const rowToTop = rowRect.top - outerRect.top;
+
+    if (rowToTop < headerHeight)
+      outer.scrollTop = outer.scrollTop + rowToTop - headerHeight;
+    else if (rowToTop > outerRect.height - rowRect.height)
+      outer.scrollTop = outer.scrollTop + rowToTop - (outerRect.height - rowRect.height);
+  } else {
+    if (Source.subs.entries.length == 0) return;
+    outer.scroll({top: outer.scrollHeight});
+  }
 });
 
 function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
-  frontend.entryRows.set(entry, node);
+  entryRows.set(entry, node);
 }
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
@@ -58,7 +85,7 @@ function getNpS(ent: SubtitleEntry, text: string) {
 }
 
 function onFocus() {
-  frontend.uiFocus.set(UIFocus.Table);
+  Interface.uiFocus.set(UIFocus.Table);
 }
 
 function setHeaderOffset() {
@@ -175,7 +202,7 @@ td.subtext {
 >
 
 <table class='subs' style="transform: scale({scale})" bind:this={table}>
-<thead bind:this={frontend.ui.tableHeader} style="top: {headerOffset}">
+<thead bind:this={tableHeader} style="top: {headerOffset}">
   <tr>
   <th scope="col">#</th>
   <th scope="col">start</th>
@@ -194,21 +221,21 @@ td.subtext {
     onmousedown={(ev) => {
       onFocus();
       if (ev.button == 0)
-        frontend.toggleEntry(ent, getSelectMode(ev));
+        Editing.toggleEntry(ent, getSelectMode(ev));
     }}
     oncontextmenu={(ev) => {
       onFocus();
-      frontend.uiHelper.contextMenu();
       ev.preventDefault();
+      Actions.contextMenu();
     }}
     ondblclick={() => {
       onFocus();
-      frontend.startEditingFocusedEntry();
-      frontend.playback.setPosition(ent.start);
+      Editing.startEditingFocusedEntry();
+      Playback.setPosition(ent.start);
     }}
     onmouseover={(ev) => {
       if (ev.buttons == 1)
-        frontend.selectEntry(ent, SelectMode.Sequence);
+        Editing.selectEntry(ent, SelectMode.Sequence);
     }}
     class:focushlt={$focus === ent}
     class:sametime={$focus instanceof SubtitleEntry 
@@ -232,10 +259,10 @@ td.subtext {
 
   <!-- virtual entry at the end -->
   {#if !$editingVirtual}
-  <tr ondblclick={() => {frontend.startEditingNewVirtualEntry();}}
+  <tr ondblclick={() => Editing.startEditingNewVirtualEntry()}
     onmousedown={() => {
-      frontend.clearSelection();
-      frontend.selectVirtualEntry();
+      Editing.clearSelection();
+      Editing.selectVirtualEntry();
     }}
     class:focushlt={$focus === 'virtual'}>
   <td>﹡</td>

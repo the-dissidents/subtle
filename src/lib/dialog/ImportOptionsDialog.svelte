@@ -1,18 +1,18 @@
 <script lang="ts">
-    import { assert } from '../Basic';
-  import DialogBase, { type DialogHandler } from '../DialogBase.svelte';
-  import { Frontend } from '../Frontend';
-  import StyleSelect from '../StyleSelect.svelte';
+  import { assert } from '../Basic';
   import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from '../core/Subtitles.svelte';
+  import type { DialogHandler } from '../frontend/Dialogs';
+  import { Source } from '../frontend/Source';
+  
+  import DialogBase from '../DialogBase.svelte';
+  import StyleSelect from '../StyleSelect.svelte';
 
   interface Props {
 		handler: DialogHandler<void, MergeOptions | null>;
-		frontend: Frontend;
 	}
 
   let {
 		handler = $bindable(),
-		frontend = $bindable()
   }: Props = $props();
 
   let inner: DialogHandler<void> = {};
@@ -34,14 +34,14 @@
   
   let form: HTMLFormElement;
   let select: StyleSelect;
-  let overrideStyle = $state(frontend.subs.defaultStyle);
+  let overrideStyle = $state(Source.subs.defaultStyle);
   let styleOption = $state('KeepDifferent');
   let selectOption = $state('UsedOnly');
   let posOption = $state('After');
   let overrideMetadata = $state(false);
 </script>
 
-<DialogBase bind:frontend handler={inner}><form bind:this={form}>
+<DialogBase handler={inner}><form bind:this={form}>
   <table class='config'>
     <tbody>
       <tr>
@@ -63,8 +63,9 @@
           <input type="radio" id="is4" value="Overwrite" bind:group={styleOption}/>
           <label for="is4">overwrite local styles when names match</label><br/>
           <input type="radio" id="is5" value="UseOverrideForAll" bind:group={styleOption}/>
-          <label for="is5">use <StyleSelect bind:this={select}
-            {frontend} bind:currentStyle={overrideStyle}/> for all</label><br/>
+          <label for="is5">use <StyleSelect 
+            bind:this={select}
+            bind:currentStyle={overrideStyle}/> for all</label><br/>
         </td>
       </tr>
       <tr>

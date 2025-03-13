@@ -1,12 +1,6 @@
-<script lang="ts" module>
-	export class DialogHandler<TInput = void, TOutput = string> {
-		showModal?: (i: TInput) => Promise<TOutput>;
-	}
-</script>
-
 <script lang="ts">
     import { assert } from "./Basic";
-    import type { Frontend } from "./Frontend";
+    import { DialogHandler, Dialogs } from "./frontend/Dialogs";
 
 	export type DialogButton = {
 		name: string,
@@ -17,7 +11,6 @@
 		handler: DialogHandler<void, string>;
 		centerWhenOpen?: boolean;
 		maxWidth?: string;
-		frontend: Frontend;
 		header?: import('svelte').Snippet;
 		children?: import('svelte').Snippet;
 		buttons?: DialogButton[];
@@ -27,7 +20,6 @@
 		handler = $bindable(),
 		centerWhenOpen = true,
 		maxWidth = '32em',
-		frontend = $bindable(),
 		header,
 		children,
 		buttons = ['cancel', 'ok'],
@@ -71,7 +63,7 @@
 			assert(!dialog.open);
 			dialog.showModal();
 			if (centerWhenOpen) makeCenter();
-			frontend.states.modalOpenCounter++;
+			Dialogs.modalOpenCounter++;
 		});
 	}
 </script>
@@ -80,7 +72,7 @@
 	bind:this={dialog}
 	class='modal'
 	style="top: {posy}px; left: {posx}px; max-width: {maxWidth};"
-	onclose={() => frontend.states.modalOpenCounter--}
+	onclose={() => Dialogs.modalOpenCounter--}
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<header onmousedown={(ev) => startDrag(ev)}>

@@ -1,7 +1,6 @@
 import { path } from "@tauri-apps/api";
-import { BaseDirectory } from "@tauri-apps/plugin-fs";
-import { assert } from "./Basic";
 import * as fs from "@tauri-apps/plugin-fs"
+import { assert } from "./Basic";
 
 const configPath = 'config.json';
 let configData = {
@@ -34,7 +33,7 @@ async function saveConfig() {
 
     try {
         await fs.writeTextFile(configPath, 
-            JSON.stringify(configData), {baseDir: BaseDirectory.AppConfig});
+            JSON.stringify(configData), {baseDir: fs.BaseDirectory.AppConfig});
     } catch (e) {
         // fail silently
         console.error('error saving config:', e);
@@ -45,12 +44,12 @@ export const Config = {
     async init() {
         console.log(await path.appConfigDir(), configPath);
         try {
-            if (!await fs.exists(configPath, {baseDir: BaseDirectory.AppConfig})) {
+            if (!await fs.exists(configPath, {baseDir: fs.BaseDirectory.AppConfig})) {
                 console.log('no config file found');
                 return;
             }
             let obj = JSON.parse(await fs.readTextFile(
-                configPath, {baseDir: BaseDirectory.AppConfig}));
+                configPath, {baseDir: fs.BaseDirectory.AppConfig}));
             configData = Object.assign(configData, obj);
             console.log(configData);
         } catch (e) {

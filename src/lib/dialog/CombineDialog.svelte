@@ -1,17 +1,17 @@
 <script lang="ts">
-    import DialogBase, { type DialogHandler } from '../DialogBase.svelte';
     import { type SubtitleEntry } from '../core/Subtitles.svelte';
-    import { ChangeCause, ChangeType, Frontend } from '../Frontend';
     import { assert } from '../Basic';
+    import { Editing } from '../frontend/Editing';
+    import { ChangeCause, ChangeType, Source } from '../frontend/Source';
+    import type { DialogHandler } from '../frontend/Dialogs';
+    import DialogBase from '../DialogBase.svelte';
 
     interface Props {
 		handler: DialogHandler<void, void>;
-		frontend: Frontend;
 	}
 
     let {
-        handler = $bindable(),
-        frontend = $bindable()
+        handler = $bindable()
     }: Props = $props();
 
     let inner: DialogHandler<void> = {}
@@ -32,10 +32,10 @@
 
         let selection: SubtitleEntry[]
         if (selectionOnly) {
-            let s = frontend.getSelection();
+            let s = Editing.getSelection();
             if (s.length > 0) selection = s;
-            else selection = [...frontend.subs.entries];
-        } else   selection = [...frontend.subs.entries];
+            else selection = [...Source.subs.entries];
+        } else   selection = [...Source.subs.entries];
 
         let done = new Set<SubtitleEntry>();
         for (let i = 0; i < selection.length - 1; i++) {
@@ -57,8 +57,8 @@
                     }
                     if (doit) {
                         entry0.texts.push(...entry1.texts);
-                        frontend.subs.entries.splice(
-                            frontend.subs.entries.indexOf(entry1), 1);
+                        Source.subs.entries.splice(
+                            Source.subs.entries.indexOf(entry1), 1);
                     }
                     n += 1;
                     done.add(entry1);
@@ -73,10 +73,10 @@
         if (doit) {
             hasbeen = true;
             if (done.size > 0) {
-                frontend.clearSelection();
+                Editing.clearSelection();
                 for (let ent of selection.filter((x) => !done.has(x)))
-                    frontend.selection.submitted.add(ent);
-                frontend.markChanged(ChangeType.Times, ChangeCause.Action);
+                    Editing.selection.submitted.add(ent);
+                Source.markChanged(ChangeType.Times, ChangeCause.Action);
             }
         } else
             hasbeen = false;
@@ -86,7 +86,7 @@
     });
 </script>
 
-<DialogBase bind:frontend handler={inner}>
+<DialogBase handler={inner}>
     <table class="config">
         <tbody>
             <tr>

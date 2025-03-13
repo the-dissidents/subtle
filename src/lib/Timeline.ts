@@ -1,10 +1,14 @@
 import { AudioSampler } from "./AudioSampler";
 import { Basic, assert } from "./Basic";
 import type { WithCanvas } from "./CanvasKeeper";
-import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./core/Subtitles.svelte";
-import { ChangeCause, ChangeType, SelectMode, type Frontend } from "./Frontend";
 import { MMedia } from "./API";
 import { LabelColor } from "./Theming";
+
+import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./core/Subtitles.svelte";
+import { ChangeCause, ChangeType, Source } from "./frontend/Source";
+import { Editing, SelectMode } from "./frontend/Editing";
+import { Playback } from "./frontend/Playback";
+import { Actions } from "./frontend/Actions";
 
 const SCROLLER_HEIGHT = 7 * devicePixelRatio;
 const HEADER_HEIGHT = 15 * devicePixelRatio;
@@ -88,7 +92,6 @@ function fontSize(size: number) {
 }
 
 export class Timeline implements WithCanvas {
-    #frontend: Frontend;
     #cxt: CanvasRenderingContext2D;
     #animating = false;
     #requestedRender = false;
@@ -121,16 +124,15 @@ export class Timeline implements WithCanvas {
     }
 
     #preprocessStyles() {
-        const subs = this.#frontend.subs;
+        const subs = Source.subs;
         this.#entryHeight = (this.#height - HEADER_HEIGHT - TRACK_AREA_MARGIN * 2) 
             / (subs.styles.length+1);
         this.#stylesMap = new Map(
             [[subs.defaultStyle, 0], ...subs.styles.map((x, i) => [x, i+1])] as any);
     }
 
-    constructor(c: CanvasRenderingContext2D, f: Frontend) {
+    constructor(c: CanvasRenderingContext2D) {
         this.#cxt = c;
-        this.#frontend = f;
         this.setViewScale(10);
         this.requestRender();
 
@@ -139,32 +141,34 @@ export class Timeline implements WithCanvas {
         c.canvas.onmousedown = (ev) => this.#processMouseDown(ev);
         c.canvas.ondblclick = () => this.#precessDoubleClick();
         c.canvas.onwheel = (ev) => this.#processWheel(ev);
-        f.onSelectionChanged.bind((cause) => {
+
+        const me = {};
+        Editing.onSelectionChanged.bind(me, (cause) => {
             if (cause != ChangeCause.Timeline) {
-                this.#selection = new Set(this.#frontend.getSelection());
-                let focused = this.#frontend.getFocusedEntry();
+                this.#selection = new Set(Editing.getSelection());
+                let focused = Editing.getFocusedEntry();
                 if (focused instanceof SubtitleEntry) this.#keepEntryInView(focused);
                 this.requestRender();
             }
         });
-        f.onSubtitlesChanged.bind((type) => {
+        Source.onSubtitlesChanged.bind(me, (type) => {
             if (type == ChangeType.StyleDefinitions || type == ChangeType.General) {
                 this.#preprocessStyles();
             }
             if (type != ChangeType.Metadata)
                 this.requestRender();
         });
-        f.onSubtitleObjectReload.bind(() => {
+        Source.onSubtitleObjectReload.bind(me, () => {
             this.#preprocessStyles();
             this.requestRender();
-        })
+        });
     }
 
     // helpers
 
     #getVisibleEntries(): SubtitleEntry[] {
         const end = this.#offset + this.#width / this.#scale;
-        return this.#frontend.subs.entries.filter(
+        return Source.subs.entries.filter(
             (ent) => ent.end > this.#offset && ent.start < end);
     }
 
@@ -184,7 +188,7 @@ export class Timeline implements WithCanvas {
         let result = [];
         const start = (x / this.#scale) + this.#offset;
         const end = (x + w / this.#scale) + this.#offset;
-        for (let ent of this.#frontend.subs.entries) {
+        for (let ent of Source.subs.entries) {
             if (ent.end < start || ent.start > end) continue;
             if (this.#getEntryPositions(ent)
                 .some((b) => b.x <= x + w && b.x + b.w >= x 
@@ -323,7 +327,7 @@ export class Timeline implements WithCanvas {
                     // clicked on nothing
                     if (Basic.ctrlKey() == 'Meta' ? !e0.metaKey : !e0.ctrlKey) {
                         // clear selection
-                        this.#frontend.clearSelection(ChangeCause.Timeline);
+                        Editing.clearSelection(ChangeCause.Timeline);
                         this.#selection.clear();
                         this.requestRender();
                     }
@@ -360,14 +364,14 @@ export class Timeline implements WithCanvas {
                     // right-clicked on something
                     // clear selection and re-select only if it's not selected
                     if (!ents.some((x) => this.#selection.has(x))) {
-                        this.#frontend.clearSelection(ChangeCause.Timeline);
-                        this.#frontend.selectEntry(ents[0], 
+                        Editing.clearSelection(ChangeCause.Timeline);
+                        Editing.selectEntry(ents[0], 
                             SelectMode.Single, ChangeCause.Action);
                     }
                     // you can't drag in this case! no onMove.
                     // start context menu on mouse up
                     // note we do it here instead of in oncontextmenu
-                    onUp = () => this.#frontend.uiHelper.contextMenu();
+                    onUp = () => Actions.contextMenu();
                 } else {
                     // left-clicked on something
                     // renew selection
@@ -392,7 +396,7 @@ export class Timeline implements WithCanvas {
                                 console.log('afterup');
                                 this.#selection.clear();
                                 this.#selection.add(ents[0]);
-                                this.#frontend.selectEntry(ents[0], 
+                                Editing.selectEntry(ents[0], 
                                     SelectMode.Single, ChangeCause.Timeline);
                             };
                         } else {
@@ -401,7 +405,7 @@ export class Timeline implements WithCanvas {
                             let index = (ents.indexOf(one) + 1) % ents.length;
                             this.#selection.clear();
                             this.#selection.add(ents[index]);
-                            this.#frontend.selectEntry(ents[index], 
+                            Editing.selectEntry(ents[index], 
                                 SelectMode.Single, ChangeCause.Timeline);
                         }
                         this.requestRender();
@@ -439,9 +443,7 @@ export class Timeline implements WithCanvas {
                             this.#alignmentLine = null;
                             this.requestRender();
                             if (dragged) {
-                                // for (let entry of sels) 
-                                //     entry.update.dispatch();
-                                this.#frontend.markChanged(ChangeType.Times, ChangeCause.Timeline);
+                                Source.markChanged(ChangeType.Times, ChangeCause.Timeline);
                             } else afterUp();
                         };
                     } else {
@@ -465,8 +467,7 @@ export class Timeline implements WithCanvas {
                             this.#alignmentLine = null;
                             this.requestRender();
                             if (dragged) {
-                                // entry.update.dispatch();
-                                this.#frontend.markChanged(ChangeType.Times, ChangeCause.Timeline);
+                                Source.markChanged(ChangeType.Times, ChangeCause.Timeline);
                             } else afterUp();
                         };
                     }
@@ -486,8 +487,8 @@ export class Timeline implements WithCanvas {
     #precessDoubleClick() {
         if (this.#selection.size == 1) {
             let one = [...this.#selection][0];
-            if (this.#frontend.getFocusedEntry() == one)
-                this.#frontend.startEditingFocusedEntry();
+            if (Editing.getFocusedEntry() == one)
+                Editing.startEditingFocusedEntry();
         }
     }
 
@@ -507,17 +508,17 @@ export class Timeline implements WithCanvas {
     }
 
     #dispatchSelectionChanged() {
-        this.#frontend.clearFocus();
-        this.#frontend.selection.submitted = new Set(this.#selection);
+        Editing.clearFocus();
+        Editing.selection.submitted = new Set(this.#selection);
         if (this.#selection.size == 1) {
             let array = [...this.#selection.values()];
-            this.#frontend.selection.currentGroup = array;
-            this.#frontend.selection.focused = array[0];
+            Editing.selection.currentGroup = array;
+            Editing.selection.focused = array[0];
         } else {
-            this.#frontend.selection.currentGroup = [];
-            this.#frontend.selection.focused = null;
+            Editing.selection.currentGroup = [];
+            Editing.selection.focused = null;
         }
-        this.#frontend.onSelectionChanged.dispatch(ChangeCause.Timeline);
+        Editing.onSelectionChanged.dispatch(ChangeCause.Timeline);
     }
 
     #samplerMedia?: MMedia;
@@ -539,7 +540,7 @@ export class Timeline implements WithCanvas {
     #maxPosition() {
         return this.#sampler 
             ? this.#sampler.duration 
-            : Math.max(...this.#frontend.subs.entries.map((x) => x.end)) + 20;
+            : Math.max(...Source.subs.entries.map((x) => x.end)) + 20;
     }
 
     #processSampler() {
@@ -563,7 +564,7 @@ export class Timeline implements WithCanvas {
         const subarray = this.#sampler.detail.subarray(i, i_end);
         const first0 = subarray.findIndex((x) => x == 0);
         // const firstLarge = subarray.findIndex((x) => x > 5);
-        if (this.#frontend.playback.isPlaying) {
+        if (Playback.isPlaying) {
             if (first0 < 0) {
                 // if (firstLarge < 0)
                     this.#requestedSampler = false;
@@ -612,7 +613,7 @@ export class Timeline implements WithCanvas {
     async setCursorPos(pos: number) {
         if (pos == this.#cursorPos) return;
         this.setCursorPosPassive(pos);
-        await this.#frontend.playback.setPosition(pos);
+        await Playback.setPosition(pos);
     }
 
     setViewScale(v: number) {
@@ -762,7 +763,7 @@ export class Timeline implements WithCanvas {
             this.#cxt.lineTo(this.#alignmentLine, this.#height);
             this.#cxt.stroke();
         }
-        const area = this.#frontend.playback.playArea;
+        const area = Playback.playArea;
         if (area.start !== undefined) {
             const start = (area.start - this.#offset) * this.#scale;
             this.#cxt.fillStyle = INOUT_AREA_OUTSIDE;
@@ -800,7 +801,7 @@ export class Timeline implements WithCanvas {
         this.#cxt.font = `bold ${fontSize(12)}px sans-serif`;
         this.#cxt.fillStyle = 'lightgreen';
         this.#cxt.textBaseline = 'top';
-        const area = this.#frontend.playback.playArea;
+        const area = Playback.playArea;
         const status = (area.start === undefined ? '' : 'IN ')
                      + (area.end === undefined ? '' : 'OUT ')
                      + (area.loop ? 'LOOP ' : '');

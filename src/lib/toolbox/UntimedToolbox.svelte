@@ -1,19 +1,22 @@
-<!-- @migration-task Error while migrating Svelte code: `<tr>` cannot be a child of `<table>`. `<table>` only allows these children: `<caption>`, `<colgroup>`, `<tbody>`, `<thead>`, `<tfoot>`, `<style>`, `<script>`, `<template>`. The browser will 'repair' the HTML (by moving, removing, or inserting elements) which breaks Svelte's assumptions about the structure of your components.
-https://svelte.dev/e/node_invalid_placement -->
 <script lang="ts">
-  import { onDestroy } from "svelte";
-  import { ChangeCause, ChangeType, UIFocus, type Frontend } from "../Frontend";
-  import Collapsible from "../ui/Collapsible.svelte";
   import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
   import * as dialog from "@tauri-apps/plugin-dialog"
-  import StyleSelect from "../StyleSelect.svelte";
+  import { onDestroy } from "svelte";
+
+  import type { SubtitleChannel, SubtitleEntry } from "../core/Subtitles.svelte";
   import * as fuzzyAlgorithm from "../Fuzzy";
   import { assert, Basic } from "../Basic";
-    import type { SubtitleChannel, SubtitleEntry } from "../core/Subtitles.svelte";
 
-  export let frontend: Frontend;
+  import Collapsible from "../ui/Collapsible.svelte";
+  import StyleSelect from "../StyleSelect.svelte";
+  
+  import { ChangeCause, ChangeType, Source } from "../frontend/Source";
+  import { Editing } from "../frontend/Editing";
+  import { Interface, UIFocus } from "../frontend/Interface";
+  import { Dialogs } from "../frontend/Dialogs";
+  import { EventHost } from "../frontend/Frontend";
+
   export let locked = false;
-
   let textsize = 14;
   let justify = true;
   let textarea: HTMLTextAreaElement;
@@ -22,7 +25,7 @@ https://svelte.dev/e/node_invalid_placement -->
     enabled: false,
     maxSkip: 3,
     minScore: 0.5,
-    channel: frontend.subs.defaultStyle,
+    channel: Source.subs.defaultStyle,
     snapToPunct: true,
     tokenizer: 'default',
     engine: null as fuzzyAlgorithm.Searcher | null,
@@ -30,11 +33,11 @@ https://svelte.dev/e/node_invalid_placement -->
     currentEntry: null as SubtitleEntry | null
   }
 
-  frontend.onSubtitleObjectReload.bind(readFromSubs);
-  onDestroy(() => frontend.onSubtitleObjectReload.unbind(readFromSubs));
+  const me = {};
+  onDestroy(() => EventHost.unbind(me));
 
-  frontend.onSelectionChanged.bind(fuzzyMatch);
-  onDestroy(() => frontend.onSelectionChanged.unbind(fuzzyMatch));
+  Source.onSubtitleObjectReload.bind(me, readFromSubs);
+  Editing.onSelectionChanged.bind(me, fuzzyMatch);
 
   $: if (fuzzy.enabled) {
     locked = true;
@@ -42,24 +45,24 @@ https://svelte.dev/e/node_invalid_placement -->
   }
 
   function updateToSubs() {
-    if (frontend.subs.metadata.special.untimedText == textarea.value) return;
-    frontend.subs.metadata.special.untimedText = textarea.value;
+    if (Source.subs.metadata.special.untimedText == textarea.value) return;
+    Source.subs.metadata.special.untimedText = textarea.value;
     fuzzy.engine = null;
-    frontend.markChanged(ChangeType.Metadata, ChangeCause.Action);
+    Source.markChanged(ChangeType.Metadata, ChangeCause.Action);
   }
 
   function readFromSubs() {
-    textarea.value = frontend.subs.metadata.special.untimedText;
-    fuzzy.channel = frontend.subs.defaultStyle;
+    textarea.value = Source.subs.metadata.special.untimedText;
+    fuzzy.channel = Source.subs.defaultStyle;
   }
 
   function fuzzyMatch() {
     if (!fuzzy.enabled) return;
 
-    let current = frontend.selection.focused?.texts.find(
+    let current = Editing.selection.focused?.texts.find(
       (x) => x.style.uniqueID == fuzzy.channel.uniqueID);
     if (!current || current.text == '' || textarea.value == '') {
-      console.log('no current', frontend.selection)
+      console.log('no current', Editing.selection)
       fuzzy.currentChannel = null;
       fuzzy.currentEntry = null;
       textarea.selectionEnd = textarea.selectionStart;
@@ -67,7 +70,7 @@ https://svelte.dev/e/node_invalid_placement -->
     }
     if (current.text == fuzzy.currentChannel?.text) return;
     fuzzy.currentChannel = current;
-    fuzzy.currentEntry = frontend.selection.focused;
+    fuzzy.currentEntry = Editing.selection.focused;
 
     // create engine if necessary
     if (fuzzy.engine === null) {
@@ -87,7 +90,7 @@ https://svelte.dev/e/node_invalid_placement -->
     // perform search
     const fail = () => {
       textarea.selectionEnd = textarea.selectionStart;
-      frontend.status.set('fuzzy search failed to find anything');
+      Interface.status.set('fuzzy search failed to find anything');
     };
     let result = fuzzy.engine.search(current.text, fuzzy.maxSkip);
     if (!result) {
@@ -108,7 +111,7 @@ https://svelte.dev/e/node_invalid_placement -->
     // display
     if (i0 >= i1) fail(); else {
       setSelectionAndScroll(i0, i1);
-      frontend.status.set(`fuzzy match found (${(n / m * 100).toFixed(0)}%)`);
+      Interface.status.set(`fuzzy match found (${(n / m * 100).toFixed(0)}%)`);
     }
   }
 
@@ -170,8 +173,8 @@ https://svelte.dev/e/node_invalid_placement -->
   on:keydown={(ev) => {
     if (fuzzy.enabled) {
       if (ev.getModifierState(Basic.ctrlKey()) || ev.altKey) return;
-      if (frontend.states.modalOpenCounter > 0) return;
-      if (document.activeElement !== textarea && frontend.getUIFocus() !== UIFocus.Table) return;
+      if (Dialogs.modalOpenCounter > 0) return;
+      if (document.activeElement !== textarea && Interface.getUIFocus() !== UIFocus.Table) return;
 
       if (ev.key == 'z') {
         textarea.selectionStart = offset(textarea.selectionStart, false);
@@ -182,7 +185,7 @@ https://svelte.dev/e/node_invalid_placement -->
       } else if (ev.key == 'c') {
         textarea.selectionEnd = offset(textarea.selectionEnd, false);
       } else if (ev.key == 'a') {
-        let focused = frontend.getFocusedEntry();
+        let focused = Editing.getFocusedEntry();
         if (fuzzy.currentEntry !== focused) {
           console.warn('current entry is not fuzzy.currentEntry, but', focused);
           return;
@@ -195,14 +198,14 @@ https://svelte.dev/e/node_invalid_placement -->
         assert(fuzzy.currentChannel !== null);
         if (fuzzy.currentChannel.text != str) {
           fuzzy.currentChannel.text = str;
-          frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
+          Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
         }
         // the above causes the UI to refresh, so we delay a bit
         setTimeout(() => {
-          frontend.selection.focused = fuzzy.currentEntry;
-          frontend.focused.style = fuzzy.channel;
-          frontend.onSelectionChanged.dispatch(ChangeCause.Action);
-          frontend.startEditingFocusedEntry();
+          Editing.selection.focused = fuzzy.currentEntry;
+          Editing.focused.style = fuzzy.channel;
+          Editing.onSelectionChanged.dispatch(ChangeCause.Action);
+          Editing.startEditingFocusedEntry();
         }, 0);
       } 
     }
@@ -248,7 +251,7 @@ https://svelte.dev/e/node_invalid_placement -->
           <tbody>
             <tr>
               <td>channel</td>
-              <td><StyleSelect {frontend} bind:currentStyle={fuzzy.channel} /></td>
+              <td><StyleSelect bind:currentStyle={fuzzy.channel} /></td>
             </tr>
             <tr>
               <td>tokenizer</td>

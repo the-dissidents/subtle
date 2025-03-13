@@ -1,55 +1,58 @@
 <script lang="ts">
+import { onDestroy } from 'svelte';
+
 import { SubtitleStyle } from '../core/Subtitles.svelte'
-import StyleEdit from '../StyleEdit.svelte';
-import { ChangeCause, ChangeType, Frontend } from '../Frontend';
 import Collapsible from '../ui/Collapsible.svelte';
+import StyleEdit from '../StyleEdit.svelte';
 
-interface Props {
-  frontend: Frontend
-}
+import { ChangeCause, ChangeType, Source } from '../frontend/Source';
+import { Playback } from '../frontend/Playback';
+import { EventHost } from '../frontend/Frontend';
 
-let { frontend }: Props = $props();
-
-let metadata = $state(frontend.subs.metadata);
-let styles = $state(frontend.subs.styles);
-let defaultStyle = $state(frontend.subs.defaultStyle);
-let subtitles = $state(frontend.subs);
+let metadata = $state(Source.subs.metadata);
+let styles = $state(Source.subs.styles);
+let defaultStyle = $state(Source.subs.defaultStyle);
+let subtitles = $state(Source.subs);
 let updateCounter = $state(0);
 
-frontend.onSubtitlesChanged.bind((t, c) => {
+const me = {};
+onDestroy(() => EventHost.unbind(me));
+
+Source.onSubtitlesChanged.bind(me, (t, c) => {
   if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
-    styles = frontend.subs.styles;
+    styles = Source.subs.styles;
     updateCounter += 1;
   }
 });
 
-frontend.onSubtitleObjectReload.bind(() => {
-  metadata = frontend.subs.metadata;
-  styles = frontend.subs.styles;
-  defaultStyle = frontend.subs.defaultStyle;
-  subtitles = frontend.subs;
+Source.onSubtitleObjectReload.bind(me, () => {
+  metadata = Source.subs.metadata;
+  styles = Source.subs.styles;
+  defaultStyle = Source.subs.defaultStyle;
+  subtitles = Source.subs;
 });
+
 
 function newStyle() {
   let newStyle = new SubtitleStyle('new');
-  frontend.subs.styles.push(newStyle);
-  frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+  Source.subs.styles.push(newStyle);
+  Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
 }
 
 function removeUnusedStyles() {
   let usedStyles = new Set<SubtitleStyle>();
-  frontend.subs.entries.forEach((x) => 
+  Source.subs.entries.forEach((x) => 
     x.texts.forEach((t) => usedStyles.add(t.style)));
-  frontend.subs.styles = frontend.subs.styles.filter((x) => usedStyles.has(x));
-  frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+  Source.subs.styles = Source.subs.styles.filter((x) => usedStyles.has(x));
+  Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
 }
 
 function markMetadataChange() {
-  frontend.markChanged(ChangeType.Metadata, ChangeCause.Action);
+  Source.markChanged(ChangeType.Metadata, ChangeCause.Action);
 }
 
 function changeResolution() {
-  frontend.playback.video?.subRenderer?.changeResolution();
+  Playback.video?.subRenderer?.changeResolution();
   markMetadataChange();
 }
 </script>
@@ -85,12 +88,12 @@ function changeResolution() {
 <Collapsible header="STYLES" active={true}>
   {#key subtitles}
     <h5>default</h5>
-    <StyleEdit {frontend} style={defaultStyle} {subtitles} />
+    <StyleEdit style={defaultStyle} {subtitles} />
     <hr>
     <h5>other</h5>
     {#each styles as style (`${style.uniqueID},${updateCounter}`)}
-      <StyleEdit {frontend} style={style} {subtitles}
-        on:submit={() => styles = frontend.subs.styles}/>
+      <StyleEdit style={style} {subtitles}
+        on:submit={() => styles = Source.subs.styles}/>
       <hr>
     {/each}
   {/key}

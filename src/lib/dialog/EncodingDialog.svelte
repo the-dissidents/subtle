@@ -1,20 +1,19 @@
 <script lang="ts">
-    import DialogBase, { type DialogHandler } from '../DialogBase.svelte';
-    import type { Frontend } from '../Frontend';
-    import { assert } from '../Basic';
     import { type AnalyseResult, type EncodingName } from 'chardet';
     import * as iconv from 'iconv-lite';
+    
+    import { assert } from '../Basic';
+    import type { DialogHandler } from '../frontend/Dialogs';
+    import DialogBase from '../DialogBase.svelte';
 
     interface Props {
 		handler: DialogHandler<
             {source: Uint8Array, result: AnalyseResult}, 
             {decoded: string, encoding: EncodingName} | null>;
-		frontend: Frontend;
 	}
 
     let {
         handler = $bindable(),
-        frontend = $bindable()
     }: Props = $props();
 
     let inner: DialogHandler<void, string> = {};
@@ -57,8 +56,7 @@
     }
 </script>
 
-
-<DialogBase bind:frontend handler={inner} maxWidth={'35em'}
+<DialogBase handler={inner} maxWidth={'35em'}
     buttons={['cancel', okButton]}
 >
     {#snippet header()}

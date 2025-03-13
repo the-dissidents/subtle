@@ -1,25 +1,22 @@
 <script lang="ts">
-    import DialogBase, { type DialogHandler } from '../DialogBase.svelte';
-    import type { Frontend } from '../Frontend';
-    import { assert } from '../Basic';
-    import { onMount } from 'svelte';
-    import { SubtitleEntry, type Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte';
+    import { SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
     import { LinearFormatCombineStrategy, SimpleFormats } from '../core/SimpleFormats';
-    import Collapsible from '../ui/Collapsible.svelte';
+    import { Source } from '../frontend/Source';
+    import { Interface } from '../frontend/Interface';
+    import type { DialogHandler } from '../frontend/Dialogs';
+    import DialogBase from '../DialogBase.svelte';
 
     interface Props {
 		handler: DialogHandler<void, {content: string, ext: string} | null>;
-		frontend: Frontend;
 	}
 
     let {
         handler = $bindable(),
-        frontend = $bindable()
     }: Props = $props();
 
     let inner: DialogHandler<void, string> = {};
     handler.showModal = async () => {
-        let subs = frontend.subs;
+        let subs = Source.subs;
         let map = new Map<number, number>();
         for (const entry of subs.entries) {
             for (const text of entry.texts) {
@@ -56,7 +53,7 @@
             .filter((x) => x.use)
             .map((x) => x.style.uniqueID));
         let entries: SubtitleEntry[] = [];
-        for (const e of frontend.subs.entries) {
+        for (const e of Source.subs.entries) {
             const txts = e.texts.filter((x) => styleSet.has(x.style.uniqueID));
             if (txts.length > 0)
                 entries.push(new SubtitleEntry(e.start, e.end, ...txts));
@@ -66,11 +63,11 @@
 
     async function copy() {
         await navigator.clipboard.writeText(preview);
-        frontend.status.set('copied exported data');
+        Interface.status.set('copied exported data');
     }
 </script>
 
-<DialogBase bind:frontend handler={inner} maxWidth="48em" buttons={['cancel', 'ok']}>
+<DialogBase handler={inner} maxWidth="48em" buttons={['cancel', 'ok']}>
     {#snippet header()}
         <h4>Export to a linear format</h4>
     {/snippet}

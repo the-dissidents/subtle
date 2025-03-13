@@ -1,24 +1,19 @@
 <script lang="ts">
-    import { MAPI } from "../API";
-    import { assert } from "../Basic";
-    import type { Frontend } from "../Frontend";
     import chardet from 'chardet';
     import * as dialog from "@tauri-apps/plugin-dialog";
     import * as fs from "@tauri-apps/plugin-fs";
+    
+    import { MAPI } from "../API";
+    import { assert } from "../Basic";
+    import { Playback } from "../frontend/Playback";
 
-    interface Props {
-        frontend: Frontend;
-    }
-
-    let { frontend }: Props = $props();
     let result = $state("");
-
     MAPI.version().then((x) => result = `ffmpeg version is ${x}`);
 </script>
 
 <button
     onclick={async () => {
-        let video = frontend.playback.video;
+        let video = Playback.video;
         if (video == null) {
             result = "No video!";
             return;
@@ -37,7 +32,7 @@
 </button>
 <button
     onclick={async () => {
-        let video = frontend.playback.video;
+        let video = Playback.video;
         if (video == null) {
             result = "No video!";
             return;
@@ -66,12 +61,6 @@
         result = detected.map((x) => `${x.name} -- ${x.confidence}`).join('\n');
     }}>
     detect encoding
-</button>
-<button
-    onclick={async () => {
-        await frontend.modalDialogs.export.showModal!();
-    }}>
-    export
 </button>
 <br>
 <span>{result}</span>

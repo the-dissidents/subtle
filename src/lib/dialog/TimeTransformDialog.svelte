@@ -1,20 +1,19 @@
 <script lang="ts">
-  import DialogBase, { type DialogHandler } from '../DialogBase.svelte';
-  import { Frontend } from '../Frontend';
+  import DialogBase from '../DialogBase.svelte';
   import { SubtitleEntry, SubtitleUtil, type TimeShiftOptions } from '../core/Subtitles.svelte';
+  import { assert } from '../Basic';
+  import { Editing } from '../frontend/Editing';
+  import type { DialogHandler } from '../frontend/Dialogs';
   import TimestampInput from '../TimestampInput.svelte';
-    import { assert } from '../Basic';
 
   let form: HTMLFormElement;
 
   interface Props {
 		handler: DialogHandler<void, TimeShiftOptions | null>;
-		frontend: Frontend;
 	}
 
   let {
 		handler = $bindable(),
-		frontend = $bindable()
   }: Props = $props();
 
   // constants
@@ -44,7 +43,7 @@
     return {
       // t = (t0 - anchor) * scale + anchor + offset
       // t = t0 * scale + anchor + offset - anchor * scale
-      selection: frontend.getSelection(),
+      selection: Editing.getSelection(),
       offset: cpAnchor + cpOffset - cpAnchor * cpScale,
       modifySince: check,
       scale: cpScale
@@ -71,7 +70,7 @@
   let selection: SubtitleEntry[];
   
   function updateSelection() {
-    selection = frontend.getSelection();
+    selection = Editing.getSelection();
     selectionStart = Math.min(...selection.map((x) => x.start));
     selectionEnd = Math.max(...selection.map((x) => x.end));
   }
@@ -93,7 +92,7 @@
   }
 </script>
 
-<DialogBase bind:frontend handler={inner}><form bind:this={form}>
+<DialogBase handler={inner}><form bind:this={form}>
   <table class='config'>
     <tbody>
       <tr>

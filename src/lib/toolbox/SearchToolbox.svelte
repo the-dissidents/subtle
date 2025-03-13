@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { Labels, SubtitleEntry, type LabelTypes } from '../core/Subtitles.svelte'
-	import { ChangeCause, ChangeType, Frontend, SelectMode } from '../Frontend';
 	import StyleSelect from '../StyleSelect.svelte';
 	import { assert, Basic } from '../Basic';
 	
-	export let frontend: Frontend;
+    import { ChangeCause, ChangeType, Source } from '../frontend/Source';
+    import { Editing, SelectMode } from '../frontend/Editing';
+    import { Interface } from '../frontend/Interface';
+	
 	let searchTerm = '';
 	let replaceTerm = '';
 	let useRegex = false, caseSensitive = true, selectionOnly = false;
 	let useStyle = false, replaceStyle = false;
-	let style1 = frontend.subs.defaultStyle;
-	let style2 = frontend.subs.defaultStyle;
+	let style1 = Source.subs.defaultStyle;
+	let style2 = Source.subs.defaultStyle;
 
 	let useLabel = false;
 	let label: LabelTypes = 'none';
@@ -28,12 +30,12 @@
 	}
 
 	function findAndReplace(type: SearchAction, option: SearchOption) {
-		const entries = frontend.subs.entries;
+		const entries = Source.subs.entries;
 		if (entries.length == 0) return;
-		const selection = frontend.getSelection();
+		const selection = Editing.getSelection();
 		const selectionSet = new Set(selection);
 
-		const focusedEntry = frontend.getFocusedEntry();
+		const focusedEntry = Editing.getFocusedEntry();
 		let focus = focusedEntry instanceof SubtitleEntry ? focusedEntry : entries[0];
 		if (selectionOnly) focus = selection.at(0) ?? focus;
 
@@ -51,19 +53,19 @@
 					`g${caseSensitive ? '' : 'i'}`);
 			} catch (e) {
 				assert(e instanceof Error);
-				frontend.status.set(`search failed: ${e.message}`);
+				Interface.status.set(`search failed: ${e.message}`);
 				return;
 			}
 		} else if (useLabel || useStyle) {
 			expr = /.*/;
 			usingEmptyTerm = true;
 		} else {
-			frontend.status.set(`search expression is empty`);
+			Interface.status.set(`search expression is empty`);
 			return;
 		}
 
 		if (type == SearchAction.Select || !selectionOnly) {
-			frontend.clearSelection(ChangeCause.Action);
+			Editing.clearSelection(ChangeCause.Action);
 		}
 
 		let nDone = 0;
@@ -88,7 +90,7 @@
 						console.log(j, currentTextIndex, ent, currentEntry);
 						nDone++;
 						if (type == SearchAction.Select) {
-							frontend.selection.submitted.add(ent);
+							Editing.selection.submitted.add(ent);
 							break; // selecting one channel suffices
 						} else if (type == SearchAction.Replace) {
 							channel.text = replaced;
@@ -99,8 +101,8 @@
 						if (option != SearchOption.Global) {
 							currentEntry = ent;
 							currentTextIndex = j;
-							frontend.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
-							frontend.focused.style = channel.style;
+							Editing.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
+							Editing.focused.style = channel.style;
 							break outerLoop;
 						}
 					}
@@ -113,10 +115,10 @@
 			if (type == SearchAction.Select) {
 				status = `selected ${nDone} line${nDone > 1 ? 's' : ''}`;
 				// manually call this because we didn't use selectEntry etc.
-				frontend.onSelectionChanged.dispatch(ChangeCause.Action);
+				Editing.onSelectionChanged.dispatch(ChangeCause.Action);
 			} else if (type == SearchAction.Replace || type === SearchAction.ReplaceStyleOnly) {
 				status = `replaced ${nDone} lines${nDone > 1 ? 's' : ''}`;
-				frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
+				Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
 			} else {
 				status = `found ${nDone} line${nDone > 1 ? 's' : ''}`;
 			}
@@ -125,11 +127,11 @@
 			currentEntry = null;
 			currentTextIndex = 0;
 			if (option != SearchOption.Global) {
-				frontend.clearFocus();
-				frontend.onSelectionChanged.dispatch(ChangeCause.Action);
+				Editing.clearFocus();
+				Editing.onSelectionChanged.dispatch(ChangeCause.Action);
 			}
 		}
-		frontend.status.set(status);
+		Interface.status.set(status);
 	}
 </script>
 
@@ -146,7 +148,7 @@
 	</label><br/>
 	<label><input type='checkbox' bind:checked={replaceStyle}/>
 		replace by style
-		<StyleSelect {frontend}
+		<StyleSelect
 			on:submit={() => replaceStyle = true}
 			bind:currentStyle={style2}/>
 	</label><br/>
@@ -168,7 +170,7 @@
 	</label><br/>
 	<label><input type='checkbox' bind:checked={useStyle}/>
 		search only in style
-		<StyleSelect {frontend}
+		<StyleSelect
 			on:submit={() => useStyle = true}
 			bind:currentStyle={style1}/>
 	</label>

@@ -1,5 +1,4 @@
 import { assert } from "../Basic";
-import { CSSColors, parseCSSColor } from "../colorparser";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelTypes = typeof Labels[number];

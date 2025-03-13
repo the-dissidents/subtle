@@ -12,27 +12,32 @@ import StyleSelect from './lib/StyleSelect.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 import SubtitleTable from './lib/SubtitleTable.svelte';
 
-import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/core/Subtitles.svelte'
-import { assert, Basic } from './lib/Basic';
-import { ChangeCause, ChangeType, Frontend, UIFocus } from './lib/Frontend';
-import { CanvasKeeper } from './lib/CanvasKeeper';
-import { Config } from './lib/Config';
-import { LabelColor } from './lib/Theming';
-
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
 import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 
+import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/core/Subtitles.svelte'
+import { assert, Basic } from './lib/Basic';
+import { CanvasKeeper } from './lib/CanvasKeeper';
+import { Config } from './lib/Config';
+import { LabelColor } from './lib/Theming';
+
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Menu } from '@tauri-apps/api/menu';
 import { LogicalSize } from '@tauri-apps/api/window';
 import type { Action } from 'svelte/action';
-import { derived } from 'svelte/store';
+import { derived, get } from 'svelte/store';
 import { tick } from 'svelte';
 
+import { ChangeCause, ChangeType, Source } from './lib/frontend/Source';
+import { Editing } from './lib/frontend/Editing';
+import { Interface, UIFocus } from './lib/frontend/Interface';
+import { Playback } from './lib/frontend/Playback';
+import { Dialogs } from './lib/frontend/Dialogs';
+import { Actions } from './lib/frontend/Actions';
+
 const appWindow = getCurrentWebviewWindow()
-let frontend = $state(new Frontend(appWindow));
 
 let leftPane: HTMLElement | undefined = $state();
 let editTable: HTMLElement | undefined = $state();
@@ -55,53 +60,54 @@ let editingT1 = $state(0);
 let editingDt = $state(0);
 let editingLabel: LabelTypes = $state('none');
 
-let status = frontend.status;
-let uiFocus = frontend.uiFocus;
+let status = Interface.status;
+let uiFocus = Interface.uiFocus;
 let filenameDisplay = 
-  derived([frontend.currentFile, frontend.fileChanged], 
+  derived([Source.currentFile, Source.fileChanged], 
     ([x, y]) => `${x ? Basic.getFilename(x) : '<untitled>'}${y ? '*' : ''}`);
 
-frontend.onUndoBufferChanged.bind(() => {
+const me = {};
+
+Source.onUndoBufferChanged.bind(me, () => {
   undoRedoUpdateCounter++;
 });
 
-frontend.onSubtitlesChanged.bind((type: ChangeType, cause: ChangeCause) => {
+Source.onSubtitlesChanged.bind(me, (type: ChangeType, cause: ChangeCause) => {
   // for toolbar
   if (cause != ChangeCause.UIForm)
     editFormUpdateCounter++;
   console.log('changed', ChangeType[type], ChangeCause[cause]);
 });
 
-frontend.onSelectionChanged.bind(() => {
+Editing.onSelectionChanged.bind(me, () => {
   editFormUpdateCounter++;
-  let focused = frontend.getFocusedEntry();
+  let focused = Editing.getFocusedEntry();
   if (focused instanceof SubtitleEntry) {
     editingT0 = focused.start;
     editingT1 = focused.end;
     editingDt = editingT1 - editingT0;
     editingLabel = focused.label;
-    let isEditingNow = frontend.getUIFocus() == UIFocus.EditingField;
+    let isEditingNow = Interface.getUIFocus() == UIFocus.EditingField;
     tick().then(() => {
       let col = document.getElementsByClassName('contentarea');
       for (const target of col) {
         contentSelfAdjust(target as HTMLTextAreaElement);
       }
-      if (isEditingNow) frontend.startEditingFocusedEntry();
+      if (isEditingNow) Editing.startEditingFocusedEntry();
     });
   }
 });
 
-frontend.playback.onRefreshPlaybackControl = () => {
-  let playback = frontend.playback;
-  sliderDisabled = !playback.isLoaded;
-  playIcon = playback.isPlaying ? '⏸' : '▶'
-  playPosInput = playback.position ?? 0;
-  playPos = playback.isLoaded 
-    ? playback.position / playback.duration : 0;
+Playback.onRefreshPlaybackControl = () => {
+  sliderDisabled = !Playback.isLoaded;
+  playIcon = Playback.isPlaying ? '⏸' : '▶'
+  playPosInput = Playback.position ?? 0;
+  playPos = Playback.isLoaded 
+    ? Playback.position / Playback.duration : 0;
 };
 
 function applyEditForm() {
-  let focused = frontend.getFocusedEntry();
+  let focused = Editing.getFocusedEntry();
   assert(focused instanceof SubtitleEntry);
   focused.start = editingT0;
   focused.end = editingT1;
@@ -133,13 +139,13 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
 let setupVideoView: Action = () => {
   assert(videoCanvasContainer !== undefined && videoCanvas !== undefined);
   let keeper = new CanvasKeeper(videoCanvas, videoCanvasContainer);
-  keeper.bind(frontend.playback.createVideo(keeper.cxt, frontend.subs));
+  keeper.bind(Playback.createVideo(keeper.cxt));
 };
 
 let setupTimelineView: Action = () => {
   assert(timelineCanvas !== undefined);
   let keeper = new CanvasKeeper(timelineCanvas, timelineCanvas);
-  keeper.bind(frontend.playback.createTimeline(keeper.cxt, frontend));
+  keeper.bind(Playback.createTimeline(keeper.cxt));
 };
 
 Config.init();
@@ -154,7 +160,7 @@ Config.onInitialized(() => {
 });
 
 appWindow.onCloseRequested(async (ev) => {
-  if (!await frontend.warnIfNotSaved()) {
+  if (!await Interface.warnIfNotSaved()) {
     ev.preventDefault();
     return;
   }
@@ -173,21 +179,21 @@ appWindow.onDragDropEvent(async (ev) => {
   if (ev.payload.type == 'drop') {
     const path = ev.payload.paths.at(0);
     if (!path) return;
-    if (!await frontend.warnIfNotSaved()) return;
-    await frontend.openDocument(path);
+    if (!await Interface.warnIfNotSaved()) return;
+    await Interface.openFile(path);
   }
 });
 </script>
 
 <svelte:document 
-  onkeydown={(ev) => frontend.uiHelper.processGlobalKeydown(ev)}/>
+  onkeydown={(ev) => Actions.processGlobalKeydown(ev)}/>
 <svelte:window
   onload={() => {
     let time = performance.now();
     console.log('load time:', time);
   }}
   onbeforeunload={(ev) => {
-    if (frontend.fileChanged) ev.preventDefault();
+    if (get(Source.fileChanged)) ev.preventDefault();
   }}
   onfocusin={(ev) => {
     // TODO: this works but looks like nonsense
@@ -196,11 +202,11 @@ appWindow.onDragDropEvent(async (ev) => {
   }}/>
 
 <!-- dialogs -->
-<TimeAdjustmentDialog {frontend} handler={frontend.modalDialogs.timeTransform}/>
-<ImportOptionsDialog  {frontend} handler={frontend.modalDialogs.importOptions}/>
-<CombineDialog        {frontend} handler={frontend.modalDialogs.combine}/>
-<EncodingDialog       {frontend} handler={frontend.modalDialogs.encoding}/>
-<ExportDialog         {frontend} handler={frontend.modalDialogs.export}/>
+<TimeAdjustmentDialog handler={Dialogs.timeTransform}/>
+<ImportOptionsDialog  handler={Dialogs.importOptions}/>
+<CombineDialog        handler={Dialogs.combine}/>
+<EncodingDialog       handler={Dialogs.encoding}/>
+<ExportDialog         handler={Dialogs.export}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->
@@ -212,8 +218,8 @@ appWindow.onDragDropEvent(async (ev) => {
             {
               text: 'other file...',
               async action(_) {
-                if (await frontend.warnIfNotSaved())
-                  frontend.askOpenFile();
+                if (await Interface.warnIfNotSaved())
+                Interface.askOpenFile();
               },
             },
             { item: 'Separator' },
@@ -226,28 +232,28 @@ appWindow.onDragDropEvent(async (ev) => {
                 text: '[...]/' + x.name.split(Basic.pathSeparator)
                   .slice(-2).join(Basic.pathSeparator),
                 action: async () => {
-                  if (await frontend.warnIfNotSaved())
-                    frontend.openDocument(x.name);
+                  if (await Interface.warnIfNotSaved())
+                  Interface.openFile(x.name);
                 }
               }))
             ),
         ]});
         openMenu.popup();
       }}>open</button></li>
-      <li><button onclick={() => frontend.askSaveFile(true)}>save as</button></li>
-      <li><button onclick={() => frontend.askImportFile()}>import</button></li>
-      <li><button onclick={() => frontend.askExportFile()}>export</button></li>
+      <li><button onclick={() => Interface.askSaveFile(true)}>save as</button></li>
+      <li><button onclick={() => Interface.askImportFile()}>import</button></li>
+      <li><button onclick={() => Interface.askExportFile()}>export</button></li>
       <li class='separator'></li>
       {#key undoRedoUpdateCounter}
       <li><button
-        onclick={() => frontend.undo()} 
-        disabled={frontend.undoStack.length <= 1}>undo</button></li>
+        onclick={() => Source.undo()} 
+        disabled={Source.undoStack.length <= 1}>undo</button></li>
       <li><button
-        onclick={() => frontend.redo()}
-        disabled={frontend.redoStack.length == 0}>redo</button></li>
+        onclick={() => Source.redo()}
+        disabled={Source.redoStack.length == 0}>redo</button></li>
       {/key}
       <li class='separator'></li>
-      <li><button onclick={() => frontend.askOpenVideo()}>open video</button></li>
+      <li><button onclick={() => Interface.askOpenVideo()}>open video</button></li>
       <li><div class='label'>{$filenameDisplay}</div></li>
     </ul>
   </div>
@@ -263,21 +269,21 @@ appWindow.onDragDropEvent(async (ev) => {
       <div class='hlayout'>
         <button 
           style="width: 30px; height: 20px"
-          onclick={() => frontend.playback.toggle()
+          onclick={() => Playback.toggle()
             .catch((e) => $status = `Error playing video: ${e}`)}
         >{playIcon}</button>
         <input type='range' class='play-pointer flexgrow'
           step="any" max="1" min="0" disabled={sliderDisabled}
           bind:value={playPos}
           oninput={() => {
-            if (!frontend.playback.isLoaded) {
+            if (!Playback.isLoaded) {
               playPos = 0;
               return;
             }
-            frontend.playback.setPosition(playPos * frontend.playback.duration);
+            Playback.setPosition(playPos * Playback.duration);
           }}/>
         <TimestampInput bind:timestamp={playPosInput}
-          on:change={() => frontend.playback.setPosition(playPosInput)}/>
+          on:change={() => Playback.setPosition(playPosInput)}/>
       </div>
       <!-- resizer -->
       <div>
@@ -288,16 +294,16 @@ appWindow.onDragDropEvent(async (ev) => {
         <TabView>
         {#snippet children()}
           <TabPage name="Properties">
-            <PropertiesToolbox {frontend}/>
+            <PropertiesToolbox/>
           </TabPage>
           <TabPage name="Untimed text" active={true}>
-            <UntimedToolbox {frontend}/>
+            <UntimedToolbox/>
           </TabPage>
           <TabPage name="Search/Replace">
-            <SearchToolbox {frontend}/>
+            <SearchToolbox/>
           </TabPage>
           <TabPage name="Test">
-            <TestToolbox {frontend}/>
+            <TestToolbox/>
           </TabPage>
         {/snippet}
         </TabView>
@@ -328,9 +334,9 @@ appWindow.onDragDropEvent(async (ev) => {
               if (editMode == 0 && keepDuration)
                 editingT1 = editingT0 + editingDt;
               applyEditForm(); 
-              frontend.states.editChanged = true;}} 
+              Editing.editChanged = true;}} 
             on:change={() => 
-              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+              Source.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
           <br>
           <TimestampInput bind:timestamp={editingT1}
             stretch={true}
@@ -338,11 +344,11 @@ appWindow.onDragDropEvent(async (ev) => {
               if (editMode == 1 && keepDuration)
                 editingT0 = editingT1 - editingDt;
               applyEditForm(); 
-              frontend.states.editChanged = true;}} 
+              Editing.editChanged = true;}} 
             on:change={() => {
               if (editingT1 < editingT0) editingT1 = editingT0;
               applyEditForm();
-              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
+              Source.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
           <br>
           <TimestampInput bind:timestamp={editingDt}
             stretch={true}
@@ -352,9 +358,9 @@ appWindow.onDragDropEvent(async (ev) => {
               else if (editMode == 1)
                 editingT0 = editingT1 - editingDt; 
               applyEditForm();
-              frontend.states.editChanged = true;}}
+              Editing.editChanged = true;}}
             on:change={() => 
-              frontend.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+              Source.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
           <hr>
           <div class="hlayout">
             <div style={`height: auto; width: 25px; border: solid 1px;
@@ -364,7 +370,7 @@ appWindow.onDragDropEvent(async (ev) => {
               class="flexgrow"
               onchange={() => {
                 applyEditForm();
-                frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm);}}>
+                Source.markChanged(ChangeType.InPlace, ChangeCause.UIForm);}}>
               {#each Labels as color}
                 <option value={color}>{color}</option>
               {/each}
@@ -373,21 +379,21 @@ appWindow.onDragDropEvent(async (ev) => {
         </div>
         <!-- channels view -->
         <div class="channels flexgrow isolated">
-          {#if frontend.getFocusedEntry() instanceof SubtitleEntry}
-          {@const focused = frontend.getFocusedEntry() as SubtitleEntry}
+          {#if Editing.getFocusedEntry() instanceof SubtitleEntry}
+          {@const focused = Editing.getFocusedEntry() as SubtitleEntry}
           <table class='fields'>
             <tbody>
               {#each focused.texts as line, i}
               <tr>
                 <td class="vlayout">
-                  <StyleSelect {frontend} bind:currentStyle={line.style}
+                  <StyleSelect bind:currentStyle={line.style}
                     on:submit={() => {
-                      frontend.markChanged(ChangeType.InPlace, ChangeCause.UIForm)}} />
+                      Source.markChanged(ChangeType.InPlace, ChangeCause.UIForm)}} />
                   <div class="hlayout">
                     <button tabindex='-1' class="flexgrow"
-                      onclick={() => frontend.insertChannelAt(i)}>+</button>
+                      onclick={() => Editing.insertChannelAt(i)}>+</button>
                     <button tabindex='-1' class="flexgrow"
-                      onclick={() => frontend.deleteChannelAt(i)}
+                      onclick={() => Editing.deleteChannelAt(i)}
                       disabled={focused.texts.length == 1}>-</button>
                   </div>
                 </td>
@@ -402,20 +408,20 @@ appWindow.onDragDropEvent(async (ev) => {
                     }}
                     onfocus={() => {
                       $uiFocus = UIFocus.EditingField;
-                      frontend.focused.channel = line;
-                      frontend.focused.style = line.style;
+                      Editing.focused.channel = line;
+                      Editing.focused.style = line.style;
                     }}
                     onblur={(x) => {
                       // TODO: this works but looks like nonsense
                       if ($uiFocus === UIFocus.EditingField)
                         $uiFocus = UIFocus.Other;
-                      frontend.submitFocusedEntry();
-                      frontend.focused.channel = null;
+                      Editing.submitFocusedEntry();
+                      Editing.focused.channel = null;
                     }}
                     oninput={(x) => {
                       $uiFocus = UIFocus.EditingField;
                       contentSelfAdjust(x.currentTarget); 
-                      frontend.states.editChanged = true;
+                      Editing.editChanged = true;
                     }}></textarea>
                 </td>
               </tr>
@@ -424,7 +430,7 @@ appWindow.onDragDropEvent(async (ev) => {
           </table>
           {:else}
           <div class="fill hlayout" style="justify-content: center; align-items: center;">
-            <i>{frontend.getFocusedEntry() == 'virtual'
+            <i>{Editing.getFocusedEntry() == 'virtual'
               ? 'double-click or press enter to append new entry'
               : 'select a line to start editing'}</i>
           </div>
@@ -439,7 +445,7 @@ appWindow.onDragDropEvent(async (ev) => {
       <!-- table view -->
       <div class='scrollable fixminheight subscontainer flexgrow isolated' 
         class:subsfocused={$uiFocus === UIFocus.Table}>
-        <SubtitleTable {frontend} />
+        <SubtitleTable/>
       </div>
     </div>
   </div>

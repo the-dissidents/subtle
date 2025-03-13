@@ -2,10 +2,10 @@
   import { createEventDispatcher } from "svelte";
   import { assert } from "./Basic";
   import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./core/Subtitles.svelte";
-  import { ChangeCause, ChangeType, type Frontend } from "./Frontend";
   import { Menu } from "@tauri-apps/api/menu";
   import Collapsible from "./ui/Collapsible.svelte";
   import { writable } from 'svelte/store';
+    import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
@@ -13,10 +13,9 @@
   interface Props {
     style: SubtitleStyle;
     subtitles: Subtitles;
-    frontend: Frontend;
   }
 
-  let { style: _style, subtitles = $bindable(), frontend }: Props = $props();
+  let { style: _style, subtitles = $bindable() }: Props = $props();
   let alignSelector: HTMLSelectElement | undefined = $state();
   let button: HTMLButtonElement | undefined = $state();
   let style = writable(_style);
@@ -45,7 +44,7 @@
           let i = subtitles.styles.indexOf($style);
           if (i < 0) return;
           subtitles.styles.splice(i, 1);
-          frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+          Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
           submit();
         }
       },
@@ -56,7 +55,7 @@
           clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
           subtitles.styles.push(clone);
           subtitles.styles = subtitles.styles;
-          frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+          Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
           submit();
         }
       },
@@ -70,7 +69,7 @@
             let n = Number.parseInt(id);
             let other = withoutThis[n];
             if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
-                frontend.markChanged(ChangeType.InPlace, ChangeCause.Action);
+              Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
           }
         }))
       },
@@ -83,7 +82,7 @@
           const index = subtitles.styles.indexOf($style);
           subtitles.styles.splice(index, 1);
           subtitles.styles.splice(0, 0, oldDefault);
-          frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+          Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
           submit();
         }
       },
@@ -103,7 +102,7 @@
         assert(i >= 0);
         let newStyle = new SubtitleStyle('new');
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
-        frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>+</button><br/>
     <!-- move up -->
@@ -115,8 +114,9 @@
           ...subtitles.styles.slice(0, i-1), 
           $style, 
           subtitles.styles[i-1],
-          ...subtitles.styles.slice(i+1)];
-        frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+          ...subtitles.styles.slice(i+1)
+        ];
+        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>↑</button><br/>
 
@@ -129,8 +129,9 @@
           ...subtitles.styles.slice(0, i), 
           subtitles.styles[i+1],
           $style, 
-          ...subtitles.styles.slice(i+2)];
-        frontend.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+          ...subtitles.styles.slice(i+2)
+        ];
+        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
         submit();
       }}>↓</button><br/>
     {/if}
@@ -146,7 +147,7 @@
           <td><input id='name' bind:value={$style.name}
             class={isDuplicate($style.name) ? 'duplicate' : ''}
             onchange={() => 
-              frontend.markChanged(ChangeType.InPlace, ChangeCause.Action)}/></td>
+              Source.markChanged(ChangeType.InPlace, ChangeCause.Action)}/></td>
         </tr>
         <tr>
           <td><label for='font'>font:</label></td>
