@@ -1,5 +1,5 @@
 import { CSSColors, parseCSSColor } from "../colorparser";
-import { AlignMode, SubtitleEntry, Subtitles, SubtitleStyle, SubtitleUtil } from "./Subtitles.svelte";
+import { AlignMode, SubtitleEntry, Subtitles, SubtitleStyle, SubtitleUtil, type SubtitleChannel } from "./Subtitles.svelte";
 
 export const ASS = {
     parse(source: string) {
@@ -220,6 +220,17 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
 }
 
 function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
+    function getStyleOrCreate(styleName: string) {
+        let style = styles.get(styleName);
+        if (!style) {
+            console.log(`warning: style not found: ${styleName}`);
+            style = new SubtitleStyle(styleName);
+            styles.set(styleName, style);
+            subs.styles.push(style);
+        }
+        return style;
+    }
+
     let text = sections.get('Events');
     if (text === undefined) return;
 
@@ -240,15 +251,27 @@ function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
         const start = SubtitleUtil.parseTimestamp(opts[fieldMap.get('Start')!]),
               end   = SubtitleUtil.parseTimestamp(opts[fieldMap.get('End')!]);
         if (start === null || end === null) continue;
-
         let styleName = opts[fieldMap.get('Style')!];
-        if (!styles.has(styleName)) {
-            let style = new SubtitleStyle(styleName);
-            styles.set(styleName, style);
-            subs.styles.push(style);
+        let style = getStyleOrCreate(styleName);
+        let text = match[2].replaceAll('\\N', '\n').trimEnd();
+        let breaks = [...text.matchAll(/\n{\\r(.*?)}/g)];
+        if (breaks.length == 0) {
+            // regular entry
+            subs.entries.push(new SubtitleEntry(start, end, { style, text }));
+        } else {
+            // multiple channels
+            let startIndex = 0, currentStyle = style;
+            let channels: SubtitleChannel[] = [];
+            breaks.forEach((x) => {
+                channels.push({ 
+                    style: currentStyle, 
+                    text: text.substring(startIndex, x.index) 
+                });
+                currentStyle = x[1] ? getStyleOrCreate(x[1]) : style;
+                startIndex = x.index + x[0].length;
+            });
+            channels.push({ style: currentStyle, text: text.substring(startIndex) });
+            subs.entries.push(new SubtitleEntry(start, end, ...channels));
         }
-        subs.entries.push(new SubtitleEntry(start, end, {
-            style: styles.get(styleName)!, 
-            text: match[2].replaceAll('\\N', '\n').trimEnd()}))
     }
 }
