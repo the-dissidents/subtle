@@ -443,7 +443,7 @@ appWindow.onDragDropEvent(async (ev) => {
         <Resizer control={editTable} minValue={125}/>
       </div>
       <!-- table view -->
-      <div class='scrollable fixminheight subscontainer flexgrow isolated' 
+      <div class='fixminheight subscontainer flexgrow isolated' 
         class:subsfocused={$uiFocus === UIFocus.Table}>
         <SubtitleTable/>
       </div>

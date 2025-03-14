@@ -1,79 +1,265 @@
 <script lang="ts">
-import { onDestroy } from "svelte";
+import { onDestroy, onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
 
 import { SubtitleEntry, SubtitleUtil } from "./core/Subtitles.svelte";
 import { LabelColor } from "./Theming";
 import { assert, Basic } from "./Basic";
 
-import { ChangeType, Source } from "./frontend/Source";
+import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
 import { Interface, UIFocus } from "./frontend/Interface";
 import { Playback } from "./frontend/Playback";
 import { Actions } from "./frontend/Actions";
 import { EventHost } from "./frontend/Frontend";
+    import type { Action } from "svelte/action";
+    import { CanvasKeeper } from "./CanvasKeeper";
 
-let entries = $state(Source.subs.entries);
 let selection = $state(new SvelteSet<SubtitleEntry>);
-
-let entryRows = new WeakMap<SubtitleEntry, HTMLElement>;
-
-let focus = Editing.focused.entry;
 let editingVirtual = Editing.isEditingVirtualEntry;
 
-let scale = $state(1);
-let headerOffset = $state('0');
-let outer = $state<HTMLDivElement>();
-let table = $state<HTMLTableElement>();
-let tableHeader = $state<HTMLElement>();
+let canvas = $state<HTMLCanvasElement>();
+let cxt: CanvasRenderingContext2D;
 
 let centerX: number | undefined;
 let centerY: number | undefined;
+
+let scale = 1;
+let scrollX = 0, scrollY = 0;
+let width = 100, height = 100;
+
+let lines: {entry: SubtitleEntry, line: number, height: number}[] = [];
+let lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
+let maxX = 0, maxY = 0, totalLines = 0;
+let requestedRender = false;
+let colPos: [number, number, number, number, number, number,] = [0, 0, 0, 0, 0, 0];
+
+const FontSize = 14;
+const linePadding = 5;
+const lineHeight = FontSize + linePadding * 2;
+const headerHeight = lineHeight;
+const cellPadding = 6;
+
+const gridColor = '#bbb';
+const gridMajorColor = '#999';
+const headerBackground = '#ddd';
+const overlapColor = 'crimson';
+const focusBackground = 'lightblue';
+const selectedBackground = 'rgb(234, 234, 234)';
+
+function layout() {
+  cxt.resetTransform();
+  cxt.scale(devicePixelRatio, devicePixelRatio);
+  cxt.font = `${FontSize}px sans-serif`;
+
+  lines = []; totalLines = 0;
+  let textWidth = 0;
+  for (const entry of Source.subs.entries) {
+    let height = 0;
+    for (const channel of entry.texts) {
+      let splitLines = channel.text.split('\n');
+      height += splitLines.length;
+      textWidth = Math.max(textWidth, ...splitLines.map((x) => cxt.measureText(x).width));
+    }
+    lines.push({entry, line: totalLines, height});
+    lineMap.set(entry, {line: totalLines, height});
+    totalLines += height;
+  }
+
+  const timestampWidth = cxt.measureText(`99:99:99.999`).width;
+  colPos[0] = 0;
+  colPos[1] = colPos[0] + cellPadding * 2 + cxt.measureText(`${lines.length+1}`).width;
+  colPos[2] = colPos[1] + cellPadding * 2 + timestampWidth;
+  colPos[3] = colPos[2] + cellPadding * 2 + timestampWidth;
+  colPos[4] = colPos[3] + cellPadding * 2 + Math.max(
+    ...[Source.subs.defaultStyle, ...Source.subs.styles]
+      .map((x) => cxt.measureText(x.name).width), 
+    cxt.measureText('style').width);
+  colPos[5] = colPos[4] + cellPadding * 2 + cxt.measureText(`999.9`).width;
+
+  maxY = (totalLines + 1) * lineHeight + headerHeight; // add 1 for virtual entry
+  maxX = colPos[5] + cellPadding * 2 + textWidth;
+}
+
+function render() {
+  const drawLine = (x1: number, y1: number, x2: number, y2: number) => {
+    cxt.beginPath();
+    cxt.moveTo(x1, y1);
+    cxt.lineTo(x2, y2);
+    cxt.stroke();
+  };
+
+  requestedRender = false;
+  cxt.resetTransform();
+  cxt.scale(devicePixelRatio, devicePixelRatio);
+  cxt.clearRect(0, 0, width, height);
+  cxt.scale(scale, scale);
+  cxt.translate(-scrollX, -scrollY);
+  cxt.font = `${FontSize}px sans-serif`;
+  cxt.textBaseline = 'top';
+  cxt.fillStyle = 'black';
+
+  // table
+  let selection = new Set(Editing.getSelection());
+  let focused = Editing.getFocusedEntry();
+  let i = 0;
+  for (const {entry, line, height: lh} of lines) {
+    i += 1;
+    if ((line + lh) * lineHeight < scrollY) continue;
+    if (line * lineHeight > scrollY + height) break;
+
+    // background
+    const y = line * lineHeight + headerHeight;
+    const h = lh * lineHeight;
+    if (entry == focused) {
+      cxt.fillStyle = focusBackground;
+      cxt.fillRect(0, y, width + scrollX, h);
+    } else if (selection.has(entry)) {
+      cxt.fillStyle = selectedBackground;
+      cxt.fillRect(0, y, width + scrollX, h);
+    }
+
+    // label
+    if (entry.label !== 'none') {
+      cxt.fillStyle = LabelColor(entry.label);
+      cxt.fillRect(0, y, colPos[1], h);
+    }
+
+    // texts
+    cxt.textBaseline = 'top';
+    cxt.fillStyle = 
+      (entry !== focused 
+        && focused instanceof SubtitleEntry 
+        && overlappingTime(focused, entry)) ? overlapColor : 'black';
+    cxt.strokeStyle = gridColor;
+    let y0 = y;
+    entry.texts.forEach((channel, i) => {
+      // lines
+      cxt.textAlign = 'start';
+      const splitLines = channel.text.split('\n');
+      splitLines.forEach((x, i) => 
+        cxt.fillText(x, colPos[5] + cellPadding, y0 + linePadding + i * lineHeight));
+
+      const cellY = y0 + (splitLines.length * lineHeight) / 2;
+      cxt.textBaseline = 'middle';
+      cxt.fillText(channel.style.name, colPos[3] + cellPadding, cellY);
+      cxt.textAlign = 'end';
+      cxt.fillText(getNpS(entry, channel.text), colPos[5] - cellPadding, cellY);
+
+      // inner horizontal lines
+      y0 += splitLines.length * lineHeight;
+      if (i != entry.texts.length - 1) {
+        drawLine(colPos[3], y0, width + scrollX, y0);
+      }
+    });
+
+    // entry cells
+    cxt.textBaseline = 'middle';
+    cxt.textAlign = 'end';
+    cxt.fillText(`${i}`, 
+      colPos[1] - cellPadding, y + h * 0.5);
+    cxt.textAlign = 'start';
+    cxt.fillText(SubtitleUtil.formatTimestamp(entry.start), 
+      colPos[1] + cellPadding, y + h * 0.5);
+    cxt.fillText(SubtitleUtil.formatTimestamp(entry.end), 
+      colPos[2] + cellPadding, y + h * 0.5);
+
+    // outer horizontal line
+    cxt.strokeStyle = gridMajorColor;
+    drawLine(0, y + h, width + scrollX, y + h);
+  }
+  if (i == lines.length) {
+    // virtual entry
+    if (focused == 'virtual') {
+      cxt.fillStyle = focusBackground;
+      cxt.fillRect(0, maxY - lineHeight, width + scrollX, lineHeight);
+    }
+    cxt.fillStyle = 'black';
+    cxt.textBaseline = 'middle';
+    cxt.textAlign = 'end';
+    cxt.fillText(`﹡`, colPos[1] - cellPadding, maxY - lineHeight * 0.5);
+  }
+
+  // header
+  cxt.fillStyle = headerBackground;
+  cxt.fillRect(0, scrollY, scrollX + width, headerHeight);
+  cxt.fillStyle = 'black';
+  cxt.textBaseline = 'top';
+  cxt.textAlign = 'end';
+  cxt.fillText(`#`,     colPos[1] - cellPadding, scrollY + linePadding);
+  cxt.fillText(`nps`,   colPos[5] - cellPadding, scrollY + linePadding);
+  cxt.textAlign = 'start';
+  cxt.fillText(`start`, colPos[1] + cellPadding, scrollY + linePadding);
+  cxt.fillText(`end`,   colPos[2] + cellPadding, scrollY + linePadding);
+  cxt.fillText(`style`, colPos[3] + cellPadding, scrollY + linePadding);
+  cxt.fillText(`text`,  colPos[5] + cellPadding, scrollY + linePadding);
+
+  // vertical lines
+  cxt.strokeStyle = gridMajorColor;
+  drawLine(colPos[1], scrollY, colPos[1], Math.min(scrollY + height, maxY));
+
+  const bottom = Math.min(scrollY + height, maxY - lineHeight);
+  colPos.slice(2).map((pos) => drawLine(pos, scrollY, pos, bottom));
+}
+
+function requestRender() {
+  if (requestedRender) return;
+  requestedRender = true;
+  requestAnimationFrame(() => render());
+}
 
 const me = {};
 onDestroy(() => EventHost.unbind(me));
 
 Source.onSubtitleObjectReload.bind(me, () => {
-  entries = Source.subs.entries;
+  layout();
+  requestRender();
 });
 
 Source.onSubtitlesChanged.bind(me, (t) => {
-  if (t == ChangeType.General || t == ChangeType.Times || t == ChangeType.Order)
-    entries = Source.subs.entries;
+  if (t !== ChangeType.Metadata) {
+    layout();
+    requestRender();
+  }
 });
 
 Editing.onSelectionChanged.bind(me, () => {
   selection = new SvelteSet(Editing.getSelection());
+  requestRender();
 });
 
 Editing.onKeepEntryInView.bind(me, (ent) => {
-  assert(outer !== undefined);
-  assert(tableHeader !== undefined);
-
   if (ent instanceof SubtitleEntry) {
-    const row = entryRows.get(ent);
-    if (!row) {
+    const pos = lineMap.get(ent);
+    if (pos === undefined) {
         console.warn('?!row', ent);
         return;
     }
-    const rowRect = row.getBoundingClientRect();
-    const outerRect = outer.getBoundingClientRect();
-    const headerHeight = tableHeader.getBoundingClientRect().height;
-    const rowToTop = rowRect.top - outerRect.top;
-
-    if (rowToTop < headerHeight)
-      outer.scrollTop = outer.scrollTop + rowToTop - headerHeight;
-    else if (rowToTop > outerRect.height - rowRect.height)
-      outer.scrollTop = outer.scrollTop + rowToTop - (outerRect.height - rowRect.height);
+    scrollY = Math.max(
+      (pos.line + pos.height + 1) * lineHeight - height, 
+      Math.min(scrollY, pos.line * lineHeight));
+    requestRender();
   } else {
-    if (Source.subs.entries.length == 0) return;
-    outer.scroll({top: outer.scrollHeight});
+    scrollY = Math.max(0, maxY - height);
+    requestRender();
   }
 });
 
-function setupEntryGUI(node: HTMLElement, entry: SubtitleEntry) {
-  entryRows.set(entry, node);
-}
+
+onMount(() => {
+  assert(canvas !== undefined);
+  let keeper = new CanvasKeeper(canvas, canvas);
+  keeper.bind({
+    setDisplaySize(w, h, rw, rh) {
+        width = w;
+        height = h;
+        console.log(w, h);
+    },
+  });
+  cxt = keeper.cxt;
+  layout();
+  requestRender();
+});
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
   return e1 && e2 && e1.start < e2.end && e1.end > e2.start;
@@ -84,192 +270,114 @@ function getNpS(ent: SubtitleEntry, text: string) {
   return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
 }
 
+let currentLine = -1;
+
 function onFocus() {
   Interface.uiFocus.set(UIFocus.Table);
 }
 
-function setHeaderOffset() {
-  headerOffset = (outer!.scrollTop * (1 / scale - 1)) + 'px';
+function onMouseDown(ev: MouseEvent) {
+  onFocus();
+  if (ev.button == 0) {
+    currentLine = (ev.offsetY / scale + scrollY - headerHeight) / lineHeight;
+    if (currentLine > totalLines) {
+      Editing.selectVirtualEntry();
+    } else {
+      let i = 0;
+      for (; i < lines.length && lines[i].line <= currentLine; i++);
+      Editing.toggleEntry(lines[i-1].entry, getSelectMode(ev), ChangeCause.UIList);
+    }
+  }
+}
+
+function onMouseMove(ev: MouseEvent) {
+  centerX = undefined;
+  if (ev.buttons == 1) {
+    let line = (ev.offsetY / scale + scrollY - headerHeight) / lineHeight;
+    if (line != currentLine) {
+      currentLine = line;
+      let i = 0;
+      for (; i < lines.length && lines[i].line < currentLine; i++);
+      Editing.selectEntry(lines[i-1].entry, SelectMode.Sequence);
+    }
+  }
+}
+
+function constraintScroll() {
+  scrollX = Math.max(0, Math.min(maxX - width / scale, scrollX));
+  scrollY = Math.max(0, Math.min(maxY - height / scale, scrollY));
 }
 
 function processWheel(ev: WheelEvent) {
   const tr = Basic.translateWheelEvent(ev);
-  let box = outer!.getBoundingClientRect();
-  let offsetX = ev.clientX - box.left;
-  let offsetY = ev.clientY - box.top;
   if (tr.isZoom) {
-    // ev.preventDefault();
     if (ev.movementX || ev.movementY || !centerX || !centerY) {
-      centerX = (offsetX + outer!.scrollLeft) / scale;
-      centerY = (offsetY + outer!.scrollTop) / scale;
+      centerX = ev.offsetX / scale + scrollX;
+      centerY = ev.offsetY / scale + scrollY;
     }
     scale = Math.min(2, Math.max(1, scale / Math.pow(1.01, tr.amount)));
-    outer!.scrollTo({
-      left: centerX * scale - offsetX,
-      top: centerY * scale - offsetY,
-      behavior: 'instant'
-    });
-    table!.style.border = 'none';
-    setHeaderOffset();
+    scrollX = centerX - ev.offsetX / scale;
+    scrollY = centerY - ev.offsetY / scale;
+  } else {
+    scrollX += tr.amountX * 0.1;
+    scrollY += tr.amountY * 0.1;
   }
+  constraintScroll();
+
+  // let box = outer!.getBoundingClientRect();
+  // let offsetX = ev.clientX - box.left;
+  // let offsetY = ev.clientY - box.top;
+  // if (tr.isZoom) {
+  //   // ev.preventDefault();
+  //   if (ev.movementX || ev.movementY || !centerX || !centerY) {
+  //     centerX = (offsetX + outer!.scrollLeft) / scale;
+  //     centerY = (offsetY + outer!.scrollTop) / scale;
+  //   }
+  //   scale = Math.min(2, Math.max(1, scale / Math.pow(1.01, tr.amount)));
+  //   outer!.scrollTo({
+  //     left: centerX * scale - offsetX,
+  //     top: centerY * scale - offsetY,
+  //     behavior: 'instant'
+  //   });
+  //   setHeaderOffset();
+  // }
+  requestRender();
 }
 </script>
 
-<style>
-table {
-  border-collapse: collapse;
-  border-style: hidden;
-  line-height: 1;
-  padding: 5px;
-  width: 100%;
-  box-sizing: border-box;
-  position: relative;
-  cursor: default;
-  user-select: none; -webkit-user-select: none;
-  -moz-user-select: none; -ms-user-select: none;
-  /* overflow-wrap: break-word; */
-
-  transform-origin: 0 0;
-}
-
-table thead {
-  background-color: #f6f6f6;
-  width: 100%;
-  /* z-index: 5; */
-  position: sticky;
-  top: 0;
-}
-
-table tbody {
-  border: none;
-  background-color: #f6f6f6;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-table th {
-  padding: 5px;
-}
-
-table thead th:nth-child(6) {
-  width: 100%;
-  text-align: left;
-  padding-left: 10px;
-}
-
-.right {
-  text-align: right;
-}
-
-table tbody td {
-  padding: 5px;
-  border: 1px solid gray;
-  white-space: pre-wrap;
-  text-wrap: nowrap;
-  min-height: 1lh;
-  user-select: none; -webkit-user-select: none;
-  -moz-user-select: none; -ms-user-select: none;
-}
-table tbody tr {
-  background-color: white;
-}
-tr.selected {
-  background-color: rgb(234, 234, 234) ! important;
-}
-tr.focushlt {
-  background-color: lightblue ! important;
-}
-tr.sametime {
-  color: crimson;
-}
-td.subtext {
-  text-align: left;
-}
-
-.outer {
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  position: relative;
-}
-</style>
-
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="outer" bind:this={outer} 
+<!-- <div class="outer" bind:this={outer} 
   onwheel={(ev) => processWheel(ev)}
   onmousemove={() => centerX = undefined}
-  onscroll={() => setHeaderOffset()}
->
+> -->
 
-<table class='subs' style="transform: scale({scale})" bind:this={table}>
-<thead bind:this={tableHeader} style="top: {headerOffset}">
-  <tr>
-  <th scope="col">#</th>
-  <th scope="col">start</th>
-  <th scope="col">end</th>
-  <th scope="col">style</th>
-  <th scope="col">n/s</th>
-  <th scope="col">text</th>
-  </tr>
-</thead>
-<tbody>
-  <!-- list all entries -->
-  {#each entries as ent, i (`${ent.uniqueID}`)}
-  {#each ent.texts as line, j (`${ent.uniqueID},${j}`)}
-  <!-- svelte-ignore a11y_mouse_events_have_key_events -->
-  <tr
-    onmousedown={(ev) => {
-      onFocus();
-      if (ev.button == 0)
-        Editing.toggleEntry(ent, getSelectMode(ev));
-    }}
-    oncontextmenu={(ev) => {
-      onFocus();
-      ev.preventDefault();
-      Actions.contextMenu();
-    }}
-    ondblclick={() => {
-      onFocus();
+<canvas bind:this={canvas}
+  onwheel={(ev) => processWheel(ev)}
+  onmousemove={(ev) => onMouseMove(ev)}
+  onmousedown={(ev) => onMouseDown(ev)}
+  ondblclick={() => {
+    onFocus();
+    let focused = Editing.getFocusedEntry();
+    assert(focused !== null);
+    if (focused == 'virtual') {
+      Editing.startEditingNewVirtualEntry();
+    } else {
+      Playback.setPosition(focused.start);
       Editing.startEditingFocusedEntry();
-      Playback.setPosition(ent.start);
-    }}
-    onmouseover={(ev) => {
-      if (ev.buttons == 1)
-        Editing.selectEntry(ent, SelectMode.Sequence);
-    }}
-    class:focushlt={$focus === ent}
-    class:sametime={$focus instanceof SubtitleEntry 
-      && $focus !== ent && overlappingTime($focus, ent)}
-    class:selected={selection.has(ent)}
-  >
-  {#if line === ent.texts[0]}
-    <td rowspan={ent.texts.length}
-        class="right"
-        style={`background-color: ${LabelColor(ent.label)}`}
-        use:setupEntryGUI={ent}>{i}</td>
-    <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.start)}</td>
-    <td rowspan={ent.texts.length}>{SubtitleUtil.formatTimestamp(ent.end)}</td>
-  {/if}
-  <td>{line.style.name}</td>
-  <td>{getNpS(ent, line.text)}</td>
-  <td class='subtext'>{line.text}</td>
-  </tr>
-  {/each}
-  {/each}
+    }
+  }}
+  oncontextmenu={(ev) => {
+    onFocus();
+    ev.preventDefault();
+    Actions.contextMenu();
+  }}
+></canvas>
 
-  <!-- virtual entry at the end -->
-  {#if !$editingVirtual}
-  <tr ondblclick={() => Editing.startEditingNewVirtualEntry()}
-    onmousedown={() => {
-      Editing.clearSelection();
-      Editing.selectVirtualEntry();
-    }}
-    class:focushlt={$focus === 'virtual'}>
-  <td>﹡</td>
-  <td colspan="5"></td>
-  </tr>
-  {/if}
-</tbody>
-</table>
+<!-- </div> -->
 
-</div>
+<style>
+  canvas {
+    width: 100%;
+    height: 100%;
+  }
+</style>
