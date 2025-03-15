@@ -14,6 +14,9 @@ let configData = {
 
     windowW: 1000,
     windowH: 800,
+    windowX: 200,
+    windowY: 200,
+    
     editorH: 125,
     timelineH: 150,
     leftPaneW: 300,

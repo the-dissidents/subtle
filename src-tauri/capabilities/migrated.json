@@ -13,6 +13,7 @@
     "core:window:allow-scale-factor",
     "core:window:allow-inner-size",
     "core:window:allow-set-size",
+    "core:window:allow-set-position",
     "os:default",
     "fs:default",
     "clipboard-manager:allow-read-text",

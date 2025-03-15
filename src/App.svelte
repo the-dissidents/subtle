@@ -25,7 +25,7 @@ import { LabelColor } from './lib/Theming';
 
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Menu } from '@tauri-apps/api/menu';
-import { LogicalSize } from '@tauri-apps/api/window';
+import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
 import { tick } from 'svelte';
@@ -36,6 +36,8 @@ import { Interface, UIFocus } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Dialogs } from './lib/frontend/Dialogs';
 import { Actions } from './lib/frontend/Actions';
+    import { getVersion } from '@tauri-apps/api/app';
+    import { arch, platform, version } from '@tauri-apps/plugin-os';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -150,6 +152,9 @@ let setupTimelineView: Action = () => {
 
 Config.init();
 Config.onInitialized(() => {
+  appWindow.setPosition(new LogicalPosition(
+    Config.get('windowX'), 
+    Config.get('windowY')));
   appWindow.setSize(new LogicalSize(
     Config.get('windowW'), 
     Config.get('windowH')));
@@ -159,6 +164,9 @@ Config.onInitialized(() => {
   leftPane!.style.width = `${Config.get('leftPaneW')}px`;
 });
 
+getVersion().then((x) => 
+  appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
+
 appWindow.onCloseRequested(async (ev) => {
   if (!await Interface.warnIfNotSaved()) {
     ev.preventDefault();
@@ -167,8 +175,11 @@ appWindow.onCloseRequested(async (ev) => {
 
   const factor = await appWindow.scaleFactor();
   const size = (await appWindow.innerSize()).toLogical(factor);
+  const pos = (await appWindow.position()).toLogical(factor);
   await Config.set('windowW', size.width);
   await Config.set('windowH', size.height);
+  await Config.set('windowX', pos.x);
+  await Config.set('windowY', pos.y);
   await Config.set('videoH', videoCanvasContainer!.clientHeight);
   await Config.set('timelineH', timelineCanvas!.clientHeight);
   await Config.set('editorH', editTable!.clientHeight);
