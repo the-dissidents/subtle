@@ -12,12 +12,9 @@ import { Interface, UIFocus } from "./frontend/Interface";
 import { Playback } from "./frontend/Playback";
 import { Actions } from "./frontend/Actions";
 import { EventHost } from "./frontend/Frontend";
-    import type { Action } from "svelte/action";
-    import { CanvasKeeper } from "./CanvasKeeper";
+import { CanvasKeeper } from "./CanvasKeeper";
 
 let selection = $state(new SvelteSet<SubtitleEntry>);
-let editingVirtual = Editing.isEditingVirtualEntry;
-
 let canvas = $state<HTMLCanvasElement>();
 let cxt: CanvasRenderingContext2D;
 
@@ -39,6 +36,7 @@ const linePadding = 5;
 const lineHeight = FontSize + linePadding * 2;
 const headerHeight = lineHeight;
 const cellPadding = 6;
+const scrollerSize = 4;
 
 const gridColor = '#bbb';
 const gridMajorColor = '#999';
@@ -46,6 +44,12 @@ const headerBackground = '#ddd';
 const overlapColor = 'crimson';
 const focusBackground = 'lightblue';
 const selectedBackground = 'rgb(234, 234, 234)';
+
+const autoScrollSpeed = 2;
+const autoScrollPower = 1.5;
+const minScrollerLength = 20;
+const scrollerFade = 1500;
+const scrollerFadeStart = 1000;
 
 function layout() {
   cxt.resetTransform();
@@ -80,6 +84,8 @@ function layout() {
   maxY = (totalLines + 1) * lineHeight + headerHeight; // add 1 for virtual entry
   maxX = colPos[5] + cellPadding * 2 + textWidth;
 }
+
+let scrollerFadeStartTime = 0;
 
 function render() {
   const drawLine = (x1: number, y1: number, x2: number, y2: number) => {
@@ -126,7 +132,6 @@ function render() {
     }
 
     // texts
-    cxt.textBaseline = 'top';
     cxt.fillStyle = 
       (entry !== focused 
         && focused instanceof SubtitleEntry 
@@ -135,6 +140,7 @@ function render() {
     let y0 = y;
     entry.texts.forEach((channel, i) => {
       // lines
+      cxt.textBaseline = 'top';
       cxt.textAlign = 'start';
       const splitLines = channel.text.split('\n');
       splitLines.forEach((x, i) => 
@@ -200,6 +206,40 @@ function render() {
 
   const bottom = Math.min(scrollY + height, maxY - lineHeight);
   colPos.slice(2).map((pos) => drawLine(pos, scrollY, pos, bottom));
+
+  const now = performance.now();
+  if (now > scrollerFadeStartTime + scrollerFade) return;
+  const fade = 
+    1 - Math.max(0, now - scrollerFadeStartTime - scrollerFadeStart) 
+    / (scrollerFade - scrollerFadeStart);
+
+  // for scrollers, draw in screen space again
+  cxt.resetTransform();
+  cxt.scale(devicePixelRatio, devicePixelRatio);
+  cxt.fillStyle = `rgb(0 0 0 / ${40 * fade}%)`;
+  if (maxX > width / scale) {
+    let scaledScreen = width / scale;
+    let len = Math.max(minScrollerLength, scaledScreen / maxX * width);
+    cxt.fillRect(
+      scrollX / (maxX - scaledScreen) * (width - len), 
+      height - scrollerSize, 
+      len, 
+      scrollerSize);
+  }
+  if (maxY > height / scale) {
+    let scaledScreen = height / scale;
+    let len = Math.max(minScrollerLength, scaledScreen / maxY * height);
+    cxt.fillRect(
+      width - scrollerSize, 
+      scrollY / (maxY - scaledScreen) * (height - len),
+      scrollerSize, 
+      len);
+  }
+  if (now - scrollerFadeStartTime < scrollerFadeStart) {
+    setTimeout(requestRender, scrollerFadeStart - now + scrollerFadeStartTime);
+  } else {
+    requestRender();
+  }
 }
 
 function requestRender() {
@@ -229,6 +269,9 @@ Editing.onSelectionChanged.bind(me, () => {
 });
 
 Editing.onKeepEntryInView.bind(me, (ent) => {
+  // otherwise dragging outside/auto scrolling becomes unusable
+  if (isDragging) return;
+
   if (ent instanceof SubtitleEntry) {
     const pos = lineMap.get(ent);
     if (pos === undefined) {
@@ -236,11 +279,11 @@ Editing.onKeepEntryInView.bind(me, (ent) => {
         return;
     }
     scrollY = Math.max(
-      (pos.line + pos.height + 1) * lineHeight - height, 
+      (pos.line + pos.height + 1) * lineHeight - height / scale, 
       Math.min(scrollY, pos.line * lineHeight));
     requestRender();
   } else {
-    scrollY = Math.max(0, maxY - height);
+    scrollY = Math.max(0, maxY - height / scale);
     requestRender();
   }
 });
@@ -253,7 +296,7 @@ onMount(() => {
     setDisplaySize(w, h, rw, rh) {
         width = w;
         height = h;
-        console.log(w, h);
+        requestRender();
     },
   });
   cxt = keeper.cxt;
@@ -270,11 +313,13 @@ function getNpS(ent: SubtitleEntry, text: string) {
   return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
 }
 
-let currentLine = -1;
-
 function onFocus() {
   Interface.uiFocus.set(UIFocus.Table);
 }
+
+let currentLine = -1;
+let autoScrollY = 0, isDragging = false;;
+let lastAnimateFrameTime = -1;
 
 function onMouseDown(ev: MouseEvent) {
   onFocus();
@@ -286,14 +331,63 @@ function onMouseDown(ev: MouseEvent) {
       let i = 0;
       for (; i < lines.length && lines[i].line <= currentLine; i++);
       Editing.toggleEntry(lines[i-1].entry, getSelectMode(ev), ChangeCause.UIList);
+      isDragging = true;
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        isDragging = false;
+        autoScrollY = 0;
+      }, { once: true });
     }
   }
 }
 
+function requestAutoScroll() {
+  const doAutoScroll = () => {
+    if (autoScrollY == 0) {
+      lastAnimateFrameTime = -1;
+      return;
+    }
+    let time = performance.now();
+    scrollY += autoScrollY * (time - lastAnimateFrameTime) * 0.001;
+    lastAnimateFrameTime = time;
+    constraintScroll();
+
+    let line = (((autoScrollY < 0) ? 0 : height) / scale + scrollY - headerHeight) / lineHeight;
+    if (line != currentLine) {
+      currentLine = line;
+      let i = 0;
+      for (; i < lines.length && lines[i].line < currentLine; i++);
+      Editing.selectEntry(lines[i-1].entry, SelectMode.Sequence);
+    }
+
+    requestRender();
+    requestAnimationFrame(() => doAutoScroll());
+  }
+  if (lastAnimateFrameTime < 0)
+    lastAnimateFrameTime = performance.now();
+  requestAnimationFrame(() => doAutoScroll());
+}
+
+function powWithSign(x: number, y: number) {
+  return Math.sign(x) * Math.pow(Math.abs(x), y);
+}
+
 function onMouseMove(ev: MouseEvent) {
-  centerX = undefined;
   if (ev.buttons == 1) {
-    let line = (ev.offsetY / scale + scrollY - headerHeight) / lineHeight;
+    let offsetY = ev.clientY - canvas!.getBoundingClientRect().top;
+    // auto scroll if pointing outside
+    if (offsetY < headerHeight) {
+      if (autoScrollY == 0) requestAutoScroll();
+      autoScrollY = powWithSign((offsetY - headerHeight) * autoScrollSpeed, autoScrollPower);
+    } else if (offsetY > height) {
+      if (autoScrollY == 0) requestAutoScroll();
+      autoScrollY = powWithSign((offsetY - height) * autoScrollSpeed, autoScrollPower);
+    } else {
+      autoScrollY = 0;
+    }
+
+    let line = (offsetY / scale + scrollY - headerHeight) / lineHeight;
     if (line != currentLine) {
       currentLine = line;
       let i = 0;
@@ -304,6 +398,7 @@ function onMouseMove(ev: MouseEvent) {
 }
 
 function constraintScroll() {
+  scrollerFadeStartTime = performance.now();
   scrollX = Math.max(0, Math.min(maxX - width / scale, scrollX));
   scrollY = Math.max(0, Math.min(maxY - height / scale, scrollY));
 }
@@ -311,7 +406,7 @@ function constraintScroll() {
 function processWheel(ev: WheelEvent) {
   const tr = Basic.translateWheelEvent(ev);
   if (tr.isZoom) {
-    if (ev.movementX || ev.movementY || !centerX || !centerY) {
+    if (!centerX || !centerY) {
       centerX = ev.offsetX / scale + scrollX;
       centerY = ev.offsetY / scale + scrollY;
     }
@@ -323,37 +418,13 @@ function processWheel(ev: WheelEvent) {
     scrollY += tr.amountY * 0.1;
   }
   constraintScroll();
-
-  // let box = outer!.getBoundingClientRect();
-  // let offsetX = ev.clientX - box.left;
-  // let offsetY = ev.clientY - box.top;
-  // if (tr.isZoom) {
-  //   // ev.preventDefault();
-  //   if (ev.movementX || ev.movementY || !centerX || !centerY) {
-  //     centerX = (offsetX + outer!.scrollLeft) / scale;
-  //     centerY = (offsetY + outer!.scrollTop) / scale;
-  //   }
-  //   scale = Math.min(2, Math.max(1, scale / Math.pow(1.01, tr.amount)));
-  //   outer!.scrollTo({
-  //     left: centerX * scale - offsetX,
-  //     top: centerY * scale - offsetY,
-  //     behavior: 'instant'
-  //   });
-  //   setHeaderOffset();
-  // }
   requestRender();
 }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- <div class="outer" bind:this={outer} 
-  onwheel={(ev) => processWheel(ev)}
-  onmousemove={() => centerX = undefined}
-> -->
-
 <canvas bind:this={canvas}
   onwheel={(ev) => processWheel(ev)}
-  onmousemove={(ev) => onMouseMove(ev)}
+  onmousemove={() => centerX = undefined}
   onmousedown={(ev) => onMouseDown(ev)}
   ondblclick={() => {
     onFocus();
@@ -372,8 +443,6 @@ function processWheel(ev: WheelEvent) {
     Actions.contextMenu();
   }}
 ></canvas>
-
-<!-- </div> -->
 
 <style>
   canvas {

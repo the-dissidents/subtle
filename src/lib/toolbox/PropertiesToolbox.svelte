@@ -11,7 +11,6 @@ import { EventHost } from '../frontend/Frontend';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
-let defaultStyle = $state(Source.subs.defaultStyle);
 let subtitles = $state(Source.subs);
 let updateCounter = $state(0);
 
@@ -28,8 +27,8 @@ Source.onSubtitlesChanged.bind(me, (t, c) => {
 Source.onSubtitleObjectReload.bind(me, () => {
   metadata = Source.subs.metadata;
   styles = Source.subs.styles;
-  defaultStyle = Source.subs.defaultStyle;
   subtitles = Source.subs;
+  updateCounter += 1;
 });
 
 
@@ -52,6 +51,7 @@ function markMetadataChange() {
 }
 
 function changeResolution() {
+  console.log('change', metadata.width, metadata.height);
   Playback.video?.subRenderer?.changeResolution();
   markMetadataChange();
 }
@@ -86,12 +86,12 @@ function changeResolution() {
   </tbody>
 </table>
 <Collapsible header="STYLES" active={true}>
-  {#key subtitles}
+  {#key updateCounter}
     <h5>default</h5>
-    <StyleEdit style={defaultStyle} {subtitles} />
+    <StyleEdit style={Source.subs.defaultStyle} {subtitles} />
     <hr>
     <h5>other</h5>
-    {#each styles as style (`${style.uniqueID},${updateCounter}`)}
+    {#each styles as style (style.uniqueID)}
       <StyleEdit style={style} {subtitles}
         on:submit={() => styles = Source.subs.styles}/>
       <hr>

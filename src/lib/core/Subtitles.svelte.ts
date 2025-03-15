@@ -160,10 +160,10 @@ export class SubtitleEntry {
 }
 
 export class Subtitles {
-    defaultStyle: SubtitleStyle;
+    defaultStyle: SubtitleStyle = $state(new SubtitleStyle('default'));
     styles: SubtitleStyle[] = [];
     entries: SubtitleEntry[] = [];
-    metadata = {
+    metadata = $state({
         title: '',
         language: '',
         width: 1920,
@@ -171,14 +171,13 @@ export class Subtitles {
         special: {
             untimedText: ''
         }
-    }
+    });
 
     constructor(base?: Subtitles) {
         if (base) {
             this.defaultStyle = base.defaultStyle.clone();
             this.styles = base.styles.map((x) => x.clone());
-        } else
-            this.defaultStyle = new SubtitleStyle('default');
+        }
     }
 
     /** Note: this method will use and modify the entries in `other` */ 

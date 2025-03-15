@@ -117,7 +117,7 @@
 				// manually call this because we didn't use selectEntry etc.
 				Editing.onSelectionChanged.dispatch(ChangeCause.Action);
 			} else if (type == SearchAction.Replace || type === SearchAction.ReplaceStyleOnly) {
-				status = `replaced ${nDone} lines${nDone > 1 ? 's' : ''}`;
+				status = `replaced ${nDone} line${nDone > 1 ? 's' : ''}`;
 				Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
 			} else {
 				status = `found ${nDone} line${nDone > 1 ? 's' : ''}`;

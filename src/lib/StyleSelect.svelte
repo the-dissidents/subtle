@@ -16,8 +16,10 @@
     onDestroy(() => EventHost.unbind(me));
 
     Source.onSubtitlesChanged.bind(me, (t, c) => {
-        if (t == ChangeType.StyleDefinitions || t == ChangeType.General)
+        if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
             styles = Source.subs.styles;
+            refresh++;
+        }
     });
 
 	const dispatch = createEventDispatcher();

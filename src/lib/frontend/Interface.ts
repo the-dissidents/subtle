@@ -112,11 +112,9 @@ export const Interface = {
         let entries = Source.subs.merge(newSubs, options);
         if (entries.length > 0) {
             Editing.setSelection(entries);
-            Source.markChanged(ChangeType.General, ChangeCause.Action);
-            Interface.status.set('pasted');
-        } else {
-            Interface.status.set('nothing to paste');
         }
+        Source.markChanged(ChangeType.General, ChangeCause.Action);
+        Interface.status.set('imported');
     },
 
     async askExportFile() {
@@ -129,7 +127,7 @@ export const Interface = {
         let menu = await Menu.new({items: [
             {
                 text: 'ASS',
-                action: () => ask('ass', ASS.export)
+                action: () => ask('ass', (x) => ASS.export(x))
             },
             {
                 text: 'SRT/plaintext/...',
