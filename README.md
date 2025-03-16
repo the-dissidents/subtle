@@ -109,10 +109,10 @@
 
 ### macOS
 
-1. 确保能连接外网
+1. 确保能连接外网，并且已安装`git`，`npm`，`cargo`，以及`dylibbundler`或`homebrew`
 2. `git clone`
 3. `npm install`
-4. `cargo build`
+4. `cargo install tauri-cli --version "^2.0.0" --locked`（只需要第一次，后续构建不需要）
 5. `cargo tauri build --target universal-apple-darwin`
 6. `./mac-repack-test.sh`
 
@@ -125,11 +125,11 @@
 3. 把clang的地址导出为环境变量LIBCLANG_PATH，否则一些工具可能找不着它
 4. 在**MSYS2**下使用rustup安装cargo。一定要把host triple改成`x86_64-pc-windows-gnu`
 5. 把MSYS2的可执行文件路径（例如`C:/msys2/usr/bin`）加到 Windows的PATH里面
-6. 用官方MSI安装Node.js。最好**不要使用**winget和fnm！**不要在MSYS2里面**安装Node.js！
+6. 用官方MSI安装Node.js。最好**不要使用**winget和fnm，否则可能吃苦头！**不要在MSYS2里面**安装Node.js，否则无法正常运行vite！
 7. 如果没安装的话，用VS Code安装git
 8. `git clone`
 9. `npm install`
-10. `cargo build`
+10. `cargo install tauri-cli --version "^2.0.0" --locked`（只需要第一次，后续构建不需要）
 11. `cargo tauri build`
 
 ## 联系
