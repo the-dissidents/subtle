@@ -41,21 +41,13 @@ fn main() {
             media::video_status,
             media::open_media,
             media::close_media,
-
             media::open_audio,
-            media::seek_audio,
-            media::get_intensities,
-            media::send_current_audio_frame,
-            media::get_current_audio_position,
-            media::poll_next_audio_frame,
-            media::move_to_next_audio_frame,
-
             media::open_video,
-            media::seek_video,
+            media::seek_audio,
+            media::seek_precise_and_get_frame,
+            media::get_next_frame_data,
+            media::get_intensities,
             media::video_set_size,
-            media::send_current_video_frame,
-            media::get_current_video_position,
-            media::move_to_next_video_frame,
 
             // request_something,
             test_response

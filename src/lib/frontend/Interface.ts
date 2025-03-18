@@ -30,6 +30,20 @@ const IMPORT_FILTERS = [
     { name: 'SSA subtitles', extensions: ['ssa', 'ass'] },
     { name: 'subtle archive', extensions: ['json'] }];
 
+const Debug = true;
+
+async function guard(x: () => Promise<any> | void, msg: string) {
+    if (Debug) {
+        await x();
+    } else {
+        try {
+            await x();
+        } catch (x) {
+            Interface.status.set(`${msg}: ${x}`);
+        };
+    }
+}
+
 export const Interface = {
     uiFocus: writable(UIFocus.Other),
     status: writable('ok'),
@@ -82,11 +96,9 @@ export const Interface = {
     },
 
     async openVideo(videoFile: string) {
-        try {
-            await Playback.load(videoFile);
-        } catch (x) {
-            this.status.set(`error opening video '${videoFile}': ${x}`);
-        };
+        guard(() => Playback.load(videoFile), 
+            `error opening video '${videoFile}'`);
+        
         let source = get(Source.currentFile);
         if (source != '')
             Config.rememberVideo(source, videoFile);

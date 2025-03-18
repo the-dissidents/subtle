@@ -1,11 +1,16 @@
 import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./core/Subtitles.svelte";
 import type { WithCanvas } from "./CanvasKeeper";
-import { MMedia, type VideoFrameData } from "./API";
+import { MMedia, type AudioFrameData, type VideoFrameData } from "./API";
 import { assert } from "./Basic";
 
 import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
-import type { AudioFeedbackData } from "./worker/DecodedAudioLoader";
+import type { AudioFeedbackData, AudioInputData } from "./worker/DecodedAudioLoader";
+import { Interface } from "./frontend/Interface";
+
+function sum(a: number[]) {
+    return a.reduce((p, c) => p + c, 0);
+}
 
 export class VideoPlayer implements WithCanvas {
     #ctx: CanvasRenderingContext2D;
@@ -21,34 +26,42 @@ export class VideoPlayer implements WithCanvas {
     #outOffsetX = 0;
     #outOffsetY = 0;
 
-    #requestedTime = 0;
-    #lastRenderTime = 0;
-    #processingTime = 0;
-    #frameTime = 0;
-    #waitTimeCorrection = 0;
-    #waitTime = 0;
-    #audioFullness = 0;
+    // #requestedTime = 0;
+    // #lastRenderTime = 0;
+    // #processingTime = 0;
+    // #frameTime = 0;
+    // #waitTimeCorrection = 0;
+    // #waitTime = 0;
+    // #audioFullness = 0;
 
     #opened?: {
         framerate: number;
         sampleRate: number;
-        pos: number;
-        audioPos: number;
-        video: MMedia;
-        audio: MMedia;
+        media: MMedia;
         audioCxt: AudioContext;
+
+        // manages audio cache and is used as the position reference
         worklet: AudioWorkletNode;
         onAudioFeedback?: (data: AudioFeedbackData) => void;
+        audioHead: number;
+        audioTail: number;
+        audioBufferLength: number;
+        audioSize: number;
+
+        EOF: boolean;
+        videoCache: VideoFrameData[];
+        videoPosition: number;
     };
 
     // position used when no media opened
     #fallbackPosition: number = 0;
 
-    get duration() { return this.#opened?.video.duration; }
+    get duration() { return this.#opened?.media.duration; }
     get framerate() { return this.#opened?.framerate; }
     get currentPosition() {
-        if (!this.#opened) return this.#fallbackPosition;
-        return this.#opened.pos / this.#opened.framerate;
+        if (!this.#opened || this.#opened.audioHead < 0)
+            return this.#fallbackPosition;
+        return this.#opened.audioHead;
     }
 
     get isLoaded() { return this.#opened !== undefined; }
@@ -84,7 +97,7 @@ export class VideoPlayer implements WithCanvas {
     async #updateOutputSize() {
         assert(this.#opened !== undefined);
         let [w, h] = [this.#canvasWidth, this.#canvasHeight];
-        let [width, height] = this.#opened.video.videoSize!;
+        let [width, height] = this.#opened.media.videoSize!;
         let ratio = width / height;
         let nw: number, nh: number;
         if (w / h < ratio)
@@ -93,7 +106,7 @@ export class VideoPlayer implements WithCanvas {
             [nw, nh] = [h * ratio, h];
         this.#outOffsetX = (w - nw) / 2;
         this.#outOffsetY = (h - nh) / 2;
-        await this.#opened.video.setVideoSize(nw, nh);
+        await this.#opened.media.setVideoSize(nw, nh);
     }
 
     setSubtitles(subs: Subtitles) {
@@ -104,26 +117,22 @@ export class VideoPlayer implements WithCanvas {
     }
 
     _testGetMedia() {
-        return this.#opened?.video;
+        return this.#opened?.media;
     }
     
     async load(rawurl: string) {
         console.log('VideoPlayer: url=', rawurl);
 
-        if (this.#opened && !this.#opened.video.isClosed) {
-            await this.#opened.video.close();
-            await this.#opened.audio.close();
+        if (this.#opened && !this.#opened.media.isClosed) {
+            await this.#opened.media.close();
             await this.#opened.audioCxt.close();
         }
         let media = await MMedia.open(rawurl);
         await media.openVideo(-1);
-        console.log('VideoPlayer: opened video');
+        await media.openAudio(-1);
+        console.log('VideoPlayer: opened media');
 
-        let audio = await MMedia.open(rawurl);
-        await audio.openAudio(-1);
-        console.log('VideoPlayer: opened audio');
-
-        const audioStatus = await audio.audioStatus();
+        const audioStatus = await media.audioStatus();
         const videoStatus = await media.videoStatus();
         assert(audioStatus !== null);
         assert(videoStatus !== null);
@@ -137,8 +146,6 @@ export class VideoPlayer implements WithCanvas {
                 console.log.apply(console, ev.data);
             } else {
                 let feedback = ev.data as AudioFeedbackData;
-                if (feedback.averageFullness >= 0)
-                    this.#audioFullness = feedback.averageFullness;
                 if (this.#opened?.onAudioFeedback)
                     this.#opened.onAudioFeedback(feedback);
             }
@@ -147,37 +154,97 @@ export class VideoPlayer implements WithCanvas {
         audioCxt.suspend();
 
         this.#opened = {
-            video: media, audio, audioCxt, worklet,
+            media, audioCxt, worklet,
             framerate: videoStatus.framerate,
             sampleRate: audioStatus.sampleRate,
-            pos: 0, audioPos: 0
+            EOF: false,
+            audioHead: -1,
+            audioTail: -1,
+            audioBufferLength: 0,
+            audioSize: 0,
+            videoCache: [],
+            videoPosition: 0,
         };
 
         await this.#updateOutputSize();
+        this.requestPreload();
         this.requestRender();
         console.log('VideoPlayer: loaded media');
     }
 
-    async fillAudioBuffer() {
-        assert(this.#opened !== undefined);
-        while (await this.#sendNextAudioFrame()) {};
-    }
-
-    async #sendNextAudioFrame() {
-        assert(this.#opened !== undefined);
-        await this.#opened.audio.moveToNextAudioFrame();
-        return await new Promise<boolean>((resolve) => {
+    async postAudioMessage(msg: AudioInputData) {
+        // TODO: add timeout?
+        return await new Promise<void>((resolve, reject) => {
             assert(this.#opened !== undefined);
             this.#opened.onAudioFeedback = (data) => {
-                if (data.type == 'received') {
-                    this.#opened!.audioPos = data.headPosition!;
-                    resolve(data.bufferLength < data.bufferCapacity);
+                assert(this.#opened !== undefined);
+                if (data.headPosition) {
+                    this.#opened.audioHead = data.headPosition / this.#opened!.sampleRate;
                 }
+                if (data.tailPosition)
+                    this.#opened.audioTail = data.tailPosition / this.#opened!.sampleRate;
+                this.#opened.audioSize = data.bufferSize;
+                this.#opened.audioBufferLength = data.bufferLength;
+                resolve();
             };
-            this.#opened.audio.readCurrentAudioFrame().then((data) => {
-                this.#opened!.worklet.port.postMessage(data)
-            });
+            this.#opened.worklet.port.postMessage(msg);
         });
+    }
+
+    async #clearCache() {
+        if (!this.#opened) return;
+        this.#opened.videoCache = [];
+        this.#opened.EOF = false;
+        this.#opened.audioHead = -1;
+        this.#opened.audioTail = -1;
+        await this.postAudioMessage({ type: 'clearBuffer' });
+    }
+
+    async #populateCache() {
+        const PreloadAmount = 0.5; // in seconds
+
+        if (!this.#opened || this.#opened.EOF) return false;
+        const video = this.#opened.videoCache;
+        const videoSize = sum(video.map((x) => x.content.length));
+        
+        if (video.length > 1 && video.at(-1)!.time - video[0].time > PreloadAmount
+         && this.#opened.audioTail - this.#opened.audioHead > PreloadAmount) return false;
+
+        const frame = await this.#opened.media.readNextFrame();
+        if (!frame) {
+            this.#opened.EOF = true;
+            return false;
+        }
+        if (frame.type == 'audio') {
+            if (this.#opened.audioTail > 0 && frame.time < this.#opened.audioTail) {
+                await this.#clearCache();
+                return true;
+            }
+            await this.postAudioMessage({ type: 'frame', frame });
+        } else {
+            if (video.length > 0 && frame.time < video.at(-1)!.time) {
+                await this.#clearCache();
+                return true;
+            }
+            video.push(frame);
+        }
+        // Interface.status.set(`${this.#opened.audioBufferLength}, ${this.#opened.videoCache.length}`);
+        return true;
+    }
+
+    #requestedPreload = false;
+    requestPreload() {
+        if (this.#requestedPreload) return;
+        this.#requestedPreload = true;
+        const load = async () => {
+            if (await this.#populateCache()) {
+                setTimeout(load, 0);
+            } else {
+                this.#requestedPreload = false;
+            }
+        }
+        // requestAnimationFrame(load);
+        setTimeout(load, 0);
     }
 
     async setPosition(t: number) {
@@ -197,93 +264,111 @@ export class VideoPlayer implements WithCanvas {
     async setPositionFrame(position: number) {
         assert(this.#opened !== undefined);
         position = Math.max(0, Math.floor(position));
-        if (position == this.#opened.pos) return;
-        await this.#opened.video.seekVideo(position);
-        await this.#opened.audio.seekAudio(Math.floor(
-            position / this.#opened.framerate * this.#opened.sampleRate!));
-        this.#opened.pos = await this.#opened.video.videoPosition();
-        this.#opened.audioPos = await this.#opened.audio.audioPosition();
+
+        this.play(false);
+
+        const video = this.#opened.videoCache;
+        if (this.#opened.videoCache.length > 0) {
+            if (position >= video[0].position && position <= video.at(-1)!.position) {
+                while (position > video[0].position)
+                    video.shift();
+                await this.postAudioMessage({ type: 'shiftUntil', 
+                    position: position / this.#opened.framerate * this.#opened.sampleRate });
+                this.#fallbackPosition = position;
+                this.requestPreload();
+                this.onVideoPositionChange();
+                Interface.status.set(`shifted to: (${position})`);
+                return;
+            }
+        }
+
+        await this.#clearCache();
+        const frame = await this.#opened.media.seekVideoAndGetFrame(position);
+        if (frame) this.#opened.videoCache.push(frame);
+        Interface.status.set(`seeked to: ${frame?.position} (${position})`);
+        this.#fallbackPosition = frame?.position ?? position;
+        this.requestPreload();
         this.onVideoPositionChange();
     }
 
     async nextFrame() {
         if (!this.#opened) return;
-        await this.#opened.video.moveToNextVideoFrame();
-        await this.#opened.video.readCurrentVideoFrame();
+        // await this.#opened.video.moveToNextVideoFrame();
+        // await this.#opened.video.readCurrentVideoFrame();
     }
 
     async previousFrame() {
         if (!this.#opened) return;
-        await this.setPositionFrame(this.#opened.pos - 1);
-        await this.#opened.video.readCurrentVideoFrame();
+        // await this.setPositionFrame(this.#opened.pos - 1);
+        // await this.#opened.video.readCurrentVideoFrame();
     }
 
-    calculateWaitTime(t0: number) {
+    #drawFrame(frame: VideoFrameData) {
         assert(this.#opened !== undefined);
-        const Q = 0.2; // Math.exp(-LATENCY_DAMPING * (t0 - this.#lastRenderTime) / 1000);
-        this.#processingTime = 
-            this.#processingTime * Q + (t0 - this.#requestedTime) * (1-Q);
-        this.#frameTime = 
-            this.#frameTime * Q + (t0 - this.#lastRenderTime) * (1-Q);
-        this.#lastRenderTime = t0;
+        this.onVideoPositionChange();
+        this.subRenderer?.setTime(frame.time);
 
-        // | Frame -----------------------------------------------|
-        // |----------- Processing -----------|------ Delay ------|
-        // | fill audio | read video | render | wait time | error |
+        let [nw, nh] = this.#opened.media.videoOutputSize;
+        let imgData = new ImageData(frame.content, frame.stride);
 
-        const K = 0.5;
-        const targetTime = 1000 / this.#opened.framerate!;
-        this.#waitTimeCorrection = K * (targetTime - this.#frameTime);
-        this.#waitTimeCorrection = Math.min(10, Math.max(-20, this.#waitTimeCorrection));
-        this.#waitTime = Math.min(50, Math.max(0, 
-                targetTime - this.#processingTime + this.#waitTimeCorrection));
+        this.#ctxbuf.clearRect(0, 0, this.#canvasWidth, this.#canvasHeight);
+        this.#ctxbuf.putImageData(imgData, 
+            this.#outOffsetX, this.#outOffsetY, 0, 0, nw, nh);
+        if (this.subRenderer)
+            this.#ctxbuf.drawImage(this.subRenderer.getCanvas(), 0, 0);
 
-        // for debug
-        this.#ctxbuf.fillStyle = 'yellow';
+        this.#ctxbuf.fillStyle = 'red';
         this.#ctxbuf.font= `${window.devicePixelRatio * 10}px Courier`;
-        this.#ctxbuf.fillText(`fps=${(1000 / this.#frameTime).toFixed(1)} [${this.framerate!.toFixed(1)}; Q=${Q.toFixed(2)}]`, 0, 20);
         this.#ctxbuf.fillText(
-            `fra=${this.#frameTime.toFixed(1)}`.padEnd(10) + 
-            `pro=${this.#processingTime.toFixed(1)}`, 0, 40);
+            `vt:${frame.time}`, 0, 20);
         this.#ctxbuf.fillText(
-            `wai=${this.#waitTime.toFixed(1)}`.padEnd(10) + 
-            `cor=${this.#waitTimeCorrection.toFixed(1)}`, 0, 60);
-        this.#ctxbuf.fillText(`audio buffer: ${this.#audioFullness.toFixed(1)}%`, 0, 80);
+            `at:${this.#opened.audioHead}`, 0, 40);
+        this.#ctxbuf.fillText(
+            `vb:${this.#opened.videoCache.length}`, 0, 60);
+        this.#ctxbuf.fillText(
+            `ab:${this.#opened.audioBufferLength}`, 0, 80);
+        this.#ctxbuf.fillText(
+            `ps:${frame.position}`, 0, 100);
     }
 
     async #render() {
         this.#requestedRender = false;
         this.#ctx.globalCompositeOperation = 'copy';
 
-        if (this.#opened) {
-            if (this.isPlaying) {
-                this.#requestedTime = performance.now();
-                await this.fillAudioBuffer();
-                await this.#opened.video.moveToNextVideoFrame();
-            }
-            let data = await this.#opened.video.readCurrentVideoFrame();
-            this.#opened.pos = data.position;
-            this.onVideoPositionChange();
-            this.subRenderer?.setTime(data.time);
-
-            let [nw, nh] = this.#opened.video.videoOutputSize;
-            let imgData = new ImageData(data.content, data.stride);
-
-            this.#ctxbuf.clearRect(0, 0, this.#canvasWidth, this.#canvasHeight);
-            this.#ctxbuf.putImageData(imgData, 
-                this.#outOffsetX, this.#outOffsetY, 0, 0, nw, nh);
-            if (this.subRenderer)
-                this.#ctxbuf.drawImage(this.subRenderer.getCanvas(), 0, 0);
-            if (this.#playing) {
-                this.calculateWaitTime(performance.now());
-                setTimeout(() => this.#render(), Math.max(0, this.#waitTime));
-            }
-            requestAnimationFrame(() => 
-                this.#ctx.drawImage(this.#canvas, 0, 0));
-        } else if (this.subRenderer) {
+        if (!this.#opened) {
             requestAnimationFrame(() => 
                 this.#ctx.drawImage(this.subRenderer!.getCanvas(), 0, 0));
+            return;
         }
+
+        const video = this.#opened.videoCache;
+        const tolerance = 1 / this.#opened.framerate;
+        while (video.length > 0) {
+            if (video[0].time < this.currentPosition - tolerance) {
+                // discard missed frame
+                video.shift();
+            } else {
+                // consume frame
+                const frame = video.shift()!;
+                console.log('consumed video frame', frame.position, video.length);
+                this.#opened.videoPosition = frame.position;
+                this.#drawFrame(frame);
+                this.onVideoPositionChange();
+                this.requestPreload();
+
+                if (this.#playing) {
+                    setTimeout(() => {
+                        this.#render();
+                    }, Math.max(0, frame.time - this.currentPosition) * 1000);
+                }
+
+                requestAnimationFrame(() => 
+                    this.#ctx.drawImage(this.#canvas, 0, 0));
+                return;
+            }
+        }
+        this.requestPreload();
+        requestAnimationFrame(() => this.#render());
     }
 
     requestRender() {
@@ -303,8 +388,9 @@ export class VideoPlayer implements WithCanvas {
             this.#playing = true;
             this.#opened.audioCxt?.resume();
             this.onPlayStateChange();
-            this.#requestedTime = performance.now();
-            this.#lastRenderTime = this.#requestedTime;
+            // this.#requestedTime = performance.now();
+            // this.#lastRenderTime = this.#requestedTime;
+            this.requestPreload();
             this.requestRender();
         }
     }

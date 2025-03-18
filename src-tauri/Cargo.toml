@@ -1,5 +1,5 @@
 [package]
-name = "subtle"
+name = "subtle-subtitles"
 version = "0.2.9"
 description = "Cross-platform subtitle editor"
 authors = ["the_dissidents"]

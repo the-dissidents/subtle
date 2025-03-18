@@ -3,54 +3,40 @@
     import * as dialog from "@tauri-apps/plugin-dialog";
     import * as fs from "@tauri-apps/plugin-fs";
     
-    import { MAPI } from "../API";
+    import { MAPI, MMedia } from "../API";
     import { assert } from "../Basic";
     import { Playback } from "../frontend/Playback";
 
     let result = $state("");
     MAPI.version().then((x) => result = `ffmpeg version is ${x}`);
+
+    let media: MMedia | undefined;
 </script>
 
 <button
     onclick={async () => {
-        let video = Playback.video;
-        if (video == null) {
-            result = "No video!";
-            return;
-        }
-        let media = video._testGetMedia();
-        if (media == null) {
-            result = "No MMedia!";
-            return;
-        }
-        let t0 = performance.now();
-        await media.moveToNextVideoFrame();
-        await media.readCurrentVideoFrame();
-        result = `done: t=${performance.now() - t0}\n`;
+        let path = await dialog.open();
+        if (!path) return;
+        media = await MMedia.open(path);
+        console.log('media opened');
+        await media.openVideo(-1);
+        console.log('video opened');
+        await media.openAudio(-1);
+        console.log('audio opened');
+        result = media.streams.join(';');
     }}>
-    next video frame
+    open media
 </button>
+
+
 <button
     onclick={async () => {
-        let video = Playback.video;
-        if (video == null) {
-            result = "No video!";
-            return;
-        }
-        let media = video._testGetMedia();
-        if (media == null) {
-            result = "No MMedia!";
-            return;
-        }
-        let t0 = performance.now();
-        assert(video.currentPosition !== undefined);
-        assert(video.framerate !== undefined);
-        let pos = video.currentPosition * video.framerate - 1;
-        await video.setPosition(pos / video.framerate);
-        await media.readCurrentVideoFrame();
-        result = `done: t=${performance.now() - t0}\n`;
+        if (!media) return;
+        let result = await media.readNextFrame();
+        if (!result) console.log("EOF!");
+        else console.log(`${result.type} @${result.position}, time=${result.time}, length ${result.content.length}`)
     }}>
-    previous video frame
+    read frame
 </button>
 <button
     onclick={async () => {

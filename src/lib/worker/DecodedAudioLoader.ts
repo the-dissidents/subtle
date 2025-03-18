@@ -3,15 +3,30 @@
 
 import type { AudioFrameData } from "../API";
 
-export type AudioFeedbackData = {
-    type: 'received' | 'playing',
-    bufferLength: number,
-    bufferCapacity: number,
-    averageFullness: number,
-    headPosition: number
-}
+export type AudioInputData = {
+    type: 'clearBuffer'
+} | {
+    type: 'shiftUntil',
+    position: number
+} | {
+    type: 'frame',
+    frame: AudioFrameData
+};
 
-const MaxBufferLength = 10;
+export type AudioFeedbackData = {
+    type: 'ok',
+    bufferLength: number,
+    bufferSize: number,
+    headPosition: number | undefined,
+    tailPosition: number | undefined
+} | {
+    type: 'playing',
+    bufferLength: number,
+    bufferSize: number,
+    headPosition: number | undefined,
+    tailPosition: number | undefined,
+    fullness: number
+};
 
 class DecodedAudioLoader extends AudioWorkletProcessor {
     #buffer: AudioFrameData[] = [];
@@ -20,12 +35,24 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     
     constructor(...args: any) {
         super(...args);
-        this.port.onmessage = (e: MessageEvent<AudioFrameData>) => {
-            this.#buffer.push(e.data);
-            if (this.#buffer.length > MaxBufferLength) {
-                this.#buffer.shift();
+        this.port.onmessage = (e: MessageEvent<AudioInputData>) => {
+            switch (e.data.type) {
+                case "clearBuffer":
+                    this.#buffer = [];
+                    this.#postFeedback('ok');
+                    break;
+                case "frame":
+                    this.#buffer.push(e.data.frame);
+                    this.#postFeedback('ok');
+                    break;
+                case "shiftUntil":
+                    while (this.#buffer.length > 0 && this.#buffer[0].position > e.data.position)
+                        this.#buffer.shift();
+                    this.#postFeedback('ok');
+                    break;
+                default:
+                    break;
             }
-            this.#postFeedback('received');
         };
     }
 
@@ -33,10 +60,11 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
         this.port.postMessage({
             type,
             bufferLength: this.#buffer.length,
-            bufferCapacity: MaxBufferLength,
+            bufferSize: this.#buffer.reduce((a, b) => a + b.content.length * 4, 0),
             headPosition: this.#buffer[0]?.position,
-            averageFullness: type == 'playing' 
-                ? this.#fullness.reduce((a, b) => a + b, 0) / MaxBufferLength 
+            tailPosition: this.#buffer.at(-1)?.position,
+            fullness: type == 'playing' 
+                ? this.#fullness.reduce((a, b) => a + b, 0) / 100 
                 : -1
         } as AudioFeedbackData);
     }
