@@ -72,7 +72,6 @@ pub struct MediaPlayback {
     input: Box<format::context::Input>,
     audio: Option<AudioContext>,
     video: Option<VideoContext>,
-    stream_timebases: Vec<Rational>
 }
 
 // Required by tauri. Is this ok?
@@ -107,17 +106,12 @@ impl MediaPlayback {
     }
 
     pub fn from_file(path: &str) -> Result<MediaPlayback, MediaError> {
-        let ictx = Box::new(check!(format::input(&path))?);
+        let input = Box::new(check!(format::input(&path))?);
         debug!("got input from {}", path);
-        let mut tbs = Vec::<Rational>::new();
-        for stream in ictx.streams() {
-            tbs.push(stream.time_base());
-        }
         Ok(MediaPlayback {
-            input: ictx,
+            input,
             audio: None,
             video: None,
-            stream_timebases: tbs
         })
     }
 
@@ -199,13 +193,9 @@ impl MediaPlayback {
 
         // create decoder
         let codecxt = check!(codec::Context::from_parameters(stream.parameters()))?;
-        // hack to solve `Could not update timestamps for skipped samples.`
         let mut decoder = check!(codecxt.decoder().audio())?;
-        // unsafe {
-        //     (*decoder.as_mut_ptr()).pkt_timebase = 
-        //         AVRational{ num: stream.time_base().0, den: stream.time_base().1 };
-        // }
         check!(decoder.set_parameters(stream.parameters()))?;
+        decoder.set_packet_time_base(stream.time_base());
 
         // resampler
         // TODO: support more than mono
@@ -217,11 +207,6 @@ impl MediaPlayback {
                 decoder.rate(),
             ),
         ))?;
-
-        let invert_rate = 
-            ffmpeg::Rational::new(1, decoder.rate().try_into().unwrap());
-        // if I understand correctly, we can actually remove this as it holds by definition
-        assert!(decoder.time_base() == invert_rate);
 
         let length = self.input.duration()
             .rescale(rescale::TIME_BASE, decoder.time_base());
@@ -237,7 +222,7 @@ impl MediaPlayback {
         self.audio = Some(AudioContext {
             stream_i: index,
             stream_timebase: stream.time_base(),
-            pos_timebase: invert_rate,
+            pos_timebase: decoder.time_base(),
             length,
             decoder, resampler
         });
@@ -250,7 +235,6 @@ impl MediaPlayback {
         assert!(self.audio.is_some() || self.video.is_some());
 
         for (stream, packet) in self.input.packets() {
-            // TODO: skip until
             if let Some(c) = self.audio.as_mut() {
                 if c.stream_i == stream.index() {
                     // decode audio packet
@@ -275,8 +259,10 @@ impl MediaPlayback {
     }
 
     pub fn seek_video(&mut self, position: i64) -> Result<(), MediaError> {
-        let cxt = self.video.as_ref()
+        let cxt = self.video.as_mut()
             .ok_or(MediaError::InternalError("no video".to_string()))?;
+        cxt.flush();
+
         let rescaled = position.rescale(
             cxt.pos_timebase, 
             cxt.stream_timebase);
@@ -299,8 +285,10 @@ impl MediaPlayback {
     }
 
     pub fn seek_audio(&mut self, position: i64) -> Result<(), MediaError> {
-        let cxt = self.audio.as_ref()
+        let cxt = self.audio.as_mut()
             .ok_or(MediaError::InternalError("no audio".to_string()))?;
+        cxt.flush();
+
         let rescaled = position.rescale(
             cxt.pos_timebase, 
             cxt.stream_timebase);
@@ -325,8 +313,6 @@ impl MediaPlayback {
     pub fn seek_video_precise(&mut self, position: i64)
         -> Result<Option<DecodedVideoFrame>, MediaError>
     {
-        // let guard = pprof::ProfilerGuardBuilder::default().frequency(1000).blocklist(&["libc", "libgcc", "pthread", "vdso"]).build().unwrap();
-
         self.seek_video(position)?;
 
         let cxt = self.video.as_mut()
@@ -336,9 +322,9 @@ impl MediaPlayback {
             if stream.index() == cxt.stream_i {
                 cxt.feed(&packet)?;
                 if let Some(f) = cxt.decode()? {
+                    debug!("seek_precise: at {}", f.position);
                     if f.position >= position {
-                        debug!("seek_precise: advanced {} additional times", n_advanced);
-                        debug!("seek_precise: arrived at {}", f.position);
+                        debug!("seek_precise: done; advanced {} additional times", n_advanced);
                         return Ok(Some(f));
                     }
                 }
@@ -346,11 +332,6 @@ impl MediaPlayback {
             }
         }
         Ok(None)
-
-        // if let Ok(report) = guard.report().build() {
-        //     let file = std::fs::File::create("debug/flamegraph.svg").unwrap();
-        //     report.flamegraph(file).unwrap();
-        // };
     }
 }
 
@@ -366,6 +347,10 @@ impl AudioContext {
             },
             send_packet_error => check!(send_packet_error)
         }
+    }
+
+    fn flush(&mut self) {
+        self.decoder.flush();
     }
 
     pub fn decode(&mut self) -> Result<Option<DecodedAudioFrame>, MediaError> {
@@ -418,6 +403,10 @@ impl VideoContext {
             },
             send_packet_error => check!(send_packet_error)
         }
+    }
+
+    fn flush(&mut self) {
+        self.decoder.flush();
     }
 
     fn decode(&mut self) -> Result<Option<DecodedVideoFrame>, MediaError> {

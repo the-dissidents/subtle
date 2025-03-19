@@ -320,6 +320,27 @@ pub fn seek_audio(
 }
 
 #[tauri::command]
+pub fn seek_video(
+    id: i32,
+    position: i64,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) {
+    let mut ap = state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => return send_invalid_id(&channel)
+    };
+    if playback.video().is_none() {
+        return send(&channel, MediaEvent::NoStream { })
+    };
+    if let Err(e) = playback.seek_video(position) {
+        return send_error!(&channel, e.to_string());
+    };
+    send_done(&channel);
+}
+
+#[tauri::command]
 pub fn seek_precise_and_get_frame(
     id: i32,
     position: i64,

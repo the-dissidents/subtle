@@ -26,14 +26,6 @@ export class VideoPlayer implements WithCanvas {
     #outOffsetX = 0;
     #outOffsetY = 0;
 
-    // #requestedTime = 0;
-    // #lastRenderTime = 0;
-    // #processingTime = 0;
-    // #frameTime = 0;
-    // #waitTimeCorrection = 0;
-    // #waitTime = 0;
-    // #audioFullness = 0;
-
     #opened?: {
         framerate: number;
         sampleRate: number;
@@ -50,7 +42,9 @@ export class VideoPlayer implements WithCanvas {
 
         EOF: boolean;
         videoCache: VideoFrameData[];
-        videoPosition: number;
+
+        // used for precise seeking. in seconds
+        discardBefore: number;
     };
 
     // position used when no media opened
@@ -59,9 +53,9 @@ export class VideoPlayer implements WithCanvas {
     get duration() { return this.#opened?.media.duration; }
     get framerate() { return this.#opened?.framerate; }
     get currentPosition() {
-        if (!this.#opened || this.#opened.audioHead < 0)
+        if (!this.#opened || this.#opened.videoCache.length == 0)
             return this.#fallbackPosition;
-        return this.#opened.audioHead;
+        return this.#opened.videoCache[0].time;
     }
 
     get isLoaded() { return this.#opened !== undefined; }
@@ -106,6 +100,7 @@ export class VideoPlayer implements WithCanvas {
             [nw, nh] = [h * ratio, h];
         this.#outOffsetX = (w - nw) / 2;
         this.#outOffsetY = (h - nh) / 2;
+        await this.#opened.media.waitUntilAvailable();
         await this.#opened.media.setVideoSize(nw, nh);
     }
 
@@ -124,6 +119,7 @@ export class VideoPlayer implements WithCanvas {
         console.log('VideoPlayer: url=', rawurl);
 
         if (this.#opened && !this.#opened.media.isClosed) {
+            await this.#opened.media.waitUntilAvailable();
             await this.#opened.media.close();
             await this.#opened.audioCxt.close();
         }
@@ -163,7 +159,7 @@ export class VideoPlayer implements WithCanvas {
             audioBufferLength: 0,
             audioSize: 0,
             videoCache: [],
-            videoPosition: 0,
+            discardBefore: -1,
         };
 
         await this.#updateOutputSize();
@@ -172,19 +168,35 @@ export class VideoPlayer implements WithCanvas {
         console.log('VideoPlayer: loaded media');
     }
 
-    async postAudioMessage(msg: AudioInputData) {
-        // TODO: add timeout?
+    #waitingWorklet = false;
+    async #postAudioMessage(msg: AudioInputData) {
+        if (this.#waitingWorklet) {
+            await new Promise<void>((resolve) => {
+                const wait = () => {
+                    if (this.#waitingWorklet) setTimeout(wait, 1);
+                    else resolve();
+                };
+                wait();
+            });
+        }
+
+        this.#waitingWorklet = true;
         return await new Promise<void>((resolve, reject) => {
+            setTimeout(() => {
+                this.#waitingWorklet = false;
+                reject(new Error('postAudioMessage timed out'));
+            }, 1000);
+
             assert(this.#opened !== undefined);
             this.#opened.onAudioFeedback = (data) => {
                 assert(this.#opened !== undefined);
-                if (data.headPosition) {
+                if (data.headPosition)
                     this.#opened.audioHead = data.headPosition / this.#opened!.sampleRate;
-                }
                 if (data.tailPosition)
                     this.#opened.audioTail = data.tailPosition / this.#opened!.sampleRate;
                 this.#opened.audioSize = data.bufferSize;
                 this.#opened.audioBufferLength = data.bufferLength;
+                this.#waitingWorklet = false;
                 resolve();
             };
             this.#opened.worklet.port.postMessage(msg);
@@ -197,38 +209,43 @@ export class VideoPlayer implements WithCanvas {
         this.#opened.EOF = false;
         this.#opened.audioHead = -1;
         this.#opened.audioTail = -1;
-        await this.postAudioMessage({ type: 'clearBuffer' });
+        await this.#postAudioMessage({ type: 'clearBuffer' });
     }
 
     async #populateCache() {
-        const PreloadAmount = 0.5; // in seconds
+        const PreloadAmount = 0.1; // in seconds
 
         if (!this.#opened || this.#opened.EOF) return false;
         const video = this.#opened.videoCache;
-        const videoSize = sum(video.map((x) => x.content.length));
-        
         if (video.length > 1 && video.at(-1)!.time - video[0].time > PreloadAmount
          && this.#opened.audioTail - this.#opened.audioHead > PreloadAmount) return false;
 
+        await this.#opened.media.waitUntilAvailable();
         const frame = await this.#opened.media.readNextFrame();
         if (!frame) {
             this.#opened.EOF = true;
             return false;
         }
+        if (frame.time < this.#opened.discardBefore) {
+            // discard this
+            return true;
+        }
         if (frame.type == 'audio') {
             if (this.#opened.audioTail > 0 && frame.time < this.#opened.audioTail) {
+                console.warn('abnormal audio frame ordering, clearing cache!');
                 await this.#clearCache();
                 return true;
             }
-            await this.postAudioMessage({ type: 'frame', frame });
+            await this.#postAudioMessage({ type: 'frame', frame });
         } else {
-            if (video.length > 0 && frame.time < video.at(-1)!.time) {
+            if (video.length > 0 && frame.position < video.at(-1)!.position) {
+                console.warn('abnormal video frame ordering, clearing cache!');
                 await this.#clearCache();
                 return true;
             }
             video.push(frame);
         }
-        // Interface.status.set(`${this.#opened.audioBufferLength}, ${this.#opened.videoCache.length}`);
+        this.requestRender();
         return true;
     }
 
@@ -236,11 +253,13 @@ export class VideoPlayer implements WithCanvas {
     requestPreload() {
         if (this.#requestedPreload) return;
         this.#requestedPreload = true;
+        // console.log('preloading');
         const load = async () => {
             if (await this.#populateCache()) {
                 setTimeout(load, 0);
             } else {
                 this.#requestedPreload = false;
+                // console.log('preloading ends');
             }
         }
         // requestAnimationFrame(load);
@@ -264,49 +283,53 @@ export class VideoPlayer implements WithCanvas {
     async setPositionFrame(position: number) {
         assert(this.#opened !== undefined);
         position = Math.max(0, Math.floor(position));
-
+        this.#fallbackPosition = position / this.#opened.framerate;
         this.play(false);
 
         const video = this.#opened.videoCache;
-        if (this.#opened.videoCache.length > 0) {
+
+        // check if target position is with cache
+        if (video.length > 0) {
+            console.log(position, video[0].position, video.at(-1)!.position);
             if (position >= video[0].position && position <= video.at(-1)!.position) {
                 while (position > video[0].position)
                     video.shift();
-                await this.postAudioMessage({ type: 'shiftUntil', 
+                await this.#postAudioMessage({ type: 'shiftUntil', 
                     position: position / this.#opened.framerate * this.#opened.sampleRate });
-                this.#fallbackPosition = position;
                 this.requestPreload();
-                this.onVideoPositionChange();
-                Interface.status.set(`shifted to: (${position})`);
+                Interface.status.set(`shifted: (${position})`);
                 return;
             }
         }
-
+        // else, do seek and rebuild cache
         await this.#clearCache();
-        const frame = await this.#opened.media.seekVideoAndGetFrame(position);
-        if (frame) this.#opened.videoCache.push(frame);
-        Interface.status.set(`seeked to: ${frame?.position} (${position})`);
-        this.#fallbackPosition = frame?.position ?? position;
+        await this.#opened.media.waitUntilAvailable();
+        await this.#opened.media.seekVideo(position);
+        this.#opened.discardBefore = position / this.#opened.framerate;
         this.requestPreload();
-        this.onVideoPositionChange();
     }
 
     async nextFrame() {
         if (!this.#opened) return;
-        // await this.#opened.video.moveToNextVideoFrame();
-        // await this.#opened.video.readCurrentVideoFrame();
+        if (this.#opened.videoCache.length == 0) {
+            console.warn('nextFrame: no video cache');
+            return;
+        }
+        await this.setPositionFrame(this.#opened.videoCache[0].position + 1);
     }
 
     async previousFrame() {
         if (!this.#opened) return;
-        // await this.setPositionFrame(this.#opened.pos - 1);
-        // await this.#opened.video.readCurrentVideoFrame();
+        if (this.#opened.videoCache.length == 0) {
+            console.warn('nextFrame: no video cache');
+            return;
+        }
+        await this.setPositionFrame(this.#opened.videoCache[0].position - 1);
     }
 
     #drawFrame(frame: VideoFrameData) {
         assert(this.#opened !== undefined);
-        this.onVideoPositionChange();
-        this.subRenderer?.setTime(frame.time);
+        this.subRenderer?.setTime(this.currentPosition);
 
         let [nw, nh] = this.#opened.media.videoOutputSize;
         let imgData = new ImageData(frame.content, frame.stride);
@@ -319,62 +342,86 @@ export class VideoPlayer implements WithCanvas {
 
         this.#ctxbuf.fillStyle = 'red';
         this.#ctxbuf.font= `${window.devicePixelRatio * 10}px Courier`;
+
+        const videoSize = sum(this.#opened.videoCache.map((x) => x.content.length));
+        const audioSize = this.#opened.audioSize;
+
         this.#ctxbuf.fillText(
-            `vt:${frame.time}`, 0, 20);
+            `vt:${frame.time.toFixed(2)}`, 0, 20);
         this.#ctxbuf.fillText(
-            `at:${this.#opened.audioHead}`, 0, 40);
+            `at:${this.#opened.audioHead.toFixed(2)}`, 0, 40);
         this.#ctxbuf.fillText(
-            `vb:${this.#opened.videoCache.length}`, 0, 60);
+            `vb:${this.#opened.videoCache.length}`.padEnd(10)
+            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, 0, 60);
         this.#ctxbuf.fillText(
-            `ab:${this.#opened.audioBufferLength}`, 0, 80);
+              `ab:${this.#opened.audioBufferLength}`.padEnd(10) 
+            + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, 0, 80);
         this.#ctxbuf.fillText(
             `ps:${frame.position}`, 0, 100);
+        
+        const position = this.#opened.audioHead < 0 
+            ? this.#fallbackPosition 
+            : this.#opened.audioHead;
+        this.#ctxbuf.fillText(
+            `wi:${(frame.time - position).toFixed(3)}`, 0, 120);
     }
 
     async #render() {
-        this.#requestedRender = false;
+        // this.#requestedRender = false;
         this.#ctx.globalCompositeOperation = 'copy';
 
         if (!this.#opened) {
             requestAnimationFrame(() => 
                 this.#ctx.drawImage(this.subRenderer!.getCanvas(), 0, 0));
+            this.#requestedRender = false;
             return;
         }
 
         const video = this.#opened.videoCache;
         const tolerance = 1 / this.#opened.framerate;
+
+        const position = this.#opened.audioHead < 0 
+            ? this.#fallbackPosition 
+            : this.#opened.audioHead;
+        if (this.#opened.audioHead < 0) {
+            console.log('audioHead < 0;', this.#fallbackPosition);
+        }
         while (video.length > 0) {
-            if (video[0].time < this.currentPosition - tolerance) {
+            if (video[0].time < position - tolerance) {
                 // discard missed frame
+                console.log('discarding frame at', video[0].time, position);
                 video.shift();
             } else {
                 // consume frame
-                const frame = video.shift()!;
-                console.log('consumed video frame', frame.position, video.length);
-                this.#opened.videoPosition = frame.position;
+                const frame = video[0];
                 this.#drawFrame(frame);
                 this.onVideoPositionChange();
-                this.requestPreload();
 
                 if (this.#playing) {
+                    video.shift();
+                    this.requestPreload();
+                    this.onVideoPositionChange();
                     setTimeout(() => {
                         this.#render();
-                    }, Math.max(0, frame.time - this.currentPosition) * 1000);
+                    }, Math.max(0, frame.time - position) * 1000);
+                } else {
+                    this.#requestedRender = false;
                 }
-
                 requestAnimationFrame(() => 
                     this.#ctx.drawImage(this.#canvas, 0, 0));
                 return;
             }
         }
         this.requestPreload();
-        requestAnimationFrame(() => this.#render());
+        this.#requestedRender = false;
     }
 
     requestRender() {
         if (this.#requestedRender) return;
         this.#requestedRender = true;
-        requestAnimationFrame(() => this.#render());
+        requestAnimationFrame(() => {
+            this.#render();
+        });
     }
 
     play(state = true) {
@@ -388,8 +435,6 @@ export class VideoPlayer implements WithCanvas {
             this.#playing = true;
             this.#opened.audioCxt?.resume();
             this.onPlayStateChange();
-            // this.#requestedTime = performance.now();
-            // this.#lastRenderTime = this.#requestedTime;
             this.requestPreload();
             this.requestRender();
         }

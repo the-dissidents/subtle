@@ -20,7 +20,6 @@ fn main() {
     ffmpeg::init().unwrap();
 
     tauri::Builder::default()
-        // .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
@@ -30,9 +29,6 @@ fn main() {
             backend_task: true,
         }))
         .manage(Mutex::new(media::PlaybackRegistry::new()))
-        // .manage(Mutex::new(SocketState {
-        //     sender: tx
-        // }))
         .invoke_handler(tauri::generate_handler![
             init_complete,
             media::media_version,
@@ -44,6 +40,7 @@ fn main() {
             media::open_audio,
             media::open_video,
             media::seek_audio,
+            media::seek_video,
             media::seek_precise_and_get_frame,
             media::get_next_frame_data,
             media::get_intensities,

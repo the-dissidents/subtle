@@ -215,6 +215,17 @@ export class MMedia {
             invoke('close_media', {id: this.id, channel});
         });
     }
+    
+    async waitUntilAvailable() {
+        return await new Promise<void>((resolve, reject) => {
+            setTimeout(() => reject(new MediaError('timed out')), 1000);
+            const wait = () => {
+                if (!this.hasJob) resolve();
+                else setTimeout(wait, 1);
+            };
+            wait();
+        });
+    }
 
     async openAudio(audioId: number) {
         assert(!this.#destroyed);
@@ -308,38 +319,9 @@ export class MMedia {
         this.#outHeight = height;
     }
 
-    // async videoPosition() {
-    //     assert(!this.#destroyed);
-    //     try {
-    //         return await new Promise<number>((resolve, reject) => {
-    //             this.#currentJobs += 1;
-    //             let channel = createChannel({
-    //                 position: (data_1) => resolve(data_1.value)
-    //             });
-    //             invoke('get_current_video_position', { id: this.id, channel });
-    //         });
-    //     } finally {
-    //         this.#currentJobs -= 1;
-    //     }
-    // }
-    
-    // async audioPosition() {
-    //     assert(!this.#destroyed);
-    //     try {
-    //         return await new Promise<number>((resolve, reject) => {
-    //             this.#currentJobs += 1;
-    //             let channel = createChannel({
-    //                 position: (data_1) => resolve(data_1.value)
-    //             });
-    //             invoke('get_current_audio_position', { id: this.id, channel });
-    //         });
-    //     } finally {
-    //         this.#currentJobs -= 1;
-    //     }
-    // }
-
     async readNextFrame() {
         assert(!this.#destroyed);
+        assert(this.#currentJobs == 0);
         try {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
@@ -355,6 +337,7 @@ export class MMedia {
 
     async seekAudio(position: number) {
         assert(!this.#destroyed);
+        assert(this.#currentJobs == 0);
         try {
             return await new Promise<void>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
@@ -369,8 +352,27 @@ export class MMedia {
         }
     }
 
+    async seekVideo(position: number) {
+        assert(!this.#destroyed);
+        assert(this.#currentJobs == 0);
+        try {
+            return await new Promise<void>((resolve, reject) => {
+                setTimeout(() => reject(new MediaError('timed out')), 1000);
+                this.#currentJobs += 1;
+                let channel = createChannel({
+                    done: () => resolve()
+                });
+                invoke('seek_video', { id: this.id, channel, position });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
+    /** @deprecated */
     async seekVideoAndGetFrame(position: number) {
         assert(!this.#destroyed);
+        assert(this.#currentJobs == 0);
         try {
             return await new Promise<VideoFrameData | null>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
@@ -389,6 +391,7 @@ export class MMedia {
 
     async getIntensities(until: number, step: number) {
         assert(!this.#destroyed);
+        assert(this.#currentJobs == 0);
         return await new Promise<{
             start: number,
             end: number,
