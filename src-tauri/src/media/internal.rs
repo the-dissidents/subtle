@@ -41,7 +41,6 @@ pub struct DecodedVideoFrame {
     pub position: i64,
     pub time: f64,
     pub decoded: frame::Video,
-    pub scaled: frame::Video
 }
 
 pub struct DecodedAudioFrame {
@@ -142,7 +141,6 @@ impl MediaPlayback {
             .ok_or(MediaError::InternalError("invalid stream index".to_string()))?;
 
         // create decoder
-
         let codecxt = check!(codec::Context::from_parameters(stream.parameters()))?;
         let mut decoder = check!(codecxt.decoder().video())?;
         check!(decoder.set_parameters(stream.parameters()))?;
@@ -230,7 +228,8 @@ impl MediaPlayback {
     }
 
     /// Returns Ok(None) at EOF
-    pub fn get_next(&mut self) -> Result<Option<DecodedFrame>, MediaError>
+    pub fn get_next(&mut self) 
+    -> Result<Option<DecodedFrame>, MediaError>
     {
         assert!(self.audio.is_some() || self.video.is_some());
 
@@ -240,7 +239,7 @@ impl MediaPlayback {
                     // decode audio packet
                     c.feed(&packet)?;
                     if let Some(f) = c.decode()? {
-                        return Ok(Some(DecodedFrame::Audio(f)))
+                        return Ok(Some(DecodedFrame::Audio(c.process(f)?)))
                     }
                 }
             }
@@ -249,12 +248,11 @@ impl MediaPlayback {
                     // decode video packet
                     c.feed(&packet)?;
                     if let Some(f) = c.decode()? {
-                        return Ok(Some(DecodedFrame::Video(f)))
+                        return Ok(Some(DecodedFrame::Video(c.process(f)?)))
                     }
                 }
             }
         }
-        debug!("get_next: met EOF!");
         Ok(None)
     }
 
@@ -275,7 +273,7 @@ impl MediaPlayback {
                 0,
                 rescaled,
                 rescaled,
-                ffmpeg_sys_next::AVSEEK_FLAG_ANY,
+                ffmpeg_sys_next::AVSEEK_FLAG_BACKWARD,
             ) {
                 s if s >= 0 => Ok(()),
                 e => Err(MediaError::InternalError(
@@ -310,27 +308,47 @@ impl MediaPlayback {
         }
     }
 
-    pub fn seek_video_precise(&mut self, position: i64)
-        -> Result<Option<DecodedVideoFrame>, MediaError>
+    pub fn seek_precise(&mut self, video_position: i64)
+        -> Result<Option<DecodedFrame>, MediaError>
     {
-        self.seek_video(position)?;
+        self.seek_video(video_position)?;
 
-        let cxt = self.video.as_mut()
+        let video = self.video.as_mut()
             .ok_or(MediaError::InternalError("no video".to_string()))?;
-        let mut n_advanced = 0;
+        let time = (video_position as f64) / f64::from(video.framerate());
         for (stream, packet) in self.input.packets() {
-            if stream.index() == cxt.stream_i {
-                cxt.feed(&packet)?;
-                if let Some(f) = cxt.decode()? {
-                    debug!("seek_precise: at {}", f.position);
-                    if f.position >= position {
-                        debug!("seek_precise: done; advanced {} additional times", n_advanced);
-                        return Ok(Some(f));
+            if let Some(c) = self.audio.as_mut() {
+                if c.stream_i == stream.index() {
+                    // decode audio packet
+                    c.feed(&packet)?;
+                    if let Some(f) = c.decode()? {
+                        if f.time < time {
+                            trace!("seek_precise: skipping audio #{}, t={:.3} (target {:.3})", 
+                                f.position, f.time, time);
+                            continue;
+                        }
+                        debug!("seek_precise: -> audio #{}, t={:.3} (target {:.3})", 
+                            f.position, f.time, time);
+                        return Ok(Some(DecodedFrame::Audio(c.process(f)?)))
                     }
                 }
-                n_advanced += 1;
+            }
+            if video.stream_i == stream.index() {
+                // decode video packet
+                video.feed(&packet)?;
+                if let Some(f) = video.decode()? {
+                    if f.position < video_position {
+                        trace!("seek_precise: skipping video #{} (target {}), t={:.3}", 
+                            f.position, video_position, f.time);
+                        continue;
+                    }
+                    debug!("seek_precise: -> video #{} (target {}), t={:.3}", 
+                        f.position, video_position, f.time);
+                    return Ok(Some(DecodedFrame::Video(video.process(f)?)))
+                }
             }
         }
+        debug!("seek_precise: -> EOF");
         Ok(None)
     }
 }
@@ -354,14 +372,8 @@ impl AudioContext {
     }
 
     pub fn decode(&mut self) -> Result<Option<DecodedAudioFrame>, MediaError> {
-        let mut frame = DecodedAudioFrame {
-            position: -1,
-            time: -1.0,
-            decoded: frame::Audio::empty()
-        };
-
-        let mut decoded_frame = frame::Audio::empty();
-        match self.decoder.receive_frame(&mut decoded_frame) {
+        let mut decoded = frame::Audio::empty();
+        match self.decoder.receive_frame(&mut decoded) {
             Ok(_) => (),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 return Ok(None);
@@ -369,13 +381,19 @@ impl AudioContext {
             receive_frame_error => check!(receive_frame_error)?
         }
 
-        frame.position = decoded_frame.pts()
+        let position = decoded.pts()
             .ok_or(MediaError::InternalError("decoded frame has no pts".to_owned()))?
             .rescale(self.stream_timebase, self.pos_timebase);
-        frame.time = f64::from(self.pos_timebase) * frame.position as f64;
+        let time = f64::from(self.pos_timebase) * position as f64;
 
-        check!(self.resampler.run(&decoded_frame, &mut frame.decoded))?;
-        Ok(Some(frame))
+        Ok(Some(DecodedAudioFrame { position, time, decoded }))
+    }
+
+    pub fn process(&mut self, mut frame: DecodedAudioFrame) -> Result<DecodedAudioFrame, MediaError> {
+        let mut processed = frame::Audio::empty();
+        check!(self.resampler.run(&frame.decoded, &mut processed))?;
+        frame.decoded = processed;
+        Ok(frame)
     }
 
     pub fn stream_index(&self) -> usize {
@@ -410,22 +428,9 @@ impl VideoContext {
     }
 
     fn decode(&mut self) -> Result<Option<DecodedVideoFrame>, MediaError> {
-        let mut frame = DecodedVideoFrame {
-            position: -1,
-            time: -1.0,
-            decoded: frame::Video::empty(),
-            scaled: frame::Video::empty(),
-        };
-
-        match self.decoder.receive_frame(&mut frame.decoded) {
-            Ok(()) => {
-                frame.position = frame.decoded.pts()
-                    // fall back to packet's DTS if no pts available (as in AVI)
-                    .unwrap_or(frame.decoded.packet().dts)
-                    .rescale(self.stream_timebase, self.pos_timebase);
-                frame.time = f64::from(self.pos_timebase) * frame.position as f64;
-                trace!("receive: got frame {}", frame.position);
-            },
+        let mut decoded = frame::Video::empty();
+        match self.decoder.receive_frame(&mut decoded) {
+            Ok(()) => {},
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 trace!("receive: EAGAIN");
                 return Ok(None)
@@ -433,8 +438,23 @@ impl VideoContext {
             receive_frame_error => check!(receive_frame_error)?
         }
 
-        check!(self.scaler.run(&frame.decoded, &mut frame.scaled))?;
-        Ok(Some(frame))
+        let position = decoded.pts()
+            // fall back to packet's DTS if no pts available (as in AVI)
+            .unwrap_or(decoded.packet().dts)
+            .rescale(self.stream_timebase, self.pos_timebase);
+        let time = f64::from(self.pos_timebase) * position as f64;
+        trace!("receive: got frame {}", position);
+
+        Ok(Some(DecodedVideoFrame { position, time, decoded }))
+    }
+
+    pub fn process(&mut self, mut frame: DecodedVideoFrame) 
+    -> Result<DecodedVideoFrame, MediaError> 
+    {
+        let mut processed = frame::Video::empty();
+        check!(self.scaler.run(&frame.decoded, &mut processed))?;
+        frame.decoded = processed;
+        Ok(frame)
     }
 
     pub fn set_output_size(&mut self, size: (u32, u32)) -> Result<(), String>  {

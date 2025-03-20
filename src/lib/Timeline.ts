@@ -93,7 +93,6 @@ function fontSize(size: number) {
 
 export class Timeline implements WithCanvas {
     #cxt: CanvasRenderingContext2D;
-    #animating = false;
     #requestedRender = false;
     #requestedSampler = false;
 
@@ -529,10 +528,13 @@ export class Timeline implements WithCanvas {
         }
         this.#samplerMedia = await MMedia.open(rawurl);
         this.#sampler = await AudioSampler.open(this.#samplerMedia);
+        this.#sampler.onProgress = () => this.requestRender();
         this.#scale = Math.max(this.#width / this.#sampler.duration, 10);
         this.#offset = 0;
         this.#cursorPos = 0; // or setCursorPos?
+        this.#requestedSampler = true;
         this.requestRender();
+        console.log('Timeline.load: done');
     }
 
     // view & sampling
@@ -556,7 +558,8 @@ export class Timeline implements WithCanvas {
             else if (this.#sampler.sampleEnd < end + preload)
                 this.#sampler.extendSampling(end + preload);
         }
-        if (this.#sampler.isSampling) return;
+        if (this.#sampler.isSampling)
+            return;
 
         const resolution = this.#sampler.resolution;
         const i = Math.floor(this.#offset * resolution),
@@ -572,7 +575,9 @@ export class Timeline implements WithCanvas {
             }
         } else {
             this.#requestedSampler = false;
-            if (first0 < 0) return;
+            if (first0 < 0) {
+                return;
+            }
         }
         start = (first0 + i) / resolution;
         let end0 = subarray.findIndex((x, i) => i > first0 && x > 0);
@@ -581,14 +586,13 @@ export class Timeline implements WithCanvas {
         end += preload;
         if (start < 0) start = 0;
         if (end > this.#sampler.duration) end = this.#sampler.duration;
-        if (end <= start) return;
+        if (end <= start) {
+            console.log(start, '>=', end);
+            return;
+        }
 
-        this.#animating = true;
-        this.#sampler.startSampling(start, end).then(() => {
-            this.#animating = false;
-            this.requestRender();
-            this.#processSampler();
-        });
+        console.log('sampling', start, end);
+        this.#sampler.startSampling(start, end);
         this.requestRender();
     }
 
@@ -612,8 +616,8 @@ export class Timeline implements WithCanvas {
 
     async setCursorPos(pos: number) {
         if (pos == this.#cursorPos) return;
-        this.setCursorPosPassive(pos);
-        await Playback.setPosition(pos);
+        // this.setCursorPosPassive(pos);
+        Playback.setPosition(pos);
     }
 
     setViewScale(v: number) {
@@ -814,9 +818,6 @@ export class Timeline implements WithCanvas {
         this.#cxt.fillText(`scale=${this.#scale.toFixed(2)}`, 5 * devicePixelRatio, 25 * devicePixelRatio);
         this.#cxt.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 80 * devicePixelRatio, 15 * devicePixelRatio);
         this.#cxt.fillText(`dpr=${devicePixelRatio}`, 80 * devicePixelRatio, 25 * devicePixelRatio);
-
-        if (this.#animating)
-            this.requestRender();
     }
 
     requestRender() {

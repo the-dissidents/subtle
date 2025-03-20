@@ -29,7 +29,7 @@ impl PlaybackRegistry {
 pub enum MediaEvent<'a> {
     #[serde(rename_all = "camelCase")]
     Done,
-    #[serde(rename_all = "camelCase")]
+    #[serde(rename = "EOF")]
     EOF,
     #[serde(rename_all = "camelCase")]
     IntensityList {
@@ -359,8 +359,9 @@ pub fn seek_precise_and_get_frame(
         send(&channel, MediaEvent::NoStream { });
         return Err(());
     };
-    match playback.seek_video_precise(position) {
-        Ok(Some(f)) => return send_video_frame(f),
+    match playback.seek_precise(position) {
+        Ok(Some(DecodedFrame::Video(f))) => return send_video_frame(f),
+        Ok(Some(DecodedFrame::Audio(f))) => return send_audio_frame(f),
         Ok(None) => send(&channel, MediaEvent::EOF),
         Err(e) => send_error!(&channel, e.to_string()),
     };
@@ -412,13 +413,13 @@ pub fn send_video_frame(
 
     let pos = frame.position;
     let time = frame.time;
-    let data = to_byte_slice(frame.scaled.plane(0));
+    let data = to_byte_slice(frame.decoded.plane(0));
 
     let mut binary = Vec::<u8>::new();
     binary.extend((1 as u32).to_le_bytes().iter());
     binary.extend((pos as i32).to_le_bytes().iter());
     binary.extend(time.to_le_bytes().iter());
-    binary.extend(((frame.scaled.stride(0) / 4) as u32).to_le_bytes().iter());
+    binary.extend(((frame.decoded.stride(0) / 4) as u32).to_le_bytes().iter());
     binary.extend((data.len() as u32).to_le_bytes().iter());
     binary.extend_from_slice(data);
 
@@ -484,8 +485,7 @@ pub fn get_intensities(
         let frame = match playback.get_next() {
             Ok(Some(DecodedFrame::Audio(f))) => f,
             Ok(Some(_)) => continue,
-            Ok(None) => return send_error!(&channel, 
-                format!("get_intensities: get_next(): EOF")),
+            Ok(None) => break,
             Err(e) => return send_error!(&channel, 
                 format!("get_intensities: get_next(): {e}")),
         };

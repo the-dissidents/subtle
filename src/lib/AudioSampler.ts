@@ -19,6 +19,8 @@ export class AudioSampler {
     data: Float32Array;
     detail: Float32Array;
 
+    onProgress?: () => void;
+
     get resolution() {return this.#sampleRate / AudioSampler.SAMPLE_LENGTH;}
     get sampleRate() {return this.#sampleRate;}
     get duration() {return this.#length / this.#sampleRate;}
@@ -63,53 +65,57 @@ export class AudioSampler {
         this.#sampleEnd = pos;
     }
 
-    startSampling(from: number, to: number): Promise<void> {
+    async startSampling(from: number, to: number): Promise<void> {
         assert(!this.#isSampling);
+
         let a = Math.floor(from * this.#sampleRate);
         let b = Math.floor(to * this.#sampleRate);
         if (b > this.#length) b = this.#length;
         assert(b > a);
 
-        let counter = 1;
-        let doSampling = async (resolve: () => void) => {
+        this.#isSampling = true;
+        this.#cancelling = false;
+        this.#sampleProgress = a;
+
+        let current = a;
+        await this.#media.waitUntilAvailable();
+        await this.#media.seekAudio(a);
+        let doSampling = async () => {
             let next = this.#sampleProgress + AudioSampler.SAMPLE_LENGTH * 500;
             if (next > b) next = b;
+            await this.#media.waitUntilAvailable();
             const data = await this.#media.getIntensities(next, AudioSampler.SAMPLE_LENGTH);
-            const status = await this.#media.audioStatus();
-            assert(status !== null);
-            // this.#sampleProgress = status.position;
-            this.#sampleProgress = data.end;
+            if (data.start < 0 || data.start == data.end) {
+                console.log(`sampling done upon EOF`, data.end, `(${from}-${current / this.#sampleRate}-${to})`);
+                this.#isSampling = false;
+                // FIXME: very hacky!
+                this.#length = Math.min(this.#length, current);
+                return;
+            }
             
             const start = Math.round(data.start / AudioSampler.SAMPLE_LENGTH);
             const end = start + data.data.length + 1;
             this.data.set(data.data, start);
             this.detail.fill(1, start, end);
+            this.onProgress?.();
 
+            this.#sampleProgress = data.end;
             if (this.#sampleProgress > b) {
                 // console.log(`sampling done with ${counter} steps, last=${data.start}~${data.end}, pos=${status.position}`);
                 // console.log(data);
                 this.#isSampling = false;
-                resolve(); return;
+                return;
             }
             if (this.#cancelling && this.#sampleProgress - a > AudioSampler.SAMPLE_LENGTH) {
-                console.log('sucessfully cancelled');
+                // console.log('sucessfully cancelled');
                 this.#isSampling = false;
-                resolve(); return;
+                return;
             }
 
             // continue
-            counter += 1;
-            requestAnimationFrame(() => doSampling(resolve));
+            current = data.end;
+            requestAnimationFrame(() => doSampling());
         }
-
-        this.#isSampling = true;
-        this.#cancelling = false;
-        return new Promise<void>((resolve) => {
-            this.#media.seekAudio(a).then(() => {
-                this.#sampleProgress = a;
-                // console.log(`starting sampling: ${(a / this.#sampleRate).toFixed(3)}, ${(b / this.#sampleRate).toFixed(3)}`);
-                requestAnimationFrame(() => doSampling(resolve));
-            });
-        })
+        requestAnimationFrame(() => doSampling());
     }
 }

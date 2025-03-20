@@ -46,7 +46,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                     this.#postFeedback('ok');
                     break;
                 case "shiftUntil":
-                    while (this.#buffer.length > 0 && this.#buffer[0].position > e.data.position)
+                    while (this.#buffer.length > 0 && e.data.position > this.#buffer[0].position)
                         this.#buffer.shift();
                     this.#postFeedback('ok');
                     break;

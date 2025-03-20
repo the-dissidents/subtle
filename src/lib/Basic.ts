@@ -41,6 +41,20 @@ export const Basic = {
             new Promise<T>((_, reject) => setTimeout(() => reject('timeout'), t))]);
     },
 
+    wait(n: number) {
+        return new Promise<void>((resolve) => setTimeout(() => resolve(), n));
+    },
+
+    waitUntil(cond: () => boolean): Promise<void> {
+        return new Promise((resolve) => {
+            const wait = () => {
+                if (cond()) resolve();
+                else setTimeout(wait, 1);
+            };
+            wait();
+        });
+    },
+
     translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
         if (e.ctrlKey) {
             // zoom. only look at Y

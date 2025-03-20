@@ -137,7 +137,7 @@ export const Actions = {
         }
         else if (ev.code == 'KeyP' && altOrTableOrTimeline) {
             // play selected entry
-            if (Playback.timeline === null) return;
+            if (Playback.timeline === null || Playback.video === null) return;
             const current = Editing.selection.focused;
             if (current === null) return;
             Playback.playAreaOverride = {
@@ -145,26 +145,22 @@ export const Actions = {
                 end: current.end,
                 loop: false
             };
-            // cf. comment at line 99 in Playback.ts
-            Playback.setPosition(current.start)
-                .then(() => Playback.play(true));
             ev.preventDefault();
+            (async () => {
+                await Playback.forceSetPosition(current.start);
+                await Basic.waitUntil(() => !Playback.video!.isPreloading);
+                await Playback.play(true);
+            })();
         }
         else if (ev.key == 'ArrowLeft' && altOrTimeline) {
-            // move backward 1s or 1 frame
-            let skipTime = ctrlOrMeta
-                ? 1 / (Playback.video?.framerate ?? 24)
-                : 1;
-            Playback.setPosition(Playback.position - skipTime);
+            // move backward 1 frame
             ev.preventDefault();
+            Playback.video?.requestPreviousFrame();
         }
         else if (ev.key == 'ArrowRight' && altOrTimeline) {
-            // move forward 1s or 1 frame
-            let skipTime = ctrlOrMeta
-                ? 1 / (Playback.video?.framerate ?? 24)
-                : 1;
-            Playback.setPosition(Playback.position + skipTime);
+            // move forward 1 frame
             ev.preventDefault();
+            Playback.video?.requestNextFrame();
         }
         else if (ev.key == 'ArrowLeft' && ctrlOrMeta && altOrTimeline) {
             // move backward 1s

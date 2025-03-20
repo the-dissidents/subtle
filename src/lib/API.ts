@@ -96,7 +96,7 @@ function createChannel(handler: {[key in MediaEventKey]?: MediaEventHandler<key>
             console.log(msg.data.message);
             break;
         case 'runtimeError':
-            throw new MediaError(msg.data.what);
+            throw new MediaError('runtimeError: ' + msg.data.what);
         case 'invalidId':
             throw new MediaError('invalid media ID referenced');
         default:
@@ -326,9 +326,15 @@ export class MMedia {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
                 this.#currentJobs += 1;
-                let channel = createChannel({ 'EOF': () => resolve(null) });
+                let channel = createChannel({ 'EOF': () => {
+                    console.log('at eof');
+                    resolve(null);
+                } });
                 invoke<ArrayBuffer>('get_next_frame_data', { id: this.id, channel })
-                    .then((x) => resolve(this.#readData(x)));
+                    .then((x) => resolve(this.#readData(x)))
+                    .catch(() => {});
+                // errors are handled in the channel; the backend returning Err(()) is just a way
+                // to not return any data
             });
         } finally {
             this.#currentJobs -= 1;
@@ -369,12 +375,11 @@ export class MMedia {
         }
     }
 
-    /** @deprecated */
-    async seekVideoAndGetFrame(position: number) {
+    async seekVideoPrecise(position: number) {
         assert(!this.#destroyed);
         assert(this.#currentJobs == 0);
         try {
-            return await new Promise<VideoFrameData | null>((resolve, reject) => {
+            return await new Promise<AudioFrameData | VideoFrameData | null>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
                 this.#currentJobs += 1;
                 let channel = createChannel({
@@ -382,7 +387,9 @@ export class MMedia {
                 });
                 invoke<ArrayBuffer>('seek_precise_and_get_frame', 
                         { id: this.id, channel, position })
-                    .then((x) => resolve(this.#readData(x) as VideoFrameData));
+                    .then((x) => resolve(this.#readData(x)))
+                    .catch(() => {});
+                // see line 336
             });
         } finally {
             this.#currentJobs -= 1;

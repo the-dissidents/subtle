@@ -40,21 +40,17 @@ function updateProgress(pos: number) {
 
 async function handlePlayArea() {
     const playArea = Playback.playAreaOverride ?? Playback.playArea;
-    // FIXME: media set position is still buggy, and if it jumps not to the precise
-    // position but slight before it, this will fail miserably. So commented out
-    // for now
-
-    // if (playArea.start !== undefined && this.position < playArea.start) {
-    //     console.log('jumping to in point from before', playArea, this.position);
+    // if (playArea.start !== undefined && position < playArea.start) {
+    //     console.log('jumping to in point from before', playArea, position);
     //     // await this.play(false);
-    //     await this.setPosition(playArea.start);
+    //     await Playback.setPosition(playArea.start);
     //     return;
     // }
     if (playArea.end !== undefined && position > playArea.end) {
         console.log('jumping to in point from after out point', playArea, position);
         Playback.playAreaOverride = undefined;
         if (!playArea.loop) await Playback.play(false);
-        await Playback.setPosition(playArea.start ?? 0);
+        await Playback.forceSetPosition(playArea.start ?? 0);
         return;
     }
 }
@@ -84,11 +80,8 @@ export const Playback = {
         this.video.setSubtitles(Source.subs);
         this.video.onVideoPositionChange = () => {
             assert(this.video != null);
-            if (isPlaying) {
-                updateProgress(this.video.currentPosition!);
-                handlePlayArea();
-            }
-            this.onRefreshPlaybackControl();
+            updateProgress(this.video.currentPosition!);
+            handlePlayArea();
         };
         this.video.onPlayStateChange = () => {
             assert(this.video != null);
@@ -116,9 +109,17 @@ export const Playback = {
         this.onRefreshPlaybackControl();
     },
 
-    async setPosition(pos: number) {
-        updateProgress(pos);
-        await this.video?.setPosition(pos);
+    setPosition(pos: number) {
+        if (this.video) {
+            this.video.requestSetPosition(pos);
+        } else {
+            updateProgress(pos);
+        }
+    },
+
+    async forceSetPosition(pos: number) {
+        assert(this.video !== null);
+        await this.video.forceSetPosition(pos);
     },
 
     async play(state = true) {
