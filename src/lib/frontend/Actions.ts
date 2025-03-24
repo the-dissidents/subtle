@@ -152,17 +152,17 @@ export const Actions = {
                 await Playback.play(true);
             })();
         }
-        else if (ev.key == 'ArrowLeft' && altOrTimeline) {
+        else if (ev.key == 'ArrowLeft' && ctrlOrMeta && altOrTimeline) {
             // move backward 1 frame
             ev.preventDefault();
             Playback.video?.requestPreviousFrame();
         }
-        else if (ev.key == 'ArrowRight' && altOrTimeline) {
+        else if (ev.key == 'ArrowRight' && ctrlOrMeta && altOrTimeline) {
             // move forward 1 frame
             ev.preventDefault();
             Playback.video?.requestNextFrame();
         }
-        else if (ev.key == 'ArrowLeft' && ctrlOrMeta && altOrTimeline) {
+        else if (ev.key == 'ArrowLeft' && altOrTimeline) {
             // move backward 1s
             Playback.setPosition(Playback.position - 1);
             ev.preventDefault();

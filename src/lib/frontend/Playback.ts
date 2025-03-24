@@ -80,7 +80,7 @@ export const Playback = {
         this.video.setSubtitles(Source.subs);
         this.video.onVideoPositionChange = () => {
             assert(this.video != null);
-            updateProgress(this.video.currentPosition!);
+            updateProgress(this.video.currentTimestamp);
             handlePlayArea();
         };
         this.video.onPlayStateChange = () => {

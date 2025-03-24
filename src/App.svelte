@@ -165,7 +165,7 @@ Config.onInitialized(() => {
 });
 
 getVersion().then((x) => 
-  appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
+  appWindow.setTitle(`subtle beta ${x}a0 (${platform()}-${version()}/${arch()})`));
 
 appWindow.onCloseRequested(async (ev) => {
   if (!await Interface.warnIfNotSaved()) {

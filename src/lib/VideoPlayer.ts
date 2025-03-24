@@ -39,21 +39,27 @@ export class VideoPlayer implements WithCanvas {
         audioBufferLength: number;
         audioSize: number;
 
-        // FIXME: handle eof
         preloadEOF: boolean;
         playEOF: boolean;
         videoCache: VideoFrameData[];
+        lastFrame?: VideoFrameData;
         discardBeforeVideoPosition: number;
     };
 
     // position used when no media opened
-    #fallbackPosition: number = 0;
+    #fallbackTime: number = 0;
 
     get duration() { return this.#opened?.media.duration; }
     get currentPosition() {
-        if (!this.#opened || this.#opened.videoCache.length == 0)
-            return this.#fallbackPosition;
-        return this.#opened.videoCache[0].time;
+        if (!this.#opened) return null;
+        if (this.#opened.playEOF) return this.#opened.lastFrame?.position ?? null;
+        if (this.#opened.videoCache.length == 0) return null;
+        return this.#opened.videoCache[0].position;
+    }
+    get currentTimestamp() {
+        const pos = this.currentPosition;
+        if (pos !== null) return pos / this.#opened!.framerate;
+        return this.#fallbackTime;
     }
 
     get isLoaded() { return this.#opened !== undefined; }
@@ -249,7 +255,8 @@ export class VideoPlayer implements WithCanvas {
         const video = this.#opened.videoCache;
         if (frame.type == 'audio') {
             if (this.#opened.audioTail !== undefined && frame.time < this.#opened.audioTail) {
-                console.log('receiveFrame: abnormal audio frame ordering, clearing cache!');
+                console.warn('receiveFrame: abnormal audio frame ordering', 
+                    frame.time, this.#opened.audioTail);
                 await this.#clearCache();
                 return true;
             }
@@ -265,10 +272,12 @@ export class VideoPlayer implements WithCanvas {
             await this.#postAudioMessage({ type: 'frame', frame });
         } else {
             if (video.length > 0 && frame.position < video.at(-1)!.position) {
-                console.log('receiveFrame: abnormal video frame ordering, clearing cache!');
+                console.warn('receiveFrame: abnormal video frame ordering',
+                    frame.position, video.at(-1)!.position);
                 await this.#clearCache();
                 return true;
             }
+            this.#opened.lastFrame = frame;
             if (video.length == 0 && frame.position < this.#opened.discardBeforeVideoPosition) {
                 // skip frames before seek target
                 return true;
@@ -342,8 +351,8 @@ export class VideoPlayer implements WithCanvas {
             let position = Math.floor(t * this.#opened.framerate);
             await this.forceSetPositionFrame(position);
         } else {
-            if (t == this.#fallbackPosition) return;
-            this.#fallbackPosition = t;
+            if (t == this.#fallbackTime) return;
+            this.#fallbackTime = t;
             this.subRenderer?.setTime(t);
             this.requestRender();
         }
@@ -351,6 +360,8 @@ export class VideoPlayer implements WithCanvas {
 
     #setPositionInProgress = false;
     async forceSetPositionFrame(position: number) {
+        if (position < 0) position = 0;
+
         assert(this.#opened !== undefined);
         await Basic.waitUntil(() => !this.#setPositionInProgress);
         this.#setPositionInProgress = true;
@@ -359,7 +370,7 @@ export class VideoPlayer implements WithCanvas {
         await Basic.waitUntil(() => !this.#populatingInProgress);
 
         position = Math.max(0, Math.floor(position));
-        this.#fallbackPosition = position / this.#opened.framerate;
+        this.#fallbackTime = position / this.#opened.framerate;
         this.#opened.discardBeforeVideoPosition = position;
         this.#opened.preloadEOF = false;
         this.#opened.playEOF = false;
@@ -376,6 +387,7 @@ export class VideoPlayer implements WithCanvas {
                     video.shift();
                 await this.#postAudioMessage({ type: 'shiftUntil', 
                     position: position / this.#opened.framerate * this.#opened.sampleRate });
+                this.#subRenderer?.setTime(video[0].time);
                 this.onVideoPositionChange();
                 this.requestRender();
                 this.#requestPreload();
@@ -385,40 +397,42 @@ export class VideoPlayer implements WithCanvas {
         }
         // else, do the seeking and rebuild cache
         await this.#opened.media.waitUntilAvailable();
-        // await this.#opened.media.seekVideo(position);
-        // console.info(`setPositionFrame: seeking [${position}]`);
-        // await this.#clearCache();
-        // this.requestPreload();
-        const frame = await this.#opened.media.seekVideoPrecise(position);
-        console.info(`setPositionFrame: seeking [${position}], got frame`, 
-            frame?.position, frame?.time);
+        await this.#opened.media.seekVideo(position);
+        console.info(`setPositionFrame: seeking [${position}]`);
         await this.#clearCache();
-        if (await this.#receiveFrame(frame))
-            this.#requestPreload();
+        this.#requestPreload();
+        // const frame = await this.#opened.media.seekVideoPrecise(position);
+        // console.info(`setPositionFrame: seeking [${position}], got frame`, 
+        //     frame?.position, frame?.time);
+        // await this.#clearCache();
+        // if (await this.#receiveFrame(frame))
+        //     this.#requestPreload();
         this.#setPositionInProgress = false;
     }
 
     async requestNextFrame() {
-        if (!this.#opened) return;
-        if (this.#opened.videoCache.length == 0) {
-            console.warn('nextFrame: no video cache');
+        if (!this.#opened || this.#opened.playEOF) return;
+        const pos = this.currentPosition;
+        if (pos === null) {
+            console.warn('requestNextFrame: invalid position');
             return;
         }
-        this.requestSetPositionFrame(this.#opened.videoCache[0].position + 1);
+        this.requestSetPositionFrame(pos + 1);
     }
 
     async requestPreviousFrame() {
         if (!this.#opened) return;
-        if (this.#opened.videoCache.length == 0) {
-            console.warn('nextFrame: no video cache');
+        const pos = this.currentPosition;
+        if (pos === null) {
+            console.warn('requestPreviousFrame: invalid position');
             return;
         }
-        this.requestSetPositionFrame(this.#opened.videoCache[0].position - 1);
+        this.requestSetPositionFrame(pos - 1);
     }
 
     #drawFrame(frame: VideoFrameData) {
         assert(this.#opened !== undefined);
-        this.subRenderer?.setTime(this.currentPosition);
+        this.subRenderer?.setTime(frame.time);
 
         let [nw, nh] = this.#opened.media.videoOutputSize;
         let imgData = new ImageData(frame.content, frame.stride);
@@ -429,8 +443,6 @@ export class VideoPlayer implements WithCanvas {
         if (this.subRenderer)
             this.#ctxbuf.drawImage(this.subRenderer.getCanvas(), 0, 0);
 
-        this.#ctxbuf.fillStyle = 'red';
-        this.#ctxbuf.font= `${window.devicePixelRatio * 10}px Courier`;
 
         const videoSize = sum(this.#opened.videoCache.map((x) => x.content.length));
         const audioSize = this.#opened.audioSize;
@@ -441,6 +453,12 @@ export class VideoPlayer implements WithCanvas {
             ? (frame.time - this.#opened.audioHead).toFixed(3) : 'n/a';
         if (!latency.startsWith('-')) latency = ' ' + latency;
 
+        this.#ctxbuf.fillStyle = 'red';
+        this.#ctxbuf.font = `${window.devicePixelRatio * 10}px Courier`;
+        this.#ctxbuf.textBaseline = 'top';
+
+        this.#ctxbuf.fillText(
+            `fr: ${this.#opened.framerate}; sp: ${this.#opened.sampleRate}`, 0, 0);
         this.#ctxbuf.fillText(
             `at: ${audioTime}`, 0, 20);
         this.#ctxbuf.fillText(
@@ -468,7 +486,13 @@ export class VideoPlayer implements WithCanvas {
         }
 
         if (this.#opened.playEOF) {
-            console.log('#render called when playEOF');
+            // display last frame
+            console.log('playeof has been true');
+            assert(this.#opened.lastFrame !== undefined);
+            this.onVideoPositionChange();
+            this.#drawFrame(this.#opened.lastFrame);
+            requestAnimationFrame(() => 
+                this.#ctx.drawImage(this.#canvas, 0, 0));
             this.#requestedRender = false;
             return;
         }
@@ -479,23 +503,15 @@ export class VideoPlayer implements WithCanvas {
 
         const position = this.#opened.audioHead;
         while (position !== undefined && video.length > 0) {
-            let show = video[0].time > position - tolerance;
-            if (this.#opened.preloadEOF && video.length <= 1) {
-                this.#opened.playEOF = true;
-                this.play(false);
-                show = true;
-            }
-
-            if (show) {
+            if (video[0].time > position - tolerance) {
                 // consume frame
                 const frame = video[0];
                 this.#drawFrame(frame);
 
                 if (this.#playing) {
+                    this.onVideoPositionChange();
                     video.shift();
                     this.#requestPreload();
-                    this.subRenderer?.setTime(frame.time);
-                    this.onVideoPositionChange();
                     // FIXME: this means we essentially display video one frame ahead of its time
                     setTimeout(() => {
                         this.#render();
@@ -512,7 +528,13 @@ export class VideoPlayer implements WithCanvas {
                 video.shift();
             }
         }
-        this.#requestPreload();
+        // videoCache is empty
+        if (this.#opened.preloadEOF) {
+            this.#opened.playEOF = true;
+            this.play(false);
+        } else {
+            this.#requestPreload();
+        }
         this.#requestedRender = false;
     }
 
