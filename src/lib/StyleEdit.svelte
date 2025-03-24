@@ -91,7 +91,7 @@
   }
 </script>
 
-<div class='split'>
+<div class='hlayout'>
   <!-- toolbar -->
   <div class="toolbar">
     {#if $style !== subtitles.defaultStyle}
@@ -138,40 +138,40 @@
     <button bind:this={button} onclick={() => contextMenu()}>...</button>
   </div>
   <!-- properties -->
-  <div>
+  <div class="flexgrow">
     <!-- basic -->
     <table class="stretch">
       <tbody>
         <tr>
-          <td><label for='name'>name:</label></td>
-          <td><input id='name' bind:value={$style.name}
+          <td>name:</td>
+          <td><input bind:value={$style.name}
             class={isDuplicate($style.name) ? 'duplicate' : ''}
             onchange={() => 
               Source.markChanged(ChangeType.InPlace, ChangeCause.Action)}/></td>
         </tr>
         <tr>
-          <td><label for='font'>font:</label></td>
-          <td><input id='font' bind:value={$style.font}/></td>
+          <td>font:</td>
+          <td><input bind:value={$style.font}/></td>
         </tr>
         <tr>
-          <td><label for='size'>size:</label></td>
-          <td><input id='size' type='number' bind:value={$style.size}/></td>
+          <td>size:</td>
+          <td><input type='number' bind:value={$style.size}/></td>
         </tr>
         <tr>
           <td></td>
           <td>
             <div class="flex style">
               <div>
-                <input type='checkbox' id='bold' bind:checked={$style.styles.bold}/><label for="bold">B</label>
+                <label><input type='checkbox' bind:checked={$style.styles.bold}/><b>B</b></label>
               </div>
               <div>
-                <input type='checkbox' id='italic' bind:checked={$style.styles.italic}/><label for="italic">I</label>
+                <label><input type='checkbox' bind:checked={$style.styles.italic}/><i>I</i></label>
               </div>
               <div>
-                <input type='checkbox' id='underline' bind:checked={$style.styles.underline}/><label for="underline">U</label>
+                <label><input type='checkbox' bind:checked={$style.styles.underline}/><u>U</u></label>
               </div>
               <div>
-                <input type='checkbox' id='strikethru' bind:checked={$style.styles.strikethrough}/><label for="strikethru">S</label>
+                <label><input type='checkbox' bind:checked={$style.styles.strikethrough}/><s>S</s></label>
               </div>
             </div>
           </td>
@@ -183,24 +183,24 @@
       <table class="stretch">
         <tbody>
           <tr>
-            <td><label for='color'>text color:</label></td>
-            <td><input id='color' bind:value={$style.color}/></td>
+            <td>text color:</td>
+            <td><input bind:value={$style.color}/></td>
           </tr>
           <tr>
-            <td><label for='ocolor'>line color:</label></td>
-            <td><input id='ocolor' bind:value={$style.outlineColor}/></td>
+            <td>line color:</td>
+            <td><input bind:value={$style.outlineColor}/></td>
           </tr>
           <tr>
-            <td><label for='outline'>line size:</label></td>
-            <td><input id='outline' type='number' bind:value={$style.outline}/></td>
+            <td>line size:</td>
+            <td><input type='number' bind:value={$style.outline}/></td>
           </tr>
           <tr>
-            <td><label for='shadow'>shadow:</label></td>
-            <td><input id='shadow' type='number' bind:value={$style.shadow}/></td>
+            <td>shadow:</td>
+            <td><input type='number' bind:value={$style.shadow}/></td>
           </tr>
           <tr>
-            <td><label for='align'>alignment:</label></td>
-            <td><select id='align'
+            <td>alignment:</td>
+            <td><select
                 bind:this={alignSelector}
                 value={AlignMode[$style.alignment]}
                 oninput={() => $style.alignment = alignSelector!.selectedIndex + 1}>
@@ -219,22 +219,18 @@
             <td>margins:</td>
             <td>
               <div class="flex margin">
-                <div>
-                  <label for='top'>top:</label>
-                  <input id='top' type='number' bind:value={$style.margin.top}/>
-                </div>
-                <div>
-                  <label for='bottom'>bottom:</label>
-                  <input id='bottom' type='number' bind:value={$style.margin.bottom}/>
-                </div>
-                <div>
-                  <label for='left'>left:</label>
-                  <input id='left' type='number' bind:value={$style.margin.left}/>
-                </div>
-                <div>
-                  <label for='right'>right:</label>
-                  <input id='right' type='number' bind:value={$style.margin.right}/>
-                </div>
+                <div><label>top:
+                    <input type='number' bind:value={$style.margin.top}/>
+                </label></div>
+                <div><label>bottom:
+                  <input type='number' bind:value={$style.margin.bottom}/>
+                </label></div>
+                <div><label>left:
+                  <input type='number' bind:value={$style.margin.left}/>
+                </label></div>
+                <div><label>right:
+                  <input type='number' bind:value={$style.margin.right}/>
+                </label></div>
               </div>
             </td>
           </tr>
@@ -260,33 +256,19 @@
   flex-wrap: wrap;
 }
 
-.split {
-  display: flex;
-}
-
-.split div {
-  height: 100%;
-}
-
 .stretch {
   width: 100%;
+}
+
+table td:first-child {
+  font-size: 95%;
+  /* text-transform: uppercase; */
+  /* font-weight: bold; */
 }
 
 .style div {
   padding-right: 5px;
   font-family: 'Times New Roman', Times, serif;
-}
-.style label[for='bold'] {
-  font-weight: bold;
-}
-.style label[for='italic'] {
-  font-style: italic;
-}
-.style label[for='underline'] {
-  text-decoration: underline;
-}
-.style label[for='strikethru'] {
-  text-decoration: line-through;
 }
 
 button {
@@ -310,6 +292,6 @@ input[type='checkbox'] {
   display: inline-block;
 }
 .margin div {
-  padding-right: 5px;
+  padding-right: 15px;
 }
 </style>

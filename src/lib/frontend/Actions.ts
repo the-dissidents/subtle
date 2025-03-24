@@ -1,5 +1,5 @@
 import { Menu } from "@tauri-apps/api/menu";
-import { Basic } from "../Basic";
+import { Basic, InputConfig } from "../Basic";
 
 import { ASS } from "../core/ASS";
 import { type LabelTypes, Labels, SubtitleEntry, SubtitleTools, Subtitles } from "../core/Subtitles.svelte";
@@ -163,13 +163,13 @@ export const Actions = {
             Playback.video?.requestNextFrame();
         }
         else if (ev.key == 'ArrowLeft' && altOrTimeline) {
-            // move backward 1s
-            Playback.setPosition(Playback.position - 1);
+            // move backward
+            Playback.setPosition(Playback.position - InputConfig.data.skipDuration);
             ev.preventDefault();
         }
         else if (ev.key == 'ArrowRight' && altOrTimeline) {
-            // move forward 1s
-            Playback.setPosition(Playback.position + 1);
+            // move forward
+            Playback.setPosition(Playback.position + InputConfig.data.skipDuration);
             ev.preventDefault();
         }
         else if (ev.key == 'Enter' && !ev.shiftKey && focus == UIFocus.EditingField){

@@ -15,6 +15,7 @@ import { Editing } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
 import { Config } from "../Config";
 import { Playback } from "./Playback";
+import { DebugConfig } from "../Basic";
 
 export enum UIFocus {
     Other,
@@ -30,16 +31,37 @@ const IMPORT_FILTERS = [
     { name: 'SSA subtitles', extensions: ['ssa', 'ass'] },
     { name: 'subtle archive', extensions: ['json'] }];
 
-const Debug = true;
+export async function guardAsync(x: () => Promise<void>, msg: string): Promise<void>;
+export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback: T): Promise<T>;
 
-async function guard(x: () => Promise<any> | void, msg: string) {
-    if (Debug) {
-        await x();
+export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback?: T) {
+    if (DebugConfig.data.disableTry) {
+        return await x();
     } else {
         try {
-            await x();
+            return await x();
         } catch (x) {
             Interface.status.set(`${msg}: ${x}`);
+            return fallback;
+        };
+    }
+}
+
+type EnforceNotPromise<T extends () => any> = ReturnType<T> extends Promise<any> ? never : T;
+
+export function guard<T extends () => void>(x: EnforceNotPromise<T>, msg: string): void;
+export function guard<T extends () => any>(
+    x: EnforceNotPromise<T>, msg: string, fallback: ReturnType<T>): ReturnType<T>;
+
+export function guard<T>(x: () => T, msg: string, fallback?: T) {
+    if (DebugConfig.data.disableTry) {
+        return x();
+    } else {
+        try {
+            return x();
+        } catch (x) {
+            Interface.status.set(`${msg}: ${x}`);
+            return fallback;
         };
     }
 }
@@ -64,7 +86,7 @@ export const Interface = {
             Interface.status.set(`does not exist: ${path}`);
             return;
         }
-        try {
+        return guardAsync(async () => {
             const file = await fs.readFile(path);
             const result = chardet.analyse(file);
             if (result[0].confidence == 100 
@@ -76,10 +98,7 @@ export const Interface = {
                 if (!out) return null;
                 return out.decoded;
             }
-        } catch (e) {
-            Interface.status.set(`unable to read file ${path}: ${e}`);
-            return;
-        }
+        }, `unable to read file ${path}`, null);
     },
 
     async openFile(path: string) {
@@ -96,7 +115,7 @@ export const Interface = {
     },
 
     async openVideo(videoFile: string) {
-        guard(() => Playback.load(videoFile), 
+        guardAsync(async () => await Playback.load(videoFile), 
             `error opening video '${videoFile}'`);
         
         let source = get(Source.currentFile);

@@ -1,5 +1,5 @@
 import { AudioSampler } from "./AudioSampler";
-import { Basic, assert } from "./Basic";
+import { Basic, DebugConfig, assert } from "./Basic";
 import type { WithCanvas } from "./CanvasKeeper";
 import { MMedia } from "./API";
 import { LabelColor } from "./Theming";
@@ -526,6 +526,8 @@ export class Timeline implements WithCanvas {
         if (this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed) {
             this.#samplerMedia.close();
         }
+        if (DebugConfig.data.disableWaveform) return;
+        
         this.#samplerMedia = await MMedia.open(rawurl);
         this.#sampler = await AudioSampler.open(this.#samplerMedia);
         this.#sampler.onProgress = () => this.requestRender();

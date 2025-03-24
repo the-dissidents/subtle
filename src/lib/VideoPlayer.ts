@@ -2,7 +2,7 @@ import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./core/Subtitles.svelte";
 import type { WithCanvas } from "./CanvasKeeper";
 import { MMedia, type AudioFrameData, type VideoFrameData } from "./API";
-import { assert, Basic } from "./Basic";
+import { assert, Basic, DebugConfig } from "./Basic";
 
 import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 import type { AudioFeedbackData, AudioInputData } from "./worker/DecodedAudioLoader";
@@ -131,6 +131,8 @@ export class VideoPlayer implements WithCanvas {
         if (this.#opened) {
             await this.close();
         }
+        if (DebugConfig.data.disableVideo) return;
+        
         let media = await MMedia.open(rawurl);
         await media.openVideo(-1);
         await media.openAudio(-1);

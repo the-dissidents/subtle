@@ -1,16 +1,12 @@
 import { path } from "@tauri-apps/api";
 import * as fs from "@tauri-apps/plugin-fs"
 import { assert } from "./Basic";
+import { guard, guardAsync } from "./frontend/Interface";
 
 const configPath = 'config.json';
 let configData = {
     maxRecent: 10,
     paths: [] as {name: string, video?: string}[],
-
-    mouseScrollSensitivity: 1,
-    trackpadScrollSensitivity: 10,
-    mouseZoomSensitivity: 0.05,
-    trackpadZoomSensitivity: 1,
 
     windowW: 1000,
     windowH: 800,
@@ -34,13 +30,10 @@ async function saveConfig() {
     if (!await fs.exists(configDir))
         await fs.mkdir(configDir, {recursive: true});
 
-    try {
+    await guardAsync(async () => {
         await fs.writeTextFile(configPath, 
-            JSON.stringify(configData), {baseDir: fs.BaseDirectory.AppConfig});
-    } catch (e) {
-        // fail silently
-        console.error('error saving config:', e);
-    }
+            JSON.stringify(configData), {baseDir: fs.BaseDirectory.AppConfig}); 
+    }, `error saving private config`);
 }
 
 export const Config = {

@@ -18,7 +18,7 @@ import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
 import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 
 import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/core/Subtitles.svelte'
-import { assert, Basic } from './lib/Basic';
+import { assert, Basic, MainConfig } from './lib/Basic';
 import { CanvasKeeper } from './lib/CanvasKeeper';
 import { Config } from './lib/Config';
 import { LabelColor } from './lib/Theming';
@@ -38,6 +38,7 @@ import { Dialogs } from './lib/frontend/Dialogs';
 import { Actions } from './lib/frontend/Actions';
     import { getVersion } from '@tauri-apps/api/app';
     import { arch, platform, version } from '@tauri-apps/plugin-os';
+    import ConfigDialog from './lib/dialog/ConfigDialog.svelte';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -164,6 +165,8 @@ Config.onInitialized(() => {
   leftPane!.style.width = `${Config.get('leftPaneW')}px`;
 });
 
+MainConfig.init();
+
 getVersion().then((x) => 
   appWindow.setTitle(`subtle beta ${x}a0 (${platform()}-${version()}/${arch()})`));
 
@@ -184,6 +187,7 @@ appWindow.onCloseRequested(async (ev) => {
   await Config.set('timelineH', timelineCanvas!.clientHeight);
   await Config.set('editorH', editTable!.clientHeight);
   await Config.set('leftPaneW', leftPane!.clientWidth);
+  await MainConfig.save();
 });
 
 appWindow.onDragDropEvent(async (ev) => {
@@ -218,6 +222,7 @@ appWindow.onDragDropEvent(async (ev) => {
 <CombineDialog        handler={Dialogs.combine}/>
 <EncodingDialog       handler={Dialogs.encoding}/>
 <ExportDialog         handler={Dialogs.export}/>
+<ConfigDialog         handler={Dialogs.configuration}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->
@@ -266,6 +271,8 @@ appWindow.onDragDropEvent(async (ev) => {
       <li class='separator'></li>
       <li><button onclick={() => Interface.askOpenVideo()}>open video</button></li>
       <li><div class='label'>{$filenameDisplay}</div></li>
+      <li class='separator'></li>
+      <li><button onclick={() => Dialogs.configuration.showModal!()}>config</button></li>
     </ul>
   </div>
 

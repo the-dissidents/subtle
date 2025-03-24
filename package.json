@@ -16,6 +16,7 @@
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
     "@tauri-apps/plugin-os": "^2.0.0",
+    "ajv": "^8.17.1",
     "chardet": "^2.1.0",
     "iconv-lite": "^0.6.3"
   },

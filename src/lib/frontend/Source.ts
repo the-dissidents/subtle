@@ -2,7 +2,7 @@ import { get, writable } from "svelte/store";
 import { Subtitles, SubtitleTools } from "../core/Subtitles.svelte";
 
 import * as fs from "@tauri-apps/plugin-fs";
-import { Interface } from "./Interface";
+import { guardAsync, Interface } from "./Interface";
 import { Config } from "../Config";
 import { Editing } from "./Editing";
 import { EventHost } from "./Frontend";
@@ -108,18 +108,15 @@ export const Source = {
     },
 
     async exportTo(file: string, text: string) {
-        try {
+        return guardAsync(async () => {
             await fs.writeTextFile(file, text);
             Interface.status.set('exported to ' + file);
             return true;
-        } catch (error) {
-            Interface.status.set(`error when writing to ${file}: ${error}`);
-        }
-        return false;
+        }, `error when writing to ${file}`, false);
     },
 
     async saveTo(file: string, text: string) {
-        try {
+        return guardAsync(async () => {
             await fs.writeTextFile(file, text);
             Interface.status.set('saved to ' + file);
             this.fileChanged.set(false);
@@ -128,9 +125,6 @@ export const Source = {
                 this.currentFile.set(file);
             }
             return true;
-        } catch (error) {
-            Interface.status.set(`error when writing to ${file}: ${error}`);
-        }
-        return false;
+        }, `error when writing to ${file}`, false);
     },
 }
