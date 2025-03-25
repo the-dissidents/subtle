@@ -19,7 +19,8 @@
     "@tauri-apps/plugin-os": "^2.0.0",
     "ajv": "^8.17.1",
     "chardet": "^2.1.0",
-    "iconv-lite": "^0.6.3"
+    "iconv-lite": "^0.6.3",
+    "svelte-i18n": "^4.0.1"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^4.0.0",

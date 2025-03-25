@@ -6,6 +6,8 @@
   import type { DialogHandler } from '../frontend/Dialogs';
   import TimestampInput from '../TimestampInput.svelte';
 
+  import { _ } from 'svelte-i18n';
+
   let form: HTMLFormElement;
 
   interface Props {
@@ -96,19 +98,19 @@
   <table class='config'>
     <tbody>
       <tr>
-        <td>shift times</td>
+        <td>{$_('transformdialog.shift-times')}</td>
         <td>
           <label><input type="radio" value="forward"
               bind:group={shiftOption} onchange={() => toTransformed()}/>
-            forward</label>
+            {$_('transformdialog.forward')}</label>
           <label><input type="radio" value="backward"
               bind:group={shiftOption} onchange={() => toTransformed()}/>
-            backward</label><br/>
+            {$_('transformdialog.backward')}</label><br/>
           <label>by: <TimestampInput
             bind:timestamp={offset}
             on:input={() => toTransformed()}/></label><br/>
           <label><input type='checkbox' bind:checked={check}/>
-            modify everything after this</label><br/>
+            {$_('transformdialog.modify-everything-after-this')}</label><br/>
         </td>
       </tr>
       <tr>
@@ -116,7 +118,7 @@
         <td><hr/></td>
       </tr>
       <tr>
-        <td>FPS before:after</td>
+        <td>{$_('transformdialog.fps-before-after')}</td>
         <td>
           <input type="number" class="number" 
             bind:value={fpsBefore}
@@ -128,17 +130,17 @@
         </td>
       </tr>
       <tr>
-        <td>scaling anchor</td>
+        <td>{$_('transformdialog.scaling-anchor')}</td>
         <td>
           <label><input type="radio" value="zero"
               bind:group={anchorOption} onchange={() => toTransformed()}/>
-            zero time</label><br/>
+            {$_('transformdialog.zero-time')}</label><br/>
           <label><input type="radio" value="start"
               bind:group={anchorOption} onchange={() => toTransformed()}/>
-            start of selection</label><br/>
+            {$_('transformdialog.start-of-selection')}</label><br/>
           <label><input type="radio" value="end"
               bind:group={anchorOption} onchange={() => toTransformed()}/>
-            end of selection</label><br/>
+            {$_('transformdialog.end-of-selection')}</label><br/>
           <label>
             <input type="radio" value="custom"
               bind:group={anchorOption} onchange={() => toTransformed()}/>
@@ -153,7 +155,7 @@
         <td><hr/></td>
       </tr>
       <tr>
-        <td>range</td>
+        <td>{$_('transformdialog.range')}</td>
         <td>
           {SubtitleUtil.formatTimestamp(selectionStart)}
           →

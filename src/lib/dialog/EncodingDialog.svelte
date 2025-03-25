@@ -6,6 +6,8 @@
     import type { DialogHandler } from '../frontend/Dialogs';
     import DialogBase from '../DialogBase.svelte';
 
+    import { _ } from 'svelte-i18n';
+    
     interface Props {
 		handler: DialogHandler<
             {source: Uint8Array, result: AnalyseResult}, 
@@ -60,25 +62,25 @@
     buttons={['cancel', okButton]}
 >
     {#snippet header()}
-    <h4>The file you're opening seems to be using an unusual encoding format, which can cause problems on today's devices. </h4>
+    <h4>{$_('encodingdialog.header')}</h4>
     {/snippet}
-    <p>We can guess the format and convert the file to the modern encoding for you. The guess is usually very accurate, unless the file is simply invalid; but when in doubt, consult an expert.</p>
+    <p>{$_('encodingdialog.info')}</p>
     <div class='hlayout'>
         <table>
             <thead>
             <tr>
                 <th></th>
-                <th>Encoding</th>
-                <th>Confidence</th>
+                <th>{$_('encodingdialog.encoding')}</th>
+                <th>{$_('encodingdialog.confidence')}</th>
             </tr>
             </thead>
             <tbody>
             {#if candidates && candidates.length > 0}
                 {#each candidates as c, i}
                 <tr class={{
-                        important: c.confidence == 100, 
-                        unimportant: c.confidence < 20 
-                                  || (i > 0 && candidates[0].confidence == 100)
+                    important: c.confidence == 100, 
+                    unimportant: c.confidence < 20 
+                      || (i > 0 && candidates[0].confidence == 100)
                 }}>
                     <td class="right">
                         <input type="radio" value={c.name}
@@ -92,7 +94,7 @@
             {:else}
                 <tr>
                     <td colspan="3">
-                        Unable to guess encoding
+                        {$_('encodingdialog.unable-to-guess-encoding')}
                     </td>
                 </tr>
             {/if}
@@ -100,7 +102,7 @@
         </table>
         <textarea class="flexgrow" readonly>{preview}</textarea>
     </div>
-    <p>Choose an encoding, check the preview for correctness, then click 'ok' to convert the file to UTF-8 for use in modern applications.</p>
+    <p>{$_('encodingdialog.conclusion')}</p>
 </DialogBase>
 
 <style>

@@ -8,6 +8,9 @@ import { ChangeCause, ChangeType, Source } from "./Source";
 import { SimpleFormats } from "../core/SimpleFormats";
 import { Playback } from "./Playback";
 
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
+
 export const Utils = {
     timeEpsilon: 0.01,
 
@@ -42,7 +45,7 @@ export const Utils = {
         let [portion, _] = parseSubtitleSource(source);
         if (!portion) {
             console.log('error reading clipboard: ' + source);
-            Interface.status.set('failed to parse clipboard data as subtitles');
+            Interface.status.set($_('msg.failed-to-parse-clipboard-data-as-subtitles'));
             return;
         }
         let position: number;
@@ -61,9 +64,9 @@ export const Utils = {
         if (entries.length > 0) {
             Editing.setSelection(entries);
             Source.markChanged(ChangeType.General, ChangeCause.Action);
-            Interface.status.set('pasted');
+            Interface.status.set($_('msg.pasted'));
         } else {
-            Interface.status.set('nothing to paste');
+            Interface.status.set($_('msg.nothing-to-paste'));
         }
     },
 
@@ -130,13 +133,12 @@ export const Utils = {
                 // ent.update.dispatch();
                 done++;
             }
+
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
         if (done > 0) {
             Editing.clearSelection();
             Editing.selection.submitted = new Set(newSelection);
             Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
-            Interface.status.set(`changed ${done} entrie${done > 1 ? 's' : ''}`);
-        } else {
-            Interface.status.set(`changed nothing`);
         }
     },
 
@@ -236,10 +238,10 @@ export const Utils = {
             }
             // entry.update.dispatch();
         }
-        if (count > 0) {
+
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: count}}));
+        if (count > 0)
             Source.markChanged(ChangeType.Times, ChangeCause.Action);
-            Interface.status.set(`changed ${count} entrie${count > 1 ? 's' : ''}`);
-        } else Interface.status.set(`changed nothing`);
     },
 
     combineSelection(selection: SubtitleEntry[]) {
@@ -254,7 +256,7 @@ export const Utils = {
         }
         // main.update.dispatch();
         Source.markChanged(ChangeType.Times, ChangeCause.Action);
-        Interface.status.set(`combined ${selection.length} entries`);
+        Interface.status.set($_('msg.combined-n-entries', {values: {n: selection.length}}));
     },
 
     mergeDuplicate(selection: SubtitleEntry[]) {

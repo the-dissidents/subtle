@@ -7,6 +7,9 @@ import { PrivateConfig } from "../config/PrivateConfig";
 import { Editing } from "./Editing";
 import { EventHost } from "./Frontend";
 
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
+
 export type Snapshot = {
     archive: string,
     change: ChangeType,
@@ -110,21 +113,21 @@ export const Source = {
     async exportTo(file: string, text: string) {
         return guardAsync(async () => {
             await fs.writeTextFile(file, text);
-            Interface.status.set('exported to ' + file);
+            Interface.status.set($_('msg.exported-to-file', {values: {file}}));
             return true;
-        }, `error when writing to ${file}`, false);
+        }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
     },
 
     async saveTo(file: string, text: string) {
         return guardAsync(async () => {
             await fs.writeTextFile(file, text);
-            Interface.status.set('saved to ' + file);
+            Interface.status.set($_('msg.saved-to-file', {values: {file}}));
             this.fileChanged.set(false);
             if (file != get(this.currentFile)) {
                 PrivateConfig.pushRecent(file);
                 this.currentFile.set(file);
             }
             return true;
-        }, `error when writing to ${file}`, false);
+        }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
     },
 }

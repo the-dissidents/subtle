@@ -6,6 +6,8 @@
     import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
     import { revealItemInDir } from '@tauri-apps/plugin-opener';
 
+    import { _ } from 'svelte-i18n';
+
     interface Props {
 		handler: DialogHandler<void, void>;
 	}
@@ -26,17 +28,16 @@
     let groups = $state<[string, PublicConfigGroup<PublicConfigGroupDefinition>][]>([]);
 </script>
 
-
 <DialogBase handler={inner} maxWidth="36em" buttons={['ok']}>
     {#snippet header()}
-        <h3>configuration</h3>
+        <h3>{$_('menu.configuration')}</h3>
     {/snippet}
 
     <p class='notice'>
-        All items are automatically saved. <br/>
+        {$_('configdialog.all-items-are-automatically-saved')}<br/>
         <button onclick={() => {
             revealItemInDir(MainConfig.configPath);
-        }}>Show config file (advanced)</button>
+        }}>{$_('configdialog.show-config-file-advanced')}</button>
     </p>
     
     {#each groups as [_gkey, group]}

@@ -6,6 +6,8 @@
     import { ChangeCause, ChangeType, Source } from '../frontend/Source';
     import { Editing, SelectMode } from '../frontend/Editing';
     import { Interface } from '../frontend/Interface';
+
+	import { _ } from 'svelte-i18n';
 	
 	let searchTerm = '';
 	let replaceTerm = '';
@@ -53,7 +55,7 @@
 					`g${caseSensitive ? '' : 'i'}`);
 			} catch (e) {
 				assert(e instanceof Error);
-				Interface.status.set(`search failed: ${e.message}`);
+				Interface.status.set(`search failed: ` + e.message);
 				return;
 			}
 		} else if (useLabel || useStyle) {
@@ -113,17 +115,17 @@
 		let status: string;
 		if (nDone > 0) {
 			if (type == SearchAction.Select) {
-				status = `selected ${nDone} line${nDone > 1 ? 's' : ''}`;
+				status = $_('search.selected-n-lines', {values: {n: nDone}});
 				// manually call this because we didn't use selectEntry etc.
 				Editing.onSelectionChanged.dispatch(ChangeCause.Action);
 			} else if (type == SearchAction.Replace || type === SearchAction.ReplaceStyleOnly) {
-				status = `replaced ${nDone} line${nDone > 1 ? 's' : ''}`;
+				status = $_('search.replaced-n-lines', {values: {n: nDone}});
 				Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
 			} else {
-				status = `found ${nDone} line${nDone > 1 ? 's' : ''}`;
+				status = $_('search.found-n-lines', {values: {n: nDone}});
 			}
 		} else {
-			status = `found nothing`;
+			status = $_('search.found-nothing');
 			currentEntry = null;
 			currentTextIndex = 0;
 			if (option != SearchOption.Global) {
@@ -135,19 +137,21 @@
 	}
 </script>
 
-<input class='wfill' bind:value={searchTerm} id='expr' placeholder="expression"/>
-<input class='wfill' bind:value={replaceTerm} id='repl' placeholder="replace term"/>
+<input class='wfill' bind:value={searchTerm}
+	id='expr' placeholder={$_('search.expression')}/>
+<input class='wfill' bind:value={replaceTerm}
+	id='repl' placeholder={$_('search.replace-term')}/>
 
 <div class='form'>
 	<h5>options</h5>
 	<label><input type='checkbox' bind:checked={useRegex}/>
-		use regular expressions
+		{$_('search.use-regular-expressions')}
 	</label><br/>
 	<label><input type='checkbox' bind:checked={caseSensitive}/>
-		case sensitive
+		{$_('search.case-sensitive')}
 	</label><br/>
 	<label><input type='checkbox' bind:checked={replaceStyle}/>
-		replace by style
+		{$_('search.replace-by-style')}
 		<StyleSelect
 			on:submit={() => replaceStyle = true}
 			bind:currentStyle={style2}/>
@@ -155,10 +159,10 @@
 
 	<h5>range</h5>
 	<label><input type='checkbox' bind:checked={selectionOnly}/>
-		search only in selected entries
+		{$_('search.search-only-in-selected-entries')}
 	</label><br/>
 	<label><input type='checkbox' bind:checked={useLabel}/>
-		search only in label
+		{$_('search.search-only-in-label')}
 		<select
 			bind:value={label}
 			on:input={() => useLabel = true}
@@ -169,7 +173,7 @@
 		</select>
 	</label><br/>
 	<label><input type='checkbox' bind:checked={useStyle}/>
-		search only in style
+		{$_('search.search-only-in-style')}
 		<StyleSelect
 			on:submit={() => useStyle = true}
 			bind:currentStyle={style1}/>
@@ -179,18 +183,18 @@
 		<tbody>
 			<tr>
 				<td>
-					<button class="left wfill" disabled>find</button>
+					<button class="left wfill" disabled>{$_('search.find')}</button>
 				</td>
 				<td class="hlayout">
 					<button class="middle"
 						on:click={() => findAndReplace(SearchAction.Find, SearchOption.None)}
-					>next</button>
+					>{$_('search.next')}</button>
 					<button class="middle"
 						on:click={() => findAndReplace(SearchAction.Find, SearchOption.Reverse)}
-					>previous</button>
+					>{$_('search.previous')}</button>
 					<button class="right flexgrow"
 						on:click={() => findAndReplace(SearchAction.Select, SearchOption.Global)}
-					>all</button>
+					>{$_('search.all')}</button>
 				</td>
 			</tr>
 			<tr>
@@ -200,16 +204,16 @@
 				<td class="hlayout">
 					<button class="middle"
 						on:click={() => findAndReplace(SearchAction.Replace, SearchOption.None)}
-					>next</button>
+					>{$_('search.next')}</button>
 					<button class="middle"
 						on:click={() => findAndReplace(SearchAction.Replace, SearchOption.Reverse)}
-					>previous</button>
+					>{$_('search.previous')}</button>
 					<button class="middle"
 						on:click={() => findAndReplace(SearchAction.Replace, SearchOption.Global)}
-					>all</button>
+					>{$_('search.all')}</button>
 					<button class="right flexgrow"
 						on:click={() => findAndReplace(SearchAction.ReplaceStyleOnly, SearchOption.Global)}
-					>only styles</button>
+					>{$_('search.only-styles')}</button>
 				</td>
 			</tr>
 		</tbody>

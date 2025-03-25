@@ -16,6 +16,8 @@
   import { Dialogs } from "../frontend/Dialogs";
   import { EventHost } from "../frontend/Frontend";
 
+  import { _ } from 'svelte-i18n';
+
   export let locked = false;
   let textsize = 14;
   let justify = true;
@@ -90,7 +92,7 @@
     // perform search
     const fail = () => {
       textarea.selectionEnd = textarea.selectionStart;
-      Interface.status.set('fuzzy search failed to find anything');
+      Interface.status.set($_('untimed.fuzzy-search-failed-to-find-anything'));
     };
     let result = fuzzy.engine.search(current.text, fuzzy.maxSkip);
     if (!result) {
@@ -111,7 +113,7 @@
     // display
     if (i0 >= i1) fail(); else {
       setSelectionAndScroll(i0, i1);
-      Interface.status.set(`fuzzy match found (${(n / m * 100).toFixed(0)}%)`);
+      Interface.status.set($_('untimed.fuzzy-match-found', {values: {x: n / m}}));
     }
   }
 
@@ -230,11 +232,11 @@
       <table class="config">
         <tbody>
           <tr>
-            <td>text size</td>
+            <td>{$_('untimed.text-size')}</td>
             <td><input id='size' type='number' bind:value={textsize}/></td>
           </tr>
           <tr>
-            <td>justify</td>
+            <td>{$_('untimed.justify')}</td>
             <td><input id='just' type='checkbox' bind:checked={justify}/></td>
           </tr>
         </tbody>

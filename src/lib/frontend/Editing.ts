@@ -5,6 +5,9 @@ import { Interface } from "./Interface";
 import { ChangeCause, ChangeType, Source } from "./Source";
 import { EventHost } from "./Frontend";
 
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
+
 export type SelectionState = {
     submitted: Set<SubtitleEntry>,
     currentGroup: SubtitleEntry[],
@@ -89,7 +92,7 @@ export const Editing = {
     },
 
     startEditingNewVirtualEntry() {
-        Interface.status.set('new entry appended');
+        Interface.status.set($_('msg.new-entry-appended'));
         let last = Source.subs.entries.at(-1);
         let entry = last 
             ? new SubtitleEntry(last.end, last.end + 2, 

@@ -16,6 +16,10 @@ import { parseSubtitleSource } from "./Frontend";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { Playback } from "./Playback";
 import { DebugConfig } from "../config/Groups";
+import { Basic } from "../Basic";
+
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
 
 export enum UIFocus {
     Other,
@@ -25,11 +29,11 @@ export enum UIFocus {
 }
 
 const IMPORT_FILTERS = [
-    { name: 'All supported formats', extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },
-    { name: 'SRT subtitles', extensions: ['srt'] },
-    { name: 'VTT subtitles', extensions: ['vtt'] },
-    { name: 'SSA subtitles', extensions: ['ssa', 'ass'] },
-    { name: 'subtle archive', extensions: ['json'] }];
+    { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },
+    { name: $_('filter.srt-subtitles'), extensions: ['srt'] },
+    { name: $_('filter.vtt-subtitles'), extensions: ['vtt'] },
+    { name: $_('filter.ssa-subtitles'), extensions: ['ssa', 'ass'] },
+    { name: $_('filter.subtle-archive'), extensions: ['json'] }];
 
 export async function guardAsync(x: () => Promise<void>, msg: string): Promise<void>;
 export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback: T): Promise<T>;
@@ -78,12 +82,12 @@ export const Interface = {
         try {
             const stats = await fs.stat(path);
             if (!stats.isFile) {
-                Interface.status.set(`not a file: ${path}`);
+                Interface.status.set($_('msg.not-a-file', {values: {path}}));
                 return;
             }
-            if (stats.size > 1024*1024*5 && !await dialog.ask("The file you're opening is very large and likely not a supported subtitle file. Do you really want to proceed? This may crash the application.", {kind: 'warning'})) return null;
+            if (stats.size > 1024*1024*5 && !await dialog.ask($_('msg.the-file-youre-opening-is-very-large-and-likely-not-a-supported-subtitle-file-do-you-really-want-to-proceed-this-may-crash-the-application'), {kind: 'warning'})) return null;
         } catch {
-            Interface.status.set(`does not exist: ${path}`);
+            Interface.status.set($_('msg.does-not-exist', {values: {path}}));
             return;
         }
         return guardAsync(async () => {
@@ -98,7 +102,7 @@ export const Interface = {
                 if (!out) return null;
                 return out.decoded;
             }
-        }, `unable to read file ${path}`, null);
+        }, $_('msg.unable-to-read-file-path', {values: {path}}), null);
     },
 
     async openFile(path: string) {
@@ -106,7 +110,7 @@ export const Interface = {
         if (!text) return;
         let [newSubs, isJSON] = parseSubtitleSource(text);
         if (!newSubs) {
-            this.status.set(`failed to parse as subtitles: ${path}`);
+            this.status.set($_('msg.failed-to-parse-as-subtitles-path', {values: {path}}));
             return;
         }
         await Source.openDocument(newSubs, path, !isJSON);
@@ -114,17 +118,46 @@ export const Interface = {
         if (video) await this.openVideo(video);
     },
 
-    async openVideo(videoFile: string) {
-        guardAsync(async () => await Playback.load(videoFile), 
-            `error opening video '${videoFile}'`);
+    async openVideo(path: string) {
+        guardAsync(async () => await Playback.load(path), 
+            $_('msg.error-opening-video-path', {values: {path}}));
         
         let source = get(Source.currentFile);
         if (source != '')
-            PrivateConfig.rememberVideo(source, videoFile);
+            PrivateConfig.rememberVideo(source, path);
     },
 
     async warnIfNotSaved() {
-        return !get(Source.fileChanged) || await dialog.confirm('Proceed without saving?');
+        return !get(Source.fileChanged) || await dialog.confirm($_('msg.proceed-without-saving'));
+    },
+
+    async openFileMenu() {
+        const paths = PrivateConfig.get('paths');
+        let openMenu = await Menu.new({ items: [
+            {
+              text: $_('cxtmenu.other-file'),
+              async action(_) {
+                if (await Interface.warnIfNotSaved())
+                Interface.askOpenFile();
+              },
+            },
+            { item: 'Separator' },
+            ...(paths.length == 0 ? [
+                {
+                  text: $_('cxtmenu.no-recent-files'),
+                  enabled: false
+                }
+              ] : paths.map((x) => ({
+                text: '[...]/' + x.name.split(Basic.pathSeparator)
+                  .slice(-2).join(Basic.pathSeparator),
+                action: async () => {
+                  if (await Interface.warnIfNotSaved())
+                  Interface.openFile(x.name);
+                }
+              }))
+            ),
+        ]});
+        openMenu.popup();
     },
 
     async askImportFile() {
@@ -134,7 +167,8 @@ export const Interface = {
         if (!text) return;
         let [newSubs, _] = parseSubtitleSource(text);
         if (!newSubs) {
-            this.status.set(`failed to parse as subtitles: ${selected}`);
+            this.status.set($_('msg.failed-to-parse-as-subtitles-path', 
+                {values: {path: selected}}));
             return;
         }
         const options = await Dialogs.importOptions.showModal!();
@@ -148,10 +182,10 @@ export const Interface = {
         Interface.status.set('imported');
     },
 
-    async askExportFile() {
+    async exportFileMenu() {
         let ask = async (ext: string, func: (s: Subtitles) => string) => {
             const selected = await dialog.save({
-                filters: [{name: 'subtitle file', extensions: [ext]}]});
+                filters: [{name: $_('filter.subtitle-file'), extensions: [ext]}]});
             if (typeof selected != 'string') return;
             await Source.exportTo(selected, func(Source.subs));
         }
@@ -161,7 +195,7 @@ export const Interface = {
                 action: () => ask('ass', (x) => ASS.export(x))
             },
             {
-                text: 'SRT/plaintext/...',
+                text: $_('cxtmenu.srt-plaintext'),
                 action: async () => {
                     const result = await Dialogs.export.showModal!();
                     if (!result) return;
@@ -180,7 +214,7 @@ export const Interface = {
 
     async askOpenVideo() {
         const selected = await dialog.open({multiple: false, 
-            filters: [{name: 'video file', extensions: ['avi', 'mp4', 'webm', 'mkv']}]});
+            filters: [{name: $_('filter.video-file'), extensions: ['avi', 'mp4', 'webm', 'mkv']}]});
         if (typeof selected != 'string') return;
         await this.openVideo(selected);
     },
@@ -189,7 +223,7 @@ export const Interface = {
         let file = get(Source.currentFile);
         if (file == '' || saveAs) {
             const selected = await dialog.save({
-                filters: [{name: 'subtle archive', extensions: ['json']}]});
+                filters: [{name: $_('filter.subtle-archive'), extensions: ['json']}]});
             if (typeof selected != 'string') return;
             file = selected;
         }

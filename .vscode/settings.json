@@ -1,0 +1,18 @@
+{
+    "i18n-ally.localesPaths": [
+        "src/locales"
+    ],
+    "i18n-ally.ignoreFiles": [
+        "src-tauri/**",
+        "dist/**",
+        "node_modules/**"
+    ],
+    "i18n-ally.keystyle": "nested",
+    "i18n-ally.extract.ignored": [
+        "Separator"
+    ],
+    "i18n-ally.sortKeys": true,
+    "i18n-ally.usage.scanningIgnore": [
+        "src-tauri/**"
+    ]
+}

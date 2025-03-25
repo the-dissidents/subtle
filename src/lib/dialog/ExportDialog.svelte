@@ -6,6 +6,8 @@
     import type { DialogHandler } from '../frontend/Dialogs';
     import DialogBase from '../DialogBase.svelte';
 
+    import { _ } from 'svelte-i18n';
+
     interface Props {
 		handler: DialogHandler<void, {content: string, ext: string} | null>;
 	}
@@ -63,13 +65,13 @@
 
     async function copy() {
         await navigator.clipboard.writeText(preview);
-        Interface.status.set('copied exported data');
+        Interface.status.set($_('msg.copied-exported-data'));
     }
 </script>
 
 <DialogBase handler={inner} maxWidth="48em" buttons={['cancel', 'ok']}>
     {#snippet header()}
-        <h4>Export to a linear format</h4>
+        <h4>{$_('exportdialog.header')}</h4>
     {/snippet}
     <div class="hlayout">
         <div>
@@ -77,8 +79,8 @@
                 <thead>
                 <tr>
                     <th></th>
-                    <th class="stylename">Style</th>
-                    <th>Usage</th>
+                    <th class="stylename">$_('exportdialog.style')</th>
+                    <th>$_('exportdialog.usage')</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -94,34 +96,40 @@
                 </tbody>
             </table>
 
-            <h5>combine strategy</h5>
+            <h5>{$_('exportdialog.combine-strategy')}</h5>
             <label><input type="radio" bind:group={combine}
                         value={LinearFormatCombineStrategy.KeepOrder}
-                        onchange={() => makePreview()} /> keep order
+                        onchange={() => makePreview()} />
+                {$_('exportdialog.keep-order')}
             </label><br/>
             <label><input type="radio" bind:group={combine}
                         value={LinearFormatCombineStrategy.Sorted}
-                        onchange={() => makePreview()} /> sorted
+                        onchange={() => makePreview()} />
+                {$_('exportdialog.sorted')}
             </label><br/>
             <label><input type="radio" bind:group={combine}
                         value={LinearFormatCombineStrategy.Recombine}
-                        onchange={() => makePreview()} /> recombine
+                        onchange={() => makePreview()} />
+                {$_('exportdialog.recombine')}
             </label><br/>
 
             <h5>format</h5>
             <label><input type="radio" bind:group={format} value="srt"
-                        onchange={() => makePreview()} /> SRT
+                        onchange={() => makePreview()} />
+                {$_('exportdialog.srt')}
             </label><br/>
             <label><input type="radio" bind:group={format} value="txt"
-                        onchange={() => makePreview()} /> plaintext
+                        onchange={() => makePreview()} />
+                {$_('exportdialog.plaintext')}
             </label><br/>
             <label><input type="radio" bind:group={format} value="tab"
-                        onchange={() => makePreview()} /> tab-delimited
+                        onchange={() => makePreview()} />
+                {$_('exportdialog.tab-delimited')}
             </label><br/>
         </div>
         <div class='vlayout rightpane'>
             <textarea class="preview" readonly>{preview}</textarea>
-            <button onclick={() => copy()}>copy to clipboard</button>
+            <button onclick={() => copy()}>{$_('exportdialog.copy-to-clipboard')}</button>
         </div>
     </div>
 </DialogBase>

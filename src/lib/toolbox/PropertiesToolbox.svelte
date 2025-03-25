@@ -9,6 +9,8 @@ import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 import { Playback } from '../frontend/Playback';
 import { EventHost } from '../frontend/Frontend';
 
+import { _ } from 'svelte-i18n';
+
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
 let subtitles = $state(Source.subs);
@@ -60,21 +62,21 @@ function changeResolution() {
 <table class="config">
   <tbody>
     <tr>
-      <td>title</td>
+      <td>{$_('ppty.title')}</td>
       <td>
         <input class='txt' bind:value={metadata.title}
           onchange={() => markMetadataChange()} />
       </td>
     </tr>
     <tr>
-      <td>language</td>
+      <td>{$_('ppty.language')}</td>
       <td>
         <input class='txt' bind:value={metadata.language}
           onchange={() => markMetadataChange()} />
       </td>
     </tr>
     <tr>
-      <td>resolution</td>
+      <td>{$_('ppty.resolution')}</td>
       <td>
         <input type='number' class='res' bind:value={metadata.width}
           onchange={() => changeResolution()}/>
@@ -85,12 +87,12 @@ function changeResolution() {
     </tr>
   </tbody>
 </table>
-<Collapsible header="STYLES" active={true}>
+<Collapsible header={$_('ppty.styles')} active={true}>
   {#key updateCounter}
-    <h5>default</h5>
+    <h5>{$_('ppty.default')}</h5>
     <StyleEdit style={Source.subs.defaultStyle} {subtitles} />
     <hr>
-    <h5>other</h5>
+    <h5>{$_('ppty.other')}</h5>
     {#each styles as style (style.uniqueID)}
       <StyleEdit style={style} {subtitles}
         on:submit={() => styles = Source.subs.styles}/>
@@ -100,7 +102,7 @@ function changeResolution() {
   <button style="width: 25px; height: 20px"
     onclick={() => newStyle()}>+</button>
   <button style="height: 20px"
-    onclick={() => removeUnusedStyles()}>remove all unused</button>
+    onclick={() => removeUnusedStyles()}>{$_('ppty.remove-all-unused')}</button>
 </Collapsible>
 
 <style>

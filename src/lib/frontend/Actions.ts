@@ -13,6 +13,9 @@ import { Interface, UIFocus } from "./Interface";
 import { Dialogs } from "./Dialogs";
 import { Playback } from "./Playback";
 
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
+
 const toSRT = (x: Subtitles) => 
     SimpleFormats.export.SRT(x.entries, LinearFormatCombineStrategy.Recombine);
 const toPlaintext = (x: Subtitles) => 
@@ -202,29 +205,29 @@ export const Actions = {
 
         let menu = await Menu.new({items: [
         {
-            text: 'copy',
+            text: $_('action.copy'),
             items: [
                 {
-                    text: 'JSON (internal)',
+                    text: $_('cxtmenu.json-internal'),
                     accelerator: `CmdOrCtrl+C`,
                     action: () => Utils.copySelection()
                 },
                 {
-                    text: 'SRT',
+                    text: $_('cxtmenu.srt'),
                     action: () => Utils.copySelection((x) => toSRT(x))
                 },
                 {
-                    text: 'ASS fragment',
+                    text: $_('cxtmenu.ass-fragment'),
                     action: () => Utils.copySelection(ASS.exportFragment)
                 },
                 {
-                    text: 'plain text',
+                    text: $_('cxtmenu.plain-text'),
                     action: () => Utils.copySelection((x) => toPlaintext(x))
                 }
             ]
         },
         {
-            text: 'cut',
+            text: $_('action.cut'),
             accelerator: `CmdOrCtrl+X`,
             action: () => {
                 Utils.copySelection();
@@ -232,24 +235,24 @@ export const Actions = {
             }
         },
         {
-            text: 'paste',
+            text: $_('action.paste'),
             accelerator: `${Basic.ctrlKey()}+V`,
             action: () => Utils.paste()
         },
         { item: 'Separator' },
         {
-            text: 'delete',
+            text: $_('action.delete'),
             accelerator: `CmdOrCtrl+Backspace`,
             action: () => Editing.deleteSelection()
         },
         { item: 'Separator' },
         {
-            text: 'select all',
+            text: $_('action.select-all'),
             accelerator: `CmdOrCtrl+A`,
             action: () => Utils.selectAll()
         },
         {
-            text: 'select all by channel',
+            text: $_('action.select-all-by-channel'),
             items: allStyles.map((x) => ({
                 text: x.name,
                 action: () => {
@@ -263,72 +266,72 @@ export const Actions = {
             }))
         },
         {
-            text: 'invert selection',
+            text: $_('action.invert-selection'),
             action: () => Utils.invertSelection()
         },
         { item: 'Separator' },
         {
-            text: 'insert before',
+            text: $_('action.insert-before'),
             action: () => Utils.insertEntryBefore(selection[0])
         },
         {
-            text: 'insert after',
+            text: $_('action.insert-after'),
             accelerator: `CmdOrCtrl+Enter`,
             action: () => Utils.insertEntryAfter(selection[0])
         },
         {
-            text: 'move',
+            text: $_('action.move'),
             enabled: selection.length > 0,
             items: [
                 {
-                    text: 'up',
+                    text: $_('action.up'),
                     enabled: !isDisjunct,
                     accelerator: `CmdOrCtrl+Up`,
                     action: () => Utils.moveSelectionContinuous(selection, -1)
                 },
                 {
-                    text: 'down',
+                    text: $_('action.down'),
                     enabled: !isDisjunct,
                     accelerator: `CmdOrCtrl+Down`,
                     action: () => Utils.moveSelectionContinuous(selection, 1)
                 },
                 {
-                    text: 'to the beginning',
+                    text: $_('action.to-the-beginning'),
                     action: () => Utils.moveSelectionTo(selection, 'beginning')
                 },
                 {
-                    text: 'to the end',
+                    text: $_('action.to-the-end'),
                     action: () => Utils.moveSelectionTo(selection, 'end')
                 }
             ]
         },
         { item: 'Separator' },
         {
-            text: 'combine',
+            text: $_('action.combine'),
             enabled: selection.length > 1,
             action: () => Utils.combineSelection(selection)
         },
         {
-            text: 'split simultaneous',
+            text: $_('action.split-simultaneous'),
             action: () => Utils.splitSimultaneous(selection)
         },
         {
-            text: 'merge entries',
+            text: $_('action.merge-entries'),
             enabled: !isDisjunct && selection.length > 1,
             items: [
                 {
-                    text: 'connect all',
+                    text: $_('action.connect-all'),
                     action: () => Utils.mergeEntries(selection, true)
                 },
                 {
-                    text: 'keep first only',
+                    text: $_('action.keep-first-only'),
                     action: () => Utils.mergeEntries(selection, false)
                 }
             ]
         },
         { item: 'Separator' },
         {
-            text: 'label',
+            text: $_('action.label'),
             items: Labels.map((x) => ({
                 text: x,
                 checked: x === label,
@@ -344,7 +347,7 @@ export const Actions = {
             text: 'utilities',
             items: [
                 {
-                    text: 'transform times...',
+                    text: $_('action.transform-times'),
                     action: async () => {
                         let options = await Dialogs.timeTransform.showModal!();
                         if (options && Source.subs.shiftTimes(options))
@@ -353,22 +356,22 @@ export const Actions = {
                 },
                 { item: 'Separator' },
                 {
-                    text: 'sort by time',
+                    text: $_('action.sort-by-time'),
                     enabled: !isDisjunct && selection.length > 1,
                     action: () => Utils.sortSelection(selection, false)
                 },
                 {
-                    text: 'sort by first style',
+                    text: $_('action.sort-by-first-style'),
                     enabled: !isDisjunct && selection.length > 1,
                     action: () => Utils.sortSelection(selection, true)
                 },
                 {
-                    text: 'sort channels',
+                    text: $_('action.sort-channels'),
                     action: () => Utils.sortChannels(selection)
                 },
                 { item: 'Separator' },
                 {
-                    text: 'create channel',
+                    text: $_('action.create-channel'),
                     items: allStyles.map((x) => ({
                         text: x.name,
                         action: () => {
@@ -384,7 +387,7 @@ export const Actions = {
                     }))
                 },
                 {
-                    text: 'replace channel',
+                    text: $_('action.replace-channel'),
                     enabled: Source.subs.styles.length > 0,
                     items: allStyles.map((x) => ({
                         text: x.name,
@@ -401,7 +404,7 @@ export const Actions = {
                     }))
                 },
                 {
-                    text: 'replace n-th channel',
+                    text: $_('action.replace-n-th-channel'),
                     items: [...Array(maxLines).keys()].map((x) => ({
                         text: (x+1).toString(),
                         items: [{
@@ -423,7 +426,7 @@ export const Actions = {
                     }))
                 },
                 {
-                    text: 'remove channel',
+                    text: $_('action.remove-channel'),
                     enabled: Source.subs.styles.length > 0,
                     items: Source.subs.styles.map((x) => ({
                         text: x.name,
@@ -431,27 +434,27 @@ export const Actions = {
                     }))
                 },
                 {
-                    text: 'remove empty',
+                    text: $_('action.remove-empty'),
                     action: () => Utils.removeChannel(selection, (t) => t.text == '')
                 },
                 { item: 'Separator' },
                 {
-                    text: 'merge overlapping duplicates',
+                    text: $_('action.merge-overlapping-duplicates'),
                     enabled: selection.length > 1,
                     action: () => Utils.mergeDuplicate(selection)
                 },
                 {
-                    text: 'combine by matching time...',
+                    text: $_('action.combine-by-matching-time'),
                     enabled: selection.length > 1,
                     action: () => Dialogs.combine.showModal!()
                 },
                 {
-                    text: 'split by line',
+                    text: $_('action.split-by-line'),
                     enabled: selection.length >= 1,
                     action: () => Utils.splitByNewline(selection)
                 },
                 {
-                    text: 'fix erroneous overlapping',
+                    text: $_('action.fix-erroneous-overlapping'),
                     action: () => Utils.fixOverlap(selection)
                 }
 

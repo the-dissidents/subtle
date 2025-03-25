@@ -1,4 +1,6 @@
 <script lang="ts">
+import * as _i18n from './lib/i18n';
+
 import { InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
 
@@ -27,7 +29,6 @@ import { CanvasKeeper } from './lib/CanvasKeeper';
 import { LabelColor } from './lib/Theming';
 
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { Menu } from '@tauri-apps/api/menu';
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
@@ -41,6 +42,8 @@ import { Dialogs } from './lib/frontend/Dialogs';
 import { Actions } from './lib/frontend/Actions';
 import { getVersion } from '@tauri-apps/api/app';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
+
+import { _ } from 'svelte-i18n';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -69,7 +72,7 @@ let status = Interface.status;
 let uiFocus = Interface.uiFocus;
 let filenameDisplay = 
   derived([Source.currentFile, Source.fileChanged], 
-    ([x, y]) => `${x ? Basic.getFilename(x) : '<untitled>'}${y ? '*' : ''}`);
+    ([x, y]) => `${x ? Basic.getFilename(x) : $_('untitled')}${y ? '*' : ''}`);
 
 const me = {};
 
@@ -239,51 +242,28 @@ appWindow.onDragDropEvent(async (ev) => {
   <!-- toolbar -->
   <div>
     <ul class='menu'>
-      <li><button onclick={async () => {
-        const paths = PrivateConfig.get('paths');
-        let openMenu = await Menu.new({ items: [
-            {
-              text: 'other file...',
-              async action(_) {
-                if (await Interface.warnIfNotSaved())
-                Interface.askOpenFile();
-              },
-            },
-            { item: 'Separator' },
-            ...(paths.length == 0 ? [
-                {
-                  text: 'no recent files',
-                  enabled: false
-                }
-              ] : paths.map((x) => ({
-                text: '[...]/' + x.name.split(Basic.pathSeparator)
-                  .slice(-2).join(Basic.pathSeparator),
-                action: async () => {
-                  if (await Interface.warnIfNotSaved())
-                  Interface.openFile(x.name);
-                }
-              }))
-            ),
-        ]});
-        openMenu.popup();
-      }}>open</button></li>
-      <li><button onclick={() => Interface.askSaveFile(true)}>save as</button></li>
-      <li><button onclick={() => Interface.askImportFile()}>import</button></li>
-      <li><button onclick={() => Interface.askExportFile()}>export</button></li>
+      <li><button onclick={() => Interface.openFileMenu()}>{$_('menu.open')}</button></li>
+      <li><button onclick={() => Interface.askSaveFile(true)}>{$_('menu.save-as')}</button></li>
+      <li><button onclick={() => Interface.askImportFile()}>{$_('menu.import')}</button></li>
+      <li><button onclick={() => Interface.exportFileMenu()}>{$_('menu.export')}</button></li>
       <li class='separator'></li>
       {#key undoRedoUpdateCounter}
       <li><button
         onclick={() => Source.undo()} 
-        disabled={Source.undoStack.length <= 1}>undo</button></li>
+        disabled={Source.undoStack.length <= 1}>{$_('menu.undo')}</button></li>
       <li><button
         onclick={() => Source.redo()}
-        disabled={Source.redoStack.length == 0}>redo</button></li>
+        disabled={Source.redoStack.length == 0}>{$_('menu.redo')}</button></li>
       {/key}
       <li class='separator'></li>
-      <li><button onclick={() => Interface.askOpenVideo()}>open video</button></li>
+      <li><button onclick={() => Interface.askOpenVideo()}>
+        {$_('menu.open-video')}
+      </button></li>
       <li class='separator'></li>
       <li class="label">{$filenameDisplay}</li>
-      <li><button onclick={() => Dialogs.configuration.showModal!()}>configuration</button></li>
+      <li><button onclick={() => Dialogs.configuration.showModal!()}>
+        {$_('menu.configuration')}
+      </button></li>
     </ul>
   </div>
 
@@ -350,11 +330,11 @@ appWindow.onDragDropEvent(async (ev) => {
           <span>
             <select
               oninput={(ev) => editMode = ev.currentTarget.selectedIndex}>
-              <option>anchor start</option>
-              <option>anchor end</option>
+              <option>{$_('editbox.anchor-start')}</option>
+              <option>{$_('editbox.anchor-end')}</option>
             </select>
             <input type='checkbox' id='keepd' bind:checked={keepDuration}/>
-            <label for='keepd'>keep duration</label>
+            <label for='keepd'>{$_('editbox.keep-duration')}</label>
           </span>
           <br>
           <TimestampInput bind:timestamp={editingT0}
@@ -460,8 +440,8 @@ appWindow.onDragDropEvent(async (ev) => {
           {:else}
           <div class="fill hlayout" style="justify-content: center; align-items: center;">
             <i>{Editing.getFocusedEntry() == 'virtual'
-              ? 'double-click or press enter to append new entry'
-              : 'select a line to start editing'}</i>
+              ? $_('editbox.at-virtual-entry')
+              : $_('editbox.no-selection')}</i>
           </div>
           {/if}
         </div>

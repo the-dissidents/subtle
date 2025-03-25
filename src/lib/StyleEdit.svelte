@@ -5,7 +5,9 @@
   import { Menu } from "@tauri-apps/api/menu";
   import Collapsible from "./ui/Collapsible.svelte";
   import { writable } from 'svelte/store';
-    import { ChangeCause, ChangeType, Source } from "./frontend/Source";
+  import { ChangeCause, ChangeType, Source } from "./frontend/Source";
+
+	import { _ } from 'svelte-i18n';
 
 	const dispatch = createEventDispatcher();
 	const submit = () => dispatch('submit');
@@ -38,7 +40,7 @@
     let menu = await Menu.new({
       items: [
       {
-        text: 'delete',
+        text: $_('style.delete'),
         enabled: used.length == 0 && !isDefault,
         action() {
           let i = subtitles.styles.indexOf($style);
@@ -49,7 +51,7 @@
         }
       },
       {
-        text: 'duplicate',
+        text: $_('style.duplicate'),
         action() {
           let clone = $style.clone();
           clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
@@ -60,7 +62,7 @@
         }
       },
       {
-        text: 'replace by',
+        text: $_('style.replace-by'),
         enabled: withoutThis.length > 0,
         items: withoutThis.map((x, i) => ({
           id: i.toString(),
@@ -74,7 +76,7 @@
         }))
       },
       {
-        text: 'set as default',
+        text: $_('style.set-as-default'),
         enabled: subtitles.defaultStyle != $style,
         action() {
           let oldDefault = subtitles.defaultStyle;
@@ -143,18 +145,18 @@
     <table class="stretch">
       <tbody>
         <tr>
-          <td>name:</td>
+          <td>{$_('style.name')}</td>
           <td><input bind:value={$style.name}
             class={isDuplicate($style.name) ? 'duplicate' : ''}
             onchange={() => 
               Source.markChanged(ChangeType.InPlace, ChangeCause.Action)}/></td>
         </tr>
         <tr>
-          <td>font:</td>
+          <td>{$_('style.font')}</td>
           <td><input bind:value={$style.font}/></td>
         </tr>
         <tr>
-          <td>size:</td>
+          <td>{$_('style.size')}</td>
           <td><input type='number' bind:value={$style.size}/></td>
         </tr>
         <tr>
@@ -183,52 +185,52 @@
       <table class="stretch">
         <tbody>
           <tr>
-            <td>text color:</td>
+            <td>{$_('style.text-color')}</td>
             <td><input bind:value={$style.color}/></td>
           </tr>
           <tr>
-            <td>line color:</td>
+            <td>{$_('style.line-color')}</td>
             <td><input bind:value={$style.outlineColor}/></td>
           </tr>
           <tr>
-            <td>line size:</td>
+            <td>{$_('style.line-size')}</td>
             <td><input type='number' bind:value={$style.outline}/></td>
           </tr>
           <tr>
-            <td>shadow:</td>
+            <td>{$_('style.shadow')}</td>
             <td><input type='number' bind:value={$style.shadow}/></td>
           </tr>
           <tr>
-            <td>alignment:</td>
+            <td>{$_('style.alignment')}</td>
             <td><select
                 bind:this={alignSelector}
                 value={AlignMode[$style.alignment]}
                 oninput={() => $style.alignment = alignSelector!.selectedIndex + 1}>
-              <option value="BottomLeft">bottom left</option>
-              <option value="BottomCenter">bottom center</option>
-              <option value="BottomRight">bottom right</option>
-              <option value="CenterLeft">center left</option>
-              <option value="Center">center</option>
-              <option value="CenterRight">center right</option>
-              <option value="TopLeft">top left</option>
-              <option value="TopCenter">top center</option>
-              <option value="TopRight">top right</option>
+              <option value="BottomLeft">{$_('style.bottom-left')}</option>
+              <option value="BottomCenter">{$_('style.bottom-center')}</option>
+              <option value="BottomRight">{$_('style.bottom-right')}</option>
+              <option value="CenterLeft">{$_('style.center-left')}</option>
+              <option value="Center">{$_('style.center')}</option>
+              <option value="CenterRight">{$_('style.center-right')}</option>
+              <option value="TopLeft">{$_('style.top-left')}</option>
+              <option value="TopCenter">{$_('style.top-center')}</option>
+              <option value="TopRight">{$_('style.top-right')}</option>
             </select></td>
           </tr>
           <tr>
-            <td>margins:</td>
+            <td>{$_('style.margins')}</td>
             <td>
               <div class="flex margin">
-                <div><label>top:
+                <div><label>{$_('style.top')}
                     <input type='number' bind:value={$style.margin.top}/>
                 </label></div>
-                <div><label>bottom:
+                <div><label>{$_('style.bottom')}
                   <input type='number' bind:value={$style.margin.bottom}/>
                 </label></div>
-                <div><label>left:
+                <div><label>{$_('style.left')}
                   <input type='number' bind:value={$style.margin.left}/>
                 </label></div>
-                <div><label>right:
+                <div><label>{$_('style.right')}
                   <input type='number' bind:value={$style.margin.right}/>
                 </label></div>
               </div>

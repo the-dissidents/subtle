@@ -6,6 +6,8 @@
     import type { DialogHandler } from '../frontend/Dialogs';
     import DialogBase from '../DialogBase.svelte';
 
+    import { _ } from 'svelte-i18n';
+    
     interface Props {
 		handler: DialogHandler<void, void>;
 	}
@@ -90,17 +92,21 @@
     <table class="config">
         <tbody>
             <tr>
-                <td>start time threshold</td>
+                <td>{$_('combinedialog.start-time-threshold')}</td>
                 <td><input type='number' min='0' step="0.001" bind:value={start} /></td>
             </tr>
             <tr>
-                <td>end time threshold</td>
+                <td>{$_('combinedialog.end-time-threshold')}</td>
                 <td><input type='number' min='0' step="0.001" bind:value={end}/></td>
             </tr>
             <tr>
                 <td></td>
-                <td><input type="checkbox" bind:checked={only}> selection only
-                <br><input type="checkbox" bind:checked={different}> different style only</td>
+                <td>
+                    <input type="checkbox" bind:checked={only}>
+                    {$_('combinedialog.selection-only')}<br>
+                    <input type="checkbox" bind:checked={different}>
+                    {$_('combinedialog.different-style-only')}
+                </td>
             </tr>
             <tr>
                 <td></td>
@@ -108,13 +114,16 @@
             </tr>
             <tr>
                 <td>{number[0]}<br><br>{number[1]}</td>
-                <td>{number[0] == 1 ? 'entry' : 'entries'}
-                <br>{hasbeen ? `${number[0] == 1 ? 'has' : 'have'} been` : 'will be'} combined in
-                <br>{number[1] == 1 ? 'group' : 'groups'}</td>
+                <td>{$_('combinedialog.entries', {values: {n: number[0]}})}
+                <br>{hasbeen 
+                    ? $_('combinedialog.have-been-combined-in', {values: {n: number[0]}}) 
+                    : $_('combinedialog.will-be-combined-in', {values: {n: number[0]}})}
+                <br>{$_('combinedialog.groups', {values: {n: number[1]}})}</td>
             </tr>
             <tr>
                 <td colspan="2"><button style="width: 100%;" 
-                    onclick={() => run(true, start, end, only, different)}>combine</button></td>
+                    onclick={() => run(true, start, end, only, different)}
+                >{$_('combinedialog.combine')}</button></td>
             </tr>
             <tr>
                 <td></td>
