@@ -85,9 +85,10 @@ export const SimpleFormats = {
         },
         SRT_VTT(source: string) {
             const regex = 
-                /\n(\d+:\d+:\d+[,.]\d+)\s-->\s(\d+:\d+:\d+[,.]\d+).+\n((.+\n)+)$/gm;
+                /(?:\n|^)(\d+:\d+:\d+[,.]\d+)\s-->\s(\d+:\d+:\d+[,.]\d+)\s*\n((?:.+\n)*.+)(?:\n|$)/g;
             let matches = [...source.matchAll(regex)];
             if (matches.length == 0) return null;
+            console.log(matches);
     
             let subs = new Subtitles();
             for (let match of matches) {

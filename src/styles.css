@@ -1,6 +1,6 @@
 :root {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 14px;
+  font-family: var(--fontFamily);
+  font-size: var(--fontSize);
   line-height: 1.5em;
   font-weight: 400;
 
@@ -49,7 +49,8 @@ label:has(input[type='checkbox'].button) {
 
   text-align: center;
   text-decoration: none;
-  font-size: 12px;
+  font-family: var(--fontFamily);
+  font-size: 0.8rem;
   padding-block-start: 2px;
   padding-block-end: 3px;
   padding-inline-start: 6px;
@@ -90,16 +91,17 @@ button.right {
 }
 
 input {
-  font-size: 12px;
+  font-size: 0.8rem;
 }
 
 select {
-  font-size: 14px;
+  font-size: 1rem;
+  font-family: var(--fontFamily);
 }
 
 textarea {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 14px;
+  font-family: var(--fontFamily);
+  font-size: 1rem;
   box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
   border: none;
   border-radius: 3px;
@@ -145,7 +147,7 @@ h5 {
   margin: 0 1px 3px 1px;
   padding-top: 6px;
   color: var(--uchu-yin-6);
-  font-size: 11px;
+  font-size: 0.8rem;
   font-weight: bold;
   text-transform: uppercase;
   border-bottom: 1px solid gray;
@@ -172,7 +174,7 @@ ul.menu li {
 }
 
 ul.menu button {
-  font-size: 14px;
+  font-size: 1rem;
   display: block;
   color: white;
   min-width: max-content;
@@ -194,15 +196,15 @@ ul.menu button[disabled] {
 }
 
 ul.menu .label {
-  font-size: 14px;
   display: block;
   color: rgb(226, 223, 223);
   background-color: transparent;
   border: none;
-  text-align: center;
+  text-align: start;
+  flex-grow: 1;
   height: 100%;
   text-decoration: none;
-  padding-left: 10px;
+  padding: 0 10px 0 10px;
 }
 
 ul.menu .separator {

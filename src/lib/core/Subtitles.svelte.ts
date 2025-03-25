@@ -116,7 +116,7 @@ export class SubtitleStyle {
 export type SubtitleChannel = {
     style: SubtitleStyle,
     text: string,
-    // I don't consider this a good practice, but we have to store which channel corresponds to which text area, if any
+    // FIXME: I don't consider this a good practice, but we have to store which channel corresponds to which text area, if any
     gui?: HTMLTextAreaElement
 }
 

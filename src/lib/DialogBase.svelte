@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick } from "svelte";
     import { assert } from "./Basic";
     import { DialogHandler, Dialogs } from "./frontend/Dialogs";
 
@@ -26,12 +27,20 @@
 	}: Props = $props();
 
 	let dialog: HTMLDialogElement | undefined = $state();
+	let dialogBody: HTMLDivElement | undefined = $state();
 	let cx: number, cy: number, ox: number, oy: number;
 	let posx: number = $state(0), posy: number = $state(0);
+	let shadow = $state(false);
 
 	function makeCenter() {
-		posx = (window.innerWidth - dialog!.clientWidth) / 2;
-		posy = (window.innerHeight - dialog!.clientHeight) / 2;
+		assert(dialog !== undefined);
+		posx = (window.innerWidth - dialog.clientWidth) / 2;
+		posy = (window.innerHeight - dialog.clientHeight) / 2;
+	}
+
+	function checkScroll() {
+		assert(dialogBody !== undefined);
+		shadow = dialogBody.scrollHeight - dialogBody.scrollTop > dialogBody.clientHeight + 10;
 	}
 
 	function startDrag(ev: MouseEvent) {
@@ -62,7 +71,10 @@
 			assert(dialog !== undefined);
 			assert(!dialog.open);
 			dialog.showModal();
-			if (centerWhenOpen) makeCenter();
+			tick().then(() => {
+				makeCenter();
+				checkScroll();
+			});
 			Dialogs.modalOpenCounter++;
 		});
 	}
@@ -74,14 +86,17 @@
 	style="top: {posy}px; left: {posx}px; max-width: {maxWidth};"
 	onclose={() => Dialogs.modalOpenCounter--}
 >
+<div class='vlayout'>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<header onmousedown={(ev) => startDrag(ev)}>
 		{@render header?.()}
 	</header>
-	<div>
+	<div class='body' bind:this={dialogBody} 
+		 onscroll={() => checkScroll()}
+	>
 		{@render children?.()}
 	</div>
-	<footer>
+	<footer class={{shadow}}>
 		{#each buttons as btn}
 		{#if typeof btn == 'string'}
 			<button 
@@ -103,6 +118,7 @@
 		{/if}
 		{/each}
 	</footer>
+</div>
 </dialog>
 
 <style>
@@ -134,6 +150,9 @@
 		from { opacity: 0; }
 		to { opacity: 1; }
 	}
+	dialog > div {
+		max-height: 80vh;
+	}
 	/* hr {
 		border: 1px solid gray;
 		margin: 10px 0 10px 0;
@@ -143,13 +162,18 @@
 		padding: 1em 1.5em 1px;
 		/* box-shadow: 0 -10px 10px 10px gray; */
 	}
-	dialog > div {
+	dialog .body {
 		padding: 0 1.5em 1em;
+		box-sizing: border-box;
+		overflow-y: auto;
 	}
 	footer {
 		padding: 1em 1.5em 1em;
 		text-align: right;
 		background-color: rgb(226, 226, 226);
+	}
+	.shadow {
+		box-shadow: 0px 10px 10px 10px #555;
 	}
 	.submit {
 		/* position: absolute; */

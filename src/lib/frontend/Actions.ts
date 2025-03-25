@@ -1,5 +1,6 @@
 import { Menu } from "@tauri-apps/api/menu";
-import { Basic, InputConfig } from "../Basic";
+import { Basic } from "../Basic";
+import { InputConfig } from "../config/Groups";
 
 import { ASS } from "../core/ASS";
 import { type LabelTypes, Labels, SubtitleEntry, SubtitleTools, Subtitles } from "../core/Subtitles.svelte";

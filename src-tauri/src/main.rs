@@ -20,6 +20,7 @@ fn main() {
     ffmpeg::init().unwrap();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
@@ -45,7 +46,6 @@ fn main() {
             media::get_next_frame_data,
             media::get_intensities,
             media::video_set_size,
-
             // request_something,
             test_response
         ])
@@ -55,7 +55,9 @@ fn main() {
 
 #[tauri::command]
 async fn test_response() -> Result<tauri::ipc::Response, ()> {
-    Ok(tauri::ipc::Response::new(InvokeResponseBody::Raw(vec![1,2,3,4,5,6])))
+    Ok(tauri::ipc::Response::new(InvokeResponseBody::Raw(vec![
+        1, 2, 3, 4, 5, 6,
+    ])))
 }
 
 #[tauri::command]

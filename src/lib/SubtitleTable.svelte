@@ -1,18 +1,56 @@
+<script lang="ts" module>
+export const TableConfig = new PublicConfigGroup(
+    'table view',
+    '', 1,
+{
+  maxZoom: {
+      localizedName: 'maximum zoom',
+      type: 'number',
+      description: `Maximum zoom level, in proportion to regular size (e.g. 1 = 100%, 2 = 200%).`,
+      bounds: [1, 6],
+      default: 2
+  },
+  minScrollerLength: {
+      localizedName: 'minimum scroller length',
+      type: 'number',
+      description: `Minimum scroller length to prevent it from becoming too small, in CSS pixels.`,
+      bounds: [1, 200],
+      default: 20
+  },
+  autoScrollSpeed: {
+      localizedName: 'auto scroll factor',
+      type: 'number',
+      description: `Multiplier for the automatic scrolling when dragging outside of the table area.`,
+      bounds: [1, 5],
+      default: 2
+  },
+  autoScrollExponent: {
+      localizedName: 'auto scroll exponent',
+      type: 'number',
+      description: `Exponent for the automatic scrolling when dragging outside of the table area. The magnitude of autoscroll speed per second is calculated as: (distanceFromEdge * factor) ^ exponent.`,
+      bounds: [1, 2],
+      default: 1.5
+  },
+});
+</script>
+
 <script lang="ts">
 import { onDestroy, onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
 
 import { SubtitleEntry, SubtitleUtil } from "./core/Subtitles.svelte";
 import { LabelColor } from "./Theming";
-import { assert, Basic } from "./Basic";
+import { assert } from "./Basic";
 
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
 import { Interface, UIFocus } from "./frontend/Interface";
 import { Playback } from "./frontend/Playback";
 import { Actions } from "./frontend/Actions";
-import { EventHost } from "./frontend/Frontend";
+import { EventHost, translateWheelEvent } from "./frontend/Frontend";
 import { CanvasKeeper } from "./CanvasKeeper";
+import { PublicConfigGroup } from "./config/PublicConfig.svelte";
+    import { InterfaceConfig } from "./config/Groups";
 
 let selection = $state(new SvelteSet<SubtitleEntry>);
 let canvas = $state<HTMLCanvasElement>();
@@ -31,12 +69,11 @@ let maxX = 0, maxY = 0, totalLines = 0;
 let requestedRender = false;
 let colPos: [number, number, number, number, number, number,] = [0, 0, 0, 0, 0, 0];
 
-const FontSize = 14;
-const linePadding = 5;
-const lineHeight = FontSize + linePadding * 2;
-const headerHeight = lineHeight;
-const cellPadding = 6;
-const scrollerSize = 4;
+let linePadding = $derived(InterfaceConfig.data.fontSize * 0.35);
+let lineHeight = $derived(InterfaceConfig.data.fontSize + linePadding * 2);
+let headerHeight = $derived(lineHeight);
+let cellPadding = $derived(InterfaceConfig.data.fontSize * 0.4);
+let scrollerSize = 4;
 
 const gridColor = '#bbb';
 const gridMajorColor = '#999';
@@ -45,16 +82,17 @@ const overlapColor = 'crimson';
 const focusBackground = 'lightblue';
 const selectedBackground = 'rgb(234, 234, 234)';
 
-const autoScrollSpeed = 2;
-const autoScrollPower = 1.5;
-const minScrollerLength = 20;
 const scrollerFade = 1500;
 const scrollerFadeStart = 1000;
+
+function font() {
+  return `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`;
+}
 
 function layout() {
   cxt.resetTransform();
   cxt.scale(devicePixelRatio, devicePixelRatio);
-  cxt.font = `${FontSize}px sans-serif`;
+  cxt.font = font();
 
   lines = []; totalLines = 0;
   let textWidth = 0;
@@ -101,7 +139,7 @@ function render() {
   cxt.clearRect(0, 0, width, height);
   cxt.scale(scale, scale);
   cxt.translate(-scrollX, -scrollY);
-  cxt.font = `${FontSize}px sans-serif`;
+  cxt.font = font();
   cxt.textBaseline = 'top';
   cxt.fillStyle = 'black';
 
@@ -140,14 +178,13 @@ function render() {
     let y0 = y;
     entry.texts.forEach((channel, i) => {
       // lines
-      cxt.textBaseline = 'top';
+      cxt.textBaseline = 'middle';
       cxt.textAlign = 'start';
       const splitLines = channel.text.split('\n');
       splitLines.forEach((x, i) => 
-        cxt.fillText(x, colPos[5] + cellPadding, y0 + linePadding + i * lineHeight));
+        cxt.fillText(x, colPos[5] + cellPadding, y0 + (i + 0.5) * lineHeight));
 
       const cellY = y0 + (splitLines.length * lineHeight) / 2;
-      cxt.textBaseline = 'middle';
       cxt.fillText(channel.style.name, colPos[3] + cellPadding, cellY);
       cxt.textAlign = 'end';
       cxt.fillText(getNpS(entry, channel.text), colPos[5] - cellPadding, cellY);
@@ -217,6 +254,7 @@ function render() {
   cxt.resetTransform();
   cxt.scale(devicePixelRatio, devicePixelRatio);
   cxt.fillStyle = `rgb(0 0 0 / ${40 * fade}%)`;
+  const minScrollerLength = TableConfig.data.minScrollerLength;
   if (maxX > width / scale) {
     let scaledScreen = width / scale;
     let len = Math.max(minScrollerLength, scaledScreen / maxX * width);
@@ -300,9 +338,15 @@ onMount(() => {
     },
   });
   cxt = keeper.cxt;
-  layout();
-  requestRender();
+
+  $effect(() => {
+    if (InterfaceConfig.data.fontSize || InterfaceConfig.data.fontFamily) {
+      layout();
+      requestRender();
+    }
+  });
 });
+
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
   return e1 && e2 && e1.start < e2.end && e1.end > e2.start;
@@ -377,12 +421,14 @@ function onMouseMove(ev: MouseEvent) {
   if (ev.buttons == 1) {
     let offsetY = ev.clientY - canvas!.getBoundingClientRect().top;
     // auto scroll if pointing outside
+    const speed = TableConfig.data.autoScrollSpeed;
+    const exponent = TableConfig.data.autoScrollExponent;
     if (offsetY < headerHeight) {
       if (autoScrollY == 0) requestAutoScroll();
-      autoScrollY = powWithSign((offsetY - headerHeight) * autoScrollSpeed, autoScrollPower);
+      autoScrollY = powWithSign((offsetY - headerHeight) * speed, exponent);
     } else if (offsetY > height) {
       if (autoScrollY == 0) requestAutoScroll();
-      autoScrollY = powWithSign((offsetY - height) * autoScrollSpeed, autoScrollPower);
+      autoScrollY = powWithSign((offsetY - height) * speed, exponent);
     } else {
       autoScrollY = 0;
     }
@@ -404,13 +450,14 @@ function constraintScroll() {
 }
 
 function processWheel(ev: WheelEvent) {
-  const tr = Basic.translateWheelEvent(ev);
+  const tr = translateWheelEvent(ev);
   if (tr.isZoom) {
     if (!centerX || !centerY) {
       centerX = ev.offsetX / scale + scrollX;
       centerY = ev.offsetY / scale + scrollY;
     }
-    scale = Math.min(2, Math.max(1, scale / Math.pow(1.01, tr.amount)));
+    scale = Math.min(TableConfig.data.maxZoom, 
+      Math.max(1, scale / Math.pow(1.01, tr.amount)));
     scrollX = centerX - ev.offsetX / scale;
     scrollY = centerY - ev.offsetY / scale;
   } else {

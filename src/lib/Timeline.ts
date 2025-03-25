@@ -1,5 +1,6 @@
 import { AudioSampler } from "./AudioSampler";
-import { Basic, DebugConfig, assert } from "./Basic";
+import { Basic, assert } from "./Basic";
+import { DebugConfig, InterfaceConfig } from "./config/Groups";
 import type { WithCanvas } from "./CanvasKeeper";
 import { MMedia } from "./API";
 import { LabelColor } from "./Theming";
@@ -9,6 +10,45 @@ import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 import { Editing, SelectMode } from "./frontend/Editing";
 import { Playback } from "./frontend/Playback";
 import { Actions } from "./frontend/Actions";
+import { PublicConfigGroup } from "./config/PublicConfig.svelte";
+import { translateWheelEvent } from "./frontend/Frontend";
+
+export const TimelineConfig = new PublicConfigGroup(
+    'timeline',
+    '', 1,
+{
+    fontSize: {
+        localizedName: 'font size',
+        type: 'number',
+        bounds: [5, null],
+        default: 12
+    },
+    dragResizeArea: {
+        localizedName: 'resize area size',
+        type: 'number',
+        description: `Size of the area around the left and right side of an entry in which you can drag to resize the entry, in CSS pixels.`,
+        bounds: [1, 10],
+        default: 5
+    },
+    enableSnap: {
+        localizedName: 'snapping',
+        type: 'boolean',
+        description: `Whether to enable snapping by default. If true, holding down Alt/Option temporarily disables it; if false, temporarily enables it.`,
+        default: true
+    },
+    snapDistance: {
+        localizedName: 'snap distance',
+        type: 'number',
+        description: `Maximum distance between entries for snapping, in CSS pixels.`,
+        bounds: [1, 10],
+        default: 5
+    },
+    showDebug: {
+        localizedName: 'show debug info',
+        type: 'boolean',
+        default: true
+    },
+});
 
 const SCROLLER_HEIGHT = 7 * devicePixelRatio;
 const HEADER_HEIGHT = 15 * devicePixelRatio;
@@ -90,6 +130,12 @@ function ellipsisText(cxt: CanvasRenderingContext2D, str: string, max: number) {
 function fontSize(size: number) {
     return window.devicePixelRatio * size;
 }
+
+function font(size: number) {
+    return `${window.devicePixelRatio * size}px ${InterfaceConfig.data.fontFamily}`;
+}
+
+// TODO: convert to a component!
 
 export class Timeline implements WithCanvas {
     #cxt: CanvasRenderingContext2D;
@@ -197,8 +243,8 @@ export class Timeline implements WithCanvas {
     }
 
     #snapMove(focus: SubtitleEntry, desiredStart: number) {
-        let flen = focus.end - focus.start;
-        let snap = (x: number) => {
+        const flen = focus.end - focus.start;
+        const snap = (x: number) => {
             // start
             let d = Math.abs(desiredStart - x);
             if (d < minDist) {
@@ -217,7 +263,7 @@ export class Timeline implements WithCanvas {
         let minDist = SNAP_DISTANCE / this.#scale;
         let pos: number | null = null, newStart: number = desiredStart;
         snap(this.#cursorPos);
-        for (let e of this.#getVisibleEntries()) {
+        for (const e of this.#getVisibleEntries()) {
             if (this.#selection.has(e)) continue;
             snap(e.start);
             snap(e.end);
@@ -227,10 +273,10 @@ export class Timeline implements WithCanvas {
     }
 
     #snapEnds(ent: SubtitleEntry, desired: number, isStart: boolean) {
-        let ok = isStart 
+        const ok = isStart 
             ? (x: number) => x < ent.end 
             : (x: number) => x > ent.start;
-        let snap = (x: number) => {
+        const snap = (x: number) => {
             if (!ok(x)) return;
             let d = Math.abs(desired - x);
             if (d < minDist) {
@@ -263,9 +309,9 @@ export class Timeline implements WithCanvas {
     }
 
     #keepPosInSafeArea(pos: number) {
-        let margin = CURSOR_AREA_MARGIN / this.#scale;
-        let left = this.#offset + margin,
-            right = this.#offset + this.#width / this.#scale - margin;
+        const margin = CURSOR_AREA_MARGIN / this.#scale;
+        const left = this.#offset + margin,
+              right = this.#offset + this.#width / this.#scale - margin;
         if (pos < left) this.setViewOffset(this.#offset + pos - left);
         if (pos > right) this.setViewOffset(this.#offset + pos - right);
     }
@@ -427,7 +473,7 @@ export class Timeline implements WithCanvas {
                             const newPos = 
                                 e1.offsetX / this.#scale * ratio + this.#offset;
                             let dval = newPos - origPos;
-                            if (!e1.altKey && one)
+                            if ((e1.altKey !== TimelineConfig.data.enableSnap) && one)
                                 dval = this.#snapMove(one, origStarts.get(one)! + dval) 
                                     - origStarts.get(one)!;
                             dragged = newPos != origPos;
@@ -455,7 +501,8 @@ export class Timeline implements WithCanvas {
                             const newPos = 
                                 e1.offsetX / this.#scale * ratio + this.#offset;
                             let val = origVal + newPos - origPos;
-                            if (!e1.altKey) val = this.#snapEnds(entry, val, isStart);
+                            if (e1.altKey !== TimelineConfig.data.enableSnap)
+                                val = this.#snapEnds(entry, val, isStart);
                             if (isStart) entry.start = Math.min(entry.end, val);
                             else entry.end = Math.max(entry.start, val);
                             dragged = val != origVal;
@@ -474,7 +521,7 @@ export class Timeline implements WithCanvas {
             }
         };
 
-        let handler = (ev: MouseEvent) => {
+        const handler = (ev: MouseEvent) => {
             onUp(ev);
             window.removeEventListener('mousemove', onMove);
             window.removeEventListener('mouseup', handler);
@@ -492,7 +539,7 @@ export class Timeline implements WithCanvas {
     }
 
     #processWheel(e: WheelEvent) {
-        const tr = Basic.translateWheelEvent(e);
+        const tr = translateWheelEvent(e);
         if (tr.isZoom) {
             const ratio = window.devicePixelRatio;
             const origPos = this.#offset + e.offsetX / this.#scale * ratio;
@@ -527,7 +574,7 @@ export class Timeline implements WithCanvas {
             this.#samplerMedia.close();
         }
         if (DebugConfig.data.disableWaveform) return;
-        
+
         this.#samplerMedia = await MMedia.open(rawurl);
         this.#sampler = await AudioSampler.open(this.#samplerMedia);
         this.#sampler.onProgress = () => this.requestRender();
@@ -683,8 +730,6 @@ export class Timeline implements WithCanvas {
         this.#cxt.fillRect(0, 0, this.#width, HEADER_HEIGHT);
 
         this.#cxt.fillStyle = RULER_TEXT;
-        this.#cxt.font = `${fontSize(10)}px sans-serif`;
-        this.#cxt.textBaseline = 'bottom';
         this.#cxt.lineWidth = 1;
         for (let i = 0; i < n; i++) {
             let t = start + i * small;
@@ -704,6 +749,8 @@ export class Timeline implements WithCanvas {
             this.#cxt.strokeStyle = TICK_COLOR;
             line(pos, height);
         }
+        this.#cxt.font = font(HEADER_HEIGHT / window.devicePixelRatio * 0.8);
+        this.#cxt.textBaseline = 'bottom';
         for (let t = start; t < end; t += nBig * small) {
             const pos = Math.round((t - this.#offset) * this.#scale);
             this.#cxt.fillText(SubtitleUtil.formatTimestamp(t, 2), 
@@ -721,7 +768,7 @@ export class Timeline implements WithCanvas {
     #renderTracks() {
         ellipsisWidth = -1;
         this.#cxt.textBaseline = 'top';
-        this.#cxt.font = `${fontSize(12)}px sans-serif`;
+        this.#cxt.font = font(TimelineConfig.data.fontSize);
         for (let ent of this.#getVisibleEntries()) {
             this.#getEntryPositions(ent).forEach((b) => {
                 this.#cxt.fillStyle = ent.label === 'none' 
@@ -804,7 +851,7 @@ export class Timeline implements WithCanvas {
         this.#renderTracks();
         this.#renderCursor();
 
-        this.#cxt.font = `bold ${fontSize(12)}px sans-serif`;
+        this.#cxt.font = 'bold ' + font(TimelineConfig.data.fontSize);
         this.#cxt.fillStyle = 'lightgreen';
         this.#cxt.textBaseline = 'top';
         const area = Playback.playArea;
@@ -814,7 +861,9 @@ export class Timeline implements WithCanvas {
         const statusWidth = this.#cxt.measureText(status).width;
         this.#cxt.fillText(status, this.#width - statusWidth - 5, 35);
         
-        this.#cxt.font = `${fontSize(8)}px sans-serif`;
+        if (!TimelineConfig.data.showDebug) return;
+
+        this.#cxt.font = `${fontSize(8)}px Courier, monospace`;
         this.#cxt.fillStyle = 'white';
         this.#cxt.fillText(`offset=${this.#offset.toFixed(2)}`, 5 * devicePixelRatio, 15 * devicePixelRatio);
         this.#cxt.fillText(`scale=${this.#scale.toFixed(2)}`, 5 * devicePixelRatio, 25 * devicePixelRatio);

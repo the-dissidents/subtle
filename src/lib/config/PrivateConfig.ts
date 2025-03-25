@@ -1,7 +1,7 @@
 import { path } from "@tauri-apps/api";
 import * as fs from "@tauri-apps/plugin-fs"
-import { assert } from "./Basic";
-import { guard, guardAsync } from "./frontend/Interface";
+import { assert } from "../Basic";
+import { guardAsync } from "../frontend/Interface";
 
 const configPath = 'config.json';
 let configData = {
@@ -32,11 +32,11 @@ async function saveConfig() {
 
     await guardAsync(async () => {
         await fs.writeTextFile(configPath, 
-            JSON.stringify(configData), {baseDir: fs.BaseDirectory.AppConfig}); 
+            JSON.stringify(configData, null, 2), {baseDir: fs.BaseDirectory.AppConfig}); 
     }, `error saving private config`);
 }
 
-export const Config = {
+export const PrivateConfig = {
     async init() {
         console.log(await path.appConfigDir(), configPath);
         try {

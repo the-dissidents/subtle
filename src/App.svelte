@@ -1,9 +1,13 @@
 <script lang="ts">
+import { InterfaceConfig, MainConfig } from "./lib/config/Groups";
+import { PrivateConfig } from './lib/config/PrivateConfig';
+
 import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
 import CombineDialog from "./lib/dialog/CombineDialog.svelte";
 import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import EncodingDialog from './lib/dialog/EncodingDialog.svelte';
 import ExportDialog from './lib/dialog/ExportDialog.svelte';
+import ConfigDialog from './lib/dialog/ConfigDialog.svelte';
 
 import TabView from './lib/ui/TabView.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
@@ -17,10 +21,9 @@ import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
 import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 
+import { assert, Basic } from './lib/Basic';
 import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/core/Subtitles.svelte'
-import { assert, Basic, MainConfig } from './lib/Basic';
 import { CanvasKeeper } from './lib/CanvasKeeper';
-import { Config } from './lib/Config';
 import { LabelColor } from './lib/Theming';
 
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -36,9 +39,8 @@ import { Interface, UIFocus } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Dialogs } from './lib/frontend/Dialogs';
 import { Actions } from './lib/frontend/Actions';
-    import { getVersion } from '@tauri-apps/api/app';
-    import { arch, platform, version } from '@tauri-apps/plugin-os';
-    import ConfigDialog from './lib/dialog/ConfigDialog.svelte';
+import { getVersion } from '@tauri-apps/api/app';
+import { arch, platform, version } from '@tauri-apps/plugin-os';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -151,21 +153,30 @@ let setupTimelineView: Action = () => {
   keeper.bind(Playback.createTimeline(keeper.cxt));
 };
 
-Config.init();
-Config.onInitialized(() => {
+PrivateConfig.init();
+PrivateConfig.onInitialized(() => {
   appWindow.setPosition(new LogicalPosition(
-    Config.get('windowX'), 
-    Config.get('windowY')));
+    PrivateConfig.get('windowX'), 
+    PrivateConfig.get('windowY')));
   appWindow.setSize(new LogicalSize(
-    Config.get('windowW'), 
-    Config.get('windowH')));
-  videoCanvasContainer!.style.height = `${Config.get('videoH')}px`;
-  timelineCanvas!.style.height = `${Config.get('timelineH')}px`;
-  editTable!.style.height = `${Config.get('editorH')}px`;
-  leftPane!.style.width = `${Config.get('leftPaneW')}px`;
+    PrivateConfig.get('windowW'), 
+    PrivateConfig.get('windowH')));
+  videoCanvasContainer!.style.height = `${PrivateConfig.get('videoH')}px`;
+  timelineCanvas!.style.height = `${PrivateConfig.get('timelineH')}px`;
+  editTable!.style.height = `${PrivateConfig.get('editorH')}px`;
+  leftPane!.style.width = `${PrivateConfig.get('leftPaneW')}px`;
 });
 
 MainConfig.init();
+MainConfig.onInitialized(() => {
+  document.documentElement.style.setProperty('--fontSize', `${InterfaceConfig.data.fontSize}px`);
+  document.documentElement.style.setProperty('--fontFamily', InterfaceConfig.data.fontFamily);
+});
+
+$effect(() => {
+  document.documentElement.style.setProperty('--fontSize', `${InterfaceConfig.data.fontSize}px`);
+  document.documentElement.style.setProperty('--fontFamily', InterfaceConfig.data.fontFamily);
+});
 
 getVersion().then((x) => 
   appWindow.setTitle(`subtle beta ${x}a0 (${platform()}-${version()}/${arch()})`));
@@ -179,14 +190,14 @@ appWindow.onCloseRequested(async (ev) => {
   const factor = await appWindow.scaleFactor();
   const size = (await appWindow.innerSize()).toLogical(factor);
   const pos = (await appWindow.position()).toLogical(factor);
-  await Config.set('windowW', size.width);
-  await Config.set('windowH', size.height);
-  await Config.set('windowX', pos.x);
-  await Config.set('windowY', pos.y);
-  await Config.set('videoH', videoCanvasContainer!.clientHeight);
-  await Config.set('timelineH', timelineCanvas!.clientHeight);
-  await Config.set('editorH', editTable!.clientHeight);
-  await Config.set('leftPaneW', leftPane!.clientWidth);
+  await PrivateConfig.set('windowW', size.width);
+  await PrivateConfig.set('windowH', size.height);
+  await PrivateConfig.set('windowX', pos.x);
+  await PrivateConfig.set('windowY', pos.y);
+  await PrivateConfig.set('videoH', videoCanvasContainer!.clientHeight);
+  await PrivateConfig.set('timelineH', timelineCanvas!.clientHeight);
+  await PrivateConfig.set('editorH', editTable!.clientHeight);
+  await PrivateConfig.set('leftPaneW', leftPane!.clientWidth);
   await MainConfig.save();
 });
 
@@ -229,7 +240,7 @@ appWindow.onDragDropEvent(async (ev) => {
   <div>
     <ul class='menu'>
       <li><button onclick={async () => {
-        const paths = Config.get('paths');
+        const paths = PrivateConfig.get('paths');
         let openMenu = await Menu.new({ items: [
             {
               text: 'other file...',
@@ -270,9 +281,9 @@ appWindow.onDragDropEvent(async (ev) => {
       {/key}
       <li class='separator'></li>
       <li><button onclick={() => Interface.askOpenVideo()}>open video</button></li>
-      <li><div class='label'>{$filenameDisplay}</div></li>
       <li class='separator'></li>
-      <li><button onclick={() => Dialogs.configuration.showModal!()}>config</button></li>
+      <li class="label">{$filenameDisplay}</li>
+      <li><button onclick={() => Dialogs.configuration.showModal!()}>configuration</button></li>
     </ul>
   </div>
 

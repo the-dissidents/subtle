@@ -3,7 +3,7 @@ import { Subtitles, SubtitleTools } from "../core/Subtitles.svelte";
 
 import * as fs from "@tauri-apps/plugin-fs";
 import { guardAsync, Interface } from "./Interface";
-import { Config } from "../Config";
+import { PrivateConfig } from "../config/PrivateConfig";
 import { Editing } from "./Editing";
 import { EventHost } from "./Frontend";
 
@@ -92,7 +92,7 @@ export const Source = {
     },
 
     async openDocument(newSubs: Subtitles, path: string, isImport: boolean) {
-        Config.pushRecent(path);
+        PrivateConfig.pushRecent(path);
         this.subs = newSubs;
         Editing.clearFocus(false);
         Editing.clearSelection();
@@ -121,7 +121,7 @@ export const Source = {
             Interface.status.set('saved to ' + file);
             this.fileChanged.set(false);
             if (file != get(this.currentFile)) {
-                Config.pushRecent(file);
+                PrivateConfig.pushRecent(file);
                 this.currentFile.set(file);
             }
             return true;

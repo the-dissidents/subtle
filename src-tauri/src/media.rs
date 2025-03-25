@@ -12,15 +12,15 @@ pub(crate) use internal::MediaPlayback;
 
 pub struct PlaybackRegistry {
     next_id: i32,
-    table: HashMap<i32, MediaPlayback>
+    table: HashMap<i32, MediaPlayback>,
 }
 
 impl PlaybackRegistry {
     pub fn new() -> PlaybackRegistry {
         PlaybackRegistry {
             next_id: 0,
-            table: HashMap::new()
-        } 
+            table: HashMap::new(),
+        }
     }
 }
 
@@ -45,10 +45,7 @@ pub enum MediaEvent<'a> {
         streams: Vec<String>,
     },
     #[serde(rename_all = "camelCase")]
-    AudioStatus {
-        length: i64,
-        sample_rate: u32,
-    },
+    AudioStatus { length: i64, sample_rate: u32 },
     #[serde(rename_all = "camelCase")]
     VideoStatus {
         length: i64,
@@ -56,24 +53,20 @@ pub enum MediaEvent<'a> {
         out_width: u32,
         out_height: u32,
         width: u32,
-        height: u32
+        height: u32,
     },
     #[serde(rename_all = "camelCase")]
     Debug { message: &'a str },
     #[serde(rename_all = "camelCase")]
     RuntimeError { what: &'a str },
     #[serde(rename_all = "camelCase")]
-    Opened {
-        id: i32
-    },
+    Opened { id: i32 },
     #[serde(rename_all = "camelCase")]
     NoStream {},
     #[serde(rename_all = "camelCase")]
     InvalidId {},
     #[serde(rename_all = "camelCase")]
-    FfmpegVersion {
-        value: String
-    },
+    FfmpegVersion { value: String },
 }
 
 fn send(channel: &Channel<MediaEvent>, what: MediaEvent) {
@@ -105,15 +98,16 @@ fn send_done(channel: &Channel<MediaEvent>) {
 pub fn media_version(channel: Channel<MediaEvent>) {
     let c_buf = unsafe { ffmpeg::sys::av_version_info() };
     let c_str = unsafe { std::ffi::CStr::from_ptr(c_buf) };
-    send(&channel, MediaEvent::FfmpegVersion { value: String::from(c_str.to_str().unwrap()) });
+    send(
+        &channel,
+        MediaEvent::FfmpegVersion {
+            value: String::from(c_str.to_str().unwrap()),
+        },
+    );
 }
 
 #[tauri::command]
-pub fn media_status(
-    id: i32,
-    state: State<Mutex<PlaybackRegistry>>, 
-    channel: Channel<MediaEvent>
-) {
+pub fn media_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
@@ -136,11 +130,7 @@ pub fn media_status(
 }
 
 #[tauri::command]
-pub fn audio_status(
-    id: i32,
-    state: State<Mutex<PlaybackRegistry>>, 
-    channel: Channel<MediaEvent>
-) {
+pub fn audio_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
@@ -148,7 +138,7 @@ pub fn audio_status(
     };
     let ctx = match playback.audio() {
         Some(c) => c,
-        None => return send(&channel, MediaEvent::NoStream { }),
+        None => return send(&channel, MediaEvent::NoStream {}),
     };
     send(
         &channel,
@@ -160,11 +150,7 @@ pub fn audio_status(
 }
 
 #[tauri::command]
-pub fn video_status(
-    id: i32,
-    state: State<Mutex<PlaybackRegistry>>, 
-    channel: Channel<MediaEvent>
-) {
+pub fn video_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
@@ -172,27 +158,30 @@ pub fn video_status(
     };
     let ctx = match playback.video() {
         Some(c) => c,
-        None => return send(&channel, MediaEvent::NoStream { }),
+        None => return send(&channel, MediaEvent::NoStream {}),
     };
     let (out_width, out_height) = ctx.output_size();
     let (width, height) = ctx.original_size();
     send(
         &channel,
         MediaEvent::VideoStatus {
-            length: ctx.length(), 
+            length: ctx.length(),
             framerate: ctx.framerate().into(),
-            width, height,
-            out_width, out_height
-        }
+            width,
+            height,
+            out_width,
+            out_height,
+        },
     );
 }
 
 #[tauri::command]
 pub fn video_set_size(
     id: i32,
-    width: u32, height: u32,
-    state: State<Mutex<PlaybackRegistry>>, 
-    channel: Channel<MediaEvent>
+    width: u32,
+    height: u32,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
@@ -201,20 +190,16 @@ pub fn video_set_size(
     };
     let ctx = match playback.video_mut() {
         Some(c) => c,
-        None => return send(&channel, MediaEvent::NoStream { }),
+        None => return send(&channel, MediaEvent::NoStream {}),
     };
     match ctx.set_output_size((width, height)) {
         Ok(_) => send_done(&channel),
-        Err(e) => send_error!(&channel, e)
+        Err(e) => send_error!(&channel, e),
     }
 }
 
 #[tauri::command]
-pub fn close_media(
-    id: i32,
-    state: State<Mutex<PlaybackRegistry>>, 
-    channel: Channel<MediaEvent>
-) {
+pub fn close_media(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     if ap.table.remove(&id).is_none() {
         return send_invalid_id(&channel);
@@ -223,11 +208,7 @@ pub fn close_media(
 }
 
 #[tauri::command]
-pub fn open_media(
-    state: State<Mutex<PlaybackRegistry>>,
-    path: &str,
-    channel: Channel<MediaEvent>,
-) {
+pub fn open_media(state: State<Mutex<PlaybackRegistry>>, path: &str, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     send(&channel, MediaEvent::Debug { message: path });
 
@@ -255,22 +236,28 @@ pub fn open_video(
         None => return send_invalid_id(&channel),
     };
 
-    let index = 
-        if video_id < 0 { None } else { Some(video_id as usize) };
+    let index = if video_id < 0 {
+        None
+    } else {
+        Some(video_id as usize)
+    };
     let video = match playback.open_video(index) {
         Ok(_) => playback.video().unwrap(),
         Err(e) => return send_error!(&channel, e.to_string()),
     };
 
-    send(&channel, MediaEvent::Debug 
-        {
+    send(
+        &channel,
+        MediaEvent::Debug {
             message: format!(
                 "opening video {}; len={}:format={}",
                 video.stream_index(),
                 video.length(),
                 video.pixel_format().descriptor().unwrap().name()
-            ).as_str(),
-        });
+            )
+            .as_str(),
+        },
+    );
 
     send_done(&channel);
 }
@@ -288,8 +275,11 @@ pub fn open_audio(
         None => return send_invalid_id(&channel),
     };
 
-    let index = 
-        if audio_id < 0 { None } else { Some(audio_id as usize) };
+    let index = if audio_id < 0 {
+        None
+    } else {
+        Some(audio_id as usize)
+    };
     match playback.open_audio(index) {
         Ok(_) => playback.audio().unwrap(),
         Err(e) => return send_error!(&channel, e.to_string()),
@@ -308,10 +298,10 @@ pub fn seek_audio(
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_invalid_id(&channel)
+        None => return send_invalid_id(&channel),
     };
     if playback.audio().is_none() {
-        return send(&channel, MediaEvent::NoStream { })
+        return send(&channel, MediaEvent::NoStream {});
     };
     if let Err(e) = playback.seek_audio(position) {
         return send_error!(&channel, e.to_string());
@@ -329,10 +319,10 @@ pub fn seek_video(
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
         Some(x) => x,
-        None => return send_invalid_id(&channel)
+        None => return send_invalid_id(&channel),
     };
     if playback.video().is_none() {
-        return send(&channel, MediaEvent::NoStream { })
+        return send(&channel, MediaEvent::NoStream {});
     };
     if let Err(e) = playback.seek_video(position) {
         return send_error!(&channel, e.to_string());
@@ -356,7 +346,7 @@ pub fn seek_precise_and_get_frame(
         }
     };
     if playback.video().is_none() {
-        send(&channel, MediaEvent::NoStream { });
+        send(&channel, MediaEvent::NoStream {});
         return Err(());
     };
     match playback.seek_precise(position) {
@@ -379,20 +369,24 @@ pub fn get_next_frame_data(
         Some(x) => x,
         None => {
             send_invalid_id(&channel);
-            return Err(())
+            return Err(());
         }
     };
-    
+
     match playback.get_next() {
         Ok(Some(DecodedFrame::Video(f))) => return send_video_frame(f),
         Ok(Some(DecodedFrame::Audio(f))) => return send_audio_frame(f),
-        Ok(None) => {send(&channel, MediaEvent::EOF);},
-        Err(e) => {send_error!(&channel, e.to_string());},
+        Ok(None) => {
+            send(&channel, MediaEvent::EOF);
+        }
+        Err(e) => {
+            send_error!(&channel, e.to_string());
+        }
     };
     Err(())
 }
 
-/** 
+/**
  * returns: [
  *  type        : [u32] = 1
  *  position    : [i32]
@@ -401,14 +395,10 @@ pub fn get_next_frame_data(
  *  length      : [u32]
  *  rgba_data   : \[[u8]]
  * ]
- * */ 
-pub fn send_video_frame(
-    frame: internal::DecodedVideoFrame,
-) -> Result<ipc::Response, ()> {
+ * */
+pub fn send_video_frame(frame: internal::DecodedVideoFrame) -> Result<ipc::Response, ()> {
     fn to_byte_slice<'a>(data: &'a [(u8, u8, u8, u8)]) -> &'a [u8] {
-        unsafe {
-            std::slice::from_raw_parts(data.as_ptr() as *const _, data.len() * 4)
-        }
+        unsafe { std::slice::from_raw_parts(data.as_ptr() as *const _, data.len() * 4) }
     }
 
     let pos = frame.position;
@@ -426,7 +416,7 @@ pub fn send_video_frame(
     Ok(Response::new(InvokeResponseBody::Raw(binary)))
 }
 
-/** 
+/**
  * returns: [
  *  type        : [u32] = 0
  *  position    : [i32]
@@ -434,15 +424,11 @@ pub fn send_video_frame(
  *  length      : [u32]
  *  sample_data : [f32]
  * ]
- * */ 
-pub fn send_audio_frame(
-    frame: internal::DecodedAudioFrame,
-) -> Result<ipc::Response, ()> {
+ * */
+pub fn send_audio_frame(frame: internal::DecodedAudioFrame) -> Result<ipc::Response, ()> {
     // FIXME: support multiple channels
     fn to_byte_slice<'a>(floats: &'a [f32]) -> &'a [u8] {
-        unsafe {
-            std::slice::from_raw_parts(floats.as_ptr() as *const _, floats.len() * 4)
-        }
+        unsafe { std::slice::from_raw_parts(floats.as_ptr() as *const _, floats.len() * 4) }
     }
 
     let pos = frame.position;
@@ -473,7 +459,7 @@ pub fn get_intensities(
         None => return send_invalid_id(&channel),
     };
     if playback.audio().is_none() {
-        return send(&channel, MediaEvent::NoStream { });
+        return send(&channel, MediaEvent::NoStream {});
     }
 
     let mut vector = Vec::<f32>::new();
@@ -486,8 +472,7 @@ pub fn get_intensities(
             Ok(Some(DecodedFrame::Audio(f))) => f,
             Ok(Some(_)) => continue,
             Ok(None) => break,
-            Err(e) => return send_error!(&channel, 
-                format!("get_intensities: get_next(): {e}")),
+            Err(e) => return send_error!(&channel, format!("get_intensities: get_next(): {e}")),
         };
 
         let data: &[f32] = frame.decoded.plane(0);

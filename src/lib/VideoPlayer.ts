@@ -2,10 +2,30 @@ import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./core/Subtitles.svelte";
 import type { WithCanvas } from "./CanvasKeeper";
 import { MMedia, type AudioFrameData, type VideoFrameData } from "./API";
-import { assert, Basic, DebugConfig } from "./Basic";
+import { assert, Basic } from "./Basic";
+import { DebugConfig } from "./config/Groups";
 
 import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 import type { AudioFeedbackData, AudioInputData } from "./worker/DecodedAudioLoader";
+import { PublicConfigGroup } from "./config/PublicConfig.svelte";
+
+export const MediaConfig = new PublicConfigGroup(
+    'media',
+    '', 1,
+{
+    preloadAmount: {
+        localizedName: 'preload amount',
+        type: 'number',
+        description: `Amount of preloading for video and audio playback, in seconds. A high value can lead to high memory consumption.`,
+        bounds: [0.1, 10],
+        default: 1
+    },
+    showDebug: {
+        localizedName: 'show debug info',
+        type: 'boolean',
+        default: true
+    }
+});
 
 function sum(a: number[]) {
     return a.reduce((p, c) => p + c, 0);
@@ -128,9 +148,7 @@ export class VideoPlayer implements WithCanvas {
     }
     
     async load(rawurl: string) {
-        if (this.#opened) {
-            await this.close();
-        }
+        if (this.#opened) await this.close();
         if (DebugConfig.data.disableVideo) return;
         
         let media = await MMedia.open(rawurl);
@@ -215,17 +233,16 @@ export class VideoPlayer implements WithCanvas {
 
     #populatingInProgress = false;
     async #populateCache() {
-        const PreloadAmount = 1; // in seconds
-
         if (!this.#opened || this.#opened.preloadEOF || !this.#requestedPreload) {
             this.#populatingInProgress = false;
             return false;
         }
+        const preloadAmount = MediaConfig.data.preloadAmount;
         const video = this.#opened.videoCache;
-        if (video.length > 1 && video.at(-1)!.time - video[0].time > PreloadAmount
+        if (video.length > 1 && video.at(-1)!.time - video[0].time > preloadAmount
          && this.#opened.audioHead !== undefined
          && this.#opened.audioTail !== undefined
-         && this.#opened.audioTail - this.#opened.audioHead > PreloadAmount)
+         && this.#opened.audioTail - this.#opened.audioHead > preloadAmount)
         {
             this.#populatingInProgress = false;
             return false;
@@ -445,7 +462,8 @@ export class VideoPlayer implements WithCanvas {
         if (this.subRenderer)
             this.#ctxbuf.drawImage(this.subRenderer.getCanvas(), 0, 0);
 
-
+        if (!MediaConfig.data.showDebug) return;
+        
         const videoSize = sum(this.#opened.videoCache.map((x) => x.content.length));
         const audioSize = this.#opened.audioSize;
 

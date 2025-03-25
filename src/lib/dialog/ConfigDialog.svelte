@@ -1,8 +1,10 @@
 <script lang="ts">
     import type { DialogHandler } from '../frontend/Dialogs';
     import DialogBase from '../DialogBase.svelte';
-    import { assert, MainConfig, never } from '../Basic';
-    import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../PublicConfig.svelte';
+    import { assert, never } from '../Basic';
+    import { MainConfig } from "../config/Groups";
+    import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
+    import { revealItemInDir } from '@tauri-apps/plugin-opener';
 
     interface Props {
 		handler: DialogHandler<void, void>;
@@ -15,7 +17,9 @@
     handler.showModal = async () => {
         assert(inner !== undefined);
         groups = Object.entries(MainConfig.groups);
+        groups.sort((a, b) => a[1].priority - b[1].priority);
         await inner.showModal!();
+        await MainConfig.save();
     };
 
     let inner: DialogHandler<void> = {}
@@ -27,6 +31,13 @@
     {#snippet header()}
         <h3>configuration</h3>
     {/snippet}
+
+    <p class='notice'>
+        All items are automatically saved. <br/>
+        <button onclick={() => {
+            revealItemInDir(MainConfig.configPath);
+        }}>Show config file (advanced)</button>
+    </p>
     
     {#each groups as [_gkey, group]}
     {@const items = Object.entries(group.definition)}
@@ -41,17 +52,11 @@
         <table>
         <tbody>
         {#each items as [key, item]}
-            {#if item.type == 'boolean'}
             <tr>
-                <td><input type="checkbox" bind:checked={group.data[key] as boolean} /></td>
-                <td>{item.localizedName}</td>
-                <td style="text-align: end;"><button
-                    onclick={() => group.data[key] = group.defaults[key]}
-                >reset</button></td>
-            </tr>
-            {:else}
-            <tr>
-                <td class="key">{item.localizedName}</td>
+                <td class="key hlayout">
+                    <span>{item.localizedName}</span>
+                    <span class='line'></span>
+                </td>
                 <td>
                     {#if item.type == 'select'}
                     {@const options = Object.entries(item.options)}
@@ -60,7 +65,7 @@
                             <input type="radio" bind:group={group.data[key]} value={optkey}
                                    onchange={async () => await MainConfig.save()}/>
                             {option.localizedName}
-                        </label>
+                        </label><br/>
                         {#if option.description}
                         <p class='description'>{option.description}</p>
                         {/if}
@@ -75,8 +80,13 @@
                         {/each}
                     </select>
 
+                    {:else if item.type == 'boolean'}
+                    <input type="checkbox" bind:checked={group.data[key] as boolean} />
+
                     {:else if item.type == 'string'}
-                        <input class="stretch" type="text" bind:value={group.data[key]}
+                        <input class="stretch" type="text"
+                               autocapitalize="none" autocomplete="off" spellcheck="false"
+                               bind:value={group.data[key]}
                                onchange={async () => await MainConfig.save()}/>
 
                     {:else if item.type == 'number' || item.type == 'integer'}
@@ -116,10 +126,10 @@
                     {/if}
                 </td>
                 <td style="text-align: end;"><button
+                    disabled={group.data[key] === group.defaults[key]}
                     onclick={() => group.data[key] = group.defaults[key]}
                 >reset</button></td>
             </tr>
-            {/if}
 
             {#if item.description}
             <tr>
@@ -149,6 +159,12 @@
     
     table td.key {
         white-space: nowrap;
+    }
+    .line {
+        flex-grow: 1;
+        margin-left: 5px;
+        border-bottom: dashed 1px var(--uchu-yin-2);
+        height: 0.75lh;
     }
 
     input[type='checkbox'] {
@@ -180,5 +196,11 @@
         text-align: justify;
         margin: 5px 0 5px 0;
         line-height: 1.4em;
+    }
+    .notice {
+        color: var(--uchu-yin-8);
+        /* font-size: 90%; */
+        text-align: right;
+        margin: 0 0 5px 0;
     }
 </style>

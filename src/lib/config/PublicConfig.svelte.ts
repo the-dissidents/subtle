@@ -1,8 +1,9 @@
 import Ajv, { type JSONSchemaType, type ValidateFunction } from "ajv";
-import { assert, never } from "./Basic";
+import { assert, never } from "../Basic";
 import { path } from "@tauri-apps/api";
 import * as fs from "@tauri-apps/plugin-fs";
-import { guardAsync } from "./frontend/Interface";
+import { guardAsync } from "../frontend/Interface";
+import { join } from "@tauri-apps/api/path";
 
 const ajv = new Ajv({
     removeAdditional: true,
@@ -58,7 +59,8 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
     constructor(
         public readonly name: string,
         public readonly description: string | null,
-        public readonly definition: T
+        public readonly priority: number,
+        public readonly definition: T,
     ) {
         let defaults = {} as any;
 
@@ -107,6 +109,12 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
 export class PublicConfig {
     groups: Record<string, PublicConfigGroup<PublicConfigGroupDefinition>> = {};
 
+    get configPath() {
+        assert(this.#initialized);
+        return this.#configPath;
+    }
+
+    #configPath: string = '';
     #initialized = false;
     #onInitCallbacks: (() => void)[] = [];
 
@@ -121,7 +129,7 @@ export class PublicConfig {
 
     async init() {
         const configName = `${this.name}.json`;
-        console.log(await path.appConfigDir(), configName);
+        this.#configPath = await join(await path.appConfigDir(), configName);
         try {
             if (!await fs.exists(configName, {baseDir: fs.BaseDirectory.AppConfig})) {
                 console.log('no config file found for', this.name);
@@ -163,7 +171,7 @@ export class PublicConfig {
             data[key] = this.groups[key].data;
 
         await guardAsync(() => fs.writeTextFile(configName, 
-            JSON.stringify(data), {baseDir: fs.BaseDirectory.AppConfig}),
+            JSON.stringify(data, null, 2), {baseDir: fs.BaseDirectory.AppConfig}),
             `error saving config for ${this.name}`);
     }
 

@@ -13,9 +13,9 @@ import { Dialogs } from "./Dialogs";
 import { ChangeCause, ChangeType, Source } from "./Source";
 import { Editing } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
-import { Config } from "../Config";
+import { PrivateConfig } from "../config/PrivateConfig";
 import { Playback } from "./Playback";
-import { DebugConfig } from "../Basic";
+import { DebugConfig } from "../config/Groups";
 
 export enum UIFocus {
     Other,
@@ -110,7 +110,7 @@ export const Interface = {
             return;
         }
         await Source.openDocument(newSubs, path, !isJSON);
-        const video = Config.getVideo(path);
+        const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);
     },
 
@@ -120,7 +120,7 @@ export const Interface = {
         
         let source = get(Source.currentFile);
         if (source != '')
-            Config.rememberVideo(source, videoFile);
+            PrivateConfig.rememberVideo(source, videoFile);
     },
 
     async warnIfNotSaved() {
@@ -195,6 +195,6 @@ export const Interface = {
         }
         const text = JSON.stringify(Source.subs.toSerializable());
         if (await Source.saveTo(file, text) && Playback.video?.source)
-            Config.rememberVideo(file, Playback.video.source);
+            PrivateConfig.rememberVideo(file, Playback.video.source);
     }
 }
