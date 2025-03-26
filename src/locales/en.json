@@ -194,7 +194,7 @@
     "search-expression-is-empty": "search expression is empty",
     "search-failed": "search failed:",
     "unable-to-read-file-path": "unable to read file {path}",
-    "very-large-file-warning": "The file you're opening is very large and likely not a supported subtitle file. Do you really want to proceed? This may crash the application."
+    "very-large-file-warning": "The file you're opening is very large and likely not a supported subtitle file.\nDo you really want to proceed?\nThis may crash the application."
   },
   "not-implemented-yet": "Not implemented yet",
   "ok": "ok",

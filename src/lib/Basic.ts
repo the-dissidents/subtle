@@ -7,9 +7,11 @@ import { addMessages, locale } from 'svelte-i18n';
 
 import en from '../locales/en.json';
 import zh_cn from '../locales/zh-cn.json';
+import zh_tw from '../locales/zh-tw.json';
 
 addMessages('en', en);
 addMessages('zh-cn', zh_cn);
+addMessages('zh-tw', zh_tw);
 locale.set('en');
 
 export function assert(val: boolean): asserts val {

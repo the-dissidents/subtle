@@ -16,6 +16,7 @@ export const InterfaceConfig = new PublicConfigGroup(
             options: {
                 en: { localizedName: () => 'English' },
                 'zh-cn': { localizedName: () => '简体中文' },
+                'zh-tw': { localizedName: () => '繁體中文' },
             },
             default: 'en'
         },
