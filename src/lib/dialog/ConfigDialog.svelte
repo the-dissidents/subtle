@@ -34,7 +34,7 @@ locale.subscribe(() => refresh++);
 
 <DialogBase handler={inner} maxWidth="36em" buttons={[{
   name: 'ok',
-  localizedName: $_('ok')
+  localizedName: () => $_('ok')
 }]}>
   {#snippet header()}
     <h3>{$_('menu.configuration')}</h3>

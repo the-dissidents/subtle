@@ -6,7 +6,7 @@ import { _ } from 'svelte-i18n';
 
 export type DialogButton = {
   name: string,
-  localizedName: string,
+  localizedName: () => string,
   disabled?: boolean
 };
 
@@ -26,10 +26,10 @@ let {
   children,
   buttons = [{
     name: 'cancel',
-    localizedName: $_('cancel')
+    localizedName: () => $_('cancel')
   }, {
     name: 'ok',
-    localizedName: $_('ok')
+    localizedName: () => $_('ok')
   }],
 }: Props = $props();
 
@@ -112,7 +112,7 @@ handler.showModal = async () => {
           assert(resolve !== undefined);
           resolve(btn.name);
         }}
-      >{btn.localizedName}</button>
+      >{btn.localizedName()}</button>
     {/each}
   </footer>
 </div>

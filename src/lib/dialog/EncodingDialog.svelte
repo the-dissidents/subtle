@@ -36,7 +36,7 @@ return {
 }
 
 let selectedEncoding: EncodingName | undefined = $state();
-let okButton = $state({name: 'ok', localizedName: $_('ok'), disabled: true});
+let okButton = $state({name: 'ok', localizedName: () => $_('ok'), disabled: true});
 let preview = $state('');
 let source: Uint8Array;
 let candidates: AnalyseResult | undefined = $state();
@@ -61,7 +61,7 @@ if (selectedEncoding && source) {
 <DialogBase handler={inner} maxWidth={'35em'}
   buttons={[{
     name: 'cancel',
-    localizedName: $_('cancel')
+    localizedName: () => $_('cancel')
   }, okButton]}
 >
   {#snippet header()}
