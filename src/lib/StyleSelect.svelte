@@ -46,4 +46,12 @@
 </select>
 
 <style>
+
+.styleselect {
+  padding: 3px;
+  height: 100%;
+  /* background-color: white; */
+  box-sizing: border-box;
+}
+
 </style>

@@ -39,12 +39,14 @@
         <h3>{$_('menu.configuration')}</h3>
     {/snippet}
 
-    <p class='notice'>
-        {$_('configdialog.all-items-are-automatically-saved')}<br/>
+    <div class="hlayout">
+        <p class='notice flexgrow'>
+            {$_('configdialog.all-items-are-automatically-saved')}
+        </p>
         <button onclick={() => {
             revealItemInDir(MainConfig.configPath);
         }}>{$_('configdialog.show-config-file-advanced')}</button>
-    </p>
+    </div>
     
     {#key refresh}
     {#each groups as [_gkey, group]}
@@ -208,8 +210,7 @@
     }
     .notice {
         color: var(--uchu-yin-8);
-        /* font-size: 90%; */
-        text-align: right;
+        font-size: 90%;
         margin: 0 0 5px 0;
     }
 </style>

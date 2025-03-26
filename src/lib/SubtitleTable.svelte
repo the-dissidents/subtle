@@ -53,11 +53,13 @@ import { PublicConfigGroup } from "./config/PublicConfig.svelte";
 import { InterfaceConfig } from "./config/Groups";
 
 import { _ } from 'svelte-i18n';
-    import { get } from 'svelte/store';
+import { get } from 'svelte/store';
 
 let selection = $state(new SvelteSet<SubtitleEntry>);
 let canvas = $state<HTMLCanvasElement>();
 let cxt: CanvasRenderingContext2D;
+
+let uiFocus = Interface.uiFocus;
 
 let centerX: number | undefined;
 let centerY: number | undefined;
@@ -474,6 +476,7 @@ function processWheel(ev: WheelEvent) {
 </script>
 
 <canvas bind:this={canvas}
+  class:subsfocused={$uiFocus === UIFocus.Table}
   onwheel={(ev) => processWheel(ev)}
   onmousemove={() => centerX = undefined}
   onmousedown={(ev) => onMouseDown(ev)}
@@ -499,5 +502,12 @@ function processWheel(ev: WheelEvent) {
   canvas {
     width: 100%;
     height: 100%;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+
+  .subsfocused {
+    /* border: 2px solid skyblue; */
+    box-shadow: 0 5px 10px gray;
   }
 </style>

@@ -1,3 +1,5 @@
+/* RESET */
+
 :root {
   font-family: var(--fontFamily);
   font-size: var(--fontSize);
@@ -14,25 +16,37 @@
   -webkit-text-size-adjust: 100%;
 }
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  cursor: default;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-fieldset {
-  border: none;
+/* WIDGETS */
+
+label {
+  font-size: 90%;
+  line-height: normal;
+}
+
+input {
+  font-size: 0.85rem;
 }
 
 input[type='checkbox'].button {
   display: none;
   width: 0;
   height: 0;
-}
-
-label {
-  font-size: 90%;
-  line-height: normal;
 }
 
 button,
@@ -50,7 +64,7 @@ label:has(input[type='checkbox'].button) {
   text-align: center;
   text-decoration: none;
   font-family: var(--fontFamily);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   padding-block-start: 2px;
   padding-block-end: 3px;
   padding-inline-start: 6px;
@@ -90,11 +104,8 @@ button.right {
   text-align: left;
 }
 
-input {
-  font-size: 0.8rem;
-}
-
 select {
+  /* currently useless */
   font-size: 1rem;
   font-family: var(--fontFamily);
 }
@@ -143,6 +154,8 @@ input[type=range] {
   }
 }
 
+/* HEADER */
+
 h5 {
   margin: 0 1px 3px 1px;
   padding-top: 6px;
@@ -154,66 +167,7 @@ h5 {
   text-align: start;
 }
 
-ul.menu {
-  flex: none;
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background-color: gray;
-  display: flex;
-  align-items: center;
-  cursor: default;
-  user-select: none; -webkit-user-select: none;
-  -moz-user-select: none; -ms-user-select: none;
-}
-
-ul.menu li {
-  float: left;
-  flex: none;
-}
-
-ul.menu button {
-  font-size: 1rem;
-  display: block;
-  color: white;
-  min-width: max-content;
-  background-color: transparent;
-  border: none;
-  border-radius: 0;
-  text-align: center;
-  padding: 10px 15px 10px;
-  text-decoration: none;
-}
-
-ul.menu button:hover {
-  background-color: darkgray !important;
-}
-
-ul.menu button[disabled] {
-  background-color: transparent;
-  color: gainsboro;
-}
-
-ul.menu .label {
-  display: block;
-  color: rgb(226, 223, 223);
-  background-color: transparent;
-  border: none;
-  text-align: start;
-  flex-grow: 1;
-  height: 100%;
-  text-decoration: none;
-  padding: 0 10px 0 10px;
-}
-
-ul.menu .separator {
-  width: 1px;
-  min-height: 30px;
-  display: block;
-  margin: 0 10px;
-  background-color: rgb(193, 193, 193);
-}
+/* CONFIG TABLE */
 
 table.config {
   width: 100%;
@@ -228,40 +182,10 @@ table.config td:first-child {
   /* font-weight: bold; */
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  cursor: default;
-  user-select: none; -webkit-user-select: none;
-  -moz-user-select: none; -ms-user-select: none;
-}
-
-h2 {
-  padding: 0;
-}
-
-.container {
-  margin: 0;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100vh;
-  max-height: 100vh;
-  box-sizing: border-box;
-}
+/* CLASSES */
 
 .isolated {
   contain: layout size style;
-}
-
-.styleselect {
-  padding: 3px;
-  height: 100%;
-  /* background-color: white; */
-  box-sizing: border-box;
 }
 
 .vlayout {
@@ -295,30 +219,9 @@ h2 {
   max-width: 100%;
 }
 
-.fixminheight {
-  min-height: 0;
-  min-width: 0;
-}
-
-.scrollable {
-  max-height: 100%;
-  text-align: start;
-  box-sizing: border-box;
-  /* overflow-x: hidden; */
-  overflow-y: auto;
-}
-
 hr {
   border-top: none;
   border-left: none;
   border-right: none;
   border-bottom: 1px solid var(--uchu-yin-2);
-  /* border-radius: 0.5px; */
 }
-
-/* .label-red    { background-color: var(--uchu-red-2); }
-.label-orange { background-color: var(--uchu-orange-2); }
-.label-yellow { background-color: var(--uchu-yellow-2); }
-.label-green  { background-color: var(--uchu-green-2); }
-.label-blue   { background-color: var(--uchu-blue-2); }
-.label-purple { background-color: var(--uchu-purple-2); } */
