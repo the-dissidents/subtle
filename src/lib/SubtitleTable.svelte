@@ -376,7 +376,7 @@ function onMouseDown(ev: MouseEvent) {
     if (currentLine > totalLines) {
       Editing.selectVirtualEntry();
     } else {
-      let i = 0;
+      let i = 1;
       for (; i < lines.length && lines[i].line <= currentLine; i++);
       Editing.toggleEntry(lines[i-1].entry, getSelectMode(ev), ChangeCause.UIList);
       isDragging = true;
@@ -404,7 +404,7 @@ function requestAutoScroll() {
     let line = (((autoScrollY < 0) ? 0 : height) / scale + scrollY - headerHeight) / lineHeight;
     if (line != currentLine) {
       currentLine = line;
-      let i = 0;
+      let i = 1;
       for (; i < lines.length && lines[i].line < currentLine; i++);
       Editing.selectEntry(lines[i-1].entry, SelectMode.Sequence);
     }
@@ -440,7 +440,7 @@ function onMouseMove(ev: MouseEvent) {
     let line = (offsetY / scale + scrollY - headerHeight) / lineHeight;
     if (line != currentLine) {
       currentLine = line;
-      let i = 0;
+      let i = 1;
       for (; i < lines.length && lines[i].line < currentLine; i++);
       Editing.selectEntry(lines[i-1].entry, SelectMode.Sequence);
     }

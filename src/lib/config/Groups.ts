@@ -15,7 +15,6 @@ export const InterfaceConfig = new PublicConfigGroup(
         language: {
             localizedName: () => $_('config.language'),
             type: 'dropdown',
-            description: () => $_('not-implemented-yet'),
             options: {
                 en: { localizedName: () => 'English' },
                 'zh-cn': { localizedName: () => '简体中文' },
@@ -48,6 +47,7 @@ export const InterfaceConfig = new PublicConfigGroup(
         fontFamily: {
             localizedName: () => $_('config.ui-font-family'),
             type: 'string',
+            description: () => $_('config.ui-font-family-d'),
             default: 'Arial, Helvetica, sans-serif'
         }
     });

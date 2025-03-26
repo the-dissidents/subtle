@@ -87,6 +87,7 @@
     "trackpad-zoom-sensitivity": "触控板缩放灵敏度",
     "trackpad-zoom-sensitivity-d": "使用触控板时的缩放速度系数。调整以使滚动速度与鼠标滚轮保持一致",
     "ui-font-family": "UI字体",
+    "ui-font-family-d": "用逗号分隔列表指定优先级。包含空格的字体名称需要放在直引号（\"\"）里",
     "ui-font-size": "UI字号",
     "use-system-theme": "使用系统主题"
   },

@@ -14,7 +14,6 @@
 <script lang="ts">
     import { onDestroy, setContext } from "svelte";
     import { writable, get } from "svelte/store";
-    import { SvelteMap } from "svelte/reactivity";
 
     interface Props {
         children: import('svelte').Snippet;
@@ -24,22 +23,21 @@
 
     let Pages: [Symbol, TabPageData][] = [];
     let Selected = writable<Symbol | undefined>(undefined);
-
     let update = $state(0);
-    let selected: Symbol | undefined = $state();
-    Selected.subscribe((x) => { selected = x; });
 
     setContext<TabAPI>(TabAPIContext, {
         registerPage(id, data) {
             console.log('register page:', get(data.name));
             Pages.push([id, data]);
             Selected.update((x) => x ?? id);
+            data.name.subscribe(() => update++);
             update++;
+
             onDestroy(() => {
                 const i = Pages.findIndex((x) => x[0] === id);
                 if (i < 0) return;
                 Pages.splice(i, 1);
-                if (Pages.length == 0) Selected.set(undefined);
+                if (Pages.length == 0) $Selected = undefined;
                 else Selected.update((x) => x === id 
                     ? (Pages[i] ?? Pages[Pages.length - 1])[0] : x);
             });
@@ -55,8 +53,8 @@
         {#key update}
         {#each Pages as [id, data]}
         <button 
-            class:selected="{selected === id}"
-            onclick={() => Selected.set(id)}>{get(data.name)}</button>
+            class:selected="{$Selected === id}"
+            onclick={() => $Selected = id}>{get(data.name)}</button>
         {/each}
         {/key}
     </div>

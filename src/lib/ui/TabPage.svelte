@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { getContext } from "svelte";
+    import { getContext, type Snippet } from "svelte";
     import { TabAPIContext, type TabAPI, type TabPageData } from "./TabView.svelte";
     import { writable, get } from "svelte/store";
 
     interface Props {
         name?: string;
         active?: boolean;
-        children?: import('svelte').Snippet;
+        children?: Snippet;
     }
 
     let { name = $bindable("Tab"), active = $bindable(false), children }: Props = $props();
@@ -19,13 +19,12 @@
     tabApi.registerPage(id, page);
     const selection = tabApi.selected();
 
-    $effect(() => { writableName.set(name); });
+    $effect(() => { $writableName = name; });
+    $effect(() => { if (active) $selection = id; });
 
     selection.subscribe((x) => {
         active = x === id;
     });
-
-    $effect(() => { if (active) selection.set(id); });
 </script>
 
 <div class='page fill' class:active>

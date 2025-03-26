@@ -87,6 +87,7 @@
     "trackpad-zoom-sensitivity": "trackpad zoom sensitivity",
     "trackpad-zoom-sensitivity-d": "Multiplier for zooming speed using trackpad (typically pinching). Adjust to make zooming speed desirable and consistent with mouse wheel.",
     "ui-font-family": "UI font family",
+    "ui-font-family-d": "Specify fallbacks with a comma-separated list, as in CSS. Font names containing spaces should be wrapped in straight quotes (\"\").",
     "ui-font-size": "UI font size",
     "use-system-theme": "use system theme"
   },
