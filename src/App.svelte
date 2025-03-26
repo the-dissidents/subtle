@@ -1,6 +1,4 @@
 <script lang="ts">
-  import EntryEdit from './EntryEdit.svelte';
-
 import * as _i18n from './lib/i18n';
 
 import { InterfaceConfig, MainConfig } from "./lib/config/Groups";
@@ -18,6 +16,7 @@ import TabPage from './lib/ui/TabPage.svelte';
 import Resizer from './lib/ui/Resizer.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
 import SubtitleTable from './lib/SubtitleTable.svelte';
+import EntryEdit from './lib/EntryEdit.svelte';
 
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';

@@ -1,35 +1,35 @@
 <script lang="ts">
-  interface Props {
-    control: HTMLElement;
-    control2?: HTMLElement | null;
-    vertical?: boolean;
-    reverse?: boolean;
-    minValue?: number;
-    children?: import('svelte').Snippet;
-  }
+interface Props {
+  control: HTMLElement;
+  control2?: HTMLElement | null;
+  vertical?: boolean;
+  reverse?: boolean;
+  minValue?: number;
+  children?: import('svelte').Snippet;
+}
 
-  let {
-    control = $bindable(),
-    control2 = $bindable(null),
-    vertical = false,
-    reverse = false,
-    minValue = 10,
-    children
-  }: Props = $props();
-  let cx = $state(0), cy = $state(0), orig = $state(0), orig2 = $state(0);
+let {
+  control = $bindable(),
+  control2 = $bindable(null),
+  vertical = false,
+  reverse = false,
+  minValue = 10,
+  children
+}: Props = $props();
+let cx = $state(0), cy = $state(0), orig = $state(0), orig2 = $state(0);
 
-  function ondrag(ev: MouseEvent) {
-    let f = reverse ? -1 : 1;
-    if (vertical) {
-      let val = Math.max(orig + (ev.clientX - cx) * f, minValue);
-      if (control2) control2.style.width = (orig2 + val - orig) + 'px';
-      control.style.width = val + 'px';
-    } else {
-      let val = Math.max(orig + (ev.clientY - cy) * f, minValue);
-      if (control2) control2.style.height = (orig2 + val - orig) + 'px';
-      control.style.height = val + 'px';
-    }
+function ondrag(ev: MouseEvent) {
+  let f = reverse ? -1 : 1;
+  if (vertical) {
+    let val = Math.max(orig + (ev.clientX - cx) * f, minValue);
+    if (control2) control2.style.width = (orig2 + val - orig) + 'px';
+    control.style.width = val + 'px';
+  } else {
+    let val = Math.max(orig + (ev.clientY - cy) * f, minValue);
+    if (control2) control2.style.height = (orig2 + val - orig) + 'px';
+    control.style.height = val + 'px';
   }
+}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->

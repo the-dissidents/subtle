@@ -1,96 +1,96 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
-  import { assert } from "./Basic";
-  import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./core/Subtitles.svelte";
-  import { Menu } from "@tauri-apps/api/menu";
-  import Collapsible from "./ui/Collapsible.svelte";
-  import { writable } from 'svelte/store';
-  import { ChangeCause, ChangeType, Source } from "./frontend/Source";
+import { createEventDispatcher } from "svelte";
+import { assert } from "./Basic";
+import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./core/Subtitles.svelte";
+import { Menu } from "@tauri-apps/api/menu";
+import Collapsible from "./ui/Collapsible.svelte";
+import { writable } from 'svelte/store';
+import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
-	import { _ } from 'svelte-i18n';
+import { _ } from 'svelte-i18n';
 
-	const dispatch = createEventDispatcher();
-	const submit = () => dispatch('submit');
+const dispatch = createEventDispatcher();
+const submit = () => dispatch('submit');
 
-  interface Props {
-    style: SubtitleStyle;
-    subtitles: Subtitles;
+interface Props {
+  style: SubtitleStyle;
+  subtitles: Subtitles;
+}
+
+let { style: _style, subtitles = $bindable() }: Props = $props();
+let alignSelector: HTMLSelectElement | undefined = $state();
+let button: HTMLButtonElement | undefined = $state();
+let style = writable(_style);
+
+function isDuplicate(name: string) {
+  for (let s of [...subtitles.styles, subtitles.defaultStyle]) {
+    if (s === _style) continue;
+    if (s.name == name) return true;
   }
+  return false;
+}
 
-  let { style: _style, subtitles = $bindable() }: Props = $props();
-  let alignSelector: HTMLSelectElement | undefined = $state();
-  let button: HTMLButtonElement | undefined = $state();
-  let style = writable(_style);
-
-  function isDuplicate(name: string) {
-    for (let s of [...subtitles.styles, subtitles.defaultStyle]) {
-      if (s === _style) continue;
-      if (s.name == name) return true;
-    }
-    return false;
-  }
-
-  async function contextMenu() {
-    let isDefault = $style == subtitles.defaultStyle;
-    let used = subtitles.entries.filter(
-      (x) => x.texts.find((c) => c.style == $style) !== undefined);
-    let withoutThis = isDefault ? [] : [subtitles.defaultStyle];
-    withoutThis.push(...subtitles.styles.filter((x) => x !== $style));
-    
-    let menu = await Menu.new({
-      items: [
-      {
-        text: $_('style.delete'),
-        enabled: used.length == 0 && !isDefault,
-        action() {
-          let i = subtitles.styles.indexOf($style);
-          if (i < 0) return;
-          subtitles.styles.splice(i, 1);
-          Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-          submit();
+async function contextMenu() {
+  let isDefault = $style == subtitles.defaultStyle;
+  let used = subtitles.entries.filter(
+    (x) => x.texts.find((c) => c.style == $style) !== undefined);
+  let withoutThis = isDefault ? [] : [subtitles.defaultStyle];
+  withoutThis.push(...subtitles.styles.filter((x) => x !== $style));
+  
+  let menu = await Menu.new({
+    items: [
+    {
+      text: $_('style.delete'),
+      enabled: used.length == 0 && !isDefault,
+      action() {
+        let i = subtitles.styles.indexOf($style);
+        if (i < 0) return;
+        subtitles.styles.splice(i, 1);
+        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        submit();
+      }
+    },
+    {
+      text: $_('style.duplicate'),
+      action() {
+        let clone = $style.clone();
+        clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
+        subtitles.styles.push(clone);
+        subtitles.styles = subtitles.styles;
+        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        submit();
+      }
+    },
+    {
+      text: $_('style.replace-by'),
+      enabled: withoutThis.length > 0,
+      items: withoutThis.map((x, i) => ({
+        id: i.toString(),
+        text: x.name,
+        action(id) {
+          let n = Number.parseInt(id);
+          let other = withoutThis[n];
+          if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
+            Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
         }
-      },
-      {
-        text: $_('style.duplicate'),
-        action() {
-          let clone = $style.clone();
-          clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
-          subtitles.styles.push(clone);
-          subtitles.styles = subtitles.styles;
-          Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-          submit();
-        }
-      },
-      {
-        text: $_('style.replace-by'),
-        enabled: withoutThis.length > 0,
-        items: withoutThis.map((x, i) => ({
-          id: i.toString(),
-          text: x.name,
-          action(id) {
-            let n = Number.parseInt(id);
-            let other = withoutThis[n];
-            if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
-              Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
-          }
-        }))
-      },
-      {
-        text: $_('style.set-as-default'),
-        enabled: subtitles.defaultStyle != $style,
-        action() {
-          let oldDefault = subtitles.defaultStyle;
-          subtitles.defaultStyle = $style;
-          const index = subtitles.styles.indexOf($style);
-          subtitles.styles.splice(index, 1);
-          subtitles.styles.splice(0, 0, oldDefault);
-          Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-          submit();
-        }
-      },
-    ]});
-    menu.popup();
-  }
+      }))
+    },
+    {
+      text: $_('style.set-as-default'),
+      enabled: subtitles.defaultStyle != $style,
+      action() {
+        let oldDefault = subtitles.defaultStyle;
+        subtitles.defaultStyle = $style;
+        const index = subtitles.styles.indexOf($style);
+        subtitles.styles.splice(index, 1);
+        subtitles.styles.splice(0, 0, oldDefault);
+        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        submit();
+      }
+    },
+  ]});
+  menu.popup();
+}
 </script>
 
 <div class='hlayout'>

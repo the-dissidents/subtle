@@ -1,35 +1,35 @@
 <script lang="ts" module>
 export const TableConfig = new PublicConfigGroup(
-    () => get(_)('config.table-view'),
-    null, 1,
+  () => get(_)('config.table-view'),
+  null, 1,
 {
   maxZoom: {
-      localizedName: () => get(_)('config.maximum-zoom'),
-      type: 'number',
-      description: () => get(_)('config.maximum-zoom-d'),
-      bounds: [1, 6],
-      default: 2
+    localizedName: () => get(_)('config.maximum-zoom'),
+    type: 'number',
+    description: () => get(_)('config.maximum-zoom-d'),
+    bounds: [1, 6],
+    default: 2
   },
   minScrollerLength: {
-      localizedName: () => get(_)('config.minimum-scroller-length'),
-      type: 'number',
-      description: () => get(_)('config.minimum-scroller-length-d'),
-      bounds: [1, 200],
-      default: 20
+    localizedName: () => get(_)('config.minimum-scroller-length'),
+    type: 'number',
+    description: () => get(_)('config.minimum-scroller-length-d'),
+    bounds: [1, 200],
+    default: 20
   },
   autoScrollSpeed: {
-      localizedName: () => get(_)('config.auto-scroll-factor'),
-      type: 'number',
-      description: () => get(_)('config.auto-scroll-factor-d'),
-      bounds: [1, 5],
-      default: 2
+    localizedName: () => get(_)('config.auto-scroll-factor'),
+    type: 'number',
+    description: () => get(_)('config.auto-scroll-factor-d'),
+    bounds: [1, 5],
+    default: 2
   },
   autoScrollExponent: {
-      localizedName: () => get(_)('config.auto-scroll-exponent'),
-      type: 'number',
-      description: () => get(_)('config.auto-scroll-exponent-d'),
-      bounds: [1, 2],
-      default: 1.5
+    localizedName: () => get(_)('config.auto-scroll-exponent'),
+    type: 'number',
+    description: () => get(_)('config.auto-scroll-exponent-d'),
+    bounds: [1, 2],
+    default: 1.5
   },
 });
 </script>

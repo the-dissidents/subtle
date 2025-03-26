@@ -1,16 +1,16 @@
 <script lang="ts">
-import * as _i18n from './lib/i18n';
+import * as _i18n from './i18n';
 
-import StyleSelect from './lib/StyleSelect.svelte';
-import TimestampInput from './lib/TimestampInput.svelte';
+import StyleSelect from './StyleSelect.svelte';
+import TimestampInput from './TimestampInput.svelte';
 
-import { assert } from './lib/Basic';
-import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './lib/core/Subtitles.svelte'
-import { LabelColor } from './lib/Theming';
+import { assert } from './Basic';
+import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './core/Subtitles.svelte'
+import { LabelColor } from './Theming';
 import { tick } from 'svelte';
-import { ChangeCause, ChangeType, Source } from './lib/frontend/Source';
-import { Editing } from './lib/frontend/Editing';
-import { Interface, UIFocus } from './lib/frontend/Interface';
+import { ChangeCause, ChangeType, Source } from './frontend/Source';
+import { Editing } from './frontend/Editing';
+import { Interface, UIFocus } from './frontend/Interface';
 
 import { _ } from 'svelte-i18n';
 

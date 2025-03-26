@@ -1,174 +1,174 @@
 <script lang="ts">
-  import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
-  import * as dialog from "@tauri-apps/plugin-dialog"
-  import { onDestroy } from "svelte";
+import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
+import * as dialog from "@tauri-apps/plugin-dialog"
+import { onDestroy } from "svelte";
 
-  import type { SubtitleChannel, SubtitleEntry } from "../core/Subtitles.svelte";
-  import * as fuzzyAlgorithm from "../Fuzzy";
-  import { assert, Basic } from "../Basic";
+import type { SubtitleChannel, SubtitleEntry } from "../core/Subtitles.svelte";
+import * as fuzzyAlgorithm from "../Fuzzy";
+import { assert, Basic } from "../Basic";
 
-  import Collapsible from "../ui/Collapsible.svelte";
-  import StyleSelect from "../StyleSelect.svelte";
-  
-  import { ChangeCause, ChangeType, Source } from "../frontend/Source";
-  import { Editing } from "../frontend/Editing";
-  import { Interface, UIFocus } from "../frontend/Interface";
-  import { Dialogs } from "../frontend/Dialogs";
-  import { EventHost } from "../frontend/Frontend";
+import Collapsible from "../ui/Collapsible.svelte";
+import StyleSelect from "../StyleSelect.svelte";
 
-  import { _ } from 'svelte-i18n';
+import { ChangeCause, ChangeType, Source } from "../frontend/Source";
+import { Editing } from "../frontend/Editing";
+import { Interface, UIFocus } from "../frontend/Interface";
+import { Dialogs } from "../frontend/Dialogs";
+import { EventHost } from "../frontend/Frontend";
 
-  export let locked = false;
-  let textsize = 14;
-  let justify = true;
-  let textarea: HTMLTextAreaElement;
+import { _ } from 'svelte-i18n';
 
-  let fuzzy = {
-    enabled: false,
-    maxSkip: 3,
-    minScore: 0.5,
-    channel: Source.subs.defaultStyle,
-    snapToPunct: true,
-    tokenizer: 'default',
-    engine: null as fuzzyAlgorithm.Searcher | null,
-    currentChannel: null as SubtitleChannel | null,
-    currentEntry: null as SubtitleEntry | null
+export let locked = false;
+let textsize = 14;
+let justify = true;
+let textarea: HTMLTextAreaElement;
+
+let fuzzy = {
+  enabled: false,
+  maxSkip: 3,
+  minScore: 0.5,
+  channel: Source.subs.defaultStyle,
+  snapToPunct: true,
+  tokenizer: 'default',
+  engine: null as fuzzyAlgorithm.Searcher | null,
+  currentChannel: null as SubtitleChannel | null,
+  currentEntry: null as SubtitleEntry | null
+}
+
+const me = {};
+onDestroy(() => EventHost.unbind(me));
+
+Source.onSubtitleObjectReload.bind(me, readFromSubs);
+Editing.onSelectionChanged.bind(me, fuzzyMatch);
+
+$: if (fuzzy.enabled) {
+  locked = true;
+  fuzzyMatch();
+}
+
+function updateToSubs() {
+  if (Source.subs.metadata.special.untimedText == textarea.value) return;
+  Source.subs.metadata.special.untimedText = textarea.value;
+  fuzzy.engine = null;
+  Source.markChanged(ChangeType.Metadata, ChangeCause.Action);
+}
+
+function readFromSubs() {
+  textarea.value = Source.subs.metadata.special.untimedText;
+  fuzzy.channel = Source.subs.defaultStyle;
+}
+
+function fuzzyMatch() {
+  if (!fuzzy.enabled) return;
+
+  let current = Editing.selection.focused?.texts.find(
+    (x) => x.style.uniqueID == fuzzy.channel.uniqueID);
+  if (!current || current.text == '' || textarea.value == '') {
+    console.log('no current', Editing.selection)
+    fuzzy.currentChannel = null;
+    fuzzy.currentEntry = null;
+    textarea.selectionEnd = textarea.selectionStart;
+    return;
   }
+  if (current.text == fuzzy.currentChannel?.text) return;
+  fuzzy.currentChannel = current;
+  fuzzy.currentEntry = Editing.selection.focused;
 
-  const me = {};
-  onDestroy(() => EventHost.unbind(me));
-
-  Source.onSubtitleObjectReload.bind(me, readFromSubs);
-  Editing.onSelectionChanged.bind(me, fuzzyMatch);
-
-  $: if (fuzzy.enabled) {
-    locked = true;
-    fuzzyMatch();
-  }
-
-  function updateToSubs() {
-    if (Source.subs.metadata.special.untimedText == textarea.value) return;
-    Source.subs.metadata.special.untimedText = textarea.value;
-    fuzzy.engine = null;
-    Source.markChanged(ChangeType.Metadata, ChangeCause.Action);
-  }
-
-  function readFromSubs() {
-    textarea.value = Source.subs.metadata.special.untimedText;
-    fuzzy.channel = Source.subs.defaultStyle;
-  }
-
-  function fuzzyMatch() {
-    if (!fuzzy.enabled) return;
-
-    let current = Editing.selection.focused?.texts.find(
-      (x) => x.style.uniqueID == fuzzy.channel.uniqueID);
-    if (!current || current.text == '' || textarea.value == '') {
-      console.log('no current', Editing.selection)
-      fuzzy.currentChannel = null;
-      fuzzy.currentEntry = null;
-      textarea.selectionEnd = textarea.selectionStart;
-      return;
+  // create engine if necessary
+  if (fuzzy.engine === null) {
+    let tokenizer: fuzzyAlgorithm.Tokenizer;
+    switch (fuzzy.tokenizer) {
+      case 'syllable':
+        tokenizer = fuzzyAlgorithm.SyllableTokenizer; break;
+      case 'regexb':
+        tokenizer = new fuzzyAlgorithm.RegexTokenizer([/\b/]); break;
+      case 'default':
+      default:
+        tokenizer = fuzzyAlgorithm.DefaultTokenizer; break;
     }
-    if (current.text == fuzzy.currentChannel?.text) return;
-    fuzzy.currentChannel = current;
-    fuzzy.currentEntry = Editing.selection.focused;
+    fuzzy.engine = new fuzzyAlgorithm.Searcher(textarea.value, tokenizer);
+  }
 
-    // create engine if necessary
-    if (fuzzy.engine === null) {
-      let tokenizer: fuzzyAlgorithm.Tokenizer;
-      switch (fuzzy.tokenizer) {
-        case 'syllable':
-          tokenizer = fuzzyAlgorithm.SyllableTokenizer; break;
-        case 'regexb':
-          tokenizer = new fuzzyAlgorithm.RegexTokenizer([/\b/]); break;
-        case 'default':
-        default:
-          tokenizer = fuzzyAlgorithm.DefaultTokenizer; break;
-      }
-      fuzzy.engine = new fuzzyAlgorithm.Searcher(textarea.value, tokenizer);
+  // perform search
+  const fail = () => {
+    textarea.selectionEnd = textarea.selectionStart;
+    Interface.status.set($_('untimed.fuzzy-search-failed-to-find-anything'));
+  };
+  let result = fuzzy.engine.search(current.text, fuzzy.maxSkip);
+  if (!result) {
+    fail();
+    return;
+  }
+  let [i0, i1, n, m] = result;
+  if (n / m < fuzzy.minScore) {
+    fail();
+    return;
+  }
+  // snap to punctuation
+  if (fuzzy.snapToPunct && textarea.value.length > i1 
+    && !/\p{P}/u.test(textarea.value[i1-1]) && /\p{P}/u.test(textarea.value[i1])) i1++;
+  // trim whitespaces
+  while (i1 > 0 && /\s/.test(textarea.value[i1-1])) i1--;
+  while (i0 < textarea.value.length && /\s/.test(textarea.value[i0])) i0++;
+  // display
+  if (i0 >= i1) fail(); else {
+    setSelectionAndScroll(i0, i1);
+    Interface.status.set($_('untimed.fuzzy-match-found', {values: {x: n / m}}));
+  }
+}
+
+function offset(from: number, right: boolean) {
+  const text = textarea.value;
+  if (right && from == text.length) return from;
+  if (!right && from == 0) return from;
+
+  if (!fuzzy.engine)
+    return from + (right ? 1 : -1);
+
+  const prefix = fuzzy.engine.prefixLengthList();
+  let result = right 
+    ? prefix.find((x) => x > from) 
+    : prefix.findLast((x) => x < from);
+  assert(result !== undefined);
+  return result;
+}
+
+// per https://stackoverflow.com/a/55111246
+function setSelectionAndScroll(selectionStart: number, selectionEnd: number) {
+    // First scroll selection region to view
+    const fullText = textarea.value;
+    textarea.value = fullText.substring(0, selectionEnd);
+    // For some unknown reason, you must store the scollHeight to a variable
+    // before setting the textarea value. Otherwise it won't work for long strings
+    const scrollHeight = textarea.scrollHeight
+    textarea.value = fullText;
+    let scrollTop = scrollHeight;
+    const textareaHeight = textarea.clientHeight;
+    if (scrollTop > textareaHeight){
+        // scroll selection to center of textarea
+        scrollTop -= textareaHeight / 2;
+    } else{
+        scrollTop = 0;
     }
+    textarea.scrollTop = scrollTop;
 
-    // perform search
-    const fail = () => {
-      textarea.selectionEnd = textarea.selectionStart;
-      Interface.status.set($_('untimed.fuzzy-search-failed-to-find-anything'));
-    };
-    let result = fuzzy.engine.search(current.text, fuzzy.maxSkip);
-    if (!result) {
-      fail();
-      return;
-    }
-    let [i0, i1, n, m] = result;
-    if (n / m < fuzzy.minScore) {
-      fail();
-      return;
-    }
-    // snap to punctuation
-    if (fuzzy.snapToPunct && textarea.value.length > i1 
-      && !/\p{P}/u.test(textarea.value[i1-1]) && /\p{P}/u.test(textarea.value[i1])) i1++;
-    // trim whitespaces
-    while (i1 > 0 && /\s/.test(textarea.value[i1-1])) i1--;
-    while (i0 < textarea.value.length && /\s/.test(textarea.value[i0])) i0++;
-    // display
-    if (i0 >= i1) fail(); else {
-      setSelectionAndScroll(i0, i1);
-      Interface.status.set($_('untimed.fuzzy-match-found', {values: {x: n / m}}));
-    }
-  }
+    // Continue to set selection range
+    textarea.setSelectionRange(selectionStart, selectionEnd);
+}
 
-  function offset(from: number, right: boolean) {
-    const text = textarea.value;
-    if (right && from == text.length) return from;
-    if (!right && from == 0) return from;
+async function paste() {
+  let text = await clipboard.readText();
+  if (text.length > 500000 && !await dialog.confirm(
+    'The text in your clipboard is very long. Proceed to import?', 
+    {kind: 'warning'})) return;
+  textarea.value = text;
+  updateToSubs();
+}
 
-    if (!fuzzy.engine)
-      return from + (right ? 1 : -1);
-
-    const prefix = fuzzy.engine.prefixLengthList();
-    let result = right 
-      ? prefix.find((x) => x > from) 
-      : prefix.findLast((x) => x < from);
-    assert(result !== undefined);
-    return result;
-  }
-
-  // per https://stackoverflow.com/a/55111246
-  function setSelectionAndScroll(selectionStart: number, selectionEnd: number) {
-      // First scroll selection region to view
-      const fullText = textarea.value;
-      textarea.value = fullText.substring(0, selectionEnd);
-      // For some unknown reason, you must store the scollHeight to a variable
-      // before setting the textarea value. Otherwise it won't work for long strings
-      const scrollHeight = textarea.scrollHeight
-      textarea.value = fullText;
-      let scrollTop = scrollHeight;
-      const textareaHeight = textarea.clientHeight;
-      if (scrollTop > textareaHeight){
-          // scroll selection to center of textarea
-          scrollTop -= textareaHeight / 2;
-      } else{
-          scrollTop = 0;
-      }
-      textarea.scrollTop = scrollTop;
-
-      // Continue to set selection range
-      textarea.setSelectionRange(selectionStart, selectionEnd);
-  }
-
-  async function paste() {
-    let text = await clipboard.readText();
-    if (text.length > 500000 && !await dialog.confirm(
-      'The text in your clipboard is very long. Proceed to import?', 
-      {kind: 'warning'})) return;
-    textarea.value = text;
-    updateToSubs();
-  }
-
-  function clear() {
-    textarea.value = '';
-    updateToSubs();
-  }
+function clear() {
+  textarea.value = '';
+  updateToSubs();
+}
 </script>
 
 <svelte:document 

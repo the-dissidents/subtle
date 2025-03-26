@@ -1,23 +1,23 @@
 <script lang="ts">
-    import Tooltip from "./Tooltip.svelte";
+import Tooltip from "./Tooltip.svelte";
 
-  interface Props {
-    header?: string;
-    helpText?: string;
-    active?: boolean;
-    showCheck?: boolean;
-    checked?: boolean;
-    children?: import('svelte').Snippet;
-  }
+interface Props {
+  header?: string;
+  helpText?: string;
+  active?: boolean;
+  showCheck?: boolean;
+  checked?: boolean;
+  children?: import('svelte').Snippet;
+}
 
-  let {
-    header = "",
-    helpText = "",
-    active = $bindable(false),
-    showCheck = false,
-    checked = $bindable(false),
-    children
-  }: Props = $props();
+let {
+  header = "",
+  helpText = "",
+  active = $bindable(false),
+  showCheck = false,
+  checked = $bindable(false),
+  children
+}: Props = $props();
 </script>
 
 <button type="button" class="collapsible hlayout"
