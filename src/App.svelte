@@ -43,7 +43,7 @@ import { Actions } from './lib/frontend/Actions';
 import { getVersion } from '@tauri-apps/api/app';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
 
-import { _ } from 'svelte-i18n';
+import { _, locale } from 'svelte-i18n';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -71,7 +71,7 @@ let editingLabel: LabelTypes = $state('none');
 let status = Interface.status;
 let uiFocus = Interface.uiFocus;
 let filenameDisplay = 
-  derived([Source.currentFile, Source.fileChanged], 
+  derived([Source.currentFile, Source.fileChanged, _], 
     ([x, y]) => `${x ? Basic.getFilename(x) : $_('untitled')}${y ? '*' : ''}`);
 
 const me = {};
@@ -179,6 +179,10 @@ MainConfig.onInitialized(() => {
 $effect(() => {
   document.documentElement.style.setProperty('--fontSize', `${InterfaceConfig.data.fontSize}px`);
   document.documentElement.style.setProperty('--fontFamily', InterfaceConfig.data.fontFamily);
+});
+
+$effect(() => {
+    locale.set(InterfaceConfig.data.language);
 });
 
 getVersion().then((x) => 
@@ -302,13 +306,13 @@ appWindow.onDragDropEvent(async (ev) => {
       <div class="flexgrow fixminheight">
         <TabView>
         {#snippet children()}
-          <TabPage name="Properties">
+          <TabPage name={$_('tab.properties')}>
             <PropertiesToolbox/>
           </TabPage>
-          <TabPage name="Untimed text" active={true}>
+          <TabPage name={$_('tab.untimed-text')} active={true}>
             <UntimedToolbox/>
           </TabPage>
-          <TabPage name="Search/Replace">
+          <TabPage name={$_('tab.search-replace')}>
             <SearchToolbox/>
           </TabPage>
           <TabPage name="Test">

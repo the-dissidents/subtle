@@ -1,33 +1,33 @@
 <script lang="ts" module>
 export const TableConfig = new PublicConfigGroup(
-    'table view',
-    '', 1,
+    () => get(_)('config.table-view'),
+    null, 1,
 {
   maxZoom: {
-      localizedName: 'maximum zoom',
+      localizedName: () => get(_)('config.maximum-zoom'),
       type: 'number',
-      description: `Maximum zoom level, in proportion to regular size (e.g. 1 = 100%, 2 = 200%).`,
+      description: () => get(_)('config.maximum-zoom-d'),
       bounds: [1, 6],
       default: 2
   },
   minScrollerLength: {
-      localizedName: 'minimum scroller length',
+      localizedName: () => get(_)('config.minimum-scroller-length'),
       type: 'number',
-      description: `Minimum scroller length to prevent it from becoming too small, in CSS pixels.`,
+      description: () => get(_)('config.minimum-scroller-length-d'),
       bounds: [1, 200],
       default: 20
   },
   autoScrollSpeed: {
-      localizedName: 'auto scroll factor',
+      localizedName: () => get(_)('config.auto-scroll-factor'),
       type: 'number',
-      description: `Multiplier for the automatic scrolling when dragging outside of the table area.`,
+      description: () => get(_)('config.auto-scroll-factor-d'),
       bounds: [1, 5],
       default: 2
   },
   autoScrollExponent: {
-      localizedName: 'auto scroll exponent',
+      localizedName: () => get(_)('config.auto-scroll-exponent'),
       type: 'number',
-      description: `Exponent for the automatic scrolling when dragging outside of the table area. The magnitude of autoscroll speed per second is calculated as: (distanceFromEdge * factor) ^ exponent.`,
+      description: () => get(_)('config.auto-scroll-exponent-d'),
       bounds: [1, 2],
       default: 1.5
   },
@@ -50,7 +50,10 @@ import { Actions } from "./frontend/Actions";
 import { EventHost, translateWheelEvent } from "./frontend/Frontend";
 import { CanvasKeeper } from "./CanvasKeeper";
 import { PublicConfigGroup } from "./config/PublicConfig.svelte";
-    import { InterfaceConfig } from "./config/Groups";
+import { InterfaceConfig } from "./config/Groups";
+
+import { _ } from 'svelte-i18n';
+    import { get } from 'svelte/store';
 
 let selection = $state(new SvelteSet<SubtitleEntry>);
 let canvas = $state<HTMLCanvasElement>();
@@ -220,7 +223,7 @@ function render() {
     cxt.fillStyle = 'black';
     cxt.textBaseline = 'middle';
     cxt.textAlign = 'end';
-    cxt.fillText(`﹡`, colPos[1] - cellPadding, maxY - lineHeight * 0.5);
+    cxt.fillText(`*`, colPos[1] - cellPadding, maxY - lineHeight * 0.5);
   }
 
   // header
@@ -231,11 +234,12 @@ function render() {
   cxt.textAlign = 'end';
   cxt.fillText(`#`,     colPos[1] - cellPadding, scrollY + linePadding);
   cxt.fillText(`nps`,   colPos[5] - cellPadding, scrollY + linePadding);
+  cxt.textAlign = 'center';
+  cxt.fillText($_('table.start'), (colPos[1] + colPos[2]) / 2, scrollY + linePadding);
+  cxt.fillText($_('table.end'),   (colPos[2] + colPos[3]) / 2, scrollY + linePadding);
+  cxt.fillText($_('table.style'), (colPos[3] + colPos[4]) / 2, scrollY + linePadding);
   cxt.textAlign = 'start';
-  cxt.fillText(`start`, colPos[1] + cellPadding, scrollY + linePadding);
-  cxt.fillText(`end`,   colPos[2] + cellPadding, scrollY + linePadding);
-  cxt.fillText(`style`, colPos[3] + cellPadding, scrollY + linePadding);
-  cxt.fillText(`text`,  colPos[5] + cellPadding, scrollY + linePadding);
+  cxt.fillText($_('table.text'),  colPos[5] + cellPadding, scrollY + linePadding);
 
   // vertical lines
   cxt.strokeStyle = gridMajorColor;

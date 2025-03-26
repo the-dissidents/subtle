@@ -2,11 +2,11 @@
     import type { DialogHandler } from '../frontend/Dialogs';
     import DialogBase from '../DialogBase.svelte';
     import { assert, never } from '../Basic';
-    import { MainConfig } from "../config/Groups";
+    import { InterfaceConfig, MainConfig } from "../config/Groups";
     import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
     import { revealItemInDir } from '@tauri-apps/plugin-opener';
 
-    import { _ } from 'svelte-i18n';
+    import { _, locale } from 'svelte-i18n';
 
     interface Props {
 		handler: DialogHandler<void, void>;
@@ -26,9 +26,15 @@
 
     let inner: DialogHandler<void> = {}
     let groups = $state<[string, PublicConfigGroup<PublicConfigGroupDefinition>][]>([]);
+    let refresh = $state(0);
+
+    locale.subscribe(() => refresh++);
 </script>
 
-<DialogBase handler={inner} maxWidth="36em" buttons={['ok']}>
+<DialogBase handler={inner} maxWidth="36em" buttons={[{
+    name: 'ok',
+    localizedName: $_('ok')
+}]}>
     {#snippet header()}
         <h3>{$_('menu.configuration')}</h3>
     {/snippet}
@@ -40,14 +46,15 @@
         }}>{$_('configdialog.show-config-file-advanced')}</button>
     </p>
     
+    {#key refresh}
     {#each groups as [_gkey, group]}
     {@const items = Object.entries(group.definition)}
         <h3 class="groupname">
-            {group.name}
+            {group.name()}
         </h3>
 
         {#if group.description}
-        <p class='description'>{group.description}</p>
+        <p class='description'>{group.description()}</p>
         {/if}
 
         <table>
@@ -55,7 +62,7 @@
         {#each items as [key, item]}
             <tr>
                 <td class="key hlayout">
-                    <span>{item.localizedName}</span>
+                    <span>{item.localizedName()}</span>
                     <span class='line'></span>
                 </td>
                 <td>
@@ -65,10 +72,10 @@
                         <label>
                             <input type="radio" bind:group={group.data[key]} value={optkey}
                                    onchange={async () => await MainConfig.save()}/>
-                            {option.localizedName}
+                            {option.localizedName()}
                         </label><br/>
                         {#if option.description}
-                        <p class='description'>{option.description}</p>
+                        <p class='description'>{option.description()}</p>
                         {/if}
                     {/each}
 
@@ -77,7 +84,7 @@
                     <select bind:value={group.data[key]}
                             onchange={async () => await MainConfig.save()}>
                         {#each options as [optkey, option]}
-                            <option value={optkey}>{option.localizedName}</option>
+                            <option value={optkey}>{option.localizedName()}</option>
                         {/each}
                     </select>
 
@@ -135,7 +142,7 @@
             {#if item.description}
             <tr>
                 <td colspan="3" class='description'>
-                    {item.description}
+                    {item.description()}
                 </td>
             </tr>
             {/if}
@@ -143,6 +150,7 @@
         </tbody>
         </table>
     {/each}
+    {/key}
 </DialogBase>
 
 <style>

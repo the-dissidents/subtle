@@ -9,19 +9,22 @@ import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 import type { AudioFeedbackData, AudioInputData } from "./worker/DecodedAudioLoader";
 import { PublicConfigGroup } from "./config/PublicConfig.svelte";
 
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
+
 export const MediaConfig = new PublicConfigGroup(
-    'media',
-    '', 1,
+    () => $_('config.media'),
+    null, 1,
 {
     preloadAmount: {
-        localizedName: 'preload amount',
+        localizedName: () => $_('config.preload-amount'),
         type: 'number',
-        description: `Amount of preloading for video and audio playback, in seconds. A high value can lead to high memory consumption.`,
+        description: () => $_('config.preload-amount-d'),
         bounds: [0.1, 10],
         default: 1
     },
     showDebug: {
-        localizedName: 'show debug info',
+        localizedName: () => $_('config.show-debug-info'),
         type: 'boolean',
         default: true
     }

@@ -11,8 +11,8 @@ const ajv = new Ajv({
 });
 
 export type PublicConfigItem = {
-    localizedName: string,
-    description?: string
+    localizedName: () => string,
+    description?: () => string
 } & ({
     type: 'number',
     bounds?: [number | null, number | null],
@@ -30,14 +30,14 @@ export type PublicConfigItem = {
 } | {
     type: 'select',
     options: {[key: string]: {
-        localizedName: string,
-        description?: string
+        localizedName: () => string,
+        description?: () => string
     }},
     default: string
 } | {
     type: 'dropdown',
     options: {[key: string]: {
-        localizedName: string
+        localizedName: () => string
     }},
     default: string
 });
@@ -57,8 +57,8 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
     readonly validate: ValidateFunction<GroupType<T>>;
 
     constructor(
-        public readonly name: string,
-        public readonly description: string | null,
+        public readonly name: () => string,
+        public readonly description: (() => string) | null,
         public readonly priority: number,
         public readonly definition: T,
     ) {

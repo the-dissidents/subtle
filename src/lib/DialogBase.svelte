@@ -2,11 +2,13 @@
     import { tick } from "svelte";
     import { assert } from "./Basic";
     import { DialogHandler, Dialogs } from "./frontend/Dialogs";
+	import { _ } from 'svelte-i18n';
 
 	export type DialogButton = {
 		name: string,
-		enabled: boolean
-	} | string;
+		localizedName: string,
+		disabled?: boolean
+	};
 
 	interface Props {
 		handler: DialogHandler<void, string>;
@@ -19,11 +21,16 @@
 
 	let {
 		handler = $bindable(),
-		centerWhenOpen = true,
 		maxWidth = '32em',
 		header,
 		children,
-		buttons = ['cancel', 'ok'],
+		buttons = [{
+			name: 'cancel',
+			localizedName: $_('cancel')
+		}, {
+			name: 'ok',
+			localizedName: $_('ok')
+		}],
 	}: Props = $props();
 
 	let dialog: HTMLDialogElement | undefined = $state();
@@ -98,24 +105,14 @@
 	</div>
 	<footer class={{shadow}}>
 		{#each buttons as btn}
-		{#if typeof btn == 'string'}
-			<button 
-				class='submit' 
-				onclick={() => {
-					assert(resolve !== undefined);
-					resolve(btn);
-				}}
-			>{btn}</button>
-		{:else}
 			<button 
 				class='submit'
-				disabled={!btn.enabled}
+				disabled={btn.disabled ?? false}
 				onclick={() => {
 					assert(resolve !== undefined);
 					resolve(btn.name);
 				}}
-			>{btn.name}</button>
-		{/if}
+			>{btn.localizedName}</button>
 		{/each}
 	</footer>
 </div>

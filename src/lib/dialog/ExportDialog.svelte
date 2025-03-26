@@ -69,7 +69,7 @@
     }
 </script>
 
-<DialogBase handler={inner} maxWidth="48em" buttons={['cancel', 'ok']}>
+<DialogBase handler={inner} maxWidth="48em">
     {#snippet header()}
         <h4>{$_('exportdialog.header')}</h4>
     {/snippet}
@@ -79,8 +79,8 @@
                 <thead>
                 <tr>
                     <th></th>
-                    <th class="stylename">$_('exportdialog.style')</th>
-                    <th>$_('exportdialog.usage')</th>
+                    <th class="stylename">{$_('exportdialog.style')}</th>
+                    <th>{$_('exportdialog.usage')}</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -113,7 +113,7 @@
                 {$_('exportdialog.recombine')}
             </label><br/>
 
-            <h5>format</h5>
+            <h5>{$_('exportdialog.format')}</h5>
             <label><input type="radio" bind:group={format} value="srt"
                         onchange={() => makePreview()} />
                 {$_('exportdialog.srt')}

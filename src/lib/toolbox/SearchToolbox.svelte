@@ -55,14 +55,14 @@
 					`g${caseSensitive ? '' : 'i'}`);
 			} catch (e) {
 				assert(e instanceof Error);
-				Interface.status.set(`search failed: ` + e.message);
+				Interface.status.set($_('msg.search-failed') + e.message);
 				return;
 			}
 		} else if (useLabel || useStyle) {
 			expr = /.*/;
 			usingEmptyTerm = true;
 		} else {
-			Interface.status.set(`search expression is empty`);
+			Interface.status.set($_('msg.search-expression-is-empty'));
 			return;
 		}
 
@@ -143,7 +143,7 @@
 	id='repl' placeholder={$_('search.replace-term')}/>
 
 <div class='form'>
-	<h5>options</h5>
+	<h5>{$_('search.options')}</h5>
 	<label><input type='checkbox' bind:checked={useRegex}/>
 		{$_('search.use-regular-expressions')}
 	</label><br/>
@@ -157,7 +157,7 @@
 			bind:currentStyle={style2}/>
 	</label><br/>
 
-	<h5>range</h5>
+	<h5>{$_('search.range')}</h5>
 	<label><input type='checkbox' bind:checked={selectionOnly}/>
 		{$_('search.search-only-in-selected-entries')}
 	</label><br/>
@@ -199,7 +199,7 @@
 			</tr>
 			<tr>
 				<td>
-					<button class="left wfill" disabled>replace</button>
+					<button class="left wfill" disabled>{$_('search.replace')}</button>
 				</td>
 				<td class="hlayout">
 					<button class="middle"

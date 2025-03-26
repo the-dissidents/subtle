@@ -85,7 +85,7 @@ export const Interface = {
                 Interface.status.set($_('msg.not-a-file', {values: {path}}));
                 return;
             }
-            if (stats.size > 1024*1024*5 && !await dialog.ask($_('msg.the-file-youre-opening-is-very-large-and-likely-not-a-supported-subtitle-file-do-you-really-want-to-proceed-this-may-crash-the-application'), {kind: 'warning'})) return null;
+            if (stats.size > 1024*1024*5 && !await dialog.ask($_('msg.very-large-file-warning'), {kind: 'warning'})) return null;
         } catch {
             Interface.status.set($_('msg.does-not-exist', {values: {path}}));
             return;

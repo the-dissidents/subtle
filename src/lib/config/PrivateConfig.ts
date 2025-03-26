@@ -3,6 +3,9 @@ import * as fs from "@tauri-apps/plugin-fs"
 import { assert } from "../Basic";
 import { guardAsync } from "../frontend/Interface";
 
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
+
 const configPath = 'config.json';
 let configData = {
     maxRecent: 10,
@@ -33,7 +36,7 @@ async function saveConfig() {
     await guardAsync(async () => {
         await fs.writeTextFile(configPath, 
             JSON.stringify(configData, null, 2), {baseDir: fs.BaseDirectory.AppConfig}); 
-    }, `error saving private config`);
+    }, $_('msg.error-saving-private-config'));
 }
 
 export const PrivateConfig = {

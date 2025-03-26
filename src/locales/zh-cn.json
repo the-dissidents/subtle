@@ -34,6 +34,7 @@
     "transform-times": "变换时间...",
     "up": "向上"
   },
+  "cancel": "取消",
   "combinedialog": {
     "combine": "合并",
     "different-style-only": "仅不同的样式",
@@ -45,37 +46,84 @@
     "start-time-threshold": "开始时间阈值",
     "will-be-combined-in": "将被合并为"
   },
+  "config": {
+    "arrow-skip-amount": "方向键跳转时长",
+    "arrow-skip-amount-d": "已加载媒体文件时，通过按左或右箭头按钮来跳过的时长，以秒为单位",
+    "auto-scroll-exponent": "自动滚动指数",
+    "auto-scroll-exponent-d": "在字幕表格中拖动选择时自动滚动的指数。每秒自动滚动速率用如下方法计算：（ 到边缘的距离 * 系数 ) ^ 指数",
+    "auto-scroll-factor": "自动滚动系数",
+    "auto-scroll-factor-d": "在字幕表格中拖动选择时自动滚动的系数",
+    "dark": "深色",
+    "debug": "调试",
+    "debug-d": "⚠️ 仅用于调试，通常不需要修改",
+    "font-size": "字号",
+    "input": "输入",
+    "interface": "界面",
+    "language": "语言",
+    "light": "浅色",
+    "maximum-zoom": "最大缩放",
+    "maximum-zoom-d": "最大缩放与常规大小之比（例如1 = 100%，2 = 200%）",
+    "media": "媒体",
+    "minimum-scroller-length": "滚动条最小长度",
+    "minimum-scroller-length-d": "滚动条的最小长度（防止它变得太小而看不见），以CSS像素为单位",
+    "mouse-scroll-sensitivity": "鼠标滚动灵敏度",
+    "mouse-scroll-sensitivity-d": "使用鼠标滚轮时的滚动速度系数。调整以使滚动速度与触控板保持一致",
+    "mouse-zoom-sensitivity": "鼠标缩放灵敏度",
+    "mouse-zoom-sensitivity-d": "使用鼠标滚轮时的缩放速度系数。调整以使滚动速度与触控板保持一致",
+    "preload-amount": "预加载量",
+    "preload-amount-d": "视频和音频播放的预加载量，以秒为单位。设置过高可能导致大量内存消耗",
+    "resize-area-size": "调整区域大小",
+    "resize-area-size-d": "字幕块左侧和右侧可调整区域的大小，以CSS像素为单位",
+    "show-debug-info": "显示调试信息",
+    "snap-distance": "吸附距离",
+    "snap-distance-d": "字幕块进行吸附的最大距离，以CSS像素为单位",
+    "snapping": "吸附",
+    "snapping-d": "是否默认启用吸附。如果打开，按住Alt/Option会暂时禁用它；如果关闭，则会暂时启用它",
+    "table-view": "字幕表格",
+    "theme": "主题",
+    "timeline": "时间线",
+    "trackpad-scroll-sensitivity": "触控板滚动灵敏度",
+    "trackpad-scroll-sensitivity-d": "使用触控板时的滚动速度系数。调整以使滚动速度与鼠标滚轮保持一致",
+    "trackpad-zoom-sensitivity": "触控板缩放灵敏度",
+    "trackpad-zoom-sensitivity-d": "使用触控板时的缩放速度系数。调整以使滚动速度与鼠标滚轮保持一致",
+    "ui-font-family": "UI字体",
+    "ui-font-size": "UI字号",
+    "use-system-theme": "使用系统主题"
+  },
   "configdialog": {
     "all-items-are-automatically-saved": "所有设置项均自动保存",
     "show-config-file-advanced": "显示配置文件（高级）"
   },
   "cxtmenu": {
     "ass-fragment": "ASS片段",
+    "by": "为：",
     "json-internal": "JSON（内部格式）",
     "no-recent-files": "没有最近的文件",
     "other-file": "其他文件...",
     "plain-text": "纯文本",
     "srt": "SRT",
-    "srt-plaintext": "SRT / 纯文本 / ..."
+    "srt-plaintext": "SRT / 纯文本 / ...",
+    "utilities": "工具"
   },
   "editbox": {
     "anchor-end": "锚定结尾",
     "anchor-start": "锚定开头",
     "at-virtual-entry": "双击或按回车可添加新条目",
-    "keep-duration": "锚定持续时间",
+    "keep-duration": "保持持续时间",
     "no-selection": "选择一行开始编辑"
   },
   "encodingdialog": {
     "conclusion": "选择一个编码，检查预览，确认正确后单击“确定”将文件转换为UTF-8。",
     "confidence": "置信度",
     "encoding": "编码",
-    "header": "您打开的文件似乎使用了不寻常的编码格式，可能会在现代设备上引起问题。",
-    "info": "我们可以猜测格式并将文件转换为现代编码（通常猜得很准，除非文件完全无效）。如有疑问，请咨询专家。",
+    "header": "您打开的文件似乎使用了不寻常的编码格式",
+    "info": "这些过时或罕见的编码在现代设备上可能会导致问题。为了打开这个文件，我们可以尝试将它转换为现代格式（通常很准确，除非文件完全无效）。如有疑问请咨询专家。",
     "unable-to-guess-encoding": "无法猜测编码"
   },
   "exportdialog": {
     "combine-strategy": "合并策略",
     "copy-to-clipboard": "复制到剪贴板",
+    "format": "格式",
     "header": "导出为线性格式",
     "keep-order": "保持原来的顺序",
     "plaintext": "纯文本",
@@ -103,11 +151,15 @@
     "import-only-styles-and-no-subtitles": "仅导入样式，不导入字幕",
     "import-styles-that-are-used": "导入用到的样式",
     "import-unused-styles-as-well": "导入所有样式，包括未使用的",
+    "metadata": "元数据",
+    "options": "选项",
     "override-metadata": "覆盖元数据",
     "overwrite-current-file": "覆盖当前文件",
     "overwrite-local-styles-when-names-match": "名称匹配时覆盖本地样式",
+    "position": "位置",
     "sorted-after-existing-lines-if-time-points-are-equal": "排序；如果时间点相等，则在现有行之后",
     "sorted-before-existing-lines-if-time-points-are-equal": "排序；如果时间点相等，则在现有行之前",
+    "styles": "样式",
     "use-for-all": "全都使用这个样式：",
     "use-local-styles-when-names-match": "名称匹配时使用本地样式"
   },
@@ -122,11 +174,12 @@
     "undo": "撤消"
   },
   "msg": {
-    "changed-n-entries": "{n, plural,\n  =0 {没有可修改的东西}\n  one {修改了{n}项}\n  other {修改了{n}项}\n}",
+    "changed-n-entries": "{n,plural,=0 {没有可修改的东西} one {修改了{n}项} other {修改了{n}项}}",
     "combined-n-entries": "合并了{n}项",
     "copied-exported-data": "导出数据已复制",
     "does-not-exist": "文件不存在：{path}",
     "error-opening-video-path": "打开视频时发生错误：{path}",
+    "error-saving-private-config": "保存内部配置时出错",
     "error-when-writing-to-file": "写入文件时发生错误：{file}",
     "exported-to-file": "已导出：{file}",
     "failed-to-parse-as-subtitles-path": "无法解析字幕：{path}",
@@ -137,9 +190,13 @@
     "pasted": "粘贴",
     "proceed-without-saving": "文件还没有保存，确认继续？",
     "saved-to-file": "已保存：{file}",
-    "the-file-youre-opening-is-very-large-and-likely-not-a-supported-subtitle-file-do-you-really-want-to-proceed-this-may-crash-the-application": "您打开的文件非常大，很可能不是一种受支持的字幕文件。真的想继续吗？这可能会使应用程序崩溃。",
-    "unable-to-read-file-path": "无法读取文件：{path}"
+    "search-expression-is-empty": "查找表达式为空",
+    "search-failed": "查找失败：",
+    "unable-to-read-file-path": "无法读取文件：{path}",
+    "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的想继续吗？这可能会使应用程序崩溃。"
   },
+  "not-implemented-yet": "（暂时没有用）",
+  "ok": "确认",
   "ppty": {
     "default": "默认",
     "language": "语言",
@@ -152,19 +209,22 @@
   "search": {
     "all": "全部",
     "case-sensitive": "区分大小写",
-    "expression": "表达",
-    "find": "寻找",
+    "expression": "表达式",
+    "find": "查找",
     "found-n-lines": "找到{n} {n，复数，一个{line}其他{lines}}}",
     "found-nothing": "什么也没找到",
     "next": "下一个",
-    "only-styles": "只有样式",
-    "previous": "以前的",
+    "only-styles": "仅样式",
+    "options": "选项",
+    "previous": "上一个",
+    "range": "范围",
+    "replace": "替换",
     "replace-by-style": "替换为样式",
-    "replace-term": "替换术语",
+    "replace-term": "替换项",
     "replaced-n-lines": "替换{n} {n，复数，一个{line}其他{lines}}}",
-    "search-only-in-label": "仅在标签中搜索",
+    "search-only-in-label": "仅在这个标签中搜索：",
     "search-only-in-selected-entries": "仅在选定的条目中搜索",
-    "search-only-in-style": "仅搜索样式",
+    "search-only-in-style": "仅在这个样式中搜索：",
     "selected-n-lines": "选择{n} {n，复数，一个{line}其他{lines}}}",
     "use-regular-expressions": "使用正则表达式"
   },
@@ -184,17 +244,29 @@
     "line-color": "轮廓颜色",
     "line-size": "轮廓粗细",
     "margins": "边距",
+    "more": "更多",
     "name": "名称",
     "replace-by": "替换为",
     "right": "右",
     "set-as-default": "设为默认",
     "shadow": "阴影",
-    "size": "尺寸",
+    "size": "字号",
     "text-color": "文字颜色",
     "top": "上",
     "top-center": "顶部居中",
     "top-left": "左上",
     "top-right": "右上"
+  },
+  "tab": {
+    "properties": "属性",
+    "search-replace": "查找/替换",
+    "untimed-text": "无时间文本"
+  },
+  "table": {
+    "end": "结尾",
+    "start": "开始",
+    "style": "样式",
+    "text": "文本"
   },
   "transformdialog": {
     "backward": "向后",
@@ -209,10 +281,11 @@
     "zero-time": "零时间"
   },
   "untimed": {
+    "display": "显示",
     "fuzzy-match-found": "发现模糊匹配（{x, number, ::percent .#}）",
     "fuzzy-search-failed-to-find-anything": "未发现模糊匹配",
     "justify": "均匀排版",
-    "text-size": "文字大小"
+    "text-size": "字号"
   },
   "untitled": "「未命名」"
 }

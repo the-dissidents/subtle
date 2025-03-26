@@ -14,5 +14,6 @@
     "i18n-ally.sortKeys": true,
     "i18n-ally.usage.scanningIgnore": [
         "src-tauri/**"
-    ]
+    ],
+    "i18n-ally.sourceLanguage": "en"
 }

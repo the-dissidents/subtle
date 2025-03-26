@@ -344,7 +344,7 @@ export const Actions = {
         },
         { item: 'Separator' },
         {
-            text: 'utilities',
+            text: $_('cxtmenu.utilities'),
             items: [
                 {
                     text: $_('action.transform-times'),
@@ -392,7 +392,7 @@ export const Actions = {
                     items: allStyles.map((x) => ({
                         text: x.name,
                         items: [{
-                            text: 'by:',
+                            text: $_('cxtmenu.by'),
                             enabled: false,
                         }, ...allStyles.filter((y) => y != x).map((y) => ({
                             text: y.name,
@@ -408,7 +408,7 @@ export const Actions = {
                     items: [...Array(maxLines).keys()].map((x) => ({
                         text: (x+1).toString(),
                         items: [{
-                            text: 'by:',
+                            text: $_('cxtmenu.by'),
                             enabled: false,
                         }, ...allStyles.map((y) => ({
                             text: y.name,

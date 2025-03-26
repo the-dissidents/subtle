@@ -13,38 +13,41 @@ import { Actions } from "./frontend/Actions";
 import { PublicConfigGroup } from "./config/PublicConfig.svelte";
 import { translateWheelEvent } from "./frontend/Frontend";
 
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
+
 export const TimelineConfig = new PublicConfigGroup(
-    'timeline',
-    '', 1,
+    () => $_('config.timeline'),
+    null, 1,
 {
     fontSize: {
-        localizedName: 'font size',
+        localizedName: () => $_('config.font-size'),
         type: 'number',
         bounds: [5, null],
         default: 12
     },
     dragResizeArea: {
-        localizedName: 'resize area size',
+        localizedName: () => $_('config.resize-area-size'),
         type: 'number',
-        description: `Size of the area around the left and right side of an entry in which you can drag to resize the entry, in CSS pixels.`,
+        description: () => $_('config.resize-area-size-d'),
         bounds: [1, 10],
         default: 5
     },
     enableSnap: {
-        localizedName: 'snapping',
+        localizedName: () => $_('config.snapping'),
         type: 'boolean',
-        description: `Whether to enable snapping by default. If true, holding down Alt/Option temporarily disables it; if false, temporarily enables it.`,
+        description: () => $_('config.snapping-d'),
         default: true
     },
     snapDistance: {
-        localizedName: 'snap distance',
+        localizedName: () => $_('config.snap-distance'),
         type: 'number',
-        description: `Maximum distance between entries for snapping, in CSS pixels.`,
+        description: () => $_('config.snap-distance-d'),
         bounds: [1, 10],
         default: 5
     },
     showDebug: {
-        localizedName: 'show debug info',
+        localizedName: () => $_('config.show-debug-info'),
         type: 'boolean',
         default: true
     },

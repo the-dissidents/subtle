@@ -47,14 +47,14 @@
   <table class='config'>
     <tbody>
       <tr>
-        <td>metadata</td>
+        <td>{$_('importdialog.metadata')}</td>
         <td>
           <input type="checkbox" id='md' bind:checked={overrideMetadata} />
           <label for='md'>{$_('importdialog.override-metadata')}</label>
         </td>
       </tr>
       <tr>
-        <td>styles</td>
+        <td>{$_('importdialog.styles')}</td>
         <td>
           <input type="radio" id="is1" value="KeepDifferent" bind:group={styleOption}/>
           <label for="is1">{$_('importdialog.import-only-different-ones')}</label><br/>
@@ -71,7 +71,7 @@
         </td>
       </tr>
       <tr>
-        <td>options</td>
+        <td>{$_('importdialog.options')}</td>
         <td>
           <input type="radio" id="ia1" value="UsedOnly" bind:group={selectOption}/>
           <label for="ia1">{$_('importdialog.import-styles-that-are-used')}</label><br/>
@@ -84,7 +84,7 @@
         </td>
       </tr>
       <tr>
-        <td>position</td>
+        <td>{$_('importdialog.position')}</td>
         <td>
           <input type="radio" id="ib1" disabled={selectOption == 'OnlyStyles'} value="After" bind:group={posOption}/>
           <label for="ib1">{$_('importdialog.after-existing-lines')}</label><br/>

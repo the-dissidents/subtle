@@ -228,7 +228,7 @@
     on:blur={() => updateToSubs()}
     bind:this={textarea}></textarea>
   <div>
-    <Collapsible header='Display'>
+    <Collapsible header={$_('untimed.display')}>
       <table class="config">
         <tbody>
           <tr>

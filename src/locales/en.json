@@ -34,6 +34,7 @@
     "transform-times": "transform times...",
     "up": "up"
   },
+  "cancel": "cancel",
   "combinedialog": {
     "combine": "combine",
     "different-style-only": "different style only",
@@ -45,18 +46,64 @@
     "start-time-threshold": "start time threshold",
     "will-be-combined-in": "will be combined in"
   },
+  "config": {
+    "arrow-skip-amount": "arrow skip amount",
+    "arrow-skip-amount-d": "Amount of time to skip by pressing the left or right arrow button when a media file is loaded, in seconds.",
+    "auto-scroll-exponent": "auto scroll exponent",
+    "auto-scroll-exponent-d": "Exponent for the automatic scrolling when dragging outside of the table area. The magnitude of autoscroll speed per second is calculated as: (distanceFromEdge * factor) ^ exponent.",
+    "auto-scroll-factor": "auto scroll factor",
+    "auto-scroll-factor-d": "Multiplier for the automatic scrolling when dragging outside of the table area.",
+    "dark": "dark",
+    "debug": "debug",
+    "debug-d": "⚠️ Advanced options for debug purpose only. You shouldn't change them unless you know what you're doing.",
+    "font-size": "font size",
+    "input": "input",
+    "interface": "interface",
+    "language": "language",
+    "light": "light",
+    "maximum-zoom": "maximum zoom",
+    "maximum-zoom-d": "Maximum zoom level, in proportion to regular size (e.g. 1 = 100%, 2 = 200%).",
+    "media": "media",
+    "minimum-scroller-length": "minimum scroller length",
+    "minimum-scroller-length-d": "Minimum scroller length to prevent it from becoming too small, in CSS pixels.",
+    "mouse-scroll-sensitivity": "mouse scroll sensitivity",
+    "mouse-scroll-sensitivity-d": "Multiplier for scrolling speed using mouse wheel. Adjust to make scrolling speed desirable and consistent with trackpad.",
+    "mouse-zoom-sensitivity": "mouse zoom sensitivity",
+    "mouse-zoom-sensitivity-d": "Multiplier for zooming speed using mouse wheel while holding Control. Adjust to make zooming speed desirable and consistent with trackpad.",
+    "preload-amount": "preload amount",
+    "preload-amount-d": "Amount of preloading for video and audio playback, in seconds. A high value can lead to high memory consumption.",
+    "resize-area-size": "resize area size",
+    "resize-area-size-d": "Size of the area around the left and right side of an entry in which you can drag to resize the entry, in CSS pixels.",
+    "show-debug-info": "show debug info",
+    "snap-distance": "snap distance",
+    "snap-distance-d": "Maximum distance between entries for snapping, in CSS pixels.",
+    "snapping": "snapping",
+    "snapping-d": "Whether to enable snapping by default. If true, holding down Alt/Option temporarily disables it; if false, temporarily enables it.",
+    "table-view": "table view",
+    "theme": "theme",
+    "timeline": "timeline",
+    "trackpad-scroll-sensitivity": "trackpad scroll sensitivity",
+    "trackpad-scroll-sensitivity-d": "Multiplier for scrolling speed using trackpad (typically two-finger swiping). Adjust to make scrolling speed desirable and consistent with mouse wheel.",
+    "trackpad-zoom-sensitivity": "trackpad zoom sensitivity",
+    "trackpad-zoom-sensitivity-d": "Multiplier for zooming speed using trackpad (typically pinching). Adjust to make zooming speed desirable and consistent with mouse wheel.",
+    "ui-font-family": "UI font family",
+    "ui-font-size": "UI font size",
+    "use-system-theme": "use system theme"
+  },
   "configdialog": {
     "all-items-are-automatically-saved": "All items are automatically saved.",
     "show-config-file-advanced": "Show config file (advanced)"
   },
   "cxtmenu": {
     "ass-fragment": "ASS fragment",
+    "by": "by:",
     "json-internal": "JSON (internal)",
     "no-recent-files": "no recent files",
     "other-file": "other file...",
     "plain-text": "plain text",
     "srt": "SRT",
-    "srt-plaintext": "SRT / plaintext / ..."
+    "srt-plaintext": "SRT / plaintext / ...",
+    "utilities": "utilities"
   },
   "editbox": {
     "anchor-end": "anchor end",
@@ -69,13 +116,14 @@
     "conclusion": "Choose an encoding, check the preview for correctness, then click 'ok' to convert the file to UTF-8 for use in modern applications.",
     "confidence": "Confidence",
     "encoding": "Encoding",
-    "header": "The file you're opening seems to be using an unusual encoding format, which can cause problems on today's devices.",
-    "info": "We can guess the format and convert the file to the modern encoding for you. The guess is usually very accurate, unless the file is simply invalid; but when in doubt, consult an expert.",
+    "header": "The file you're opening seems to be using an unusual encoding format.",
+    "info": "These formats can cause problems on today's devices. In order to open the file, we can try to convert it to the modern encoding. The estimation of formats is usually very accurate, unless the file is simply invalid; but when in doubt, consult an expert.",
     "unable-to-guess-encoding": "Unable to guess encoding"
   },
   "exportdialog": {
     "combine-strategy": "combine strategy",
     "copy-to-clipboard": "copy to clipboard",
+    "format": "format",
     "header": "Export to a linear format",
     "keep-order": "keep order",
     "plaintext": "plaintext",
@@ -103,11 +151,15 @@
     "import-only-styles-and-no-subtitles": "import only styles and no subtitles",
     "import-styles-that-are-used": "import styles that are used",
     "import-unused-styles-as-well": "import unused styles as well",
+    "metadata": "metadata",
+    "options": "options",
     "override-metadata": "override metadata",
     "overwrite-current-file": "overwrite current file",
     "overwrite-local-styles-when-names-match": "overwrite local styles when names match",
+    "position": "position",
     "sorted-after-existing-lines-if-time-points-are-equal": "sorted; after existing lines if time points are equal",
     "sorted-before-existing-lines-if-time-points-are-equal": "sorted; before existing lines if time points are equal",
+    "styles": "styles",
     "use-for-all": "use for all:",
     "use-local-styles-when-names-match": "use local styles when names match"
   },
@@ -122,11 +174,12 @@
     "undo": "undo"
   },
   "msg": {
-    "changed-n-entries": "{n, plural,\n  =0 {changed nothing}\n  one {changed {n} entry}\n  other {changed {n} entries}\n}",
+    "changed-n-entries": "{n,plural,=0 {changed nothing} one {changed {n} entry} other {changed {n} entries}}",
     "combined-n-entries": "{n, plural,\n  one {combined {n, number} entry}\n  other {combined {n, number} entries}\n}",
     "copied-exported-data": "copied exported data",
     "does-not-exist": "does not exist: {path}",
     "error-opening-video-path": "error opening video: {path}",
+    "error-saving-private-config": "error saving private config",
     "error-when-writing-to-file": "error when writing to {file}",
     "exported-to-file": "exported to {file}",
     "failed-to-parse-as-subtitles-path": "failed to parse as subtitles: {path}",
@@ -137,9 +190,13 @@
     "pasted": "pasted",
     "proceed-without-saving": "Proceed without saving?",
     "saved-to-file": "saved to {file}",
-    "the-file-youre-opening-is-very-large-and-likely-not-a-supported-subtitle-file-do-you-really-want-to-proceed-this-may-crash-the-application": "The file you're opening is very large and likely not a supported subtitle file. Do you really want to proceed? This may crash the application.",
-    "unable-to-read-file-path": "unable to read file {path}"
+    "search-expression-is-empty": "search expression is empty",
+    "search-failed": "search failed:",
+    "unable-to-read-file-path": "unable to read file {path}",
+    "very-large-file-warning": "The file you're opening is very large and likely not a supported subtitle file. Do you really want to proceed? This may crash the application."
   },
+  "not-implemented-yet": "Not implemented yet",
+  "ok": "ok",
   "ppty": {
     "default": "default",
     "language": "language",
@@ -158,7 +215,10 @@
     "found-nothing": "found nothing",
     "next": "next",
     "only-styles": "only styles",
+    "options": "options",
     "previous": "previous",
+    "range": "range",
+    "replace": "replace",
     "replace-by-style": "replace by style",
     "replace-term": "replace term",
     "replaced-n-lines": "replaced {n} {n,plural,one{line} other{lines}}",
@@ -184,6 +244,7 @@
     "line-color": "line color:",
     "line-size": "line size:",
     "margins": "margins:",
+    "more": "more",
     "name": "name:",
     "replace-by": "replace by",
     "right": "right:",
@@ -195,6 +256,17 @@
     "top-center": "top center",
     "top-left": "top left",
     "top-right": "top right"
+  },
+  "tab": {
+    "properties": "Properties",
+    "search-replace": "Search/Replace",
+    "untimed-text": "Untimed text"
+  },
+  "table": {
+    "end": "end",
+    "start": "start",
+    "style": "style",
+    "text": "text"
   },
   "transformdialog": {
     "backward": "backward",
@@ -209,6 +281,7 @@
     "zero-time": "zero time"
   },
   "untimed": {
+    "display": "Display",
     "fuzzy-match-found": "fuzzy match found ({x, number, ::percent .#})",
     "fuzzy-search-failed-to-find-anything": "fuzzy search failed to find anything",
     "justify": "justify",

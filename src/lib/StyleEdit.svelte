@@ -181,7 +181,7 @@
       </tbody>
     </table>
     <!-- advanced -->
-    <Collapsible header='more'>
+    <Collapsible header={$_('style.more')}>
       <table class="stretch">
         <tbody>
           <tr>
@@ -264,6 +264,8 @@
 
 table td:first-child {
   font-size: 95%;
+  white-space: nowrap;
+  padding-right: 10px;
   /* text-transform: uppercase; */
   /* font-weight: bold; */
 }

@@ -5,4 +5,4 @@ import zh_cn from '../locales/zh-cn.json';
 
 addMessages('en', en);
 addMessages('zh-cn', zh_cn);
-locale.set('zh-cn');
+locale.set('en');
