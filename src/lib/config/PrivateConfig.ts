@@ -1,3 +1,5 @@
+console.info('PrivateConfig loading');
+
 import { path } from "@tauri-apps/api";
 import * as fs from "@tauri-apps/plugin-fs"
 import { assert } from "../Basic";

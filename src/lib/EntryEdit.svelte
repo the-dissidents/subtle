@@ -1,6 +1,4 @@
 <script lang="ts">
-import * as _i18n from './i18n';
-
 import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
 
@@ -99,36 +97,36 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
   <br>
   <TimestampInput bind:timestamp={editingT0}
     stretch={true}
-    on:input={() => {
+    oninput={() => {
       if (editMode == 0 && keepDuration)
         editingT1 = editingT0 + editingDt;
       applyEditForm(); 
       Editing.editChanged = true;}} 
-    on:change={() => 
+    onchange={() => 
       Source.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
   <br>
   <TimestampInput bind:timestamp={editingT1}
     stretch={true}
-    on:input={() => {
+    oninput={() => {
       if (editMode == 1 && keepDuration)
         editingT0 = editingT1 - editingDt;
       applyEditForm(); 
       Editing.editChanged = true;}} 
-    on:change={() => {
+    onchange={() => {
       if (editingT1 < editingT0) editingT1 = editingT0;
       applyEditForm();
       Source.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
   <br>
   <TimestampInput bind:timestamp={editingDt}
     stretch={true}
-    on:input={() => {
+    oninput={() => {
       if (editMode == 0)
         editingT1 = editingT0 + editingDt; 
       else if (editMode == 1)
         editingT0 = editingT1 - editingDt; 
       applyEditForm();
       Editing.editChanged = true;}}
-    on:change={() => 
+    onchange={() => 
       Source.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
   <hr>
   <div class="hlayout">
@@ -156,8 +154,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
       <tr>
         <td class="vlayout">
           <StyleSelect bind:currentStyle={line.style}
-            on:submit={() => {
-              Source.markChanged(ChangeType.InPlace, ChangeCause.UIForm)}} />
+            onsubmit={() => Source.markChanged(ChangeType.InPlace, ChangeCause.UIForm)} />
           <div class="hlayout">
             <button tabindex='-1' class="flexgrow"
               onclick={() => Editing.insertChannelAt(i)}>+</button>

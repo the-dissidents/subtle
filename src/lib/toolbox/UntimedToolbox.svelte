@@ -1,29 +1,28 @@
 <script lang="ts">
-import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
-import * as dialog from "@tauri-apps/plugin-dialog"
+import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
+import * as dialog from "@tauri-apps/plugin-dialog";
 import { onDestroy } from "svelte";
 
+import { assert, Basic } from "../Basic";
 import type { SubtitleChannel, SubtitleEntry } from "../core/Subtitles.svelte";
 import * as fuzzyAlgorithm from "../Fuzzy";
-import { assert, Basic } from "../Basic";
 
-import Collapsible from "../ui/Collapsible.svelte";
 import StyleSelect from "../StyleSelect.svelte";
+import Collapsible from "../ui/Collapsible.svelte";
 
-import { ChangeCause, ChangeType, Source } from "../frontend/Source";
-import { Editing } from "../frontend/Editing";
-import { Interface, UIFocus } from "../frontend/Interface";
 import { Dialogs } from "../frontend/Dialogs";
+import { Editing } from "../frontend/Editing";
 import { EventHost } from "../frontend/Frontend";
+import { Interface, UIFocus } from "../frontend/Interface";
+import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 
 import { _ } from 'svelte-i18n';
 
-export let locked = false;
-let textsize = 14;
-let justify = true;
-let textarea: HTMLTextAreaElement;
+let locked = $state(false);
+let textsize = $state(14);
+let justify = $state(true);
 
-let fuzzy = {
+let fuzzy = $state({
   enabled: false,
   maxSkip: 3,
   minScore: 0.5,
@@ -33,18 +32,22 @@ let fuzzy = {
   engine: null as fuzzyAlgorithm.Searcher | null,
   currentChannel: null as SubtitleChannel | null,
   currentEntry: null as SubtitleEntry | null
-}
+});
+
+$effect(() => {
+  if (fuzzy.enabled) {
+    locked = true;
+    fuzzyMatch();
+  }
+});
+
+let textarea: HTMLTextAreaElement;
 
 const me = {};
 onDestroy(() => EventHost.unbind(me));
 
 Source.onSubtitleObjectReload.bind(me, readFromSubs);
 Editing.onSelectionChanged.bind(me, fuzzyMatch);
-
-$: if (fuzzy.enabled) {
-  locked = true;
-  fuzzyMatch();
-}
 
 function updateToSubs() {
   if (Source.subs.metadata.special.untimedText == textarea.value) return;
@@ -172,7 +175,7 @@ function clear() {
 </script>
 
 <svelte:document 
-  on:keydown={(ev) => {
+  onkeydown={(ev) => {
     if (fuzzy.enabled) {
       if (ev.getModifierState(Basic.ctrlKey()) || ev.altKey) return;
       if (Dialogs.modalOpenCounter > 0) return;
@@ -215,17 +218,17 @@ function clear() {
 
 <div class='vlayout fill'>
   <div class="hlayout">
-    <button class="flexgrow" on:click={() => clear()}>clear</button>
-    <button class="flexgrow" on:click={() => paste()}>paste</button>
+    <button class="flexgrow" onclick={() => clear()}>{$_('untimed.clear')}</button>
+    <button class="flexgrow" onclick={() => paste()}>{$_('untimed.paste')}</button>
     <label class="flexgrow" for='lock'>
       <input type='checkbox' class="button" bind:checked={locked} id='lock'/>
-      lock
+      {$_('untimed.lock')}
     </label>
   </div>
   <textarea class="flexgrow" class:justify
     readonly={locked}
     style="min-height: 150px; font-size: {textsize}px"
-    on:blur={() => updateToSubs()}
+    onblur={() => updateToSubs()}
     bind:this={textarea}></textarea>
   <div>
     <Collapsible header={$_('untimed.display')}>
@@ -252,22 +255,22 @@ function clear() {
         <table class="config">
           <tbody>
             <tr>
-              <td>channel</td>
+              <td>{$_('untimed.channel')}</td>
               <td><StyleSelect bind:currentStyle={fuzzy.channel} /></td>
             </tr>
             <tr>
-              <td>tokenizer</td>
+              <td>{$_('untimed.tokenizer')}</td>
               <td>
-                <select name="tokenizer" on:change={(x) => {
+                <select name="tokenizer" onchange={(x) => {
                   if (x.currentTarget.value != fuzzy.tokenizer) {
                     fuzzy.tokenizer = x.currentTarget.value;
                     fuzzy.engine = null;
                     fuzzyMatch();
                   }
                 }} >
-                  <option value="default">word / CJK character</option>
-                  <option value="syllable">syllable / CJK character</option>
-                  <option value="regexb">regex \b</option>
+                  <option value="default">{$_('untimed.word-cjk-character')}</option>
+                  <option value="syllable">{$_('untimed.syllable-cjk-character')}</option>
+                  <option value="regexb">{$_('untimed.regex-b')}</option>
                   <!-- <option value="custom">custom</option> -->
                 </select>
               </td>
@@ -285,7 +288,7 @@ function clear() {
                 <input id='snap' type='checkbox' bind:checked={justify}/>
               </td>
               <td>
-                <label for='snap'>snap to following punctuation</label>
+                <label for='snap'>{$_('untimed.snap-to-following-punctuation')}</label>
               </td>
             </tr>
           </tbody>

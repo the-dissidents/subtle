@@ -1,3 +1,5 @@
+console.info('Utils loading');
+
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import { assert } from "../Basic";
 import { MergePosition, MergeStyleBehavior, SubtitleEntry, Subtitles, type SubtitleChannel, type SubtitleStyle } from "../core/Subtitles.svelte";

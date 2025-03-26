@@ -1,3 +1,5 @@
+console.info('Dialogs loading');
+
 import type { AnalyseResult, EncodingName } from "chardet"
 import type { MergeOptions, TimeShiftOptions } from "../core/Subtitles.svelte"
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-import { createEventDispatcher } from "svelte";
 import { assert } from "./Basic";
 import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./core/Subtitles.svelte";
 import { Menu } from "@tauri-apps/api/menu";
@@ -9,15 +8,13 @@ import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
 import { _ } from 'svelte-i18n';
 
-const dispatch = createEventDispatcher();
-const submit = () => dispatch('submit');
-
 interface Props {
   style: SubtitleStyle;
   subtitles: Subtitles;
+  onsubmit?: () => void;
 }
 
-let { style: _style, subtitles = $bindable() }: Props = $props();
+let { style: _style, subtitles = $bindable(), onsubmit }: Props = $props();
 let alignSelector: HTMLSelectElement | undefined = $state();
 let button: HTMLButtonElement | undefined = $state();
 let style = writable(_style);
@@ -47,7 +44,7 @@ async function contextMenu() {
         if (i < 0) return;
         subtitles.styles.splice(i, 1);
         Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-        submit();
+        onsubmit?.();
       }
     },
     {
@@ -58,7 +55,7 @@ async function contextMenu() {
         subtitles.styles.push(clone);
         subtitles.styles = subtitles.styles;
         Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-        submit();
+        onsubmit?.();
       }
     },
     {
@@ -85,7 +82,7 @@ async function contextMenu() {
         subtitles.styles.splice(index, 1);
         subtitles.styles.splice(0, 0, oldDefault);
         Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-        submit();
+        onsubmit?.();
       }
     },
   ]});
@@ -105,7 +102,7 @@ async function contextMenu() {
         let newStyle = new SubtitleStyle('new');
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
         Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-        submit();
+        onsubmit?.();
       }}>+</button><br/>
     <!-- move up -->
     <button disabled={$style === subtitles.styles[0]}
@@ -119,7 +116,7 @@ async function contextMenu() {
           ...subtitles.styles.slice(i+1)
         ];
         Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-        submit();
+        onsubmit?.();
       }}>↑</button><br/>
 
     <!-- move down -->
@@ -134,7 +131,7 @@ async function contextMenu() {
           ...subtitles.styles.slice(i+2)
         ];
         Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
-        submit();
+        onsubmit?.();
       }}>↓</button><br/>
     {/if}
     <button bind:this={button} onclick={() => contextMenu()}>...</button>

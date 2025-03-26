@@ -271,6 +271,7 @@
   },
   "transformdialog": {
     "backward": "backward",
+    "by": "by:",
     "end-of-selection": "end of selection",
     "forward": "forward",
     "fps-before-after": "FPS before:after",
@@ -282,11 +283,20 @@
     "zero-time": "zero time"
   },
   "untimed": {
+    "channel": "channel",
+    "clear": "clear",
     "display": "Display",
     "fuzzy-match-found": "fuzzy match found ({x, number, ::percent .#})",
     "fuzzy-search-failed-to-find-anything": "fuzzy search failed to find anything",
     "justify": "justify",
-    "text-size": "text size"
+    "lock": "lock",
+    "paste": "paste",
+    "regex-b": "regex \\b",
+    "snap-to-following-punctuation": "snap to following punctuation",
+    "syllable-cjk-character": "syllable / CJK character",
+    "text-size": "text size",
+    "tokenizer": "tokenizer",
+    "word-cjk-character": "word / CJK character"
   },
   "untitled": "<untitled>"
 }

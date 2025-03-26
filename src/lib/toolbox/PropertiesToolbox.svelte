@@ -95,7 +95,7 @@ function changeResolution() {
     <h5>{$_('ppty.other')}</h5>
     {#each styles as style (style.uniqueID)}
       <StyleEdit style={style} {subtitles}
-        on:submit={() => styles = Source.subs.styles}/>
+        onsubmit={() => styles = Source.subs.styles}/>
       <hr>
     {/each}
   {/key}

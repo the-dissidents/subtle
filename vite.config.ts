@@ -24,7 +24,7 @@ export default defineConfig(async () => ({
   },
   esbuild: {
     supported: {
-      'top-level-await': true //browsers can handle top-level-await features
+      'top-level-await': false //browsers can handle top-level-await features
     },
   }
 }));

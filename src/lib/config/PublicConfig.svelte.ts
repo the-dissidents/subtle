@@ -1,8 +1,9 @@
+console.info('PublicConfig loading');
+
 import Ajv, { type JSONSchemaType, type ValidateFunction } from "ajv";
 import { assert, never } from "../Basic";
 import { path } from "@tauri-apps/api";
 import * as fs from "@tauri-apps/plugin-fs";
-import { guardAsync } from "../frontend/Interface";
 import { join } from "@tauri-apps/api/path";
 
 const ajv = new Ajv({
@@ -148,7 +149,6 @@ export class PublicConfig {
                         continue;
                     }
                     group.data = object;
-                    console.log('read config for group', key)
                 }
             }
         } catch (e) {
@@ -170,9 +170,8 @@ export class PublicConfig {
         for (const key in this.groups)
             data[key] = this.groups[key].data;
 
-        await guardAsync(() => fs.writeTextFile(configName, 
-            JSON.stringify(data, null, 2), {baseDir: fs.BaseDirectory.AppConfig}),
-            `error saving config for ${this.name}`);
+        await fs.writeTextFile(configName, 
+            JSON.stringify(data, null, 2), {baseDir: fs.BaseDirectory.AppConfig});
     }
 
     onInitialized(callback: () => void) {

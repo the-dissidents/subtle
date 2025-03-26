@@ -106,9 +106,9 @@ function fromTransformed() {
           <label><input type="radio" value="backward"
               bind:group={shiftOption} onchange={() => toTransformed()}/>
             {$_('transformdialog.backward')}</label><br/>
-          <label>by: <TimestampInput
+          <label>{$_('transformdialog.by')}<TimestampInput
             bind:timestamp={offset}
-            on:input={() => toTransformed()}/></label><br/>
+            oninput={() => toTransformed()}/></label><br/>
           <label><input type='checkbox' bind:checked={check}/>
             {$_('transformdialog.modify-everything-after-this')}</label><br/>
         </td>
@@ -146,7 +146,7 @@ function fromTransformed() {
               bind:group={anchorOption} onchange={() => toTransformed()}/>
             <TimestampInput
               bind:timestamp={customAnchor}
-              on:input={() => toTransformed()}/>
+              oninput={() => toTransformed()}/>
           </label>
         </td>
       </tr>
@@ -160,12 +160,12 @@ function fromTransformed() {
           {SubtitleUtil.formatTimestamp(selectionStart)}
           →
           <TimestampInput bind:timestamp={transStart}
-            on:input={() => fromTransformed()}/>
+            oninput={() => fromTransformed()}/>
           <br/>
           {SubtitleUtil.formatTimestamp(selectionEnd)}
           →
           <TimestampInput bind:timestamp={transEnd}
-            on:input={() => fromTransformed()}/>
+            oninput={() => fromTransformed()}/>
         </td>
       </tr>
     </tbody>

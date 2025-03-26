@@ -1,5 +1,6 @@
+console.info('Playback loading');
+
 import { assert } from "../Basic";
-import { Subtitles } from "../core/Subtitles.svelte";
 import { VideoPlayer } from "../VideoPlayer";
 import { Timeline } from "../Timeline";
 import { ChangeType, Source } from "./Source";

@@ -1,3 +1,5 @@
+console.info('VideoPlayer loading');
+
 import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./core/Subtitles.svelte";
 import type { WithCanvas } from "./CanvasKeeper";

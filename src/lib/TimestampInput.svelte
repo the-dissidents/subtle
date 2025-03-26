@@ -1,21 +1,16 @@
 <script lang='ts'>
-import { createEventDispatcher } from 'svelte';
 import { SubtitleUtil } from './core/Subtitles.svelte';
 
 interface Props {
   timestamp?: number;
   stretch?: boolean;
+  onchange?: () => void;
+  oninput?: () => void;
 }
 
-let { timestamp = $bindable(0), stretch = false }: Props = $props();
+let { timestamp = $bindable(0), stretch = false, onchange, oninput }: Props = $props();
 let value = $state('00:00:00.000');
 let changed = false;
-
-const dispatch = createEventDispatcher<{
-  change: number; input: number;
-}>();
-const change = () => dispatch('change', timestamp);
-const input = () => dispatch('input', timestamp);
 
 $effect(() => {
   let newValue = SubtitleUtil.formatTimestamp(timestamp);
@@ -43,7 +38,7 @@ $effect(() => {
       ev.currentTarget.selectionEnd = pos+1;
       timestamp = SubtitleUtil.parseTimestamp(ev.currentTarget.value) ?? 0;
       changed = true;
-      input();
+      oninput?.();
     } 
   }}
   onkeydown={(ev) => {
@@ -58,13 +53,13 @@ $effect(() => {
       ev.preventDefault();
       timestamp = SubtitleUtil.parseTimestamp(ev.currentTarget.value) ?? 0;
       changed = true;
-      input();
+      oninput?.();
     };
   }}
   onblur={(ev) => {
     if (!changed) return;
     timestamp = SubtitleUtil.parseTimestamp(ev.currentTarget.value) ?? 0;
-    change();
+    onchange?.();
   }}/>
 
 <style>

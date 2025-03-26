@@ -1,3 +1,5 @@
+console.info('Actions loading');
+
 import { Menu } from "@tauri-apps/api/menu";
 import { Basic } from "../Basic";
 import { InputConfig } from "../config/Groups";

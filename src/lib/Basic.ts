@@ -1,5 +1,16 @@
+console.info('Basic loading');
+
 import { path } from "@tauri-apps/api";
 import * as os from "@tauri-apps/plugin-os";
+
+import { addMessages, locale } from 'svelte-i18n';
+
+import en from '../locales/en.json';
+import zh_cn from '../locales/zh-cn.json';
+
+addMessages('en', en);
+addMessages('zh-cn', zh_cn);
+locale.set('en');
 
 export function assert(val: boolean): asserts val {
     console.assert(val);

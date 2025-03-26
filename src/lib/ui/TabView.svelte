@@ -27,7 +27,7 @@ let update = $state(0);
 
 setContext<TabAPI>(TabAPIContext, {
   registerPage(id, data) {
-    console.log('register page:', get(data.name));
+    // console.log('register page:', get(data.name));
     Pages.push([id, data]);
     Selected.update((x) => x ?? id);
     data.name.subscribe(() => update++);

@@ -38,19 +38,19 @@ export const TableConfig = new PublicConfigGroup(
 import { onDestroy, onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
 
+import { assert } from "./Basic";
 import { SubtitleEntry, SubtitleUtil } from "./core/Subtitles.svelte";
 import { LabelColor } from "./Theming";
-import { assert } from "./Basic";
 
-import { ChangeCause, ChangeType, Source } from "./frontend/Source";
+import { CanvasKeeper } from "./CanvasKeeper";
+import { InterfaceConfig } from "./config/Groups";
+import { PublicConfigGroup } from "./config/PublicConfig.svelte";
+import { Actions } from "./frontend/Actions";
 import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
+import { EventHost, translateWheelEvent } from "./frontend/Frontend";
 import { Interface, UIFocus } from "./frontend/Interface";
 import { Playback } from "./frontend/Playback";
-import { Actions } from "./frontend/Actions";
-import { EventHost, translateWheelEvent } from "./frontend/Frontend";
-import { CanvasKeeper } from "./CanvasKeeper";
-import { PublicConfigGroup } from "./config/PublicConfig.svelte";
-import { InterfaceConfig } from "./config/Groups";
+import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
 import { _ } from 'svelte-i18n';
 import { get } from 'svelte/store';

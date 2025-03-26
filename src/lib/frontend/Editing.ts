@@ -1,3 +1,5 @@
+console.info('Editing loading');
+
 import { get, writable, type Writable } from "svelte/store";
 import { SubtitleEntry, type SubtitleChannel, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { assert, Basic } from "../Basic";

@@ -9,15 +9,20 @@ import { Interface } from '../frontend/Interface';
 
 import { _ } from 'svelte-i18n';
 
-let searchTerm = '';
-let replaceTerm = '';
-let useRegex = false, caseSensitive = true, selectionOnly = false;
-let useStyle = false, replaceStyle = false;
-let style1 = Source.subs.defaultStyle;
-let style2 = Source.subs.defaultStyle;
+let searchTerm  = $state(''),
+    replaceTerm = $state('');
 
-let useLabel = false;
-let label: LabelTypes = 'none';
+let useRegex      = $state(false), 
+    caseSensitive = $state(true), 
+    selectionOnly = $state(false),
+    useStyle      = $state(false), 
+    replaceStyle  = $state(false),
+    useLabel      = $state(false);
+
+let style1 = $state(Source.subs.defaultStyle),
+    style2 = $state(Source.subs.defaultStyle);
+
+let label: LabelTypes = $state('none');
 
 let currentEntry: SubtitleEntry | null = null;
 let currentTextIndex = 0;
@@ -153,7 +158,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
   <label><input type='checkbox' bind:checked={replaceStyle}/>
     {$_('search.replace-by-style')}
     <StyleSelect
-      on:submit={() => replaceStyle = true}
+      onsubmit={() => replaceStyle = true}
       bind:currentStyle={style2}/>
   </label><br/>
 
@@ -165,7 +170,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
     {$_('search.search-only-in-label')}
     <select
       bind:value={label}
-      on:input={() => useLabel = true}
+      oninput={() => useLabel = true}
     >
       {#each Labels as color}
       <option value={color}>{color}</option>
@@ -175,7 +180,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
   <label><input type='checkbox' bind:checked={useStyle}/>
     {$_('search.search-only-in-style')}
     <StyleSelect
-      on:submit={() => useStyle = true}
+      onsubmit={() => useStyle = true}
       bind:currentStyle={style1}/>
   </label>
   <br>
@@ -187,13 +192,13 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
         </td>
         <td class="hlayout">
           <button class="middle"
-            on:click={() => findAndReplace(SearchAction.Find, SearchOption.None)}
+            onclick={() => findAndReplace(SearchAction.Find, SearchOption.None)}
           >{$_('search.next')}</button>
           <button class="middle"
-            on:click={() => findAndReplace(SearchAction.Find, SearchOption.Reverse)}
+            onclick={() => findAndReplace(SearchAction.Find, SearchOption.Reverse)}
           >{$_('search.previous')}</button>
           <button class="right flexgrow"
-            on:click={() => findAndReplace(SearchAction.Select, SearchOption.Global)}
+            onclick={() => findAndReplace(SearchAction.Select, SearchOption.Global)}
           >{$_('search.all')}</button>
         </td>
       </tr>
@@ -203,16 +208,16 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
         </td>
         <td class="hlayout">
           <button class="middle"
-            on:click={() => findAndReplace(SearchAction.Replace, SearchOption.None)}
+            onclick={() => findAndReplace(SearchAction.Replace, SearchOption.None)}
           >{$_('search.next')}</button>
           <button class="middle"
-            on:click={() => findAndReplace(SearchAction.Replace, SearchOption.Reverse)}
+            onclick={() => findAndReplace(SearchAction.Replace, SearchOption.Reverse)}
           >{$_('search.previous')}</button>
           <button class="middle"
-            on:click={() => findAndReplace(SearchAction.Replace, SearchOption.Global)}
+            onclick={() => findAndReplace(SearchAction.Replace, SearchOption.Global)}
           >{$_('search.all')}</button>
           <button class="right flexgrow"
-            on:click={() => findAndReplace(SearchAction.ReplaceStyleOnly, SearchOption.Global)}
+            onclick={() => findAndReplace(SearchAction.ReplaceStyleOnly, SearchOption.Global)}
           >{$_('search.only-styles')}</button>
         </td>
       </tr>

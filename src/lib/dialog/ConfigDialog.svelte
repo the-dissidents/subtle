@@ -1,12 +1,13 @@
 <script lang="ts">
-import type { DialogHandler } from '../frontend/Dialogs';
-import DialogBase from '../DialogBase.svelte';
-import { assert, never } from '../Basic';
-import { InterfaceConfig, MainConfig } from "../config/Groups";
-import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { assert, never } from '../Basic';
+import { MainConfig } from "../config/Groups";
+import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
+import DialogBase from '../DialogBase.svelte';
+import type { DialogHandler } from '../frontend/Dialogs';
 
 import { _, locale } from 'svelte-i18n';
+    import { Interface } from '../frontend/Interface';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -21,7 +22,7 @@ handler.showModal = async () => {
   groups = Object.entries(MainConfig.groups);
   groups.sort((a, b) => a[1].priority - b[1].priority);
   await inner.showModal!();
-  await MainConfig.save();
+  await Interface.savePublicConfig();
 };
 
 let inner: DialogHandler<void> = {}

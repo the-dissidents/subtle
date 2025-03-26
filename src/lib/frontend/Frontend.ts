@@ -1,3 +1,5 @@
+console.info('Frontend loading');
+
 import { DebugConfig, InputConfig } from "../config/Groups";
 import { ASS } from "../core/ASS";
 import { SimpleFormats } from "../core/SimpleFormats";

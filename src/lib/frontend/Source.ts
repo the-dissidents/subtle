@@ -1,3 +1,5 @@
+console.info('Source loading');
+
 import { get, writable } from "svelte/store";
 import { Subtitles, SubtitleTools } from "../core/Subtitles.svelte";
 

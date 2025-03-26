@@ -117,7 +117,6 @@ if (selectedEncoding && source) {
   textarea {
     resize: none;
     height: auto;
-    
   }
   th {
     background-color: var(--uchu-yin-1);

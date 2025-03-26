@@ -271,6 +271,7 @@
   },
   "transformdialog": {
     "backward": "向后",
+    "by": "平移量：",
     "end-of-selection": "选区结尾",
     "forward": "向前",
     "fps-before-after": "帧率（之前:之后）",
@@ -282,11 +283,20 @@
     "zero-time": "零时间"
   },
   "untimed": {
+    "channel": "频道",
+    "clear": "清除",
     "display": "显示",
     "fuzzy-match-found": "发现模糊匹配（{x, number, ::percent .#}）",
     "fuzzy-search-failed-to-find-anything": "未发现模糊匹配",
     "justify": "均匀排版",
-    "text-size": "字号"
+    "lock": "锁定",
+    "paste": "粘贴",
+    "regex-b": "正则 \\b",
+    "snap-to-following-punctuation": "吸附到后面的标点符号",
+    "syllable-cjk-character": "音节或CJK字符",
+    "text-size": "字号",
+    "tokenizer": "分词方法",
+    "word-cjk-character": "单词或CJK字符"
   },
   "untitled": "「未命名」"
 }

@@ -1,9 +1,7 @@
-import { TableConfig } from "../SubtitleTable.svelte";
-import { TimelineConfig } from "../Timeline";
-import { MediaConfig } from "../VideoPlayer";
-import { PublicConfig, PublicConfigGroup } from "./PublicConfig.svelte";
+console.info('Groups loading');
 
-import { unwrapFunctionStore, _, locale } from 'svelte-i18n';
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { PublicConfig, PublicConfigGroup } from "./PublicConfig.svelte";
 const $_ = unwrapFunctionStore(_);
 
 export const MainConfig = new PublicConfig('main');
@@ -131,7 +129,3 @@ export const DebugConfig = new PublicConfigGroup(
         }
     });
 MainConfig.addGroup('debug', DebugConfig);
-
-MainConfig.addGroup('timeline', TimelineConfig);
-MainConfig.addGroup('media', MediaConfig);
-MainConfig.addGroup('table', TableConfig);

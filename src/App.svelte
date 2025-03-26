@@ -1,27 +1,37 @@
 <script lang="ts">
-import * as _i18n from './lib/i18n';
+console.info('App loading');
+
+import { _, locale } from 'svelte-i18n';
 
 import { InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
 
-import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
+import { TableConfig } from "./lib/SubtitleTable.svelte";
+import { TimelineConfig } from "./lib/Timeline";
+import { MediaConfig } from "./lib/VideoPlayer";
+
+MainConfig.addGroup('timeline', TimelineConfig);
+MainConfig.addGroup('media', MediaConfig);
+MainConfig.addGroup('table', TableConfig);
+
 import CombineDialog from "./lib/dialog/CombineDialog.svelte";
-import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
+import ConfigDialog from './lib/dialog/ConfigDialog.svelte';
 import EncodingDialog from './lib/dialog/EncodingDialog.svelte';
 import ExportDialog from './lib/dialog/ExportDialog.svelte';
-import ConfigDialog from './lib/dialog/ConfigDialog.svelte';
+import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
+import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 
-import TabView from './lib/ui/TabView.svelte';
-import TabPage from './lib/ui/TabPage.svelte';
-import Resizer from './lib/ui/Resizer.svelte';
-import TimestampInput from './lib/TimestampInput.svelte';
-import SubtitleTable from './lib/SubtitleTable.svelte';
 import EntryEdit from './lib/EntryEdit.svelte';
+import SubtitleTable from './lib/SubtitleTable.svelte';
+import TimestampInput from './lib/TimestampInput.svelte';
+import Resizer from './lib/ui/Resizer.svelte';
+import TabPage from './lib/ui/TabPage.svelte';
+import TabView from './lib/ui/TabView.svelte';
 
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
-import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
 import TestToolbox from './lib/toolbox/TestToolbox.svelte';
+import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 
 import { assert, Basic } from './lib/Basic';
 import { CanvasKeeper } from './lib/CanvasKeeper';
@@ -31,15 +41,13 @@ import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
 
-import { Source } from './lib/frontend/Source';
-import { Interface, UIFocus } from './lib/frontend/Interface';
-import { Playback } from './lib/frontend/Playback';
-import { Dialogs } from './lib/frontend/Dialogs';
-import { Actions } from './lib/frontend/Actions';
 import { getVersion } from '@tauri-apps/api/app';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
-
-import { _, locale } from 'svelte-i18n';
+import { Actions } from './lib/frontend/Actions';
+import { Dialogs } from './lib/frontend/Dialogs';
+import { Interface, UIFocus } from './lib/frontend/Interface';
+import { Playback } from './lib/frontend/Playback';
+import { Source } from './lib/frontend/Source';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -118,7 +126,7 @@ $effect(() => {
 });
 
 getVersion().then((x) => 
-  appWindow.setTitle(`subtle beta ${x}a0 (${platform()}-${version()}/${arch()})`));
+  appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
 
 appWindow.onCloseRequested(async (ev) => {
   if (!await Interface.warnIfNotSaved()) {
@@ -137,7 +145,7 @@ appWindow.onCloseRequested(async (ev) => {
   await PrivateConfig.set('timelineH', timelineCanvas!.clientHeight);
   await PrivateConfig.set('editorH', editTable!.clientHeight);
   await PrivateConfig.set('leftPaneW', leftPane!.clientWidth);
-  await MainConfig.save();
+  await Interface.savePublicConfig();
 });
 
 appWindow.onDragDropEvent(async (ev) => {
@@ -228,7 +236,7 @@ appWindow.onDragDropEvent(async (ev) => {
             Playback.setPosition(playPos * Playback.duration);
           }}/>
         <TimestampInput bind:timestamp={playPosInput}
-          on:change={() => Playback.setPosition(playPosInput)}/>
+          onchange={() => Playback.setPosition(playPosInput)}/>
       </div>
       <!-- resizer -->
       <div>

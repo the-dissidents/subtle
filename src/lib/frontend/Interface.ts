@@ -1,3 +1,5 @@
+console.info('Interface loading');
+
 import { get, writable } from "svelte/store";
 
 import * as dialog from "@tauri-apps/plugin-dialog";
@@ -15,7 +17,7 @@ import { Editing } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { Playback } from "./Playback";
-import { DebugConfig } from "../config/Groups";
+import { DebugConfig, MainConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
@@ -230,5 +232,10 @@ export const Interface = {
         const text = JSON.stringify(Source.subs.toSerializable());
         if (await Source.saveTo(file, text) && Playback.video?.source)
             PrivateConfig.rememberVideo(file, Playback.video.source);
+    },
+
+    async savePublicConfig() {
+        await guardAsync(() => MainConfig.save(),
+            `error saving public config`);
     }
 }
