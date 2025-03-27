@@ -142,9 +142,9 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 }
 </script>
 
-<input class='wfill' bind:value={searchTerm}
+<input class='wfill' type="text" bind:value={searchTerm}
   id='expr' placeholder={$_('search.expression')}/>
-<input class='wfill' bind:value={replaceTerm}
+<input class='wfill' type="text" bind:value={replaceTerm}
   id='repl' placeholder={$_('search.replace-term')}/>
 
 <div class='form'>
@@ -236,10 +236,5 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 
   table td {
     padding: 0;
-  }
-
-  button[disabled] {
-    background-color: var(--uchu-gray-1);
-    color: black;
   }
 </style>

@@ -300,11 +300,20 @@ function clear() {
 </div>
 
 <style>
+  @media (prefers-color-scheme: light) {
+    textarea[readonly] {
+      background-color: var(--uchu-gray-1);
+    }
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    textarea[readonly] {
+      background-color: var(--uchu-yin-6);
+    }
+  }
+
   textarea {
     resize: none;
-  }
-  textarea[readonly] {
-    background-color: #f9f9f9;
   }
   input[type='number'] {
     width: 100%;

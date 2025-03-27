@@ -48,6 +48,8 @@ import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface, UIFocus } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
+    import { app } from '@tauri-apps/api';
+    import { invoke } from '@tauri-apps/api/core';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -122,7 +124,21 @@ $effect(() => {
 });
 
 $effect(() => {
-    locale.set(InterfaceConfig.data.language);
+  locale.set(InterfaceConfig.data.language);
+});
+
+let settingTheme = false;
+async function updateTheme() {
+  if (settingTheme) return;
+  settingTheme = true;
+  await invoke("plugin:theme|set_theme", {
+    theme: InterfaceConfig.data.theme,
+  });
+  settingTheme = false;
+}
+
+$effect(() => {
+  updateTheme();
 });
 
 getVersion().then((x) => 
@@ -296,6 +312,67 @@ appWindow.onDragDropEvent(async (ev) => {
 </main>
 
 <style>
+@media (prefers-color-scheme: light) {
+  .status {
+    background-color: var(--uchu-yin-2);
+  }
+  ul.menu {
+    background-color: var(--uchu-yin-4);
+  }
+  .timelinefocused {
+    box-shadow: 0 5px 10px gray;
+  }
+  ul.menu button {
+    background-color: transparent;
+    color: white;
+  }
+  ul.menu button:not([disabled]):hover {
+    background-color: var(--uchu-yin-2) !important;
+  }
+  ul.menu button[disabled] {
+    color: gainsboro;
+  }
+  ul.menu .label {
+    color: rgb(226, 223, 223);
+    background-color: transparent;
+  }
+  ul.menu .separator {
+    background-color: rgb(193, 193, 193);
+  }
+  .player-container canvas {
+    background-color: lightgray;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .status, ul.menu {
+    background-color: var(--uchu-yin-7);
+  }
+  .timelinefocused {
+    box-shadow: 0 5px 10px gray;
+  }
+  ul.menu button {
+    color: white;
+    background-color: transparent;
+  }
+  ul.menu button:not([disabled]):hover {
+    background-color: var(--uchu-yin-6) !important;
+  }
+  ul.menu button[disabled] {
+    color: var(--uchu-yin-4);
+  }
+  ul.menu .label {
+    color: rgb(226, 223, 223);
+    background-color: transparent;
+  }
+  ul.menu .separator {
+    background-color: rgb(193, 193, 193);
+  }
+  .player-container canvas {
+    background-color: black;
+  }
+}
+
 .container {
   margin: 0;
   padding: 10px;
@@ -318,7 +395,6 @@ ul.menu {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: gray;
   display: flex;
   align-items: center;
   cursor: default;
@@ -334,29 +410,17 @@ ul.menu li {
 ul.menu button {
   font-size: 1rem;
   display: block;
-  color: white;
   min-width: max-content;
-  background-color: transparent;
   border: none;
   border-radius: 0;
   text-align: center;
   padding: 10px 15px 10px;
   text-decoration: none;
-}
-
-ul.menu button:hover {
-  background-color: darkgray !important;
-}
-
-ul.menu button[disabled] {
-  background-color: transparent;
-  color: gainsboro;
+  box-shadow: none;
 }
 
 ul.menu .label {
   display: block;
-  color: rgb(226, 223, 223);
-  background-color: transparent;
   border: none;
   text-align: start;
   flex-grow: 1;
@@ -370,12 +434,6 @@ ul.menu .separator {
   min-height: 30px;
   display: block;
   margin: 0 10px;
-  background-color: rgb(193, 193, 193);
-}
-
-.timelinefocused {
-  /* border: 2px solid skyblue; */
-  box-shadow: 0 5px 10px gray;
 }
 
 .player-container {
@@ -388,7 +446,6 @@ ul.menu .separator {
   height: 100%;
   display: block; /* to get rid of extra spacing at the bottom */
   box-sizing: border-box;
-  background-color: lightgray;
 }
 
 .timeline {
@@ -404,7 +461,6 @@ ul.menu .separator {
   padding: 5px;
   margin: 5px 0 0 0;
   line-height: normal;
-  background-color: lightgray;
   white-space: nowrap;
   overflow-x: auto;
 }

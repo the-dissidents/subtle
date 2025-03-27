@@ -23,7 +23,6 @@ export const InterfaceConfig = new PublicConfigGroup(
         theme: {
             localizedName: () => $_('config.theme'),
             type: 'select',
-            description: () => $_('not-implemented-yet'),
             options: {
                 light: {
                     localizedName: () => $_('config.light')
@@ -74,15 +73,15 @@ export const InputConfig = new PublicConfigGroup(
             localizedName: () => $_('config.mouse-zoom-sensitivity'),
             type: 'number',
             description: () => $_('config.mouse-zoom-sensitivity-d'),
-            bounds: [0.01, 0.1],
+            bounds: [0.005, 0.25],
             default: 0.05
         },
         trackpadScrollFactor: {
             localizedName: () => $_('config.trackpad-scroll-sensitivity'),
             type: 'number',
             description: () => $_('config.trackpad-scroll-sensitivity-d'),
-            bounds: [1, 50],
-            default: 10
+            bounds: [0.5, 25],
+            default: 5
         },
         trackpadZoomFactor: {
             localizedName: () => $_('config.trackpad-zoom-sensitivity'),

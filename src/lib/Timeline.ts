@@ -3,7 +3,7 @@ import { Basic, assert } from "./Basic";
 import { DebugConfig, InterfaceConfig } from "./config/Groups";
 import type { WithCanvas } from "./CanvasKeeper";
 import { MMedia } from "./API";
-import { LabelColor } from "./Theming";
+import { LabelColor } from "./Theming.svelte";
 
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./core/Subtitles.svelte";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";

@@ -63,6 +63,38 @@ setContext<TabAPI>(TabAPIContext, {
 </div>
 
 <style>
+  @media (prefers-color-scheme: light) {
+    .header {
+      border-bottom: 1px solid var(--uchu-blue-2);
+    }
+    button {
+      color: #a6a6a6;
+      &:not([disabled], .selected):hover {
+        filter: brightness(97%);
+      }
+    }
+    .selected {
+      border-bottom: 2px solid var(--uchu-blue-2);
+      color: var(--uchu-yin);
+    }
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .header {
+      border-bottom: 1px solid var(--uchu-blue-7);
+    }
+    button {
+      color: #a6a6a6;
+      &:not([disabled], .selected):hover {
+        filter: brightness(110%);
+      }
+    }
+    .selected {
+      border-bottom: 2px solid var(--uchu-blue-7);
+      color: var(--uchu-yang);
+    }
+  }
+
   .tabview {
     width: 100%;
     height: 100%;
@@ -71,7 +103,6 @@ setContext<TabAPI>(TabAPIContext, {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    border-bottom: 1px solid skyblue;
     overflow-x: auto;
     scrollbar-width: thin;
     margin-bottom: 2px;
@@ -83,15 +114,7 @@ setContext<TabAPI>(TabAPIContext, {
     border-radius: 0;
     box-shadow: none;
     margin: 0;
-    color: #a6a6a6;
     font-size: 90%;
     text-wrap: nowrap;
-    &:not([disabled], .selected):hover {
-       color: gray;
-    }
-  }
-  .selected {
-    border-bottom: 2px solid skyblue;
-    color: #333;
   }
 </style>

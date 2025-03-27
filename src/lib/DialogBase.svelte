@@ -119,12 +119,43 @@ handler.showModal = async () => {
 </dialog>
 
 <style>
+  @media (prefers-color-scheme: light) {
+    dialog {
+      box-shadow: 0 0 10px gray;
+    }
+    dialog.modal::backdrop {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .shadow {
+      box-shadow: 0px 10px 10px 10px #555;
+    }
+    footer {
+      background-color: var(--uchu-yin-2);
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    dialog {
+      box-shadow: 0 0 10px black;
+      background-color: var(--uchu-yin-9);
+      color: var(--uchu-yang);
+    }
+    dialog.modal::backdrop {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .shadow {
+      box-shadow: 0px 10px 10px 10px #ccc;
+    }
+    footer {
+      background-color: var(--uchu-yin-8);
+    }
+  }
+
   dialog {
     border-radius: 0.3em;
     border: none;
     margin: 0;
     padding: 0;
-    box-shadow: 0 0 10px gray;
     position: absolute;
     /* transform: translate(-50%, -50%); */
     z-index: 100;
@@ -132,9 +163,6 @@ handler.showModal = async () => {
   }
   dialog[open] {
     animation: zoom 0.2s ease-out;
-  }
-  dialog.modal::backdrop {
-    background: rgba(0, 0, 0, 0.3);
   }
   dialog.modal[open]::backdrop {
     animation: fade 0.2s ease-out;
@@ -150,14 +178,8 @@ handler.showModal = async () => {
   dialog > div {
     max-height: 80vh;
   }
-  /* hr {
-    border: 1px solid gray;
-    margin: 10px 0 10px 0;
-  } */
   header {
-    /* cursor: move; */
     padding: 1em 1.5em 1px;
-    /* box-shadow: 0 -10px 10px 10px gray; */
   }
   dialog .body {
     padding: 0 1.5em 1em;
@@ -167,10 +189,6 @@ handler.showModal = async () => {
   footer {
     padding: 1em 1.5em 1em;
     text-align: right;
-    background-color: rgb(226, 226, 226);
-  }
-  .shadow {
-    box-shadow: 0px 10px 10px 10px #555;
   }
   .submit {
     padding: 4px 6px;

@@ -143,14 +143,15 @@ async function contextMenu() {
       <tbody>
         <tr>
           <td>{$_('style.name')}</td>
-          <td><input bind:value={$style.name}
+          <td><input type='text'
+            bind:value={$style.name}
             class={isDuplicate($style.name) ? 'duplicate' : ''}
             onchange={() => 
               Source.markChanged(ChangeType.InPlace, ChangeCause.Action)}/></td>
         </tr>
         <tr>
           <td>{$_('style.font')}</td>
-          <td><input bind:value={$style.font}/></td>
+          <td><input type="text" bind:value={$style.font}/></td>
         </tr>
         <tr>
           <td>{$_('style.size')}</td>
@@ -183,11 +184,11 @@ async function contextMenu() {
         <tbody>
           <tr>
             <td>{$_('style.text-color')}</td>
-            <td><input bind:value={$style.color}/></td>
+            <td><input type="text" bind:value={$style.color}/></td>
           </tr>
           <tr>
             <td>{$_('style.line-color')}</td>
-            <td><input bind:value={$style.outlineColor}/></td>
+            <td><input type="text" bind:value={$style.outlineColor}/></td>
           </tr>
           <tr>
             <td>{$_('style.line-size')}</td>

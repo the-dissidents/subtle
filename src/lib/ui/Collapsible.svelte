@@ -42,6 +42,24 @@ let {
 </div>
 
 <style>
+@media (prefers-color-scheme: light) {
+  button.collapsible {
+    background-color: var(--uchu-yin-1);
+  }
+  button.checked {
+    background-color: var(--uchu-green-1) !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  button.collapsible {
+    background-color: var(--uchu-yin-7);
+  }
+  button.checked {
+    background-color: var(--uchu-green-9) !important;
+  }
+}
+
 .info {
   font-family: 'Webdings';
   font-size: 120%;
@@ -56,17 +74,14 @@ let {
   display: none;
 }
 button.collapsible {
-  background-color: whitesmoke;
-  padding: 5px;
+  padding: 3px 5px;
+  margin-top: 5px;
   width: 100%;
   border: none;
   border-radius: 3px;
   text-align: left;
   outline: none;
   box-shadow: none;
-}
-button.checked {
-  background-color: var(--uchu-green-1) !important;
 }
 button.collapsible.active .caret::before {
   transform: rotate(90deg);

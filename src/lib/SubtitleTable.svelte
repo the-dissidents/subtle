@@ -40,7 +40,7 @@ import { SvelteSet } from "svelte/reactivity";
 
 import { assert } from "./Basic";
 import { SubtitleEntry, SubtitleUtil } from "./core/Subtitles.svelte";
-import { LabelColor } from "./Theming";
+import { theme, LabelColor } from "./Theming.svelte";
 
 import { CanvasKeeper } from "./CanvasKeeper";
 import { InterfaceConfig } from "./config/Groups";
@@ -80,15 +80,20 @@ let headerHeight = $derived(lineHeight);
 let cellPadding = $derived(InterfaceConfig.data.fontSize * 0.4);
 let scrollerSize = 4;
 
-const gridColor = '#bbb';
-const gridMajorColor = '#999';
-const headerBackground = '#ddd';
-const overlapColor = 'crimson';
-const focusBackground = 'lightblue';
-const selectedBackground = 'rgb(234, 234, 234)';
+const textColor = $derived(theme.isDark ? '#fff' : '#000');
+const gridColor = $derived(theme.isDark ? '#444' : '#bbb');
+const gridMajorColor = $derived(theme.isDark ? '#666' : '#999');
+const headerBackground = $derived(theme.isDark ? '#555' : '#ddd');
+const overlapColor = $derived(theme.isDark ? 'lightpink' : 'crimson');
+const focusBackground = $derived(theme.isDark ? 'darkslategray' : 'lightblue');
+const selectedBackground = $derived(theme.isDark ? '#444' : '#eee');
 
 const scrollerFade = 1500;
 const scrollerFadeStart = 1000;
+
+$effect(() => {
+  if (theme.isDark !== undefined) requestRender();
+});
 
 function font() {
   return `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`;
@@ -146,7 +151,7 @@ function render() {
   cxt.translate(-scrollX, -scrollY);
   cxt.font = font();
   cxt.textBaseline = 'top';
-  cxt.fillStyle = 'black';
+  cxt.fillStyle = textColor;
 
   // table
   let selection = new Set(Editing.getSelection());
@@ -162,10 +167,10 @@ function render() {
     const h = lh * lineHeight;
     if (entry == focused) {
       cxt.fillStyle = focusBackground;
-      cxt.fillRect(0, y, width + scrollX, h);
+      cxt.fillRect(0, y+1, width + scrollX, h-2);
     } else if (selection.has(entry)) {
       cxt.fillStyle = selectedBackground;
-      cxt.fillRect(0, y, width + scrollX, h);
+      cxt.fillRect(0, y+1, width + scrollX, h-2);
     }
 
     // label
@@ -178,7 +183,7 @@ function render() {
     cxt.fillStyle = 
       (entry !== focused 
         && focused instanceof SubtitleEntry 
-        && overlappingTime(focused, entry)) ? overlapColor : 'black';
+        && overlappingTime(focused, entry)) ? overlapColor : textColor;
     cxt.strokeStyle = gridColor;
     let y0 = y;
     entry.texts.forEach((channel, i) => {
@@ -222,7 +227,7 @@ function render() {
       cxt.fillStyle = focusBackground;
       cxt.fillRect(0, maxY - lineHeight, width + scrollX, lineHeight);
     }
-    cxt.fillStyle = 'black';
+    cxt.fillStyle = textColor;
     cxt.textBaseline = 'middle';
     cxt.textAlign = 'end';
     cxt.fillText(`*`, colPos[1] - cellPadding, maxY - lineHeight * 0.5);
@@ -231,7 +236,7 @@ function render() {
   // header
   cxt.fillStyle = headerBackground;
   cxt.fillRect(0, scrollY, scrollX + width, headerHeight);
-  cxt.fillStyle = 'black';
+  cxt.fillStyle = textColor;
   cxt.textBaseline = 'top';
   cxt.textAlign = 'end';
   cxt.fillText(`#`,     colPos[1] - cellPadding, scrollY + linePadding);

@@ -64,14 +64,14 @@ function changeResolution() {
     <tr>
       <td>{$_('ppty.title')}</td>
       <td>
-        <input class='txt' bind:value={metadata.title}
+        <input type="text" class='txt' bind:value={metadata.title}
           onchange={() => markMetadataChange()} />
       </td>
     </tr>
     <tr>
       <td>{$_('ppty.language')}</td>
       <td>
-        <input class='txt' bind:value={metadata.language}
+        <input type="text" class='txt' bind:value={metadata.language}
           onchange={() => markMetadataChange()} />
       </td>
     </tr>

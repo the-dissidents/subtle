@@ -19,12 +19,14 @@ fn main() {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
     ffmpeg::init().unwrap();
 
+    let mut ctx = tauri::generate_context!();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_theme::init(ctx.config_mut()))
         .manage(Mutex::new(SetupState {
             frontend_task: false,
             backend_task: true,
@@ -49,7 +51,7 @@ fn main() {
             // request_something,
             test_response
         ])
-        .run(tauri::generate_context!())
+        .run(ctx)
         .expect("error while running tauri application");
 }
 

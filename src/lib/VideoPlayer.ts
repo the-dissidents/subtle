@@ -341,7 +341,8 @@ export class VideoPlayer implements WithCanvas {
     #requestedSetPositionTarget = -1;
     requestSetPosition(t: number) {
         if (!this.#opened) this.forceSetPosition(t);
-        else this.requestSetPositionFrame(Math.floor(t * this.#opened.framerate));
+        else this.requestSetPositionFrame(
+            Math.ceil(t * this.#opened.framerate)); // to avoid going before a subtitle entry
     }
 
     async requestSetPositionFrame(position: number) {

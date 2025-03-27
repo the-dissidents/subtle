@@ -4,7 +4,7 @@ import TimestampInput from './TimestampInput.svelte';
 
 import { assert } from './Basic';
 import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './core/Subtitles.svelte'
-import { LabelColor } from './Theming';
+import { LabelColor } from './Theming.svelte';
 import { tick } from 'svelte';
 import { ChangeCause, ChangeType, Source } from './frontend/Source';
 import { Editing } from './frontend/Editing';
@@ -224,8 +224,6 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
   width: 100%;
   resize: none;
   overflow: visible;
-  border-radius: 2px;
-  border: 1px solid gray;
   padding: 5px;
   box-sizing: border-box;
 }

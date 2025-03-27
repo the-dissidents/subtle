@@ -21,7 +21,9 @@ $effect(() => {
 });
 </script>
 
-<input class={'timestamp ' + (stretch ? 'stretch' : '')} bind:value={value}
+<input class={'timestamp ' + (stretch ? 'stretch' : '')}
+  type="text"
+  bind:value={value}
   onbeforeinput={(ev) => {
     // Note: Safari fires beforeinput and input *before* keydown if the IME is on, so
     // we must handle numerical input here

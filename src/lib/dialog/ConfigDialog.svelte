@@ -157,12 +157,47 @@ locale.subscribe(() => refresh++);
 </DialogBase>
 
 <style>
+@media (prefers-color-scheme: light) {
+  h3.groupname {
+    border-bottom: 1px solid gray;
+  }
+  .line {
+    border-bottom: dashed 1px var(--uchu-yin-2);
+  }
+  td.description {
+    color: var(--uchu-yin-6);
+  }
+  p.description {
+    color: var(--uchu-yin-8);
+  }
+  .notice {
+    color: var(--uchu-yin-8);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  h3.groupname {
+    border-bottom: 1px solid gray;
+  }
+  .line {
+    border-bottom: dashed 1px var(--uchu-yin-6);
+  }
+  td.description {
+    color: var(--uchu-yin-4);
+  }
+  p.description {
+    color: var(--uchu-yin-2);
+  }
+  .notice {
+    color: var(--uchu-yin-2);
+  }
+}
+
 h3.groupname {
   margin: 0 0 3px 0;
   text-align: start;
   font-size: 100%;
   font-weight: bold;
-  border-bottom: 1px solid gray;
 }
 table {
   margin-bottom: 20px;
@@ -172,10 +207,10 @@ table {
 table td.key {
   white-space: nowrap;
 }
+
 .line {
   flex-grow: 1;
   margin-left: 5px;
-  border-bottom: dashed 1px var(--uchu-yin-2);
   height: 0.75lh;
 }
 
@@ -195,7 +230,6 @@ label {
   font-size: 90%;
 }
 td.description {
-  color: var(--uchu-yin-6);
   font-size: 90%;
   text-align: justify;
   padding-left: 50px;
@@ -203,14 +237,12 @@ td.description {
   line-height: 1.4em;
 }
 p.description {
-  color: var(--uchu-yin-8);
   font-size: 90%;
   text-align: justify;
   margin: 5px 0 5px 0;
   line-height: 1.4em;
 }
 .notice {
-  color: var(--uchu-yin-8);
   font-size: 90%;
   margin: 0 0 5px 0;
 }
