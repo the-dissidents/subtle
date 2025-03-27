@@ -136,10 +136,15 @@ locale.subscribe(() => refresh++);
             {never(item)}
           {/if}
         </td>
-        <td style="text-align: end;"><button
-          disabled={group.data[key] === group.defaults[key]}
-          onclick={() => group.data[key] = group.defaults[key]}
-        >reset</button></td>
+        <td style="text-align: end;">
+          <button aria-label="reset"
+            disabled={group.data[key] === group.defaults[key]}
+            onclick={() => group.data[key] = group.defaults[key]}
+          >
+            <svg class="feather">
+              <use href="../public/feather-sprite.svg#refresh-ccw" />
+            </svg>
+          </button></td>
       </tr>
 
       {#if item.description}

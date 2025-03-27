@@ -270,7 +270,7 @@ export class SubtitleRenderer {
     setTime(time: number) {
         if (time == this.currentTime) return;
 
-        console.log('time ->', time);
+        // console.log('time ->', time);
         this.#currentTime = time;
         this.#searchCurrentEntries();
         this.#needsRender = true;

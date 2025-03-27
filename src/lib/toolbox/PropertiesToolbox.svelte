@@ -59,51 +59,53 @@ function changeResolution() {
 }
 </script>
 
-<table class="config">
-  <tbody>
-    <tr>
-      <td>{$_('ppty.title')}</td>
-      <td>
-        <input type="text" class='txt' bind:value={metadata.title}
-          onchange={() => markMetadataChange()} />
-      </td>
-    </tr>
-    <tr>
-      <td>{$_('ppty.language')}</td>
-      <td>
-        <input type="text" class='txt' bind:value={metadata.language}
-          onchange={() => markMetadataChange()} />
-      </td>
-    </tr>
-    <tr>
-      <td>{$_('ppty.resolution')}</td>
-      <td>
-        <input type='number' class='res' bind:value={metadata.width}
-          onchange={() => changeResolution()}/>
-        ×
-        <input type='number' class='res' bind:value={metadata.height}
-          onchange={() => changeResolution()}/>
-      </td>
-    </tr>
-  </tbody>
-</table>
-<Collapsible header={$_('ppty.styles')} active={true}>
-  {#key updateCounter}
-    <h5>{$_('ppty.default')}</h5>
-    <StyleEdit style={Source.subs.defaultStyle} {subtitles} />
-    <hr>
-    <h5>{$_('ppty.other')}</h5>
-    {#each styles as style (style.uniqueID)}
-      <StyleEdit style={style} {subtitles}
-        onsubmit={() => styles = Source.subs.styles}/>
+<div class="vlayout">
+  <table class="config">
+    <tbody>
+      <tr>
+        <td>{$_('ppty.title')}</td>
+        <td>
+          <input type="text" class='txt' bind:value={metadata.title}
+            onchange={() => markMetadataChange()} />
+        </td>
+      </tr>
+      <tr>
+        <td>{$_('ppty.language')}</td>
+        <td>
+          <input type="text" class='txt' bind:value={metadata.language}
+            onchange={() => markMetadataChange()} />
+        </td>
+      </tr>
+      <tr>
+        <td>{$_('ppty.resolution')}</td>
+        <td>
+          <input type='number' class='res' bind:value={metadata.width}
+            onchange={() => changeResolution()}/>
+          ×
+          <input type='number' class='res' bind:value={metadata.height}
+            onchange={() => changeResolution()}/>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <Collapsible header={$_('ppty.styles')} active={true}>
+    {#key updateCounter}
+      <h5>{$_('ppty.default')}</h5>
+      <StyleEdit style={Source.subs.defaultStyle} {subtitles} />
       <hr>
-    {/each}
-  {/key}
-  <button style="width: 25px; height: 20px"
-    onclick={() => newStyle()}>+</button>
-  <button style="height: 20px"
-    onclick={() => removeUnusedStyles()}>{$_('ppty.remove-all-unused')}</button>
-</Collapsible>
+      <h5>{$_('ppty.other')}</h5>
+      {#each styles as style (style.uniqueID)}
+        <StyleEdit style={style} {subtitles}
+          onsubmit={() => styles = Source.subs.styles}/>
+        <hr>
+      {/each}
+    {/key}
+    <button style="width: 25px; height: 20px"
+      onclick={() => newStyle()}>+</button>
+    <button style="height: 20px"
+      onclick={() => removeUnusedStyles()}>{$_('ppty.remove-all-unused')}</button>
+  </Collapsible>
+</div>
 
 <style>
 .res {

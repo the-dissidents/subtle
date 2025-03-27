@@ -13,6 +13,18 @@
   -webkit-text-size-adjust: 100%;
 }
 
+.feather {
+  display: block;
+  height: 1lh;
+  aspect-ratio: 1 / 1;
+  margin: auto;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
 /* COLORS */
 
 @media (prefers-color-scheme: light) {
@@ -89,7 +101,7 @@
     background-color: var(--uchu-yin-8);
     color: var(--uchu-yang);
     &:focus {
-      outline: 2px solid color-mix(in oklab, var(--uchu-blue-8), transparent);
+      outline: 2px solid color-mix(in oklab, var(--uchu-blue-8), transparent 40%);
     }
   }
   button,
@@ -98,6 +110,9 @@
     background-color: var(--uchu-yin-7);
     color: var(--uchu-yang);
     box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
+    &:focus {
+      outline: none;
+    }
     &:not([disabled]):hover {
       filter: brightness(110%);
     }
@@ -107,7 +122,7 @@
   }
   button[disabled] {
     background-color: var(--uchu-yin-8);
-    color: var(--uchu-gray-6);
+    color: var(--uchu-gray-9);
     box-shadow: none;
   }
   h5 {
@@ -176,9 +191,6 @@ label:has(input[type='checkbox'].button) {
   text-decoration: none;
   font-family: var(--fontFamily);
   font-size: 0.85rem;
-  padding-block-start: 2px;
-  padding-block-end: 3px;
-  padding-inline-start: 6px;
   line-height: normal;
 }
 

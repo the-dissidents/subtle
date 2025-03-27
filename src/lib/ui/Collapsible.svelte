@@ -53,7 +53,8 @@ let {
 
 @media (prefers-color-scheme: dark) {
   button.collapsible {
-    background-color: var(--uchu-yin-7);
+    outline: 1px solid var(--uchu-yin-8);
+    background-color: var(--uchu-yin-9);
   }
   button.checked {
     background-color: var(--uchu-green-9) !important;
@@ -76,11 +77,10 @@ let {
 button.collapsible {
   padding: 3px 5px;
   margin-top: 5px;
-  width: 100%;
+  /* width: 100%; */
   border: none;
   border-radius: 3px;
   text-align: left;
-  outline: none;
   box-shadow: none;
 }
 button.collapsible.active .caret::before {
@@ -88,7 +88,6 @@ button.collapsible.active .caret::before {
 }
 .caret::before {
   content: "\25B6";
-  color: var(--uchu-yin);
   display: inline-block;
   margin-right: 6px;
 }

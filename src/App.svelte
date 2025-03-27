@@ -59,7 +59,7 @@ let videoCanvasContainer: HTMLElement | undefined = $state();
 let videoCanvas: HTMLCanvasElement | undefined = $state();
 let timelineCanvas: HTMLCanvasElement | undefined = $state();
 
-let playIcon = $state('▶');
+let isPlaying = $state(false);
 let sliderDisabled = $state(true);
 let playPos = $state(0);
 let playPosInput = $state(0);
@@ -80,7 +80,7 @@ Source.onUndoBufferChanged.bind(me, () => {
 
 Playback.onRefreshPlaybackControl = () => {
   sliderDisabled = !Playback.isLoaded;
-  playIcon = Playback.isPlaying ? '⏸' : '▶'
+  isPlaying = Playback.isPlaying;
   playPosInput = Playback.position ?? 0;
   playPos = Playback.isLoaded 
     ? Playback.position / Playback.duration : 0;
@@ -217,12 +217,18 @@ appWindow.onDragDropEvent(async (ev) => {
       {/key}
       <li class='separator'></li>
       <li><button onclick={() => Interface.askOpenVideo()}>
-        {$_('menu.open-video')}
+        <svg class="feather">
+          <use href="/feather-sprite.svg#film" />
+        </svg>
+        &nbsp;{$_('menu.open-video')}
       </button></li>
       <li class='separator'></li>
       <li class="label">{$filenameDisplay}</li>
-      <li><button onclick={() => Dialogs.configuration.showModal!()}>
-        {$_('menu.configuration')}
+      <li><button title={$_('menu.configuration')} aria-label={$_('menu.configuration')}
+                  onclick={() => Dialogs.configuration.showModal!()}>
+        <svg class="feather">
+          <use href="/feather-sprite.svg#settings" />
+        </svg>
       </button></li>
     </ul>
   </div>
@@ -236,11 +242,15 @@ appWindow.onDragDropEvent(async (ev) => {
       </div>
       <!-- video playback controls -->
       <div class='hlayout'>
-        <button 
-          style="width: 30px; height: 20px"
+        <button aria-label="play/pause"
           onclick={() => Playback.toggle()
-            .catch((e) => $status = `Error playing video: ${e}`)}
-        >{playIcon}</button>
+            .catch((e) => $status = `Error playing video: ${e}`)}>
+          <svg class="feather">
+            <use href={isPlaying 
+              ? "/feather-sprite.svg#pause" 
+              : "/feather-sprite.svg#play"} />
+          </svg>
+        </button>
         <input type='range' class='play-pointer flexgrow'
           step="any" max="1" min="0" disabled={sliderDisabled}
           bind:value={playPos}
@@ -409,9 +419,10 @@ ul.menu li {
 
 ul.menu button {
   font-size: 1rem;
-  display: block;
+  display: flex;
   min-width: max-content;
   border: none;
+  margin: 0;
   border-radius: 0;
   text-align: center;
   padding: 10px 15px 10px;

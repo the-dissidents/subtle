@@ -137,7 +137,7 @@ async function contextMenu() {
     <button bind:this={button} onclick={() => contextMenu()}>...</button>
   </div>
   <!-- properties -->
-  <div class="flexgrow">
+  <div class="flexgrow vlayout">
     <!-- basic -->
     <table class="stretch">
       <tbody>
