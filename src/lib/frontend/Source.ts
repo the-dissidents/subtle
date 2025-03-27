@@ -103,8 +103,6 @@ export const Source = {
         Editing.clearSelection();
         Editing.focused.style = newSubs.defaultStyle;
         this.currentFile.set(isImport ? '' : path);
-
-        Interface.status.set('opened: ' + path);
         this.onSubtitleObjectReload.dispatch();
         this.clearUndoRedo();
         this.fileChanged.set(false);

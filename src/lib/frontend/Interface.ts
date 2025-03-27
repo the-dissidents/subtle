@@ -118,6 +118,7 @@ export const Interface = {
         await Source.openDocument(newSubs, path, !isJSON);
         const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);
+        Interface.status.set($_('msg.opened-path', {values: {path}}));
     },
 
     async openVideo(path: string) {

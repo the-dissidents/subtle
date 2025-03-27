@@ -188,6 +188,7 @@
     "new-entry-appended": "new entry appended",
     "not-a-file": "not a file: {path}",
     "nothing-to-paste": "nothing to paste",
+    "opened-path": "opened: {path}",
     "pasted": "pasted",
     "proceed-without-saving": "Proceed without saving?",
     "saved-to-file": "saved to {file}",

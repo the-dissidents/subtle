@@ -188,6 +188,7 @@
     "new-entry-appended": "已新增項目",
     "not-a-file": "不是檔案：{path}",
     "nothing-to-paste": "沒有可以貼上的東西",
+    "opened-path": "已開啟：{path}",
     "pasted": "已貼上",
     "proceed-without-saving": "檔案尚未儲存，確認繼續？",
     "saved-to-file": "已儲存：{file}",

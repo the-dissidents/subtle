@@ -188,6 +188,7 @@
     "new-entry-appended": "已添加新条目",
     "not-a-file": "不是文件：{path}",
     "nothing-to-paste": "没有可以粘贴的东西",
+    "opened-path": "已打开：{path}",
     "pasted": "粘贴",
     "proceed-without-saving": "文件还没有保存，确认继续？",
     "saved-to-file": "已保存：{file}",
