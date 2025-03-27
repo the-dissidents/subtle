@@ -212,6 +212,7 @@ export class VideoPlayer implements WithCanvas {
             assert(this.#opened !== undefined);
             this.#opened.onAudioFeedback = (data) => {
                 assert(this.#opened !== undefined);
+                this.#playing = data.isPlaying;
                 this.#opened.audioSize = data.bufferSize;
                 this.#opened.audioBufferLength = data.bufferLength;
                 if (data.headPosition !== undefined)
@@ -341,12 +342,13 @@ export class VideoPlayer implements WithCanvas {
     requestSetPosition(t: number) {
         if (!this.#opened) this.forceSetPosition(t);
         else this.requestSetPositionFrame(
-            Math.ceil(t * this.#opened.framerate)); // to avoid going before a subtitle entry
+            Math.ceil(t * this.#opened.framerate)); // ceil to avoid going before a subtitle entry
     }
 
-    async requestSetPositionFrame(position: number) {
+    requestSetPositionFrame(position: number) {
         const first = this.#requestedSetPositionTarget < 0;
         this.#requestedSetPositionTarget = position;
+        this.play(false);
         if (first) {
             (async () => {
                 let pos = this.#requestedSetPositionTarget;
@@ -527,7 +529,10 @@ export class VideoPlayer implements WithCanvas {
         const tolerance = 1 / this.#opened.framerate;
 
         const position = this.#opened.audioHead;
-        while (position !== undefined && video.length > 0) {
+        while (position !== undefined) {
+            if (this.#opened.preloadEOF 
+                ? video.length == 0 
+                : video.length <= 1) break;
             if (video[0].time > position - tolerance) {
                 // consume frame
                 const frame = video[0];
@@ -575,15 +580,19 @@ export class VideoPlayer implements WithCanvas {
         if (!this.#opened) return;
         
         if (!state && this.#playing) {
+            // console.log('playing -> false');
             this.#playing = false;
             await this.#postAudioMessage({type: 'suspend'});
             this.onPlayStateChange();
         } else if (state && !this.#playing && !this.#opened.playEOF) {
+            // console.log('playing -> true');
             this.#playing = true;
             await this.#postAudioMessage({type: 'play'});
             this.onPlayStateChange();
             this.#requestPreload();
             this.requestRender();
+        } else {
+            // console.log('requested play ->', state, 'but done nothing');
         }
     }
 }

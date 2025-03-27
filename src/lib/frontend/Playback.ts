@@ -13,7 +13,6 @@ export type PlayArea = {
 }
 
 let isLoaded = false,
-    isPlaying = false,
     position = 0,
     duration = 0;
 
@@ -60,7 +59,7 @@ export const Playback = {
     get position() { return position; },
     get duration() { return duration; },
     get isLoaded() { return isLoaded; },
-    get isPlaying() { return isPlaying; },
+    get isPlaying() { return this.video?.isPlaying ?? false; },
 
     video: null as VideoPlayer | null,
     timeline: null as Timeline | null,
@@ -86,7 +85,6 @@ export const Playback = {
         };
         this.video.onPlayStateChange = () => {
             assert(this.video != null);
-            isPlaying = this.video.isPlaying;
             this.onRefreshPlaybackControl();
         };
         return this.video;
@@ -125,10 +123,11 @@ export const Playback = {
 
     async play(state = true) {
         assert(this.video !== null);
-        this.video.play(state);
+        await this.video.play(state);
     },
 
     async toggle() {
-        await this.play(!isPlaying);
+        assert(this.video !== null);
+        await this.video.play(!this.video.isPlaying);
     }
 }
