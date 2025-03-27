@@ -4,7 +4,7 @@
 import type { AudioFrameData } from "../API";
 
 export type AudioInputData = {
-    type: 'clearBuffer'
+    type: 'clearBuffer' | 'suspend' | 'play'
 } | {
     type: 'shiftUntil',
     position: number
@@ -15,12 +15,14 @@ export type AudioInputData = {
 
 export type AudioFeedbackData = {
     type: 'ok',
+    isPlaying: boolean,
     bufferLength: number,
     bufferSize: number,
     headPosition: number | undefined,
     tailPosition: number | undefined
 } | {
     type: 'playing',
+    isPlaying: boolean,
     bufferLength: number,
     bufferSize: number,
     headPosition: number | undefined,
@@ -32,11 +34,20 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     #buffer: AudioFrameData[] = [];
     #fullness: number[] = [];
     #currentPosition = 0;
+    #playing: boolean = false;
     
     constructor(...args: any) {
         super(...args);
         this.port.onmessage = (e: MessageEvent<AudioInputData>) => {
             switch (e.data.type) {
+                case "suspend":
+                    this.#playing = false;
+                    this.#postFeedback('ok');
+                    break;
+                case "play":
+                    this.#playing = true;
+                    this.#postFeedback('ok');
+                    break;
                 case "clearBuffer":
                     this.#buffer = [];
                     this.#postFeedback('ok');
@@ -59,6 +70,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     #postFeedback(type: AudioFeedbackData['type']) {
         this.port.postMessage({
             type,
+            isPlaying: this.#playing,
             bufferLength: this.#buffer.length,
             bufferSize: this.#buffer.reduce((a, b) => a + b.content.length * 4, 0),
             headPosition: this.#buffer[0]?.position,
@@ -66,7 +78,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
             fullness: type == 'playing' 
                 ? this.#fullness.reduce((a, b) => a + b, 0) / 100 
                 : -1
-        } as AudioFeedbackData);
+        } satisfies AudioFeedbackData);
     }
 
     log(...args: any[]) {
@@ -78,10 +90,11 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
         outputs: Float32Array[][], 
         parameters: Record<string, Float32Array>
     ) {
+        if (!this.#playing) return true;
+
         this.#fullness.push(this.#buffer.length);
         if (this.#fullness.length > 100) this.#fullness.shift();
         this.#postFeedback('playing');
-        // if (Math.random() < 0.001) this.log(this.#buffer);
 
         try {
             const output = outputs[0];

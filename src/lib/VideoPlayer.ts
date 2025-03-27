@@ -180,7 +180,6 @@ export class VideoPlayer implements WithCanvas {
             }
         }
         worklet.connect(audioCxt.destination);
-        audioCxt.suspend();
 
         this.#opened = {
             media, audioCxt, worklet,
@@ -572,16 +571,16 @@ export class VideoPlayer implements WithCanvas {
         });
     }
 
-    play(state = true) {
+    async play(state = true) {
         if (!this.#opened) return;
         
         if (!state && this.#playing) {
             this.#playing = false;
-            this.#opened.audioCxt.suspend();
+            await this.#postAudioMessage({type: 'suspend'});
             this.onPlayStateChange();
         } else if (state && !this.#playing && !this.#opened.playEOF) {
             this.#playing = true;
-            this.#opened.audioCxt?.resume();
+            await this.#postAudioMessage({type: 'play'});
             this.onPlayStateChange();
             this.#requestPreload();
             this.requestRender();
