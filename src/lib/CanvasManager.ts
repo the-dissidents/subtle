@@ -155,6 +155,11 @@ export class CanvasManager {
         canvas.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));
         canvas.addEventListener('mousemove', (ev) => this.#onMouseMove(ev));
         canvas.addEventListener('wheel', (ev) => this.#onMouseWheel(ev));
+        canvas.addEventListener('mouseleave', () => {
+            if (this.#scrollerHighlight !== 'none')
+                this.requestRender();
+            this.#scrollerHighlight = 'none';
+        });
     }
 
     requestRender() {

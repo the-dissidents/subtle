@@ -142,7 +142,7 @@ locale.subscribe(() => refresh++);
             onclick={() => group.data[key] = group.defaults[key]}
           >
             <svg class="feather">
-              <use href="../public/feather-sprite.svg#refresh-ccw" />
+              <use href="/feather-sprite.svg#refresh-ccw" />
             </svg>
           </button></td>
       </tr>

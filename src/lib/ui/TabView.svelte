@@ -65,7 +65,7 @@ setContext<TabAPI>(TabAPIContext, {
 <style>
   @media (prefers-color-scheme: light) {
     .header {
-      border-bottom: 1px solid var(--uchu-blue-2);
+      border-bottom: 1px solid var(--uchu-blue-4);
     }
     button {
       color: #a6a6a6;
@@ -74,7 +74,7 @@ setContext<TabAPI>(TabAPIContext, {
       }
     }
     .selected {
-      border-bottom: 2px solid var(--uchu-blue-2);
+      border-bottom: 2px solid var(--uchu-blue-4);
       color: var(--uchu-yin);
     }
   }

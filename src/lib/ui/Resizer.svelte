@@ -52,10 +52,28 @@ function ondrag(ev: MouseEvent) {
 </div>
 
 <style>
+@media (prefers-color-scheme: light) {
+  .inside {
+    background-color: var(--uchu-yin-1);
+  }
+  :hover .inside {
+    background-color: var(--uchu-blue-3);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .inside {
+    background-color: var(--uchu-yin-8);
+  }
+  :hover .inside {
+    background-color: var(--uchu-red-3);
+  }
+}
+
 .resizerH {
-  height: 5px;
+  height: 8px;
   width: 100%;
-  margin: 2px;
+  padding: 3px 0 4px 0;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
 }
@@ -63,21 +81,19 @@ function ondrag(ev: MouseEvent) {
 .resizerH .inside {
   width: 100%;
   height: 1px;
-  background-color: gray;
   transform: translateY(50%);
   /* transition: all 0.2s ease-out; */
 }
 
 .resizerH:hover .inside {
   height: 3px;
-  background-color: palevioletred;
   transform: translateY(-25%);
 }
 
 .resizerV {
   height: 100%;
-  width: 5px;
-  margin: 2px;
+  width: 8px;
+  padding: 0 3px 0 4px;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
 }
@@ -85,14 +101,12 @@ function ondrag(ev: MouseEvent) {
 .resizerV .inside {
   height: 100%;
   width: 1px;
-  background-color: gray;
   transform: translateX(50%);
   /* transition: all 0.2s ease-out; */
 }
 
 .resizerV:hover .inside {
   width: 3px;
-  background-color: palevioletred;
   transform: translateX(-25%);
 }
 </style>
