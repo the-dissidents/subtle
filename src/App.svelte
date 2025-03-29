@@ -24,6 +24,7 @@ import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/SubtitleTable.svelte';
 import TimestampInput from './lib/TimestampInput.svelte';
+
 import Resizer from './lib/ui/Resizer.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
 import TabView from './lib/ui/TabView.svelte';
@@ -34,22 +35,20 @@ import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 
 import { assert, Basic } from './lib/Basic';
-import { CanvasKeeper } from './lib/CanvasKeeper';
-
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
-import type { Action } from 'svelte/action';
-import { derived, get } from 'svelte/store';
 
 import { getVersion } from '@tauri-apps/api/app';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
+import type { Action } from 'svelte/action';
+import { derived, get } from 'svelte/store';
+
 import { Actions } from './lib/frontend/Actions';
 import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface, UIFocus } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
-    import { app } from '@tauri-apps/api';
-    import { invoke } from '@tauri-apps/api/core';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -88,14 +87,12 @@ Playback.onRefreshPlaybackControl = () => {
 
 let setupVideoView: Action = () => {
   assert(videoCanvasContainer !== undefined && videoCanvas !== undefined);
-  let keeper = new CanvasKeeper(videoCanvas, videoCanvasContainer);
-  keeper.bind(Playback.createVideo(keeper.cxt));
+  Playback.createVideo(videoCanvas);
 };
 
 let setupTimelineView: Action = () => {
   assert(timelineCanvas !== undefined);
-  let keeper = new CanvasKeeper(timelineCanvas, timelineCanvas);
-  keeper.bind(Playback.createTimeline(keeper.cxt));
+  Playback.createTimeline(timelineCanvas);
 };
 
 PrivateConfig.init();

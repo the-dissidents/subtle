@@ -47,7 +47,14 @@ export const InterfaceConfig = new PublicConfigGroup(
             type: 'string',
             description: () => $_('config.ui-font-family-d'),
             default: 'Arial, Helvetica, sans-serif'
-        }
+        },
+        minScrollerLength: {
+            localizedName: () => $_('config.minimum-scroller-length'),
+            type: 'number',
+            description: () => $_('config.minimum-scroller-length-d'),
+            bounds: [1, 200],
+            default: 20
+        },
     });
 MainConfig.addGroup('interface', InterfaceConfig);
 

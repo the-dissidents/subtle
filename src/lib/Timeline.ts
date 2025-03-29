@@ -1,7 +1,7 @@
 import { AudioSampler } from "./AudioSampler";
 import { Basic, assert } from "./Basic";
 import { DebugConfig, InterfaceConfig } from "./config/Groups";
-import type { WithCanvas } from "./CanvasKeeper";
+import { CanvasManager } from "./CanvasManager";
 import { MMedia } from "./API";
 import { LabelColor } from "./Theming.svelte";
 
@@ -140,7 +140,7 @@ function font(size: number) {
 
 // TODO: convert to a component!
 
-export class Timeline implements WithCanvas {
+export class Timeline {
     #cxt: CanvasRenderingContext2D;
     #requestedRender = false;
     #requestedSampler = false;
@@ -179,16 +179,20 @@ export class Timeline implements WithCanvas {
             [[subs.defaultStyle, 0], ...subs.styles.map((x, i) => [x, i+1])] as any);
     }
 
-    constructor(c: CanvasRenderingContext2D) {
-        this.#cxt = c;
+    constructor(canvas: HTMLCanvasElement) {
+        const manager = new CanvasManager(canvas);
+        manager.onDisplaySizeChanged.bind(this, 
+            (w, h, rw, rh) => this.setDisplaySize(w, h, rw, rh));
+        this.#cxt = manager.context;
+
         this.setViewScale(10);
         this.requestRender();
 
-        c.canvas.oncontextmenu = (e) => e.preventDefault();
-        c.canvas.onmousemove = (ev) => this.#processMouseMove(ev);
-        c.canvas.onmousedown = (ev) => this.#processMouseDown(ev);
-        c.canvas.ondblclick = () => this.#precessDoubleClick();
-        c.canvas.onwheel = (ev) => this.#processWheel(ev);
+        canvas.oncontextmenu = (e) => e.preventDefault();
+        canvas.onmousemove = (ev) => this.#processMouseMove(ev);
+        canvas.onmousedown = (ev) => this.#processMouseDown(ev);
+        canvas.ondblclick = () => this.#precessDoubleClick();
+        canvas.onwheel = (ev) => this.#processWheel(ev);
 
         const me = {};
         Editing.onSelectionChanged.bind(me, (cause) => {

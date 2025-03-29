@@ -5,6 +5,7 @@ import { VideoPlayer } from "../VideoPlayer";
 import { Timeline } from "../Timeline";
 import { ChangeType, Source } from "./Source";
 import { tick } from "svelte";
+import { CanvasManager } from "../CanvasManager";
 
 export type PlayArea = {
     start: number | undefined,
@@ -74,9 +75,9 @@ export const Playback = {
 
     onRefreshPlaybackControl: () => { },
 
-    createVideo(cxt: CanvasRenderingContext2D) {
+    createVideo(canvas: HTMLCanvasElement) {
         assert(this.video == null);
-        this.video = new VideoPlayer(cxt);
+        this.video = new VideoPlayer(canvas);
         this.video.setSubtitles(Source.subs);
         this.video.onVideoPositionChange = () => {
             assert(this.video != null);
@@ -90,9 +91,9 @@ export const Playback = {
         return this.video;
     },
 
-    createTimeline(cxt: CanvasRenderingContext2D) {
+    createTimeline(canvas: HTMLCanvasElement) {
         assert(this.timeline == null);
-        this.timeline = new Timeline(cxt);
+        this.timeline = new Timeline(canvas);
         return this.timeline;
     },
 

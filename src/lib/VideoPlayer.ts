@@ -2,7 +2,7 @@ console.info('VideoPlayer loading');
 
 import { SubtitleRenderer } from "./SubtitleRenderer";
 import type { Subtitles } from "./core/Subtitles.svelte";
-import type { WithCanvas } from "./CanvasKeeper";
+import { CanvasManager } from "./CanvasManager";
 import { MMedia, type AudioFrameData, type VideoFrameData } from "./API";
 import { assert, Basic } from "./Basic";
 import { DebugConfig } from "./config/Groups";
@@ -36,17 +36,13 @@ function sum(a: number[]) {
     return a.reduce((p, c) => p + c, 0);
 }
 
-export class VideoPlayer implements WithCanvas {
-    #ctx: CanvasRenderingContext2D;
+export class VideoPlayer {
     #canvas: OffscreenCanvas;
     #ctxbuf: OffscreenCanvasRenderingContext2D;
 
     #sourceUrl: string | undefined = undefined;
     #playing = false;
-    #requestedRender = false;
 
-    #canvasWidth = 640;
-    #canvasHeight = 480;
     #outOffsetX = 0;
     #outOffsetY = 0;
 
@@ -93,34 +89,39 @@ export class VideoPlayer implements WithCanvas {
     get source() { return this.#sourceUrl; }
 
     #subRenderer?: SubtitleRenderer;
+    #manager: CanvasManager;
 
     get subRenderer() { return this.#subRenderer; }
 
     onVideoPositionChange = () => {};
     onPlayStateChange = () => {};
 
-    constructor(ctx: CanvasRenderingContext2D) {
-        this.#ctx = ctx;
-        this.#canvas = new OffscreenCanvas(this.#canvasWidth, this.#canvasHeight);
+    constructor(canvas: HTMLCanvasElement) {
+        this.#manager = new CanvasManager(canvas);
+        this.#manager.doNotPrescaleHighDPI = true;
+        this.#manager.setMaxZoom(2);
+        this.#manager.onDisplaySizeChanged.bind(this, 
+            (w, h, rw, rh) => this.#setDisplaySize(w, h, rw, rh));
+        this.#manager.renderer = (ctx) => this.#renderSimple(ctx);
+
+        let [w, h] = this.#manager.physicalSize;
+        this.#canvas = new OffscreenCanvas(w, h);
         let bufcxt = this.#canvas.getContext('2d', { alpha: false });
         if (!bufcxt) throw new Error("VideoPlayer: cannot create offscreen context");
         this.#ctxbuf = bufcxt;
     }
 
-    async setDisplaySize(w: number, h: number) {
-        let factor = window.devicePixelRatio;
-        this.#canvasWidth = Math.floor(w * factor);
-        this.#canvasHeight = Math.floor(h * factor);
-        this.#canvas.width = this.#canvasWidth;
-        this.#canvas.height = this.#canvasHeight;
-        this.subRenderer?.changeResolution(this.#canvasWidth, this.#canvasHeight);
+    async #setDisplaySize(w: number, h: number, rw: number, rh: number) {
+        this.#canvas.width = rw;
+        this.#canvas.height = rh;
+        this.subRenderer?.changeResolution(rw, rh);
         if (this.#opened) await this.#updateOutputSize();
         this.requestRender();
     }
 
     async #updateOutputSize() {
         assert(this.#opened !== undefined);
-        let [w, h] = [this.#canvasWidth, this.#canvasHeight];
+        let [w, h] = this.#manager.physicalSize;
         let [width, height] = this.#opened.media.videoSize!;
         let ratio = width / height;
         let nw: number, nh: number;
@@ -135,8 +136,9 @@ export class VideoPlayer implements WithCanvas {
     }
 
     setSubtitles(subs: Subtitles) {
-        if (!this.subRenderer) this.#subRenderer = 
-            new SubtitleRenderer(this.#canvasWidth, this.#canvasHeight, subs);
+        let [w, h] = this.#manager.physicalSize;
+        if (!this.subRenderer)
+            this.#subRenderer = new SubtitleRenderer(w, h, subs);
         else this.#subRenderer?.changeSubtitles(subs);
         this.requestRender();
     }
@@ -144,7 +146,6 @@ export class VideoPlayer implements WithCanvas {
     async close() {
         assert(this.#opened !== undefined && !this.#opened.media.isClosed);
         this.#requestedSetPositionTarget = -1;
-        this.#requestedRender = false;
         this.#requestedPreload = false;
         await Basic.waitUntil(() => !this.isPreloading && !this.#setPositionInProgress);
         await this.#opened.media.waitUntilAvailable();
@@ -463,7 +464,8 @@ export class VideoPlayer implements WithCanvas {
         let [nw, nh] = this.#opened.media.videoOutputSize;
         let imgData = new ImageData(frame.content, frame.stride);
 
-        this.#ctxbuf.clearRect(0, 0, this.#canvasWidth, this.#canvasHeight);
+        let [w, h] = this.#manager.physicalSize;
+        this.#ctxbuf.clearRect(0, 0, w, h);
         this.#ctxbuf.putImageData(imgData, 
             this.#outOffsetX, this.#outOffsetY, 0, 0, nw, nh);
         if (this.subRenderer)
@@ -502,13 +504,20 @@ export class VideoPlayer implements WithCanvas {
             + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, 0, 120);
     }
 
-    async #render() {
-        this.#ctx.globalCompositeOperation = 'copy';
-
+    async #renderSimple(cxt: CanvasRenderingContext2D) {
+        cxt.globalCompositeOperation = 'copy';
         if (!this.#opened) {
-            requestAnimationFrame(() => 
-                this.#ctx.drawImage(this.subRenderer!.getCanvas(), 0, 0));
-            this.#requestedRender = false;
+            cxt.drawImage(this.subRenderer!.getCanvas(), 0, 0);
+            return;
+        }
+        cxt.drawImage(this.#canvas, 0, 0);
+    }
+
+    #requestedRenderNext = false;
+
+    #renderNext() {
+        if (!this.#opened) {
+            this.#requestedRenderNext = false;
             return;
         }
 
@@ -518,9 +527,8 @@ export class VideoPlayer implements WithCanvas {
             assert(this.#opened.lastFrame !== undefined);
             this.onVideoPositionChange();
             this.#drawFrame(this.#opened.lastFrame);
-            requestAnimationFrame(() => 
-                this.#ctx.drawImage(this.#canvas, 0, 0));
-            this.#requestedRender = false;
+            this.#manager.requestRender();
+            this.#requestedRenderNext = false;
             return;
         }
 
@@ -544,13 +552,12 @@ export class VideoPlayer implements WithCanvas {
                     this.#requestPreload();
                     // FIXME: this means we essentially display video one frame ahead of its time
                     setTimeout(() => {
-                        this.#render();
+                        this.#renderNext();
                     }, Math.max(0, frame.time - position) * 1000);
                 } else {
-                    this.#requestedRender = false;
+                    this.#requestedRenderNext = false;
                 }
-                requestAnimationFrame(() => 
-                    this.#ctx.drawImage(this.#canvas, 0, 0));
+                this.#manager.requestRender();
                 return;
             } else {
                 // discard missed frame
@@ -565,15 +572,13 @@ export class VideoPlayer implements WithCanvas {
         } else {
             this.#requestPreload();
         }
-        this.#requestedRender = false;
+        this.#requestedRenderNext = false;
     }
 
     requestRender() {
-        if (this.#requestedRender) return;
-        this.#requestedRender = true;
-        requestAnimationFrame(() => {
-            this.#render();
-        });
+        if (this.#requestedRenderNext) return;
+        this.#requestedRenderNext = true;
+        requestAnimationFrame(() => this.#renderNext());
     }
 
     async play(state = true) {
