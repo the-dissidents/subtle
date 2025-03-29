@@ -84,7 +84,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
 
 <!-- timestamp fields -->
 {#key `${editFormUpdateCounter}`}
-<div>
+<fieldset disabled={!(Editing.getFocusedEntry() instanceof SubtitleEntry)}>
   <span>
     <select
       oninput={(ev) => editMode = ev.currentTarget.selectedIndex}>
@@ -143,7 +143,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
       {/each}
     </select>
   </div>
-</div>
+</fieldset>
 <!-- channels view -->
 <div class="channels flexgrow isolated">
   {#if Editing.getFocusedEntry() instanceof SubtitleEntry}

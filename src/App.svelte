@@ -7,7 +7,7 @@ import { InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
 
 import { TableConfig } from "./lib/SubtitleTable.svelte";
-import { TimelineConfig } from "./lib/Timeline";
+import { TimelineConfig } from "./lib/Timeline.svelte";
 import { MediaConfig } from "./lib/VideoPlayer";
 
 MainConfig.addGroup('timeline', TimelineConfig);
@@ -49,6 +49,7 @@ import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface, UIFocus } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
+    import { theme } from './lib/Theming.svelte';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -136,6 +137,11 @@ async function updateTheme() {
 
 $effect(() => {
   updateTheme();
+});
+
+$effect(() => {
+  if (theme.isDark !== undefined)
+    Playback.timeline?.requestRender();
 });
 
 getVersion().then((x) => 
@@ -349,6 +355,9 @@ appWindow.onDragDropEvent(async (ev) => {
   .player-container canvas {
     background-color: lightgray;
   }
+  canvas.timeline {
+    background-color: var(--uchu-gray-1);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -376,6 +385,9 @@ appWindow.onDragDropEvent(async (ev) => {
     background-color: rgb(193, 193, 193);
   }
   .player-container canvas {
+    background-color: black;
+  }
+  canvas.timeline {
     background-color: black;
   }
 }

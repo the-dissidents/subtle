@@ -230,73 +230,69 @@ function clear() {
     style="min-height: 150px; font-size: {textsize}px"
     onblur={() => updateToSubs()}
     bind:this={textarea}></textarea>
-  <div>
-    <Collapsible header={$_('untimed.display')}>
+  <Collapsible header={$_('untimed.display')}>
+    <table class="config">
+      <tbody>
+        <tr>
+          <td>{$_('untimed.text-size')}</td>
+          <td><input id='size' type='number' bind:value={textsize}/></td>
+        </tr>
+        <tr>
+          <td>{$_('untimed.justify')}</td>
+          <td><input id='just' type='checkbox' bind:checked={justify}/></td>
+        </tr>
+      </tbody>
+    </table>
+  </Collapsible>
+  <Collapsible header='Fuzzy proofreading [EXPERIMENTAL]'
+    showCheck={true} bind:checked={fuzzy.enabled}
+    helpText="Matches currently selected subtitle text with phrases in the untimed text using a fuzzy algorithm. Usage: arrow keys to adjust selection; space to replace."
+  >
+    <fieldset disabled={!fuzzy.enabled}>
       <table class="config">
         <tbody>
           <tr>
-            <td>{$_('untimed.text-size')}</td>
-            <td><input id='size' type='number' bind:value={textsize}/></td>
+            <td>{$_('untimed.channel')}</td>
+            <td><StyleSelect bind:currentStyle={fuzzy.channel} /></td>
           </tr>
           <tr>
-            <td>{$_('untimed.justify')}</td>
-            <td><input id='just' type='checkbox' bind:checked={justify}/></td>
+            <td>{$_('untimed.tokenizer')}</td>
+            <td>
+              <select name="tokenizer" onchange={(x) => {
+                if (x.currentTarget.value != fuzzy.tokenizer) {
+                  fuzzy.tokenizer = x.currentTarget.value;
+                  fuzzy.engine = null;
+                  fuzzyMatch();
+                }
+              }} >
+                <option value="default">{$_('untimed.word-cjk-character')}</option>
+                <option value="syllable">{$_('untimed.syllable-cjk-character')}</option>
+                <option value="regexb">{$_('untimed.regex-b')}</option>
+                <!-- <option value="custom">custom</option> -->
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>max skip</td>
+            <td><input type='number' bind:value={fuzzy.maxSkip} min='0' step='1'/></td>
+          </tr>
+          <tr>
+            <td>threshold</td>
+            <td><input type='number' bind:value={fuzzy.minScore} min='0' max='1'/></td>
+          </tr>
+          <tr>
+            <td>
+              <input id='snap' type='checkbox' bind:checked={justify}/>
+            </td>
+            <td>
+              <label for='snap'>{$_('untimed.snap-to-following-punctuation')}</label>
+            </td>
           </tr>
         </tbody>
       </table>
-    </Collapsible>
-  </div>
-  <div>
-    <Collapsible header='Fuzzy proofreading [EXPERIMENTAL]'
-      showCheck={true} bind:checked={fuzzy.enabled}
-      helpText="Matches currently selected subtitle text with phrases in the untimed text using a fuzzy algorithm. Usage: arrow keys to adjust selection; space to replace."
-    >
-      <fieldset disabled={!fuzzy.enabled}>
-        <table class="config">
-          <tbody>
-            <tr>
-              <td>{$_('untimed.channel')}</td>
-              <td><StyleSelect bind:currentStyle={fuzzy.channel} /></td>
-            </tr>
-            <tr>
-              <td>{$_('untimed.tokenizer')}</td>
-              <td>
-                <select name="tokenizer" onchange={(x) => {
-                  if (x.currentTarget.value != fuzzy.tokenizer) {
-                    fuzzy.tokenizer = x.currentTarget.value;
-                    fuzzy.engine = null;
-                    fuzzyMatch();
-                  }
-                }} >
-                  <option value="default">{$_('untimed.word-cjk-character')}</option>
-                  <option value="syllable">{$_('untimed.syllable-cjk-character')}</option>
-                  <option value="regexb">{$_('untimed.regex-b')}</option>
-                  <!-- <option value="custom">custom</option> -->
-                </select>
-              </td>
-            </tr>
-            <tr>
-              <td>max skip</td>
-              <td><input type='number' bind:value={fuzzy.maxSkip} min='0' step='1'/></td>
-            </tr>
-            <tr>
-              <td>threshold</td>
-              <td><input type='number' bind:value={fuzzy.minScore} min='0' max='1'/></td>
-            </tr>
-            <tr>
-              <td>
-                <input id='snap' type='checkbox' bind:checked={justify}/>
-              </td>
-              <td>
-                <label for='snap'>{$_('untimed.snap-to-following-punctuation')}</label>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </fieldset>
-      <!-- <i></i> -->
-    </Collapsible>
-  </div>
+    </fieldset>
+    <!-- <i></i> -->
+  </Collapsible>
 </div>
 
 <style>

@@ -2,10 +2,9 @@ console.info('Playback loading');
 
 import { assert } from "../Basic";
 import { VideoPlayer } from "../VideoPlayer";
-import { Timeline } from "../Timeline";
+import { Timeline } from "../Timeline.svelte";
 import { ChangeType, Source } from "./Source";
 import { tick } from "svelte";
-import { CanvasManager } from "../CanvasManager";
 
 export type PlayArea = {
     start: number | undefined,

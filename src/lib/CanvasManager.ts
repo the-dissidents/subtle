@@ -1,7 +1,6 @@
 import { assert } from "./Basic";
 import { InterfaceConfig } from "./config/Groups";
-import { EventHost, translateWheelEvent } from "./frontend/Frontend";
-import { Interface } from "./frontend/Interface";
+import { EventHost, translateWheelEvent, type TranslatedWheelEvent } from "./frontend/Frontend";
 import { theme } from "./Theming.svelte";
 
 const scrollerColorRgb = () => theme.isDark ? '255 255 255' : '0 0 0';
@@ -46,11 +45,14 @@ export class CanvasManager {
         new EventHost<[w: number, h: number, rw: number, rh: number]>();
     readonly onMouseDown =
         new EventHost<[ev: MouseEvent]>();
-    // readonly onMouseMove =
-    //     new EventHost<[ev: MouseEvent]>();
+    readonly onMouseWheel =
+        new EventHost<[tr: TranslatedWheelEvent, ev: WheelEvent]>();
+    readonly onMouseMove =
+        new EventHost<[ev: MouseEvent]>();
     readonly onDrag =
         new EventHost<[offsetX: number, offsetY: number, ev: MouseEvent]>();
     readonly onUserZoom = new EventHost();
+    readonly onUserScroll = new EventHost();
 
     renderer?: (ctx: CanvasRenderingContext2D) => void;
     doNotPrescaleHighDPI = false;
@@ -248,19 +250,21 @@ export class CanvasManager {
                 this.#scrollerHighlight = 'v';
             } else {
                 this.#scrollerHighlight = 'none';
+                this.onMouseMove.dispatch(ev);
                 return;
             }
             const now = performance.now();
             if (now - this.#scrollerFadeStartTime > scrollerFadeStart 
                 || oldHighlight != this.#scrollerHighlight) this.requestRender();
             this.#scrollerFadeStartTime = now;
-            return;
         }
     }
 
     #onMouseWheel(ev: WheelEvent) {
+        let handled = false;
         const tr = translateWheelEvent(ev);
         if (tr.isZoom) {
+            const oldscale = this.#scale;
             const centerX = ev.offsetX / this.#scale + this.#scrollX;
             const centerY = ev.offsetY / this.#scale + this.#scrollY;
             this.#scale = Math.min(this.#maxZoom, 
@@ -268,13 +272,25 @@ export class CanvasManager {
             this.#scrollX = centerX - ev.offsetX / this.#scale;
             this.#scrollY = centerY - ev.offsetY / this.#scale;
             this.#constrainScroll();
-            this.onUserZoom.dispatch();
+            if (this.#scale !== oldscale) {
+                handled = true;
+                this.requestRender();
+                this.onUserZoom.dispatch();
+            }
         } else {
+            let [x, y] = this.scroll;
             this.#scrollX += tr.amountX * 0.1;
             this.#scrollY += tr.amountY * 0.1;
             this.#constrainScroll();
+            if (this.#scrollX !== x || this.#scrollY !== y) {
+                handled = true;
+                this.requestRender();
+                this.onUserScroll.dispatch();
+            }
         }
-        this.requestRender();
+        if (!handled) {
+            this.onMouseWheel.dispatch(tr, ev);
+        }
     }
 
     #render() {

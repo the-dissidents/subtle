@@ -3,7 +3,7 @@ import { Basic, assert } from "./Basic";
 import { DebugConfig, InterfaceConfig } from "./config/Groups";
 import { CanvasManager } from "./CanvasManager";
 import { MMedia } from "./API";
-import { LabelColor } from "./Theming.svelte";
+import { LabelColor, theme } from "./Theming.svelte";
 
 import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./core/Subtitles.svelte";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
@@ -11,80 +11,86 @@ import { Editing, SelectMode } from "./frontend/Editing";
 import { Playback } from "./frontend/Playback";
 import { Actions } from "./frontend/Actions";
 import { PublicConfigGroup } from "./config/PublicConfig.svelte";
-import { translateWheelEvent } from "./frontend/Frontend";
+import { type TranslatedWheelEvent } from "./frontend/Frontend";
 
-import { unwrapFunctionStore, _ } from 'svelte-i18n';
-const $_ = unwrapFunctionStore(_);
+import { _ } from 'svelte-i18n';
+import { get } from "svelte/store";
 
 export const TimelineConfig = new PublicConfigGroup(
-    () => $_('config.timeline'),
+    () => get(_)('config.timeline'),
     null, 1,
 {
     fontSize: {
-        localizedName: () => $_('config.font-size'),
+        localizedName: () => get(_)('config.font-size'),
         type: 'number',
         bounds: [5, null],
         default: 12
     },
     dragResizeArea: {
-        localizedName: () => $_('config.resize-area-size'),
+        localizedName: () => get(_)('config.resize-area-size'),
         type: 'number',
-        description: () => $_('config.resize-area-size-d'),
+        description: () => get(_)('config.resize-area-size-d'),
         bounds: [1, 10],
         default: 5
     },
     enableSnap: {
-        localizedName: () => $_('config.snapping'),
+        localizedName: () => get(_)('config.snapping'),
         type: 'boolean',
-        description: () => $_('config.snapping-d'),
+        description: () => get(_)('config.snapping-d'),
         default: true
     },
     snapDistance: {
-        localizedName: () => $_('config.snap-distance'),
+        localizedName: () => get(_)('config.snap-distance'),
         type: 'number',
-        description: () => $_('config.snap-distance-d'),
+        description: () => get(_)('config.snap-distance-d'),
         bounds: [1, 10],
         default: 5
     },
     showDebug: {
-        localizedName: () => $_('config.show-debug-info'),
+        localizedName: () => get(_)('config.show-debug-info'),
         type: 'boolean',
         default: true
     },
 });
 
-const SCROLLER_HEIGHT = 7 * devicePixelRatio;
-const HEADER_HEIGHT = 15 * devicePixelRatio;
-const HEADER_BACK = 'hsl(0deg 0% 20%)';
-const TICK_COLOR = 'white';
-const LINE_BIG_COLOR = 'hsl(0deg 0% 60%)';
-const LINE_MED_COLOR = 'hsl(0deg 0% 30%)';
-const RULER_TEXT = 'white';
+const HEADER_HEIGHT = 15;
+const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%)' : 'hsl(0deg 0% 85%)');
+const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
+const LINE_BIG_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 40%)');
+const LINE_MED_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 30%)' : 'hsl(0deg 0% 70%)');
+const RULER_TEXT        = $derived(theme.isDark ? 'white' : 'hsl(0deg 0% 20%)');
 
-const PRELOAD_MARGIN = 3 * devicePixelRatio;
+const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
-const CURSOR_AREA_MARGIN = 50 * devicePixelRatio;
-const TRACK_AREA_MARGIN = 20 * devicePixelRatio;
+const CURSOR_AREA_MARGIN = 50;
+const TRACK_AREA_MARGIN = 20;
 
 const ENTRY_WIDTH = 1;
-const ENTRY_BORDER = 'hsl(0deg 0% 60%)';
-const ENTRY_BACK_NOLABEL = 'hsl(0deg 0% 40% / 60%)';
+const ENTRY_WIDTH_FOCUS = 2;
 const ENTRY_BACK_OPACITY = 0.6;
-const ENTRY_TEXT = 'hsl(0deg 0% 80%)';
-const ENTRY_BORDER_FOCUS = 'goldenrod';
-const ENTRY_WIDTH_FOCUS = 2 * devicePixelRatio;
+const ENTRY_BACK = 
+    $derived(theme.isDark ? 'hsl(0deg 0% 40%/60%)' : 'hsl(0deg 0% 100%/60%)');
+const ENTRY_BORDER       = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 80%)');
+const ENTRY_BORDER_FOCUS = $derived(theme.isDark ? 'goldenrod' : 'oklch(70.94% 0.136 258.06)');
+const ENTRY_TEXT         = $derived(theme.isDark ? 'hsl(0deg 0% 80%)' : 'hsl(0deg 0% 20%)');
+const INOUT_TEXT         = $derived(theme.isDark ? 'lightgreen' : 'oklch(52.77% 0.138 145.41)');
 
-const CURSOR_COLOR = 'pink';
+const CURSOR_COLOR = 
+    $derived(theme.isDark ? 'pink' : 'oklch(62.73% 0.209 12.37)');
+const PENDING_WAVEFORM_COLOR = 
+    $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 30%)`);
+const WAVEFORM_COLOR = 
+    $derived(theme.isDark ? `rgb(100 255 255)` : 'goldenrod');
+const INOUT_AREA_OUTSIDE = 
+    $derived(theme.isDark ? 'hsl(0deg 0% 80% / 40%)' : 'hsl(0deg 0% 40% / 40%)');
+
 const BOXSELECT_BACK = 'hsl(0deg 0% 80% / 40%)';
-const BOXSELECT_BORDER = 'hsl(0deg 0% 70%)';
-const BOXSELECT_WIDTH = 1.5 * devicePixelRatio;
+const BOXSELECT_BORDER = 'hsl(0deg 0% 80%)';
+const BOXSELECT_WIDTH = 1.5;
 
-const INOUT_AREA_OUTSIDE = 'hsl(0deg 0% 80% / 40%)';
-
-const DRAG_RESIZE_MARGIN = 5 * devicePixelRatio;
-const SNAP_DISTANCE = 5 * devicePixelRatio;
-const ALIGNLINE_COLOR = 'hsl(0deg 0% 80%)';
-const ALIGNLINE_WIDTH = 1.5 * devicePixelRatio;
+const ALIGNLINE_COLOR = 
+    $derived(theme.isDark ? 'hsl(0deg 0% 80%)' : 'oklch(70.23% 0.092 354.96)');
+const ALIGNLINE_WIDTH = 1.5;
 
 type Box = {
     x: number, y: number,
@@ -94,7 +100,7 @@ type Box = {
 function getTick(scale: number): [small: number, nMed: number, nBig: number] {
     const UNITS = [0.001, 0.01, 0.1, 1, 10, 60, 600, 3600];
     for (let i = 0; i < UNITS.length - 3; i++)
-        if (scale * UNITS[i] > 2) return [
+        if (scale * UNITS[i] > 2 / devicePixelRatio) return [
             UNITS[i], 
             UNITS[i+1] / UNITS[i], 
             UNITS[i+2] / UNITS[i]];
@@ -131,23 +137,19 @@ function ellipsisText(cxt: CanvasRenderingContext2D, str: string, max: number) {
 }
 
 function fontSize(size: number) {
-    return window.devicePixelRatio * size;
+    return size;
 }
 
 function font(size: number) {
-    return `${window.devicePixelRatio * size}px ${InterfaceConfig.data.fontFamily}`;
+    return `${size}px ${InterfaceConfig.data.fontFamily}`;
 }
-
 // TODO: convert to a component!
 
 export class Timeline {
-    #cxt: CanvasRenderingContext2D;
-    #requestedRender = false;
     #requestedSampler = false;
 
     #sampler: AudioSampler | null = null;
     #scale = 1; // pixel per second
-    #offset = 0; // in seconds
     #cursorPos = 0;
 
     #width = 100;
@@ -157,18 +159,23 @@ export class Timeline {
 
     #selectBox: Box | null = null;
     #selection = new Set<SubtitleEntry>;
-    #alignmentLine: number | null = null;
-    
-    get viewScale() {return this.#scale;}
-    get viewOffset() {return this.#offset;}
-    get cursorPos() {return this.#cursorPos;}
+    #alignmentLine: {x: number, y1: number, y2: number} | null = null;
 
-    setDisplaySize(_1: number, _2: number, w: number, h: number): void {
+    #manager: CanvasManager;
+    
+    get cursorPos() {return this.#cursorPos;}
+    get #offset() {
+        return this.#manager.scroll[0] / this.#scale;
+    }
+
+    setDisplaySize(w: number, h: number, cw: number, ch: number): void {
         this.#width = w;
         this.#height = h;
         this.#preprocessStyles();
+        const offset = this.#offset;
         this.setViewScale(this.#scale);
-        this.requestRender();
+        this.setViewOffset(offset);
+        this.#manager.requestRender();
     }
 
     #preprocessStyles() {
@@ -180,39 +187,38 @@ export class Timeline {
     }
 
     constructor(canvas: HTMLCanvasElement) {
-        const manager = new CanvasManager(canvas);
-        manager.onDisplaySizeChanged.bind(this, 
+        this.#manager = new CanvasManager(canvas);
+        this.#manager.onDisplaySizeChanged.bind(this, 
             (w, h, rw, rh) => this.setDisplaySize(w, h, rw, rh));
-        this.#cxt = manager.context;
-
-        this.setViewScale(10);
-        this.requestRender();
+        this.#manager.renderer = (ctx) => this.#render(ctx);
 
         canvas.oncontextmenu = (e) => e.preventDefault();
-        canvas.onmousemove = (ev) => this.#processMouseMove(ev);
-        canvas.onmousedown = (ev) => this.#processMouseDown(ev);
         canvas.ondblclick = () => this.#precessDoubleClick();
-        canvas.onwheel = (ev) => this.#processWheel(ev);
+        this.#manager.onMouseMove.bind(this, (ev) => this.#processMouseMove(ev));
+        this.#manager.onMouseDown.bind(this, (ev) => this.#processMouseDown(ev));
+        this.#manager.onMouseWheel.bind(this, (tr, e) => this.#processWheel(tr, e));
+        this.#manager.onUserScroll.bind(this, () => this.#requestedSampler = true);
 
-        const me = {};
-        Editing.onSelectionChanged.bind(me, (cause) => {
+        this.setViewScale(10);
+
+        Editing.onSelectionChanged.bind(this, (cause) => {
             if (cause != ChangeCause.Timeline) {
                 this.#selection = new Set(Editing.getSelection());
                 let focused = Editing.getFocusedEntry();
                 if (focused instanceof SubtitleEntry) this.#keepEntryInView(focused);
-                this.requestRender();
+                this.#manager.requestRender();
             }
         });
-        Source.onSubtitlesChanged.bind(me, (type) => {
+        Source.onSubtitlesChanged.bind(this, (type) => {
             if (type == ChangeType.StyleDefinitions || type == ChangeType.General) {
                 this.#preprocessStyles();
             }
             if (type != ChangeType.Metadata)
-                this.requestRender();
+                this.#manager.requestRender();
         });
-        Source.onSubtitleObjectReload.bind(me, () => {
+        Source.onSubtitleObjectReload.bind(this, () => {
             this.#preprocessStyles();
-            this.requestRender();
+            this.#manager.requestRender();
         });
     }
 
@@ -226,7 +232,7 @@ export class Timeline {
 
     #getEntryPositions(ent: SubtitleEntry): Box[] {
         const w = (ent.end - ent.start) * this.#scale,
-              x = (ent.start - this.#offset) * this.#scale;
+              x = ent.start * this.#scale;
         return ent.texts.map((channel) => {
             let i = this.#stylesMap.get(channel.style) ?? 0;
             let y = this.#entryHeight * i + HEADER_HEIGHT + TRACK_AREA_MARGIN;
@@ -234,12 +240,13 @@ export class Timeline {
         });
     }
 
+    // coordinates are offset but not scaled
     #findEntriesByPosition(
         x: number, y: number, w = 0, h = 0): SubtitleEntry[] 
     {
         let result = [];
-        const start = (x / this.#scale) + this.#offset;
-        const end = (x + w / this.#scale) + this.#offset;
+        const start = x / this.#scale;
+        const end = (x + w) / this.#scale;
         for (let ent of Source.subs.entries) {
             if (ent.end < start || ent.start > end) continue;
             if (this.#getEntryPositions(ent)
@@ -251,31 +258,34 @@ export class Timeline {
 
     #snapMove(focus: SubtitleEntry, desiredStart: number) {
         const flen = focus.end - focus.start;
-        const snap = (x: number) => {
+        const snap = (x: number, y1: number, y2: number) => {
             // start
             let d = Math.abs(desiredStart - x);
             if (d < minDist) {
-                pos = x;
+                this.#alignmentLine = {x: x * this.#scale, y1, y2};
                 newStart = x;
                 minDist = d;
             }
             // end
             d = Math.abs(desiredStart + flen - x);
             if (d < minDist) {
-                pos = x;
+                this.#alignmentLine = {x: x * this.#scale, y1, y2};
                 newStart = x - flen;
                 minDist = d;
             }
         };
-        let minDist = SNAP_DISTANCE / this.#scale;
-        let pos: number | null = null, newStart: number = desiredStart;
-        snap(this.#cursorPos);
+        let minDist = TimelineConfig.data.snapDistance / this.#scale;
+        let newStart: number = desiredStart;
+        this.#alignmentLine = null;
+        snap(this.#cursorPos, 0, this.#height);
         for (const e of this.#getVisibleEntries()) {
             if (this.#selection.has(e)) continue;
-            snap(e.start);
-            snap(e.end);
+            let positions = this.#getEntryPositions(e);
+            let y1 = Math.min(...positions.map((x) => x.y));
+            let y2 = Math.max(...positions.map((x) => x.y + x.h));
+            snap(e.start, y1, y2);
+            snap(e.end, y1, y2);
         }
-        this.#alignmentLine = pos !== null ? (pos - this.#offset) * this.#scale : null;
         return newStart;
     }
 
@@ -283,24 +293,26 @@ export class Timeline {
         const ok = isStart 
             ? (x: number) => x < ent.end 
             : (x: number) => x > ent.start;
-        const snap = (x: number) => {
+        const snap = (x: number, y1: number, y2: number) => {
             if (!ok(x)) return;
             let d = Math.abs(desired - x);
             if (d < minDist) {
-                pos = x;
+                this.#alignmentLine = {x: x * this.#scale, y1, y2};
                 minDist = d;
             }
         };
-        let minDist = SNAP_DISTANCE / this.#scale;
-        let pos: number | null = null;
-        snap(this.#cursorPos);
+        let minDist = TimelineConfig.data.snapDistance / this.#scale;
+        this.#alignmentLine = null;
+        snap(this.#cursorPos, 0, this.#height);
         for (let e of this.#getVisibleEntries()) {
             if (e == ent) continue;
-            snap(e.start);
-            snap(e.end);
+            let positions = this.#getEntryPositions(e);
+            let y1 = Math.min(...positions.map((x) => x.y));
+            let y2 = Math.max(...positions.map((x) => x.y + x.h));
+            snap(e.start, y1, y2);
+            snap(e.end, y1, y2);
         }
-        this.#alignmentLine = pos !== null ? (pos - this.#offset) * this.#scale : null;
-        return pos ?? desired;
+        return this.#alignmentLine!.x ?? desired;
     }
 
     #keepEntryInView(ent: SubtitleEntry) {
@@ -326,30 +338,31 @@ export class Timeline {
     // UI events
 
     #processMouseMove(e: MouseEvent) {
-        const ratio = window.devicePixelRatio;
-        this.#cxt.canvas.style.cursor = 'default';
-        if (e.offsetY * ratio < HEADER_HEIGHT) {
-            this.#cxt.canvas.style.cursor = 'col-resize';
+        const canvas = this.#manager.canvas;
+        canvas.style.cursor = 'default';
+        if (e.offsetY < HEADER_HEIGHT) {
+            canvas.style.cursor = 'col-resize';
             return;
         }
 
-        const under = this.#findEntriesByPosition(e.offsetX * ratio, e.offsetY * ratio);
+        const under = this.#findEntriesByPosition(
+            e.offsetX + this.#manager.scroll[0], e.offsetY);
         if (under.length == 0) return;
         if ((this.#selection.size > 1 
              || (Basic.ctrlKey() == 'Meta' ? e.metaKey : e.ctrlKey)) 
             && under.some((x) => this.#selection.has(x)))
         {
-            this.#cxt.canvas.style.cursor = 'move';
+            canvas.style.cursor = 'move';
         } else {
             let ent = under.find((x) => this.#selection.has(x)) ?? under[0];
             const w = (ent.end - ent.start) * this.#scale,
                   x = (ent.start - this.#offset) * this.#scale;
-            if (e.offsetX * ratio - x < DRAG_RESIZE_MARGIN)
-                this.#cxt.canvas.style.cursor = 'e-resize';
-            else if (x + w - e.offsetX * ratio < DRAG_RESIZE_MARGIN)
-                this.#cxt.canvas.style.cursor = 'w-resize';
+            if (e.offsetX - x < TimelineConfig.data.dragResizeArea)
+                canvas.style.cursor = 'e-resize';
+            else if (x + w - e.offsetX < TimelineConfig.data.dragResizeArea)
+                canvas.style.cursor = 'w-resize';
             // else
-            //     this.#cxt.canvas.style.cursor = 'move';
+            //     canvas.style.cursor = 'move';
         }
     }
 
@@ -357,41 +370,41 @@ export class Timeline {
         e0.preventDefault();
         let onMove = (_: MouseEvent) => {};
         let onUp = (_: MouseEvent) => {};
-        const ratio = window.devicePixelRatio;
-        const origPos = this.#offset + e0.offsetX / this.#scale * ratio;
+        const origPos = this.#offset + e0.offsetX / this.#scale;
+        const scrollX = this.#manager.scroll[0];
         if (e0.button == 1) {
             // scale
             const orig = this.#scale;
             onMove = (e1) => {
                 this.setViewScale(orig / Math.pow(1.03, (e0.clientX - e1.clientX)));
-                this.setViewOffset(origPos - e0.offsetX / this.#scale * ratio);
+                this.setViewOffset(origPos - e0.offsetX / this.#scale);
             };
         } else {
-            if (e0.offsetY * ratio < HEADER_HEIGHT) {
+            if (e0.offsetY < HEADER_HEIGHT) {
                 // move cursor
-                onMove = async (e1) => await this.setCursorPos(
-                    this.#offset + e1.offsetX / this.#scale * ratio);
+                onMove = async (e1) => 
+                    await this.setCursorPos((e1.offsetX + scrollX) / this.#scale);
                 onMove(e0);
             } else {
                 let ents = this.#findEntriesByPosition(
-                    e0.offsetX * ratio, e0.offsetY * ratio);
+                    e0.offsetX + scrollX, e0.offsetY);
                 if (ents.length == 0) {
                     // clicked on nothing
                     if (Basic.ctrlKey() == 'Meta' ? !e0.metaKey : !e0.ctrlKey) {
                         // clear selection
                         Editing.clearSelection(ChangeCause.Timeline);
                         this.#selection.clear();
-                        this.requestRender();
+                        this.#manager.requestRender();
                     }
                     // initiate box select
                     this.#selectBox = null;
                     const originalSelection = [...this.#selection];
                     let thisGroup = [];
                     onMove = (e1) => {
-                        let x1 = (origPos - this.#offset) * this.#scale,
-                            x2 = e1.offsetX * ratio,
-                            y1 = e0.offsetY * ratio,
-                            y2 = e1.offsetY * ratio;
+                        let x1 = origPos * this.#scale,
+                            x2 = e1.offsetX + scrollX,
+                            y1 = e0.offsetY,
+                            y2 = e1.offsetY;
                         let b: Box = {
                             x: Math.min(x1, x2), y: Math.min(y1, y2), 
                             w: Math.abs(x1 - x2), h: Math.abs(y1 - y2)};
@@ -404,13 +417,13 @@ export class Timeline {
                             thisGroup = newGroup;
                             this.#dispatchSelectionChanged();
                         }
-                        this.#keepPosInSafeArea(x2 / this.#scale + this.#offset);
-                        this.requestRender();
+                        this.#keepPosInSafeArea(x2 / this.#scale);
+                        this.#manager.requestRender();
                     };
                     // stop box select
                     onUp = () => {
                         this.#selectBox = null;
-                        this.requestRender();
+                        this.#manager.requestRender();
                     };
                 } else if (e0.button == 2) {
                     // right-clicked on something
@@ -433,13 +446,13 @@ export class Timeline {
                         if (!this.#selection.has(ents[0])) {
                             this.#selection.add(ents[0]);
                             this.#dispatchSelectionChanged();
-                            this.requestRender();
+                            this.#manager.requestRender();
                         } else afterUp = () => {
                             // if hasn't dragged
                             console.log('afterup');
                             this.#selection.delete(ents[0]);
                             this.#dispatchSelectionChanged();
-                            this.requestRender();
+                            this.#manager.requestRender();
                         }
                     } else {
                         // single select
@@ -460,7 +473,7 @@ export class Timeline {
                             Editing.selectEntry(ents[index], 
                                 SelectMode.Single, ChangeCause.Timeline);
                         }
-                        this.requestRender();
+                        this.#manager.requestRender();
                     }
                     // drag if necessary
                     const sels = [...this.#selection];
@@ -469,8 +482,8 @@ export class Timeline {
                     const distL = origPos - origL, distR = origR - origPos;
                     // console.log(distL * this.#scale, distR * this.#scale);
                     if (this.#selection.size > 1 
-                        || (distL * this.#scale > DRAG_RESIZE_MARGIN 
-                        &&  distR * this.#scale > DRAG_RESIZE_MARGIN))
+                        || (distL * this.#scale > TimelineConfig.data.dragResizeArea 
+                        &&  distR * this.#scale > TimelineConfig.data.dragResizeArea))
                     {
                         // dragging the whole
                         const one = ents.find((x) => this.#selection.has(x));
@@ -478,7 +491,7 @@ export class Timeline {
                         let dragged = false;
                         onMove = (e1) => {
                             const newPos = 
-                                e1.offsetX / this.#scale * ratio + this.#offset;
+                                e1.offsetX / this.#scale + this.#offset;
                             let dval = newPos - origPos;
                             if ((e1.altKey !== TimelineConfig.data.enableSnap) && one)
                                 dval = this.#snapMove(one, origStarts.get(one)! + dval) 
@@ -489,24 +502,24 @@ export class Timeline {
                                 ent.start = origStarts.get(ent)! + dval;
                                 ent.end = ent.start + len;
                             }
-                            this.requestRender();
+                            this.#manager.requestRender();
                         };
                         onUp = () => {
                             this.#alignmentLine = null;
-                            this.requestRender();
+                            this.#manager.requestRender();
                             if (dragged) {
                                 Source.markChanged(ChangeType.Times, ChangeCause.Timeline);
                             } else afterUp();
                         };
                     } else {
                         // dragging endpoints
-                        const isStart = distL * this.#scale <= DRAG_RESIZE_MARGIN;
+                        const isStart = distL * this.#scale <= TimelineConfig.data.dragResizeArea;
                         const entry = sels[0];
                         const origVal = isStart ? entry.start : entry.end;
                         let dragged = false;
                         onMove = (e1) => {
                             const newPos = 
-                                e1.offsetX / this.#scale * ratio + this.#offset;
+                                e1.offsetX / this.#scale + this.#offset;
                             let val = origVal + newPos - origPos;
                             if (e1.altKey !== TimelineConfig.data.enableSnap)
                                 val = this.#snapEnds(entry, val, isStart);
@@ -514,11 +527,11 @@ export class Timeline {
                             else entry.end = Math.max(entry.start, val);
                             dragged = val != origVal;
                             this.#keepPosInSafeArea(val);
-                            this.requestRender();
+                            this.#manager.requestRender();
                         };
                         onUp = () => {
                             this.#alignmentLine = null;
-                            this.requestRender();
+                            this.#manager.requestRender();
                             if (dragged) {
                                 Source.markChanged(ChangeType.Times, ChangeCause.Timeline);
                             } else afterUp();
@@ -545,13 +558,11 @@ export class Timeline {
         }
     }
 
-    #processWheel(e: WheelEvent) {
-        const tr = translateWheelEvent(e);
+    #processWheel(tr: TranslatedWheelEvent, e: WheelEvent) {
         if (tr.isZoom) {
-            const ratio = window.devicePixelRatio;
-            const origPos = this.#offset + e.offsetX / this.#scale * ratio;
+            const origPos = this.#offset + e.offsetX / this.#scale;
             this.setViewScale(this.#scale / Math.pow(1.03, tr.amount));
-            this.setViewOffset(origPos - e.offsetX / this.#scale * ratio);
+            this.setViewOffset(origPos - e.offsetX / this.#scale);
         } else {
             const amount = 
                 tr.isTrackpad ? tr.amountX :
@@ -584,18 +595,18 @@ export class Timeline {
 
         this.#samplerMedia = await MMedia.open(rawurl);
         this.#sampler = await AudioSampler.open(this.#samplerMedia);
-        this.#sampler.onProgress = () => this.requestRender();
-        this.#scale = Math.max(this.#width / this.#sampler.duration, 10);
-        this.#offset = 0;
+        this.#sampler.onProgress = () => this.#manager.requestRender();
+        this.setViewScale(Math.max(this.#width / this.#sampler.duration, 10));
+        this.setViewOffset(0);
         this.#cursorPos = 0; // or setCursorPos?
         this.#requestedSampler = true;
-        this.requestRender();
+        this.#manager.requestRender();
         console.log('Timeline.load: done');
     }
 
     // view & sampling
 
-    #maxPosition() {
+    get #maxPosition() {
         return this.#sampler 
             ? this.#sampler.duration 
             : Math.max(...Source.subs.entries.map((x) => x.end)) + 20;
@@ -611,8 +622,10 @@ export class Timeline {
             if (this.#sampler.sampleProgress + preload < this.#offset 
                 || this.#sampler.sampleProgress > end + preload) 
                     this.#sampler.tryCancelSampling();
-            else if (this.#sampler.sampleEnd < end + preload)
+            else if (this.#sampler.sampleEnd < end + preload) {
+                console.log('extending to', end);
                 this.#sampler.extendSampling(end + preload);
+            }
         }
         if (this.#sampler.isSampling)
             return;
@@ -649,25 +662,24 @@ export class Timeline {
 
         console.log('sampling', start, end);
         this.#sampler.startSampling(start, end);
-        this.requestRender();
+        this.#manager.requestRender();
     }
 
     setViewOffset(v: number) {
         if (v < 0) v = 0;
-        v = Math.min(v, this.#maxPosition() - this.#width / this.#scale);
-        this.#offset = v;
-        this.#processSampler();
-        this.requestRender();
+        v = Math.min(v, this.#maxPosition - this.#width / this.#scale);
+        this.#manager.setScroll({x: v * this.#scale});
+        this.#manager.requestRender();
         this.#requestedSampler = true;
     }
 
     setCursorPosPassive(pos: number) {
         if (pos == this.#cursorPos) return;
         if (pos < 0) pos = 0;
-        pos = Math.min(pos, this.#maxPosition());
+        pos = Math.min(pos, this.#maxPosition);
         this.#cursorPos = pos;
         this.#keepPosInSafeArea(pos);
-        this.requestRender();
+        this.#manager.requestRender();
     }
 
     async setCursorPos(pos: number) {
@@ -678,13 +690,17 @@ export class Timeline {
 
     setViewScale(v: number) {
         assert(v > 0);
-        v = Math.max(v, this.#width / this.#maxPosition());
+        v = Math.max(v, this.#width / this.#maxPosition, 0.15);
         v = Math.min(v, 500);
         if (v == this.#scale) return;
         this.#scale = v;
-        this.#processSampler();
-        this.requestRender();
+        this.#manager.setContentRect({r: this.#maxPosition * this.#scale})
+        this.#manager.requestRender();
         this.#requestedSampler = true;
+    }
+
+    requestRender() {
+        this.#manager.requestRender();
     }
 
     // rendering
@@ -694,7 +710,7 @@ export class Timeline {
     // 1. Make the pointer a separate sprite, or equivalently, render waveform on a 
     //    background canvas
     // 2. Render incrementally when scrolling
-    #renderWaveform() {
+    #renderWaveform(ctx: CanvasRenderingContext2D) {
         if (!this.#sampler) return;
         if (this.#requestedSampler) this.#processSampler();
 
@@ -708,179 +724,175 @@ export class Timeline {
         const drawWidth = Math.ceil(Math.max(1, step * width))
         for (let i = start; i < end; i += step) {
             const detail = this.#sampler.detail[i];
-            const x = Math.floor((i - this.#offset * resolution) * width);
+            const x = Math.floor(i * width);
 
-            this.#cxt.fillStyle = `rgb(100% 10% 10% / 30%)`;
+            ctx.fillStyle = PENDING_WAVEFORM_COLOR;
             let dh = (1 - detail) * this.#height;
-            this.#cxt.fillRect(x, this.#height - dh, drawWidth, dh);
+            ctx.fillRect(x, this.#height - dh, drawWidth, dh);
 
             if (detail == 0) continue;
             let value = Math.sqrt(this.#sampler.data[i]) * this.#height;
-            this.#cxt.fillStyle = `rgb(100 255 255)`;
-            this.#cxt.fillRect(x, (this.#height - value) / 2, 
+            ctx.fillStyle = WAVEFORM_COLOR;
+            ctx.fillRect(x, (this.#height - value) / 2, 
                 drawWidth, Math.max(value, 1));
         }
     }
 
-    #renderRulerAndScroller() {
+    #renderRulerAndScroller(ctx: CanvasRenderingContext2D) {
         let line = (pos: number, height: number) => {
-            this.#cxt.beginPath();
-            this.#cxt.moveTo(pos, 0);
-            this.#cxt.lineTo(pos, height);
-            this.#cxt.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos, 0);
+            ctx.lineTo(pos, height);
+            ctx.stroke();
         };
         const [small, nMed, nBig] = getTick(this.#scale);
         const start = Math.floor(this.#offset / small / nBig) * small * nBig, 
               end = this.#offset + this.#width / this.#scale;
         const n = Math.ceil((end - start) / small);
-        this.#cxt.fillStyle = HEADER_BACK;
-        this.#cxt.fillRect(0, 0, this.#width, HEADER_HEIGHT);
+        ctx.fillStyle = HEADER_BACK;
+        ctx.fillRect(this.#manager.scroll[0], 0, this.#width, HEADER_HEIGHT);
 
-        this.#cxt.fillStyle = RULER_TEXT;
-        this.#cxt.lineWidth = 1;
+        ctx.fillStyle = RULER_TEXT;
+        ctx.lineWidth = 0.5;
         for (let i = 0; i < n; i++) {
             let t = start + i * small;
-            let pos = Math.round((t - this.#offset) * this.#scale);
+            let pos = Math.round(t * this.#scale);
             let height = 5;
             if (i % nBig == 0) {
                 height = HEADER_HEIGHT;
-                this.#cxt.strokeStyle = LINE_BIG_COLOR;
+                ctx.strokeStyle = LINE_BIG_COLOR;
                 line(pos, this.#height);
             } else if (i % nMed == 0) {
                 height = HEADER_HEIGHT * 0.5;
-                this.#cxt.strokeStyle = LINE_MED_COLOR;
+                ctx.strokeStyle = LINE_MED_COLOR;
                 line(pos, this.#height);
             } else {
                 height = HEADER_HEIGHT * 0.2;
             }
-            this.#cxt.strokeStyle = TICK_COLOR;
+            ctx.strokeStyle = TICK_COLOR;
             line(pos, height);
         }
-        this.#cxt.font = font(HEADER_HEIGHT / window.devicePixelRatio * 0.8);
-        this.#cxt.textBaseline = 'bottom';
+        ctx.font = font(HEADER_HEIGHT * 0.8);
+        ctx.textBaseline = 'bottom';
         for (let t = start; t < end; t += nBig * small) {
-            const pos = Math.round((t - this.#offset) * this.#scale);
-            this.#cxt.fillText(SubtitleUtil.formatTimestamp(t, 2), 
+            const pos = Math.round(t * this.#scale);
+            ctx.fillText(SubtitleUtil.formatTimestamp(t, 2), 
                 pos + 5, HEADER_HEIGHT);
         }
-
-        const max = this.#maxPosition();
-        if (Math.abs(this.#width - this.#scale * max) < 0.001) return;
-        this.#cxt.fillStyle = `rgb(255 255 255 / 40%)`;
-        this.#cxt.fillRect(
-            this.#width * (this.#offset / max), this.#height - SCROLLER_HEIGHT, 
-            this.#width * (this.#width / this.#scale / max), SCROLLER_HEIGHT);
     }
 
-    #renderTracks() {
+    #renderTracks(ctx: CanvasRenderingContext2D) {
         ellipsisWidth = -1;
-        this.#cxt.textBaseline = 'top';
-        this.#cxt.font = font(TimelineConfig.data.fontSize);
+        ctx.textBaseline = 'top';
+        ctx.font = font(TimelineConfig.data.fontSize);
         for (let ent of this.#getVisibleEntries()) {
             this.#getEntryPositions(ent).forEach((b) => {
-                this.#cxt.fillStyle = ent.label === 'none' 
-                    ? ENTRY_BACK_NOLABEL 
+                ctx.fillStyle = ent.label === 'none' 
+                    ? ENTRY_BACK 
                     : LabelColor(ent.label, ENTRY_BACK_OPACITY);
                 if (this.#selection.has(ent)) {
-                    this.#cxt.strokeStyle = ENTRY_BORDER_FOCUS;
-                    this.#cxt.lineWidth = ENTRY_WIDTH_FOCUS;
+                    ctx.strokeStyle = ENTRY_BORDER_FOCUS;
+                    ctx.lineWidth = ENTRY_WIDTH_FOCUS;
                 } else {
-                    this.#cxt.strokeStyle = ENTRY_BORDER;
-                    this.#cxt.lineWidth = ENTRY_WIDTH;
+                    ctx.strokeStyle = ENTRY_BORDER;
+                    ctx.lineWidth = ENTRY_WIDTH;
                 }
-                this.#cxt.beginPath();
-                this.#cxt.roundRect(b.x, b.y, b.w, b.h, 4);
-                this.#cxt.fill();
-                this.#cxt.stroke();
+                ctx.beginPath();
+                ctx.roundRect(b.x, b.y, b.w, b.h, 4);
+                ctx.fill();
+                ctx.stroke();
                 if (b.w > 50) {
-                    this.#cxt.fillStyle = ENTRY_TEXT;
-                    this.#cxt.fillText(
-                        ellipsisText(this.#cxt, b.channel!.text, b.w - 8), 
+                    ctx.fillStyle = ENTRY_TEXT;
+                    ctx.fillText(
+                        ellipsisText(ctx, b.channel!.text, b.w - 8), 
                         b.x + 4, b.y + 4);
                 }
             });
         }
     }
 
-    #renderCursor() {
-        let pos = (this.#cursorPos - this.#offset) * this.#scale;
+    #renderCursor(ctx: CanvasRenderingContext2D) {
+        let pos = this.#cursorPos * this.#scale;
         if (this.#selectBox) {
-            this.#cxt.fillStyle = BOXSELECT_BACK;
-            this.#cxt.strokeStyle = BOXSELECT_BORDER;
-            this.#cxt.lineWidth = BOXSELECT_WIDTH;
-            this.#cxt.beginPath();
-            this.#cxt.roundRect(
+            ctx.fillStyle = BOXSELECT_BACK;
+            ctx.strokeStyle = BOXSELECT_BORDER;
+            ctx.lineWidth = BOXSELECT_WIDTH;
+            ctx.beginPath();
+            ctx.roundRect(
                 this.#selectBox.x, this.#selectBox.y, 
                 this.#selectBox.w, this.#selectBox.h, 2);
-            this.#cxt.fill();
-            this.#cxt.stroke();
+            ctx.fill();
+            ctx.stroke();
         }
         if (this.#alignmentLine) {
-            this.#cxt.strokeStyle = ALIGNLINE_COLOR;
-            this.#cxt.lineWidth = ALIGNLINE_WIDTH;
-            this.#cxt.beginPath();
-            this.#cxt.moveTo(this.#alignmentLine, HEADER_HEIGHT);
-            this.#cxt.lineTo(this.#alignmentLine, this.#height);
-            this.#cxt.stroke();
+            ctx.strokeStyle = ALIGNLINE_COLOR;
+            ctx.lineWidth = ALIGNLINE_WIDTH;
+            ctx.beginPath();
+            ctx.moveTo(this.#alignmentLine.x - 5, this.#alignmentLine.y1 - 5);
+            ctx.lineTo(this.#alignmentLine.x, this.#alignmentLine.y1);
+            ctx.lineTo(this.#alignmentLine.x + 5, this.#alignmentLine.y1 - 5);
+
+            ctx.moveTo(this.#alignmentLine.x - 5, this.#alignmentLine.y2 + 5);
+            ctx.lineTo(this.#alignmentLine.x, this.#alignmentLine.y2);
+            ctx.lineTo(this.#alignmentLine.x + 5, this.#alignmentLine.y2 + 5);
+
+            ctx.moveTo(this.#alignmentLine.x, HEADER_HEIGHT);
+            ctx.lineTo(this.#alignmentLine.x, this.#height);
+            ctx.stroke();
         }
+
+        // In-out area
         const area = Playback.playArea;
+        const scrollX = this.#manager.scroll[0];
         if (area.start !== undefined) {
-            const start = (area.start - this.#offset) * this.#scale;
-            this.#cxt.fillStyle = INOUT_AREA_OUTSIDE;
-            this.#cxt.fillRect(0, 0, start, this.#height);
+            const start = area.start * this.#scale;
+            ctx.fillStyle = INOUT_AREA_OUTSIDE;
+            ctx.fillRect(scrollX, 0, start - scrollX, this.#height);
         }
         if (area.end !== undefined) {
-            const end = (area.end - this.#offset) * this.#scale;
-            this.#cxt.fillStyle = INOUT_AREA_OUTSIDE;
-            this.#cxt.fillRect(end, 0, this.#width - end, this.#height);
+            const end = area.end * this.#scale;
+            ctx.fillStyle = INOUT_AREA_OUTSIDE;
+            ctx.fillRect(end, 0, this.#width + scrollX - end, this.#height);
         }
 
-        this.#cxt.fillStyle = CURSOR_COLOR;
-        this.#cxt.beginPath();
-        this.#cxt.moveTo(pos + 8, 0);
-        this.#cxt.lineTo(pos - 8, 0);
-        this.#cxt.lineTo(pos - 2, 10);
-        this.#cxt.lineTo(pos - 2, this.#height);
-        this.#cxt.lineTo(pos + 2, this.#height);
-        this.#cxt.lineTo(pos + 2, 10);
-        this.#cxt.lineTo(pos + 8, 0);
-        this.#cxt.fill();
+        ctx.fillStyle = CURSOR_COLOR;
+        ctx.beginPath();
+        ctx.moveTo(pos + 4, 0);
+        ctx.lineTo(pos - 4, 0);
+        ctx.lineTo(pos - 1, 10);
+        ctx.lineTo(pos - 1, this.#height);
+        ctx.lineTo(pos + 1, this.#height);
+        ctx.lineTo(pos + 1, 10);
+        ctx.lineTo(pos + 4, 0);
+        ctx.fill();
     }
 
-    #render() {
-        this.#requestedRender = false;
+    #render(ctx: CanvasRenderingContext2D) {
         const t0 = Date.now();
-    
-        this.#cxt.fillStyle = 'black';
-        this.#cxt.fillRect(0, 0, this.#width, this.#height);
-        this.#renderRulerAndScroller();
-        this.#renderWaveform();
-        this.#renderTracks();
-        this.#renderCursor();
 
-        this.#cxt.font = 'bold ' + font(TimelineConfig.data.fontSize);
-        this.#cxt.fillStyle = 'lightgreen';
-        this.#cxt.textBaseline = 'top';
+        this.#renderRulerAndScroller(ctx);
+        this.#renderWaveform(ctx);
+        this.#renderTracks(ctx);
+        this.#renderCursor(ctx);
+
+        ctx.font = 'bold ' + font(TimelineConfig.data.fontSize);
+        ctx.fillStyle = INOUT_TEXT;
+        ctx.textBaseline = 'top';
         const area = Playback.playArea;
         const status = (area.start === undefined ? '' : 'IN ')
                      + (area.end === undefined ? '' : 'OUT ')
                      + (area.loop ? 'LOOP ' : '');
-        const statusWidth = this.#cxt.measureText(status).width;
-        this.#cxt.fillText(status, this.#width - statusWidth - 5, 35);
+        const statusWidth = ctx.measureText(status).width;
+        ctx.fillText(status, 
+            this.#width - statusWidth - 5 + this.#manager.scroll[0], HEADER_HEIGHT + 5);
         
         if (!TimelineConfig.data.showDebug) return;
-
-        this.#cxt.font = `${fontSize(8)}px Courier, monospace`;
-        this.#cxt.fillStyle = 'white';
-        this.#cxt.fillText(`offset=${this.#offset.toFixed(2)}`, 5 * devicePixelRatio, 15 * devicePixelRatio);
-        this.#cxt.fillText(`scale=${this.#scale.toFixed(2)}`, 5 * devicePixelRatio, 25 * devicePixelRatio);
-        this.#cxt.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 80 * devicePixelRatio, 15 * devicePixelRatio);
-        this.#cxt.fillText(`dpr=${devicePixelRatio}`, 80 * devicePixelRatio, 25 * devicePixelRatio);
-    }
-
-    requestRender() {
-        if (this.#requestedRender) return;
-        this.#requestedRender = true;
-        requestAnimationFrame(() => this.#render());
+        ctx.translate(this.#manager.scroll[0], 0);
+        ctx.font = `${fontSize(8)}px Courier, monospace`;
+        ctx.fillStyle = theme.isDark ? 'white' : 'black';
+        ctx.fillText(`offset=${this.#offset.toFixed(2)}`, 5, 15);
+        ctx.fillText(`scale=${this.#scale.toFixed(2)}`, 5, 25);
+        ctx.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 80, 15);
+        ctx.fillText(`dpr=${devicePixelRatio}`, 80, 25);
     }
 }
