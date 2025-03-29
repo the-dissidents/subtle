@@ -66,11 +66,8 @@ function isBottom(alignment: AlignMode) {
 }
 
 export class SubtitleRenderer {
-    #canvas: OffscreenCanvas;
-    #cxt: OffscreenCanvasRenderingContext2D;
     #subs: Subtitles;
     
-    #needsRender = true;
     #currentEntries: WrappedEntry[] = [];
     #sortedEntries: WrappedEntry[] = [];
 
@@ -90,12 +87,7 @@ export class SubtitleRenderer {
         subtitles: Subtitles) 
     {
         this.#subs = subtitles;
-        this.#canvas = new OffscreenCanvas(width, height);
         this.changeResolution();
-        let context = this.#canvas.getContext('2d', { alpha: true });
-        if (!context) throw new Error(
-            'SubtitleRenderer: cannot create context for OffscreenCanvas');
-        this.#cxt = context;
         this.updateTimes();
     }
 
@@ -106,8 +98,6 @@ export class SubtitleRenderer {
     }
 
     changeResolution(width: number = this.width, height: number = this.height) {
-        this.#canvas.width = width;
-        this.#canvas.height = height;
         this.width = width;
         this.height = height;
         let ratio = this.#subs.metadata.width / this.#subs.metadata.height;
@@ -118,12 +108,6 @@ export class SubtitleRenderer {
             [this.#hMargin, this.#vMargin] = [(width - height * ratio) / 2, 0];
             this.#scale = height / this.#subs.metadata.height;
         }
-        //console.log(`margins: ${this.#hMargin} ${this.#vMargin}`)
-        this.requireRerender();
-    }
-
-    requireRerender() {
-        this.#needsRender = true;
     }
 
     updateTimes() {
@@ -134,7 +118,6 @@ export class SubtitleRenderer {
             this.#sortedEntries[i].newIndex = i;
 
         this.#searchCurrentEntries();
-        this.#needsRender = true;
     }
 
     #searchCurrentEntries() {
@@ -174,7 +157,7 @@ export class SubtitleRenderer {
         return [x, y, dy];
     }
 
-    #breakWords(text: string, width: number) {
+    #breakWords(text: string, width: number, ctx: CanvasRenderingContext2D) {
         let words = Basic.splitPrintingWords(text);
         let lines: string[] = [], currentLine = '';
         for (let word of words) {
@@ -183,7 +166,7 @@ export class SubtitleRenderer {
                 currentLine = '';
                 continue;
             }
-            let w = this.#cxt.measureText(currentLine + word).width;
+            let w = ctx.measureText(currentLine + word).width;
             if (w < width) {
                 currentLine += word;
             } else {
@@ -195,19 +178,20 @@ export class SubtitleRenderer {
         return lines;
     }
 
-    #render() {
+    render(ctx: CanvasRenderingContext2D) {
         let boxes: Box[] = [];
-        this.#cxt.clearRect(0, 0, this.width, this.height);
-        this.#cxt.strokeStyle = 'white';
-        this.#cxt.beginPath();
-        this.#cxt.rect(this.#hMargin, this.#vMargin, 
+        // ctx.clearRect(0, 0, this.width, this.height);
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.rect(this.#hMargin, this.#vMargin, 
             this.width - 2 * this.#hMargin, this.height - 2 * this.#vMargin);
-        this.#cxt.stroke();
+        ctx.stroke();
         for (let ent of this.#currentEntries)
         for (let channel of ent.entry.texts) {
-            if (isLeft(channel.style.alignment)) this.#cxt.textAlign = 'left';
-            if (isCenterH(channel.style.alignment)) this.#cxt.textAlign = 'center';
-            if (isRight(channel.style.alignment)) this.#cxt.textAlign = 'right';
+            if (isLeft(channel.style.alignment)) ctx.textAlign = 'left';
+            if (isCenterH(channel.style.alignment)) ctx.textAlign = 'center';
+            if (isRight(channel.style.alignment)) ctx.textAlign = 'right';
     
             let size = channel.style.size;
             let font = channel.style.font;
@@ -221,19 +205,19 @@ export class SubtitleRenderer {
             if (lineColor == '') lineColor = 'black';
             // I'm making sure this is compatible to libass, though I believe 3/4 is
             // a mistake for 4/3
-            this.#cxt.font = `${channel.style.styles.bold ? 'bold ' : ''}${channel.style.styles.italic ? 'italic ' : ''}${size * this.#scale * 3/4}px "${font}", sans-serif`;
-            this.#cxt.fillStyle = color;
+            ctx.font = `${channel.style.styles.bold ? 'bold ' : ''}${channel.style.styles.italic ? 'italic ' : ''}${size * this.#scale * 3/4}px "${font}", sans-serif`;
+            ctx.fillStyle = color;
 
             let width = this.width - this.#hMargin * 2 - 
                 (channel.style.margin.left + channel.style.margin.right) * this.#scale;
-            let lines = this.#breakWords(channel.text, width);
+            let lines = this.#breakWords(channel.text, width, ctx);
             
             // loop for each line, starting from the bottom
             let [bx, by, dy] = this.#basePoint(channel.style);
             if (dy < 0) lines.reverse();
             for (let line of lines) {
                 // TODO: revise the algorithm
-                let metrics = this.#cxt.measureText(line);
+                let metrics = ctx.measureText(line);
                 let [x, y] = [bx, by];
                 let newBox = getBoxFromMetrics(metrics, x, y);
                 let yOffset = 0;
@@ -252,17 +236,17 @@ export class SubtitleRenderer {
                     }
                 }
                 boxes.push(newBox);
-                this.#cxt.beginPath();
-                this.#cxt.rect(newBox.x, newBox.y, newBox.w, newBox.h);
-                this.#cxt.strokeStyle = 'white';
-                this.#cxt.lineWidth = 1;
-                this.#cxt.stroke();
+                ctx.beginPath();
+                ctx.rect(newBox.x, newBox.y, newBox.w, newBox.h);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1;
+                ctx.stroke();
                 if (lineWidth > 0) {
-                    this.#cxt.strokeStyle = lineColor;
-                    this.#cxt.lineWidth = lineWidth * this.#scale * 3/4;
-                    this.#cxt.strokeText(line, x, newBox.y + newBox.diffy);
+                    ctx.strokeStyle = lineColor;
+                    ctx.lineWidth = lineWidth * this.#scale;
+                    ctx.strokeText(line, x, newBox.y + newBox.diffy);
                 }
-                this.#cxt.fillText(line, x, newBox.y + newBox.diffy);
+                ctx.fillText(line, x, newBox.y + newBox.diffy);
             }
         }
     }
@@ -273,15 +257,6 @@ export class SubtitleRenderer {
         // console.log('time ->', time);
         this.#currentTime = time;
         this.#searchCurrentEntries();
-        this.#needsRender = true;
-    }
-
-    getCanvas() {
-        if (this.#needsRender) {
-            this.#render();
-            this.#needsRender = false;
-        }
-        return this.#canvas;
     }
 }
 

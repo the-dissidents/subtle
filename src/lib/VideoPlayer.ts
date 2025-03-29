@@ -108,6 +108,11 @@ export class VideoPlayer {
         this.#manager.renderer = (ctx) => this.#renderSimple(ctx);
         this.#manager.requestRender();
 
+        canvas.ondblclick = () => {
+            this.#manager.setScroll({x: 0, y: 0});
+            this.#manager.setScale(1);
+        };
+
         let [w, h] = this.#manager.physicalSize;
         this.#canvas = new OffscreenCanvas(w, h);
         let bufcxt = this.#canvas.getContext('2d', { alpha: false });
@@ -139,14 +144,22 @@ export class VideoPlayer {
         let [w, h] = this.#manager.physicalSize;
         let [width, height] = this.#opened.media.videoSize!;
         let ratio = width / height;
+        let oh: number, ow: number;
         if (w / h < ratio)
-            [this.#outW, this.#outH] = [w, w / ratio];
+            [ow, oh] = [w, w / ratio];
         else
-            [this.#outW, this.#outH] = [h * ratio, h];
-        this.#outOffsetX = (w - this.#outW) / 2;
-        this.#outOffsetY = (h - this.#outH) / 2;
+            [ow, oh] = [h * ratio, h];
+        this.#outOffsetX = (w - ow) / 2;
+        this.#outOffsetY = (h - oh) / 2;
+        if (ow == this.#outW && oh == this.#outH) return;
+
+        [this.#outW, this.#outH] = [ow, oh];
         await this.#opened.media.waitUntilAvailable();
-        await this.#opened.media.setVideoSize(this.#outW, this.#outH);
+        await this.#opened.media.setVideoSize(ow, oh);
+
+        const pos = this.currentPosition;
+        await this.#clearCache();
+        if (pos !== null) this.requestSetPositionFrame(pos);
     }
 
     setSubtitles(subs: Subtitles) {
@@ -482,8 +495,6 @@ export class VideoPlayer {
         this.#ctxbuf.clearRect(0, 0, w, h);
         this.#ctxbuf.putImageData(imgData, 
             this.#outOffsetX, this.#outOffsetY, 0, 0, nw, nh);
-        if (this.subRenderer)
-            this.#ctxbuf.drawImage(this.subRenderer.getCanvas(), 0, 0);
 
         if (!MediaConfig.data.showDebug) return;
         
@@ -519,12 +530,10 @@ export class VideoPlayer {
     }
 
     async #renderSimple(cxt: CanvasRenderingContext2D) {
-        // cxt.globalCompositeOperation = 'copy';
-        if (!this.#opened) {
-            cxt.drawImage(this.subRenderer!.getCanvas(), 0, 0);
-            return;
+        if (this.#opened) {
+            cxt.drawImage(this.#canvas, 0, 0);
         }
-        cxt.drawImage(this.#canvas, 0, 0);
+        this.#subRenderer!.render(cxt);
     }
 
     #requestedRenderNext = false;

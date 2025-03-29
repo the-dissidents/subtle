@@ -24,7 +24,6 @@ tick().then(() => {
         if (!Playback.video?.subRenderer) return;
         if (times == ChangeType.Times || times == ChangeType.General)
             Playback.video.subRenderer.updateTimes();
-        Playback.video.subRenderer.requireRerender();
         Playback.video.requestRender();
     });
     
