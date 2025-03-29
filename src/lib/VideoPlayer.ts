@@ -45,6 +45,8 @@ export class VideoPlayer {
 
     #outOffsetX = 0;
     #outOffsetY = 0;
+    #outW = 0;
+    #outH = 0;
 
     #opened?: {
         framerate: number;
@@ -102,7 +104,9 @@ export class VideoPlayer {
         this.#manager.setMaxZoom(2);
         this.#manager.onDisplaySizeChanged.bind(this, 
             (w, h, rw, rh) => this.#setDisplaySize(w, h, rw, rh));
+        this.#manager.onUserZoom.bind(this, () => this.#updateContentRect());
         this.#manager.renderer = (ctx) => this.#renderSimple(ctx);
+        this.#manager.requestRender();
 
         let [w, h] = this.#manager.physicalSize;
         this.#canvas = new OffscreenCanvas(w, h);
@@ -111,11 +115,22 @@ export class VideoPlayer {
         this.#ctxbuf = bufcxt;
     }
 
+    #updateContentRect() {
+        const [w, h] = this.#manager.size;
+        const scale = this.#manager.scale;
+        const wmargin = w / scale / 2;
+        const hmargin = h / scale / 2;
+        this.#manager.setContentRect({
+            l: -wmargin, t: -hmargin, r: w + wmargin, b: h + hmargin
+        });
+    }
+
     async #setDisplaySize(w: number, h: number, rw: number, rh: number) {
         this.#canvas.width = rw;
         this.#canvas.height = rh;
         this.subRenderer?.changeResolution(rw, rh);
         if (this.#opened) await this.#updateOutputSize();
+        this.#updateContentRect();
         this.requestRender();
     }
 
@@ -124,15 +139,14 @@ export class VideoPlayer {
         let [w, h] = this.#manager.physicalSize;
         let [width, height] = this.#opened.media.videoSize!;
         let ratio = width / height;
-        let nw: number, nh: number;
         if (w / h < ratio)
-            [nw, nh] = [w, w / ratio];
+            [this.#outW, this.#outH] = [w, w / ratio];
         else
-            [nw, nh] = [h * ratio, h];
-        this.#outOffsetX = (w - nw) / 2;
-        this.#outOffsetY = (h - nh) / 2;
+            [this.#outW, this.#outH] = [h * ratio, h];
+        this.#outOffsetX = (w - this.#outW) / 2;
+        this.#outOffsetY = (h - this.#outH) / 2;
         await this.#opened.media.waitUntilAvailable();
-        await this.#opened.media.setVideoSize(nw, nh);
+        await this.#opened.media.setVideoSize(this.#outW, this.#outH);
     }
 
     setSubtitles(subs: Subtitles) {
@@ -505,7 +519,7 @@ export class VideoPlayer {
     }
 
     async #renderSimple(cxt: CanvasRenderingContext2D) {
-        cxt.globalCompositeOperation = 'copy';
+        // cxt.globalCompositeOperation = 'copy';
         if (!this.#opened) {
             cxt.drawImage(this.subRenderer!.getCanvas(), 0, 0);
             return;

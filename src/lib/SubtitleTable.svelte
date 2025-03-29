@@ -107,9 +107,9 @@ function layout(cxt: CanvasRenderingContext2D) {
     cxt.measureText('style').width);
   colPos[5] = colPos[4] + cellPadding * 2 + cxt.measureText(`999.9`).width;
 
-  manager.setContentSize({
-    w: colPos[5] + cellPadding * 2 + textWidth + manager.scrollerSize,
-    h: (totalLines + 1) * lineHeight + headerHeight + manager.scrollerSize // add 1 for virtual entry
+  manager.setContentRect({
+    r: colPos[5] + cellPadding * 2 + textWidth + manager.scrollerSize,
+    b: (totalLines + 1) * lineHeight + headerHeight + manager.scrollerSize // add 1 for virtual entry
   });
 }
 
@@ -236,7 +236,7 @@ function render(cxt: CanvasRenderingContext2D) {
   // vertical lines
   cxt.strokeStyle = gridMajorColor;
 
-  const maxY = manager.contentSize[1];
+  const maxY = manager.contentRect.b;
   drawLine(colPos[1], sy, colPos[1], 
     Math.min(sy + height, maxY - manager.scrollerSize));
 
@@ -280,7 +280,7 @@ Editing.onKeepEntryInView.bind(me, (ent) => {
     manager.setScroll({y: sy})
     manager.requestRender();
   } else {
-    const sy = manager.contentSize[1] - manager.size[1] / manager.scale;
+    const sy = manager.contentRect.b - manager.size[1] / manager.scale;
     manager.setScroll({y: sy})
     manager.requestRender();
   }

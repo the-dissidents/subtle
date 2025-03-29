@@ -1,6 +1,7 @@
 import { assert } from "./Basic";
 import { InterfaceConfig } from "./config/Groups";
 import { EventHost, translateWheelEvent } from "./frontend/Frontend";
+import { Interface } from "./frontend/Interface";
 import { theme } from "./Theming.svelte";
 
 const scrollerColorRgb = () => theme.isDark ? '255 255 255' : '0 0 0';
@@ -8,6 +9,19 @@ const scrollerColorRgb = () => theme.isDark ? '255 255 255' : '0 0 0';
 const scrollerSize = 6;
 const scrollerFade = 1500;
 const scrollerFadeStart = 1000;
+
+export type Rect = {
+    l: number, t: number, r: number, b: number;
+}
+
+export type ReadonlyRect = {
+    readonly l: number, 
+    readonly t: number, 
+    readonly r: number, 
+    readonly b: number,
+    readonly w: number,
+    readonly h: number
+}
 
 export class CanvasManager {
     #cxt: CanvasRenderingContext2D;
@@ -17,12 +31,12 @@ export class CanvasManager {
     #scale = 1;
     #maxZoom = 1;
     #scrollX = 0; #scrollY = 0;
-    #maxX = -1; #maxY = -1;
+
+    #contentL = 0; #contentT = 0;
+    #contentR = -1; #contentD = -1;
 
     #dragStartX = 0; #dragStartY = 0;
     #dragStartScrollX = 0; #dragStartScrollY = 0;
-    #centerX: number | undefined;
-    #centerY: number | undefined;
 
     #dragType: 'none' | 'custom' | 'vscroll' | 'hscroll' = 'none';
     #scrollerHighlight: 'v' | 'h' | 'none' = 'none';
@@ -36,6 +50,7 @@ export class CanvasManager {
     //     new EventHost<[ev: MouseEvent]>();
     readonly onDrag =
         new EventHost<[offsetX: number, offsetY: number, ev: MouseEvent]>();
+    readonly onUserZoom = new EventHost();
 
     renderer?: (ctx: CanvasRenderingContext2D) => void;
     doNotPrescaleHighDPI = false;
@@ -55,16 +70,21 @@ export class CanvasManager {
         ];
     }
 
-    get contentSize(): readonly [number, number] {
-        return [
-            this.#maxX < 0 ? this.#width : this.#maxX,
-            this.#maxY < 0 ? this.#height : this.#maxY,
-        ];
+    get contentRect(): ReadonlyRect {
+        let rect = {
+            l: this.#contentL,
+            t: this.#contentT,
+            r: this.#contentR < 0 ? this.#width : this.#contentR,
+            b: this.#contentD < 0 ? this.#height : this.#contentD,
+        };
+        return {...rect, w: rect.r - rect.l, h: rect.b - rect.t};
     }
 
-    setContentSize(p: {w?: number, h?: number}) {
-        if (p.w !== undefined) this.#maxX = p.w;
-        if (p.h !== undefined) this.#maxY = p.h;
+    setContentRect(p: Partial<Rect>) {
+        if (p.l !== undefined) this.#contentL = p.l;
+        if (p.t !== undefined) this.#contentT = p.t;
+        if (p.r !== undefined) this.#contentR = p.r;
+        if (p.b !== undefined) this.#contentD = p.b;
         this.#constrainScroll();
         this.requestRender();
     }
@@ -86,9 +106,12 @@ export class CanvasManager {
 
     setScale(s: number) {
         assert(s > 0);
-        this.#scale = s;
-        this.#constrainScroll();
-        this.requestRender();
+        const oldScale = this.#scale;
+        this.#scale = Math.min(s, this.#maxZoom);
+        if (this.#scale !== oldScale) {
+            this.#constrainScroll();
+            this.requestRender();
+        }
     }
 
     get maxZoom() {
@@ -103,9 +126,10 @@ export class CanvasManager {
     }
 
     get hasScrollers(): readonly [boolean, boolean] {
+        const rect = this.contentRect;
         return [
-            this.#maxX > this.#width / this.#scale,
-            this.#maxY > this.#height / this.#scale
+            rect.r - rect.l > this.#width / this.#scale,
+            rect.b - rect.t > this.#height / this.#scale
         ];
     }
 
@@ -124,7 +148,6 @@ export class CanvasManager {
 
         new ResizeObserver(() => this.#update()).observe(canvas);
         this.#update();
-        this.requestRender();
 
         canvas.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));
         canvas.addEventListener('mousemove', (ev) => this.#onMouseMove(ev));
@@ -139,20 +162,20 @@ export class CanvasManager {
 
     get #hscrollerLength () { 
         return Math.max(InterfaceConfig.data.minScrollerLength, 
-            this.#width ** 2 / this.#scale / this.#maxX);
+            this.#width ** 2 / this.#scale / this.contentRect.w);
     }
       
     get #vscrollerLength () { 
         return Math.max(InterfaceConfig.data.minScrollerLength, 
-            this.#height ** 2 / this.#scale / this.#maxY);
+            this.#height ** 2 / this.#scale / this.contentRect.h);
     }
 
     get #hscrollSpace() {
-        return this.#maxX - this.#width / this.#scale;
+        return this.contentRect.w - this.#width / this.#scale;
     } 
 
     get #vscrollSpace() {
-        return this.#maxY - this.#height / this.#scale;
+        return this.contentRect.h - this.#height / this.#scale;
     } 
 
     #onMouseDown(ev: MouseEvent) {
@@ -207,8 +230,6 @@ export class CanvasManager {
     }
 
     #onMouseMove(ev: MouseEvent) {
-        this.#centerX = undefined;
-      
         if (ev.buttons == 0) {
             let oldHighlight = this.#scrollerHighlight;
             if (ev.offsetY > this.#height - scrollerSize) {
@@ -230,19 +251,19 @@ export class CanvasManager {
     #onMouseWheel(ev: WheelEvent) {
         const tr = translateWheelEvent(ev);
         if (tr.isZoom) {
-            if (!this.#centerX || !this.#centerY) {
-                this.#centerX = ev.offsetX / this.#scale + this.#scrollX;
-                this.#centerY = ev.offsetY / this.#scale + this.#scrollY;
-            }
+            const centerX = ev.offsetX / this.#scale + this.#scrollX;
+            const centerY = ev.offsetY / this.#scale + this.#scrollY;
             this.#scale = Math.min(this.#maxZoom, 
                 Math.max(1, this.#scale / Math.pow(1.01, tr.amount)));
-            this.#scrollX = this.#centerX - ev.offsetX / this.#scale;
-            this.#scrollY = this.#centerY - ev.offsetY / this.#scale;
+            this.#scrollX = centerX - ev.offsetX / this.#scale;
+            this.#scrollY = centerY - ev.offsetY / this.#scale;
+            this.#constrainScroll();
+            this.onUserZoom.dispatch();
         } else {
             this.#scrollX += tr.amountX * 0.1;
             this.#scrollY += tr.amountY * 0.1;
+            this.#constrainScroll();
         }
-        this.#constrainScroll();
         this.requestRender();
     }
 
@@ -276,24 +297,26 @@ export class CanvasManager {
             1 - Math.max(0, now - this.#scrollerFadeStartTime - scrollerFadeStart) 
             / (scrollerFade - scrollerFadeStart);
 
+        const rect = this.contentRect;
+        const [hasH, hasW] = this.hasScrollers;
         // horizontal
-        if (this.#maxX > this.#width / this.#scale) {
+        if (hasH) {
             const len = this.#hscrollerLength;
             const highlight = this.#dragType == 'hscroll' || this.#scrollerHighlight == 'h';
             this.#cxt.fillStyle = `rgb(${scrollerColorRgb()} / ${highlight ? 100 : 40 * fade}%)`;
             this.#cxt.fillRect(
-                this.#scrollX / this.#hscrollSpace * (this.#width - len), 
+                (this.#scrollX - rect.t) / this.#hscrollSpace * (this.#width - len), 
                 this.#height - scrollerSize, 
                 len, scrollerSize);
         }
         // vertical
-        if (this.#maxY > this.#height / this.#scale) {
+        if (hasW) {
             const len = this.#vscrollerLength;
             const highlight = this.#dragType == 'vscroll' || this.#scrollerHighlight == 'v';
             this.#cxt.fillStyle = `rgb(${scrollerColorRgb()} / ${highlight ? 100 : 40 * fade}%)`;
             this.#cxt.fillRect(
                 this.#width - scrollerSize, 
-                this.#scrollY / this.#vscrollSpace * (this.#height - len),
+                (this.#scrollY - rect.t) / this.#vscrollSpace * (this.#height - len),
                 scrollerSize, len);
         }
 
@@ -317,10 +340,12 @@ export class CanvasManager {
     }
 
     #constrainScroll() {
+        const rect = this.contentRect;
         this.#scrollerFadeStartTime = performance.now();
-        this.#scrollX = Math.max(0, 
-            Math.min(this.#maxX - this.#width / this.#scale, this.#scrollX));
-        this.#scrollY = Math.max(0, 
-            Math.min(this.#maxY - this.#height / this.#scale, this.#scrollY));
+        this.#scrollX = Math.max(rect.l, 
+            Math.min(rect.r - this.#width / this.#scale, this.#scrollX));
+        this.#scrollY = Math.max(rect.t, 
+            Math.min(rect.b - this.#height / this.#scale, this.#scrollY));
+        Interface.status.set(`scroll=${this.#scrollX.toFixed(2)}, ${this.#scrollY.toFixed(2)}; scale=${this.scale.toFixed(2)}`);
     }
 }
