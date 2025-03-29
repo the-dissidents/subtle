@@ -24,7 +24,7 @@ Source.onSubtitlesChanged.bind(me, (t, c) => {
 });
 </script>
 
-<select class='styleselect' tabindex='-1'
+<select tabindex='-1'
   oninput={(ev) => {
     let index = ev.currentTarget.selectedIndex;
     if (index <= 0) currentStyle = Source.subs.defaultStyle;
@@ -42,12 +42,3 @@ Source.onSubtitlesChanged.bind(me, (t, c) => {
     {/each}
   {/key}
 </select>
-
-<style>
-.styleselect {
-  padding: 3px;
-  height: 100%;
-  /* background-color: white; */
-  box-sizing: border-box;
-}
-</style>

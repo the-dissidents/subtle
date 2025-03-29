@@ -25,6 +25,13 @@ export const MediaConfig = new PublicConfigGroup(
         bounds: [0.1, 10],
         default: 1
     },
+    maxZoom: {
+      localizedName: () => $_('config.maximum-zoom'),
+      type: 'number',
+      description: () => $_('config.maximum-zoom-d'),
+      bounds: [1, 6],
+      default: 3
+    },
     showDebug: {
         localizedName: () => $_('config.show-debug-info'),
         type: 'boolean',
@@ -101,10 +108,14 @@ export class VideoPlayer {
     constructor(canvas: HTMLCanvasElement) {
         this.#manager = new CanvasManager(canvas);
         this.#manager.doNotPrescaleHighDPI = true;
-        this.#manager.setMaxZoom(2);
+        // this.#manager.showScrollers = false;
+        this.#manager.setMaxZoom(MediaConfig.data.maxZoom);
         this.#manager.onDisplaySizeChanged.bind(this, 
             (w, h, rw, rh) => this.#setDisplaySize(w, h, rw, rh));
-        this.#manager.onUserZoom.bind(this, () => this.#updateContentRect());
+        this.#manager.onUserZoom.bind(this, () => {
+            this.#manager.setMaxZoom(MediaConfig.data.maxZoom);
+            this.#updateContentRect();
+        });
         this.#manager.renderer = (ctx) => this.#renderSimple(ctx);
         this.#manager.requestRender();
 
@@ -512,21 +523,21 @@ export class VideoPlayer {
         this.#ctxbuf.textBaseline = 'top';
 
         this.#ctxbuf.fillText(
-            `fr: ${this.#opened.framerate}; sp: ${this.#opened.sampleRate}`, 0, 0);
+            `fr: ${this.#opened.framerate}; sp: ${this.#opened.sampleRate}`, this.#outOffsetX, 0);
         this.#ctxbuf.fillText(
-            `at: ${audioTime}`, 0, 20);
+            `at: ${audioTime}`, this.#outOffsetX, 20);
         this.#ctxbuf.fillText(
-            `vt: ${frame.time.toFixed(3)}`, 0, 40);
+            `vt: ${frame.time.toFixed(3)}`, this.#outOffsetX, 40);
         this.#ctxbuf.fillText(
-            `la:${latency}`, 0, 60);
+            `la:${latency}`, this.#outOffsetX, 60);
         this.#ctxbuf.fillText(
-            `ps: ${frame.position}`, 0, 80);
+            `ps: ${frame.position}`, this.#outOffsetX, 80);
         this.#ctxbuf.fillText(
             `vb: ${this.#opened.videoCache.length}`.padEnd(10)
-            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, 0, 100);
+            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, this.#outOffsetX, 100);
         this.#ctxbuf.fillText(
             `ab: ${this.#opened.audioBufferLength}`.padEnd(10) 
-            + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, 0, 120);
+            + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, this.#outOffsetX, 120);
     }
 
     async #renderSimple(cxt: CanvasRenderingContext2D) {
@@ -540,6 +551,7 @@ export class VideoPlayer {
 
     #renderNext() {
         if (!this.#opened) {
+            this.#manager.requestRender();
             this.#requestedRenderNext = false;
             return;
         }

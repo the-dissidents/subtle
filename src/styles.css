@@ -38,18 +38,22 @@
       box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
     }
     &::-webkit-slider-thumb:hover {
-      filter: brightness(97%);
+      filter: brightness(95%);
     }
     &::-webkit-slider-runnable-track {
       background: var(--uchu-yin-1);
     }
   }
-  input[type=number], input[type=text], textarea {
+  input[type=number], input[type=text], select, textarea {
     border: 1px solid var(--uchu-gray-4);
     background-color: white;
     color: var(--uchu-yin);
     &:focus {
       outline: 2px solid color-mix(in oklab, var(--uchu-blue-3), transparent);
+    }
+    &:disabled {
+      background-color: var(--uchu-gray-1);
+      color: var(--uchu-gray-9);
     }
   }
   button,
@@ -62,10 +66,26 @@
       filter: brightness(97%);
     }
     &:has(input[type='checkbox'].button:checked) {
-      background-color: var(--uchu-green-1);
+      background-color: var(--uchu-red-1);
     }
   }
-  button[disabled] {
+  input[type=checkbox], input[type=radio] {
+    border: 1px solid var(--uchu-gray-4);
+    background-color: white;
+    &:checked {
+      border: 1px solid var(--uchu-pink-8);
+      background-color: var(--uchu-pink-7);
+    }
+    &:not(:disabled):hover {
+      filter: brightness(97%);
+    }
+    &:disabled {
+      border: 1px solid var(--uchu-gray-4);
+      background-color: var(--uchu-gray-1);
+      color: var(--uchu-gray-9);
+    }
+  }
+  button:disabled {
     background-color: var(--uchu-gray-1);
     color: var(--uchu-gray-9);
   }
@@ -95,13 +115,24 @@
       background: var(--uchu-yin-7);
     }
   }
-  input[type=number], input[type=text], textarea {
+  input[type=number], input[type=text], select, textarea {
     /* border: 1px solid var(--uchu-yin-7); */
     border: none;
     background-color: var(--uchu-yin-8);
     color: var(--uchu-yang);
     &:focus {
       outline: 2px solid color-mix(in oklab, var(--uchu-blue-8), transparent 40%);
+    }
+  }
+  input[type=checkbox], input[type=radio] {
+    border: 1px solid var(--uchu-yin-7);
+    background-color: var(--uchu-yin-8);
+    &:checked {
+      border: 1px solid var(--uchu-blue-8);
+      background-color: var(--uchu-blue-4);
+    }
+    &:not([disabled]):hover {
+      filter: brightness(110%);
     }
   }
   button,
@@ -215,9 +246,23 @@ button.right {
 }
 
 select {
-  /* currently useless */
-  font-size: 1rem;
+  appearance: none;
+
+  border-radius: 3px;
+  padding: 2px 17px 2px 5px;
+  margin: 1px;
+
+  text-align: start;
+  text-decoration: none;
   font-family: var(--fontFamily);
+  font-size: 0.85rem;
+  line-height: normal;
+
+  /* background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24"><path d="M 0 0 M 24 0 M 12 24 z" fill="transparent" stroke="black"/></svg>'); */
+  background-image: url("data:image/svg+xml;charset=utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='10px' width='15px'><text x='0' y='10' fill='gray'>▾</text></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0 center;
+  background-size: 12px;
 }
 
 textarea {
@@ -226,6 +271,42 @@ textarea {
   border-radius: 3px;
   padding: 3px 5px;
   margin: 1px;
+}
+
+input[type=radio] {
+  display: inline-block;
+  vertical-align: sub;
+
+  appearance: none;
+  height: 0.85rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.4rem;
+  margin: 3px 2px;
+
+  &:checked {
+    background-image: url("data:image/svg+xml;charset=utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='10px' width='10px' fill='white'><circle cx='5' cy='5' r='5'/></svg>");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.3rem;
+  }
+}
+
+input[type=checkbox] {
+  display: inline-block;
+  vertical-align: sub;
+
+  appearance: none;
+  height: 0.85rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 2px;
+  margin: 3px 2px;
+
+  &:checked {
+    background-image: url("data:image/svg+xml;charset=utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='10px' width='10px' stroke='white' fill='none' stroke-width='1.5px'><path d='M2 6 L5 8 L8 2'/></svg>");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.7rem;
+  }
 }
 
 input[type=range] {

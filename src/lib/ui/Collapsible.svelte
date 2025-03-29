@@ -47,7 +47,7 @@ let {
     background-color: var(--uchu-yin-1);
   }
   button.checked {
-    background-color: var(--uchu-green-1) !important;
+    background-color: var(--uchu-red-1) !important;
   }
 }
 

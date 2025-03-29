@@ -69,8 +69,8 @@ setContext<TabAPI>(TabAPIContext, {
     }
     button {
       color: #a6a6a6;
-      &:not([disabled], .selected):hover {
-        filter: brightness(97%);
+      &:not(.selected):hover {
+        filter: brightness(90%) !important;
       }
     }
     .selected {
@@ -85,8 +85,8 @@ setContext<TabAPI>(TabAPIContext, {
     }
     button {
       color: #a6a6a6;
-      &:not([disabled], .selected):hover {
-        filter: brightness(110%);
+      &:not(.selected):hover {
+        filter: brightness(110%) !important;
       }
     }
     .selected {
