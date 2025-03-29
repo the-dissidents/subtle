@@ -64,9 +64,15 @@ let uiFocus = Interface.uiFocus;
 let centerX: number | undefined;
 let centerY: number | undefined;
 
-let scale = 1;
-let scrollX = 0, scrollY = 0;
 let width = 100, height = 100;
+let scale = 1;
+let scrollX = 0, scrollY = 0, 
+    dragStartX = 0, dragStartY = 0,
+    dragStartScrollX = 0, dragStartScrollY = 0;
+let dragType: 'other' | 'vscroll' | 'hscroll' = 'other';
+let scrollerHighlight: 'v' | 'h' | 'none' = 'none';
+
+let scrollerFadeStartTime = 0;
 
 let lines: {entry: SubtitleEntry, line: number, height: number}[] = [];
 let lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
@@ -74,22 +80,32 @@ let maxX = 0, maxY = 0, totalLines = 0;
 let requestedRender = false;
 let colPos: [number, number, number, number, number, number,] = [0, 0, 0, 0, 0, 0];
 
-let linePadding = $derived(InterfaceConfig.data.fontSize * 0.35);
-let lineHeight = $derived(InterfaceConfig.data.fontSize + linePadding * 2);
-let headerHeight = $derived(lineHeight);
-let cellPadding = $derived(InterfaceConfig.data.fontSize * 0.4);
-let scrollerSize = 4;
+const linePadding   = $derived(InterfaceConfig.data.fontSize * 0.35);
+const lineHeight    = $derived(InterfaceConfig.data.fontSize + linePadding * 2);
+const headerHeight  = $derived(lineHeight);
+const cellPadding   = $derived(InterfaceConfig.data.fontSize * 0.4);
+const scrollerSize  = 6;
 
-const textColor = $derived(theme.isDark ? '#fff' : '#000');
-const gridColor = $derived(theme.isDark ? '#444' : '#bbb');
-const gridMajorColor = $derived(theme.isDark ? '#666' : '#999');
-const headerBackground = $derived(theme.isDark ? '#555' : '#ddd');
-const overlapColor = $derived(theme.isDark ? 'lightpink' : 'crimson');
-const focusBackground = $derived(theme.isDark ? 'darkslategray' : 'lightblue');
-const selectedBackground = $derived(theme.isDark ? '#444' : '#eee');
+const textColor           = $derived(theme.isDark ? '#fff'          : '#000');
+const scrollerColorRgb    = $derived(theme.isDark ? '255 255 255'   : '0 0 0');
+const gridColor           = $derived(theme.isDark ? '#444'          : '#bbb');
+const gridMajorColor      = $derived(theme.isDark ? '#666'          : '#999');
+const headerBackground    = $derived(theme.isDark ? '#555'          : '#ddd');
+const overlapColor        = $derived(theme.isDark ? 'lightpink'     : 'crimson');
+const focusBackground     = $derived(theme.isDark ? 'darkslategray' : 'lightblue');
+const selectedBackground  = $derived(theme.isDark ? '#444'          : '#eee');
 
 const scrollerFade = 1500;
 const scrollerFadeStart = 1000;
+
+const hscrollerLength = () => 
+  Math.max(TableConfig.data.minScrollerLength, width / scale / maxX * width);
+
+const vscrollerLength = () => 
+  Math.max(TableConfig.data.minScrollerLength, height / scale / maxY * height);
+
+const hscrollSpace = () => maxX - width / scale;
+const vscrollSpace = () => maxY - height / scale;
 
 $effect(() => {
   if (theme.isDark !== undefined) requestRender();
@@ -129,11 +145,9 @@ function layout() {
     cxt.measureText('style').width);
   colPos[5] = colPos[4] + cellPadding * 2 + cxt.measureText(`999.9`).width;
 
-  maxY = (totalLines + 1) * lineHeight + headerHeight; // add 1 for virtual entry
-  maxX = colPos[5] + cellPadding * 2 + textWidth;
+  maxY = (totalLines + 1) * lineHeight + headerHeight + scrollerSize; // add 1 for virtual entry
+  maxX = colPos[5] + cellPadding * 2 + textWidth + scrollerSize;
 }
-
-let scrollerFadeStartTime = 0;
 
 function render() {
   const drawLine = (x1: number, y1: number, x2: number, y2: number) => {
@@ -223,14 +237,18 @@ function render() {
   }
   if (i == lines.length) {
     // virtual entry
+    const lastLine = lines.at(-1);
+    const y = lastLine 
+        ? (lastLine.line + lastLine.height + 1) * lineHeight 
+        : 0;
     if (focused == 'virtual') {
       cxt.fillStyle = focusBackground;
-      cxt.fillRect(0, maxY - lineHeight, width + scrollX, lineHeight);
+      cxt.fillRect(0, y, width + scrollX, lineHeight);
     }
     cxt.fillStyle = textColor;
     cxt.textBaseline = 'middle';
     cxt.textAlign = 'end';
-    cxt.fillText(`*`, colPos[1] - cellPadding, maxY - lineHeight * 0.5);
+    cxt.fillText(`*`, colPos[1] - cellPadding, y + lineHeight * 0.5);
   }
 
   // header
@@ -250,9 +268,9 @@ function render() {
 
   // vertical lines
   cxt.strokeStyle = gridMajorColor;
-  drawLine(colPos[1], scrollY, colPos[1], Math.min(scrollY + height, maxY));
+  drawLine(colPos[1], scrollY, colPos[1], Math.min(scrollY + height, maxY - scrollerSize));
 
-  const bottom = Math.min(scrollY + height, maxY - lineHeight);
+  const bottom = Math.min(scrollY + height, maxY - lineHeight - scrollerSize);
   colPos.slice(2).map((pos) => drawLine(pos, scrollY, pos, bottom));
 
   const now = performance.now();
@@ -264,23 +282,25 @@ function render() {
   // for scrollers, draw in screen space again
   cxt.resetTransform();
   cxt.scale(devicePixelRatio, devicePixelRatio);
-  cxt.fillStyle = `rgb(0 0 0 / ${40 * fade}%)`;
-  const minScrollerLength = TableConfig.data.minScrollerLength;
+  // horizontal
   if (maxX > width / scale) {
-    let scaledScreen = width / scale;
-    let len = Math.max(minScrollerLength, scaledScreen / maxX * width);
+    const len = hscrollerLength();
+    const highlight = dragType == 'hscroll' || scrollerHighlight == 'h';
+    cxt.fillStyle = `rgb(${scrollerColorRgb} / ${highlight ? 100 : 40 * fade}%)`;
     cxt.fillRect(
-      scrollX / (maxX - scaledScreen) * (width - len), 
+      scrollX / hscrollSpace() * (width - len), 
       height - scrollerSize, 
       len, 
       scrollerSize);
   }
+  // vertical
   if (maxY > height / scale) {
-    let scaledScreen = height / scale;
-    let len = Math.max(minScrollerLength, scaledScreen / maxY * height);
+    const len = vscrollerLength();
+    const highlight = dragType == 'vscroll' || scrollerHighlight == 'v';
+    cxt.fillStyle = `rgb(${scrollerColorRgb} / ${highlight ? 100 : 40 * fade}%)`;
     cxt.fillRect(
       width - scrollerSize, 
-      scrollY / (maxY - scaledScreen) * (height - len),
+      scrollY / vscrollSpace() * (height - len),
       scrollerSize, 
       len);
   }
@@ -337,7 +357,6 @@ Editing.onKeepEntryInView.bind(me, (ent) => {
   }
 });
 
-
 onMount(() => {
   assert(canvas !== undefined);
   let keeper = new CanvasKeeper(canvas, canvas);
@@ -379,21 +398,33 @@ let lastAnimateFrameTime = -1;
 function onMouseDown(ev: MouseEvent) {
   onFocus();
   if (ev.button == 0) {
-    currentLine = (ev.offsetY / scale + scrollY - headerHeight) / lineHeight;
-    if (currentLine > totalLines) {
-      Editing.selectVirtualEntry();
+    [dragStartX, dragStartY] = [ev.offsetX, ev.offsetY];
+    [dragStartScrollX, dragStartScrollY] = [scrollX, scrollY];
+    if (ev.offsetX > width - scrollerSize) {
+      dragType = 'vscroll';
+    } else if (ev.offsetY > height - scrollerSize) {
+      dragType = 'hscroll';
     } else {
-      let i = 1;
-      for (; i < lines.length && lines[i].line <= currentLine; i++);
-      Editing.toggleEntry(lines[i-1].entry, getSelectMode(ev), ChangeCause.UIList);
-      isDragging = true;
-      document.addEventListener('mousemove', onMouseMove);
-      document.addEventListener('mouseup', () => {
-        document.removeEventListener('mousemove', onMouseMove);
-        isDragging = false;
-        autoScrollY = 0;
-      }, { once: true });
+      dragType = 'other';
+      currentLine = (ev.offsetY / scale + scrollY - headerHeight) / lineHeight;
+      if (currentLine > totalLines) {
+        Editing.selectVirtualEntry();
+        return;
+      } else {
+        let i = 1;
+        for (; i < lines.length && lines[i].line <= currentLine; i++);
+        Editing.toggleEntry(lines[i-1].entry, getSelectMode(ev), ChangeCause.UIList);
+        isDragging = true;
+      }
     }
+
+    document.addEventListener('mousemove', onDragMouseMove);
+    document.addEventListener('mouseup', () => {
+      document.removeEventListener('mousemove', onDragMouseMove);
+      isDragging = false;
+      autoScrollY = 0;
+      dragType = 'other';
+    }, { once: true });
   }
 }
 
@@ -428,28 +459,43 @@ function powWithSign(x: number, y: number) {
   return Math.sign(x) * Math.pow(Math.abs(x), y);
 }
 
-function onMouseMove(ev: MouseEvent) {
+function onDragMouseMove(ev: MouseEvent) {
+  const rect = canvas!.getBoundingClientRect();
+  const offsetX = ev.clientX - rect.left;
+  const offsetY = ev.clientY - rect.top;
+  
   if (ev.buttons == 1) {
-    let offsetY = ev.clientY - canvas!.getBoundingClientRect().top;
-    // auto scroll if pointing outside
-    const speed = TableConfig.data.autoScrollSpeed;
-    const exponent = TableConfig.data.autoScrollExponent;
-    if (offsetY < headerHeight) {
-      if (autoScrollY == 0) requestAutoScroll();
-      autoScrollY = powWithSign((offsetY - headerHeight) * speed, exponent);
-    } else if (offsetY > height) {
-      if (autoScrollY == 0) requestAutoScroll();
-      autoScrollY = powWithSign((offsetY - height) * speed, exponent);
+    if (dragType == 'hscroll') {
+      scrollX = dragStartScrollX + 
+        (offsetX - dragStartX) / (width - hscrollerLength()) * hscrollSpace();
+      constraintScroll();
+      requestRender();
+    } else if (dragType == 'vscroll') {
+      scrollY = dragStartScrollY + 
+        (offsetY - dragStartY) / (height - vscrollerLength()) * vscrollSpace();
+      constraintScroll();
+      requestRender();
     } else {
-      autoScrollY = 0;
-    }
+      // auto scroll if pointing outside
+      const speed = TableConfig.data.autoScrollSpeed;
+      const exponent = TableConfig.data.autoScrollExponent;
+      if (offsetY < headerHeight) {
+        if (autoScrollY == 0) requestAutoScroll();
+        autoScrollY = powWithSign((offsetY - headerHeight) * speed, exponent);
+      } else if (offsetY > height) {
+        if (autoScrollY == 0) requestAutoScroll();
+        autoScrollY = powWithSign((offsetY - height) * speed, exponent);
+      } else {
+        autoScrollY = 0;
+      }
 
-    let line = (offsetY / scale + scrollY - headerHeight) / lineHeight;
-    if (line != currentLine) {
-      currentLine = line;
-      let i = 1;
-      for (; i < lines.length && lines[i].line < currentLine; i++);
-      Editing.selectEntry(lines[i-1].entry, SelectMode.Sequence);
+      let line = (offsetY / scale + scrollY - headerHeight) / lineHeight;
+      if (line != currentLine) {
+        currentLine = line;
+        let i = 1;
+        for (; i < lines.length && lines[i].line < currentLine; i++);
+        Editing.selectEntry(lines[i-1].entry, SelectMode.Sequence);
+      }
     }
   }
 }
@@ -478,12 +524,33 @@ function processWheel(ev: WheelEvent) {
   constraintScroll();
   requestRender();
 }
+
+function onMouseMove(ev: MouseEvent) {
+  centerX = undefined;
+
+  if (ev.buttons == 0) {
+    let oldHighlight = scrollerHighlight;
+    if (ev.offsetY > height - scrollerSize) {
+      scrollerHighlight = 'h';
+    } else if (ev.offsetX > width - scrollerSize) {
+      scrollerHighlight = 'v';
+    } else {
+      scrollerHighlight = 'none';
+      return;
+    }
+    const now = performance.now();
+    if (now - scrollerFadeStartTime > scrollerFadeStart || oldHighlight != scrollerHighlight)
+      requestRender();
+    scrollerFadeStartTime = now;
+    return;
+  }
+}
 </script>
 
 <canvas bind:this={canvas}
   class:subsfocused={$uiFocus === UIFocus.Table}
   onwheel={(ev) => processWheel(ev)}
-  onmousemove={() => centerX = undefined}
+  onmousemove={(ev) => onMouseMove(ev)}
   onmousedown={(ev) => onMouseDown(ev)}
   ondblclick={() => {
     onFocus();
