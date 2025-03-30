@@ -78,9 +78,9 @@ const INOUT_TEXT         = $derived(theme.isDark ? 'lightgreen' : 'oklch(52.77% 
 const CURSOR_COLOR = 
     $derived(theme.isDark ? 'pink' : 'oklch(62.73% 0.209 12.37)');
 const PENDING_WAVEFORM_COLOR = 
-    $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 30%)`);
+    $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 40%)`);
 const WAVEFORM_COLOR = 
-    $derived(theme.isDark ? `rgb(100 255 255)` : 'goldenrod');
+    $derived(theme.isDark ? `rgb(100 255 255)` : 'oklch(76.37% 0.101 355.37)');
 const INOUT_AREA_OUTSIDE = 
     $derived(theme.isDark ? 'hsl(0deg 0% 80% / 40%)' : 'hsl(0deg 0% 40% / 40%)');
 
@@ -714,28 +714,40 @@ export class Timeline {
         if (!this.#sampler) return;
         if (this.#requestedSampler) this.#processSampler();
 
+
         const resolution = this.#sampler.resolution;
         const start = Math.max(0, Math.floor(this.#offset * resolution));
         const end = Math.min(
             Math.ceil((this.#offset + this.#width / this.#scale) * resolution),
             this.#sampler.data.length - 1);
         const width = 1 / resolution * this.#scale;
-        const step = Math.max(1, Math.ceil(1 / width));
-        const drawWidth = Math.ceil(Math.max(1, step * width))
+        const drawWidth = Math.max(1 / devicePixelRatio, width);
+        const step = Math.max(1, Math.floor(1 / this.#scale * resolution));
+
+        let points: {x: number, y: number}[] = [];
+        ctx.fillStyle = PENDING_WAVEFORM_COLOR;
         for (let i = start; i < end; i += step) {
             const detail = this.#sampler.detail[i];
-            const x = Math.floor(i * width);
+            const x = i * width;
 
-            ctx.fillStyle = PENDING_WAVEFORM_COLOR;
             let dh = (1 - detail) * this.#height;
             ctx.fillRect(x, this.#height - dh, drawWidth, dh);
-
-            if (detail == 0) continue;
-            let value = Math.sqrt(this.#sampler.data[i]) * this.#height;
-            ctx.fillStyle = WAVEFORM_COLOR;
-            ctx.fillRect(x, (this.#height - value) / 2, 
-                drawWidth, Math.max(value, 1));
+            // if (detail == 0) continue;
+            let value = Math.sqrt(this.#sampler.data[i]) * (this.#height - HEADER_HEIGHT);
+            const point = {x, y: value / 2};
+            points.push(point);
         }
+        const baseline = (this.#height - HEADER_HEIGHT) / 2 + HEADER_HEIGHT;
+        ctx.beginPath();
+        ctx.moveTo(start * width, this.#height - 1);
+        points.forEach(
+            ({x, y}) => ctx.lineTo(x, baseline + y));
+        ctx.lineTo(end * width, this.#height - 1);
+        points.reverse().forEach(
+            ({x, y}) => ctx.lineTo(x, baseline - y));
+        ctx.closePath();
+        ctx.fillStyle = WAVEFORM_COLOR;
+        ctx.fill();
     }
 
     #renderRulerAndScroller(ctx: CanvasRenderingContext2D) {

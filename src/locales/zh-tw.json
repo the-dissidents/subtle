@@ -195,7 +195,7 @@
     "search-expression-is-empty": "搜尋表達式為空",
     "search-failed": "搜尋失敗：",
     "unable-to-read-file-path": "無法讀取檔案：{path}",
-    "very-large-file-warning": "您開啟的檔案非常大，很可能不是支援的字幕檔案。\n真的要繼續嗎？\n這可能會使應用程式崩潰。"
+    "very-large-file-warning": "您開啟的檔案非常大，很可能不是支援的字幕檔案。真的要繼續嗎？這可能會使應用程式崩潰。"
   },
   "not-implemented-yet": "（暫時沒有用）",
   "ok": "確認",
@@ -213,7 +213,7 @@
     "case-sensitive": "區分大小寫",
     "expression": "表達式",
     "find": "尋找",
-    "found-n-lines": "找到 {n} {n，複數，一個 {行} 其他 {行}}}",
+    "found-n-lines": "找到 {n} 行",
     "found-nothing": "什麼也沒找到",
     "next": "下一個",
     "only-styles": "僅樣式",
@@ -223,11 +223,11 @@
     "replace": "取代",
     "replace-by-style": "取代為樣式",
     "replace-term": "取代項目",
-    "replaced-n-lines": "取代 {n} {n，複數，一個 {行} 其他 {行}}}",
+    "replaced-n-lines": "已取代 {n} 行",
     "search-only-in-label": "僅在這個標籤中搜尋：",
     "search-only-in-selected-entries": "僅在選取的項目中搜尋",
     "search-only-in-style": "僅在這個樣式中搜尋：",
-    "selected-n-lines": "選擇 {n} {n，複數，一個 {行} 其他 {行}}}",
+    "selected-n-lines": "已選擇 {n} 行",
     "use-regular-expressions": "使用正規表達式"
   },
   "style": {

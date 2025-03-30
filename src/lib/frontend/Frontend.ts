@@ -53,7 +53,7 @@ export function parseSubtitleSource(source: string): [Subtitles | null, boolean]
 
 function isTrackpad(e: WheelEvent) {
     return DebugConfig.data.mouseWheelDetection == 'multiple'
-        ? e.deltaX % 120 != 0 && e.deltaY % 120 != 0
+        ? e.deltaX % 120 != 0 || e.deltaY % 120 != 0
         : Math.abs(e.deltaX) < 100 && Math.abs(e.deltaY) < 100;
 }
 
@@ -70,6 +70,7 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
         };
     } else if (isTrackpad(e)) {
         // trackpad scroll
+        // console.log('trackpad scroll', e.deltaX, e.deltaY);
         return {
             isZoom: false,
             isTrackpad: true,
@@ -78,6 +79,7 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
         };
     } else {
         // mouse scroll
+        // console.log('mouse scroll', e.deltaX, e.deltaY);
         return {
             isZoom: false,
             isTrackpad: false,

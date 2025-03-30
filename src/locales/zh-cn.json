@@ -175,8 +175,8 @@
     "undo": "撤消"
   },
   "msg": {
-    "changed-n-entries": "{n,plural,=0 {没有可修改的东西} one {修改了{n}项} other {修改了{n}项}}",
-    "combined-n-entries": "合并了{n}项",
+    "changed-n-entries": "{n,plural,=0 {没有可修改的东西} one {修改了 {n} 项} other {修改了 {n} 项}}",
+    "combined-n-entries": "合并了 {n} 项",
     "copied-exported-data": "导出数据已复制",
     "does-not-exist": "文件不存在：{path}",
     "error-opening-video-path": "打开视频时出错：{path}",
@@ -195,7 +195,7 @@
     "search-expression-is-empty": "查找表达式为空",
     "search-failed": "查找失败：",
     "unable-to-read-file-path": "无法读取文件：{path}",
-    "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。\n真的想继续吗？\n这可能会使应用程序崩溃。"
+    "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的要继续吗？这可能会使应用程序崩溃。"
   },
   "not-implemented-yet": "（暂时没有用）",
   "ok": "确认",
@@ -213,7 +213,7 @@
     "case-sensitive": "区分大小写",
     "expression": "表达式",
     "find": "查找",
-    "found-n-lines": "找到{n} {n，复数，一个{line}其他{lines}}}",
+    "found-n-lines": "找到 {n} 行",
     "found-nothing": "什么也没找到",
     "next": "下一个",
     "only-styles": "仅样式",
@@ -223,11 +223,11 @@
     "replace": "替换",
     "replace-by-style": "替换为样式",
     "replace-term": "替换项",
-    "replaced-n-lines": "替换{n} {n，复数，一个{line}其他{lines}}}",
+    "replaced-n-lines": "已替换 {n} 行",
     "search-only-in-label": "仅在这个标签中搜索：",
     "search-only-in-selected-entries": "仅在选定的条目中搜索",
     "search-only-in-style": "仅在这个样式中搜索：",
-    "selected-n-lines": "选择{n} {n，复数，一个{line}其他{lines}}}",
+    "selected-n-lines": "已选择 {n} 行",
     "use-regular-expressions": "使用正则表达式"
   },
   "style": {
