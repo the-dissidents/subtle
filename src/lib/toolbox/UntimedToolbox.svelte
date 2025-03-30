@@ -53,7 +53,7 @@ function updateToSubs() {
   if (Source.subs.metadata.special.untimedText == textarea.value) return;
   Source.subs.metadata.special.untimedText = textarea.value;
   fuzzy.engine = null;
-  Source.markChanged(ChangeType.Metadata, ChangeCause.Action);
+  Source.markChanged(ChangeType.Metadata);
 }
 
 function readFromSubs() {
@@ -203,7 +203,7 @@ function clear() {
         assert(fuzzy.currentChannel !== null);
         if (fuzzy.currentChannel.text != str) {
           fuzzy.currentChannel.text = str;
-          Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+          Source.markChanged(ChangeType.InPlace);
         }
         // the above causes the UI to refresh, so we delay a bit
         setTimeout(() => {

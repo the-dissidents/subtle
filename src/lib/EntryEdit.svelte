@@ -23,11 +23,9 @@ let uiFocus = Interface.uiFocus;
 
 const me = {};
 
-Source.onSubtitlesChanged.bind(me, (type: ChangeType, cause: ChangeCause) => {
-  // for toolbar
-  if (cause != ChangeCause.UIForm)
-    editFormUpdateCounter++;
-  console.log('changed', ChangeType[type], ChangeCause[cause]);
+Source.onSubtitlesChanged.bind(me, (type: ChangeType) => {
+  editFormUpdateCounter++;
+  console.log('changed', ChangeType[type]);
 });
 
 Editing.onSelectionChanged.bind(me, () => {
@@ -103,7 +101,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
       applyEditForm(); 
       Editing.editChanged = true;}} 
     onchange={() => 
-      Source.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+      Source.markChanged(ChangeType.Times)}/>
   <br>
   <TimestampInput bind:timestamp={editingT1}
     stretch={true}
@@ -115,7 +113,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
     onchange={() => {
       if (editingT1 < editingT0) editingT1 = editingT0;
       applyEditForm();
-      Source.markChanged(ChangeType.Times, ChangeCause.UIForm);}}/>
+      Source.markChanged(ChangeType.Times);}}/>
   <br>
   <TimestampInput bind:timestamp={editingDt}
     stretch={true}
@@ -127,7 +125,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
       applyEditForm();
       Editing.editChanged = true;}}
     onchange={() => 
-      Source.markChanged(ChangeType.Times, ChangeCause.UIForm)}/>
+      Source.markChanged(ChangeType.Times)}/>
   <hr>
   <div class="hlayout">
     <div style={`height: auto; width: 25px; border: solid 1px;
@@ -137,7 +135,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
       class="flexgrow"
       onchange={() => {
         applyEditForm();
-        Source.markChanged(ChangeType.InPlace, ChangeCause.UIForm);}}>
+        Source.markChanged(ChangeType.InPlace);}}>
       {#each Labels as color}
         <option value={color}>{color}</option>
       {/each}
@@ -154,7 +152,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
       <tr>
         <td class="vlayout">
           <StyleSelect bind:currentStyle={line.style}
-            onsubmit={() => Source.markChanged(ChangeType.InPlace, ChangeCause.UIForm)} />
+            onsubmit={() => Source.markChanged(ChangeType.InPlace)} />
           <div class="hlayout">
             <button tabindex='-1' class="flexgrow"
               onclick={() => Editing.insertChannelAt(i)}>+</button>

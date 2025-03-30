@@ -78,7 +78,7 @@ function run(doit: boolean, s: number, e: number,
       Editing.clearSelection();
       for (let ent of selection.filter((x) => !done.has(x)))
         Editing.selection.submitted.add(ent);
-      Source.markChanged(ChangeType.Times, ChangeCause.Action);
+      Source.markChanged(ChangeType.Times);
     }
   } else
     hasbeen = false;

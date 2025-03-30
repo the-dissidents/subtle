@@ -16,7 +16,7 @@ let styles = $state(Source.subs.styles);
 const me = {};
 onDestroy(() => EventHost.unbind(me));
 
-Source.onSubtitlesChanged.bind(me, (t, c) => {
+Source.onSubtitlesChanged.bind(me, (t) => {
   if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
     styles = Source.subs.styles;
     refresh++;

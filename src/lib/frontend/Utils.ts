@@ -66,7 +66,7 @@ export const Utils = {
         });
         if (entries.length > 0) {
             Editing.setSelection(entries);
-            Source.markChanged(ChangeType.General, ChangeCause.Action);
+            Source.markChanged(ChangeType.General);
             Interface.status.set($_('msg.pasted'));
         } else {
             Interface.status.set($_('msg.nothing-to-paste'));
@@ -141,7 +141,7 @@ export const Utils = {
         if (done > 0) {
             Editing.clearSelection();
             Editing.selection.submitted = new Set(newSelection);
-            Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+            Source.markChanged(ChangeType.InPlace);
         }
     },
 
@@ -178,7 +178,7 @@ export const Utils = {
             a.texts[0].style.name.localeCompare(b.texts[0].style.name)); 
         else selection.sort((a, b) => a.start - b.start);
         Source.subs.entries.splice(start, selection.length, ...selection);
-        Source.markChanged(ChangeType.Order, ChangeCause.Action);
+        Source.markChanged(ChangeType.Order);
     },
 
     sortChannels(selection: SubtitleEntry[]) {
@@ -191,7 +191,7 @@ export const Utils = {
                 (indices.get(a.style) ?? 0) - (indices.get(b.style) ?? 0));
             // ent.update.dispatch();
         }
-        Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+        Source.markChanged(ChangeType.InPlace);
     },
 
     moveSelectionContinuous(selection: SubtitleEntry[], direction: number) {
@@ -202,7 +202,7 @@ export const Utils = {
         if (index + direction < 0 || index + direction > Source.subs.entries.length) return;
         Source.subs.entries.splice(index, selection.length);
         Source.subs.entries.splice(index + direction, 0, ...selection);
-        Source.markChanged(ChangeType.Order, ChangeCause.Action);
+        Source.markChanged(ChangeType.Order);
 
         let entry = direction > 0 ? selection.at(-1)! : selection[0];
         setTimeout(() => {
@@ -221,7 +221,7 @@ export const Utils = {
             newEntries = [...newEntries, ...selection]; break;
         }
         Source.subs.entries = newEntries;
-        Source.markChanged(ChangeType.Order, ChangeCause.Action);
+        Source.markChanged(ChangeType.Order);
     },
 
     fixOverlap(selection: SubtitleEntry[], epsilon = 0.05) {
@@ -244,7 +244,7 @@ export const Utils = {
 
         Interface.status.set($_('msg.changed-n-entries', {values: {n: count}}));
         if (count > 0)
-            Source.markChanged(ChangeType.Times, ChangeCause.Action);
+            Source.markChanged(ChangeType.Times);
     },
 
     combineSelection(selection: SubtitleEntry[]) {
@@ -258,7 +258,7 @@ export const Utils = {
             Source.subs.entries.splice(index, 1);
         }
         // main.update.dispatch();
-        Source.markChanged(ChangeType.Times, ChangeCause.Action);
+        Source.markChanged(ChangeType.Times);
         Interface.status.set($_('msg.combined-n-entries', {values: {n: selection.length}}));
     },
 
@@ -290,7 +290,7 @@ export const Utils = {
             assert(index > 0);
             Source.subs.entries.splice(index, 1);
         }
-        Source.markChanged(ChangeType.Times, ChangeCause.Action);
+        Source.markChanged(ChangeType.Times);
     },
 
     mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {
@@ -312,7 +312,7 @@ export const Utils = {
             Source.subs.entries.indexOf(entry) + 1,
             selection.length - 1);
         Editing.selectEntry(entry, SelectMode.Single);
-        Source.markChanged(ChangeType.Times, ChangeCause.Action);
+        Source.markChanged(ChangeType.Times);
     },
 
     splitByNewline(selection: SubtitleEntry[]) {
@@ -327,7 +327,7 @@ export const Utils = {
             }
             entry.texts = newChannels;
         }
-        Source.markChanged(ChangeType.Times, ChangeCause.Action);
+        Source.markChanged(ChangeType.Times);
     },
 
     splitSimultaneous(selection: SubtitleEntry[]) {
@@ -349,7 +349,7 @@ export const Utils = {
             Editing.clearSelection();
             for (let ent of newSelection)
                 Editing.selection.submitted.add(ent);
-            Source.markChanged(ChangeType.Times, ChangeCause.Action);
+            Source.markChanged(ChangeType.Times);
         }
     }
 }

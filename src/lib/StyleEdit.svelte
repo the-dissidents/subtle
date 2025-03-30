@@ -43,7 +43,7 @@ async function contextMenu() {
         let i = subtitles.styles.indexOf($style);
         if (i < 0) return;
         subtitles.styles.splice(i, 1);
-        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }
     },
@@ -54,7 +54,7 @@ async function contextMenu() {
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
         subtitles.styles = subtitles.styles;
-        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }
     },
@@ -68,7 +68,7 @@ async function contextMenu() {
           let n = Number.parseInt(id);
           let other = withoutThis[n];
           if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
-            Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+            Source.markChanged(ChangeType.InPlace);
         }
       }))
     },
@@ -81,7 +81,7 @@ async function contextMenu() {
         const index = subtitles.styles.indexOf($style);
         subtitles.styles.splice(index, 1);
         subtitles.styles.splice(0, 0, oldDefault);
-        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }
     },
@@ -101,7 +101,7 @@ async function contextMenu() {
         assert(i >= 0);
         let newStyle = new SubtitleStyle('new');
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
-        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }}>+</button><br/>
     <!-- move up -->
@@ -115,7 +115,7 @@ async function contextMenu() {
           subtitles.styles[i-1],
           ...subtitles.styles.slice(i+1)
         ];
-        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }}>↑</button><br/>
 
@@ -130,7 +130,7 @@ async function contextMenu() {
           $style, 
           ...subtitles.styles.slice(i+2)
         ];
-        Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+        Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }}>↓</button><br/>
     {/if}
@@ -147,7 +147,7 @@ async function contextMenu() {
             bind:value={$style.name}
             class={isDuplicate($style.name) ? 'duplicate' : ''}
             onchange={() => 
-              Source.markChanged(ChangeType.InPlace, ChangeCause.Action)}/></td>
+              Source.markChanged(ChangeType.InPlace)}/></td>
         </tr>
         <tr>
           <td>{$_('style.font')}</td>

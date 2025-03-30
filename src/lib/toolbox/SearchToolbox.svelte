@@ -125,7 +125,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     } else if (type == SearchAction.Replace || type === SearchAction.ReplaceStyleOnly) {
       status = $_('search.replaced-n-lines', {values: {n: nDone}});
-      Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+      Source.markChanged(ChangeType.InPlace);
     } else {
       status = $_('search.found-n-lines', {values: {n: nDone}});
     }

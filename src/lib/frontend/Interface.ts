@@ -182,7 +182,7 @@ export const Interface = {
         if (entries.length > 0) {
             Editing.setSelection(entries);
         }
-        Source.markChanged(ChangeType.General, ChangeCause.Action);
+        Source.markChanged(ChangeType.General);
         Interface.status.set('imported');
     },
 

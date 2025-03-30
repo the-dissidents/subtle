@@ -508,7 +508,7 @@ export class Timeline {
                             this.#alignmentLine = null;
                             this.#manager.requestRender();
                             if (dragged) {
-                                Source.markChanged(ChangeType.Times, ChangeCause.Timeline);
+                                Source.markChanged(ChangeType.Times);
                             } else afterUp();
                         };
                     } else {
@@ -533,7 +533,7 @@ export class Timeline {
                             this.#alignmentLine = null;
                             this.#manager.requestRender();
                             if (dragged) {
-                                Source.markChanged(ChangeType.Times, ChangeCause.Timeline);
+                                Source.markChanged(ChangeType.Times);
                             } else afterUp();
                         };
                     }

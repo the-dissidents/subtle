@@ -349,7 +349,7 @@ export const Actions = {
                 action: () => {
                     for (let entry of selection)
                         entry.label = x;
-                    Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+                    Source.markChanged(ChangeType.InPlace);
                 }
             }))
         },
@@ -362,7 +362,7 @@ export const Actions = {
                     action: async () => {
                         let options = await Dialogs.timeTransform.showModal!();
                         if (options && Source.subs.shiftTimes(options))
-                            Source.markChanged(ChangeType.Times, ChangeCause.Action);
+                            Source.markChanged(ChangeType.Times);
                     }
                 },
                 { item: 'Separator' },
@@ -393,7 +393,7 @@ export const Actions = {
                                     done = true;
                                 }
                             if (done)
-                                Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+                                Source.markChanged(ChangeType.InPlace);
                         }
                     }))
                 },
@@ -409,7 +409,7 @@ export const Actions = {
                             text: y.name,
                             action: () => {
                                 if (SubtitleTools.replaceStyle(selection, x, y)) 
-                                    Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+                                    Source.markChanged(ChangeType.InPlace);
                             }
                         }))]
                     }))
@@ -431,7 +431,7 @@ export const Actions = {
                                         changed = true;
                                     }
                                 if (changed)
-                                    Source.markChanged(ChangeType.InPlace, ChangeCause.Action);
+                                    Source.markChanged(ChangeType.InPlace);
                             }
                         }))]
                     }))

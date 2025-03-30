@@ -19,7 +19,7 @@ let updateCounter = $state(0);
 const me = {};
 onDestroy(() => EventHost.unbind(me));
 
-Source.onSubtitlesChanged.bind(me, (t, c) => {
+Source.onSubtitlesChanged.bind(me, (t) => {
   if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
     styles = Source.subs.styles;
     updateCounter += 1;
@@ -37,7 +37,7 @@ Source.onSubtitleObjectReload.bind(me, () => {
 function newStyle() {
   let newStyle = new SubtitleStyle('new');
   Source.subs.styles.push(newStyle);
-  Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+  Source.markChanged(ChangeType.StyleDefinitions);
 }
 
 function removeUnusedStyles() {
@@ -45,11 +45,11 @@ function removeUnusedStyles() {
   Source.subs.entries.forEach((x) => 
     x.texts.forEach((t) => usedStyles.add(t.style)));
   Source.subs.styles = Source.subs.styles.filter((x) => usedStyles.has(x));
-  Source.markChanged(ChangeType.StyleDefinitions, ChangeCause.Action);
+  Source.markChanged(ChangeType.StyleDefinitions);
 }
 
 function markMetadataChange() {
-  Source.markChanged(ChangeType.Metadata, ChangeCause.Action);
+  Source.markChanged(ChangeType.Metadata);
 }
 
 function changeResolution() {

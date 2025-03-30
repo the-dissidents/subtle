@@ -40,7 +40,7 @@ function readSnapshot(s: Snapshot) {
     Source.subs = Subtitles.deserialize(JSON.parse(s.archive));
     Source.fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch();
-    Source.onSubtitlesChanged.dispatch(s.change, ChangeCause.Action);
+    Source.onSubtitlesChanged.dispatch(s.change);
 }
 
 export const Source = {
@@ -52,10 +52,10 @@ export const Source = {
     fileChanged: writable(false),
 
     onUndoBufferChanged: new EventHost(),
-    onSubtitlesChanged: new EventHost<[type: ChangeType, cause: ChangeCause]>(),
+    onSubtitlesChanged: new EventHost<[type: ChangeType]>(),
     onSubtitleObjectReload: new EventHost(),
 
-    markChanged(type: ChangeType, cause: ChangeCause) {
+    markChanged(type: ChangeType) {
         this.fileChanged.set(true);
         Editing.editChanged = false;
         Editing.isEditingVirtualEntry.set(false);
@@ -65,13 +65,13 @@ export const Source = {
             saved: !get(this.fileChanged)});
         this.redoStack = [];
         this.onUndoBufferChanged.dispatch();
-        this.onSubtitlesChanged.dispatch(type, cause);
+        this.onSubtitlesChanged.dispatch(type);
     },
 
     clearUndoRedo() {
         this.undoStack = [];
         this.redoStack = [];
-        this.markChanged(ChangeType.General, ChangeCause.Action);
+        this.markChanged(ChangeType.General);
         this.onUndoBufferChanged.dispatch();
     },
 
@@ -106,8 +106,8 @@ export const Source = {
         this.onSubtitleObjectReload.dispatch();
         this.clearUndoRedo();
         this.fileChanged.set(false);
-        this.onSubtitlesChanged.dispatch(ChangeType.General, ChangeCause.Action);
-        this.onSubtitlesChanged.dispatch(ChangeType.StyleDefinitions, ChangeCause.Action);
+        this.onSubtitlesChanged.dispatch(ChangeType.General);
+        this.onSubtitlesChanged.dispatch(ChangeType.StyleDefinitions);
     },
 
     async exportTo(file: string, text: string) {

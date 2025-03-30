@@ -20,9 +20,9 @@ let isLoaded = writable(false),
 const me = {};
 
 tick().then(() => {
-    Source.onSubtitlesChanged.bind(me, (times) => {
+    Source.onSubtitlesChanged.bind(me, (type) => {
         if (!Playback.video?.subRenderer) return;
-        if (times == ChangeType.Times || times == ChangeType.General)
+        if (type == ChangeType.Times || type == ChangeType.General)
             Playback.video.subRenderer.updateTimes();
         Playback.video.requestRender();
     });
