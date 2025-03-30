@@ -165,6 +165,7 @@
     "use-local-styles-when-names-match": "use local styles when names match"
   },
   "menu": {
+    "close-video": "close",
     "configuration": "configuration",
     "export": "export",
     "import": "import",

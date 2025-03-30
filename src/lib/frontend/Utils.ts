@@ -11,6 +11,7 @@ import { SimpleFormats } from "../core/SimpleFormats";
 import { Playback } from "./Playback";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { get } from "svelte/store";
 const $_ = unwrapFunctionStore(_);
 
 export const Utils = {
@@ -76,7 +77,7 @@ export const Utils = {
         let index = ent ? Source.subs.entries.indexOf(ent) : 0;
         if (index < 0) return;
         let start: number, end: number;
-        let pos = Playback.isLoaded ? Playback.position : Infinity;
+        let pos = get(Playback.isLoaded) ? Playback.position : Infinity;
         if (Source.subs.entries.length == 0) {
             start = 0;
             end = 2;
@@ -102,7 +103,7 @@ export const Utils = {
         let index = ent ? Source.subs.entries.indexOf(ent) + 1 : Source.subs.entries.length;
         if (index < 0) return;
         let start: number, end: number;
-        let pos = Playback.isLoaded ? Playback.position : Infinity;
+        let pos = get(Playback.isLoaded) ? Playback.position : Infinity;
         if (index == Source.subs.entries.length) {
             let last = Source.subs.entries.at(-1);
             start = Math.max(pos, last?.end ?? 0);

@@ -275,7 +275,7 @@ table td:first-child {
 
 button {
   width: 25px;
-  height: 20px;
+  /* height: 20px; */
 }
 
 input {

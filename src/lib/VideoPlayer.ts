@@ -189,6 +189,9 @@ export class VideoPlayer {
         await this.#opened.media.waitUntilAvailable();
         await this.#opened.media.close();
         await this.#opened.audioCxt.close();
+        await this.forceSetPosition(0);
+        this.#opened = undefined;
+        this.#manager.requestRender();
     }
     
     async load(rawurl: string) {
@@ -220,6 +223,7 @@ export class VideoPlayer {
         }
         worklet.connect(audioCxt.destination);
 
+        this.#sourceUrl = rawurl;
         this.#opened = {
             media, audioCxt, worklet,
             framerate: videoStatus.framerate,

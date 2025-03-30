@@ -165,6 +165,7 @@
     "use-local-styles-when-names-match": "名稱匹配時使用本地樣式"
   },
   "menu": {
+    "close-video": "關閉",
     "configuration": "設定",
     "export": "匯出",
     "import": "匯入",

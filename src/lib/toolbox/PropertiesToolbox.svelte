@@ -100,9 +100,9 @@ function changeResolution() {
         <hr>
       {/each}
     {/key}
-    <button style="width: 25px; height: 20px"
+    <button style="width: 25px"
       onclick={() => newStyle()}>+</button>
-    <button style="height: 20px"
+    <button
       onclick={() => removeUnusedStyles()}>{$_('ppty.remove-all-unused')}</button>
   </Collapsible>
 </div>

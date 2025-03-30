@@ -69,7 +69,7 @@ const ENTRY_WIDTH = 1;
 const ENTRY_WIDTH_FOCUS = 2;
 const ENTRY_BACK_OPACITY = 0.6;
 const ENTRY_BACK = 
-    $derived(theme.isDark ? 'hsl(0deg 0% 40%/60%)' : 'hsl(0deg 0% 100%/60%)');
+    $derived(theme.isDark ? 'hsl(0deg 0% 40%/50%)' : 'hsl(0deg 0% 100%/40%)');
 const ENTRY_BORDER       = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 80%)');
 const ENTRY_BORDER_FOCUS = $derived(theme.isDark ? 'goldenrod' : 'oklch(70.94% 0.136 258.06)');
 const ENTRY_TEXT         = $derived(theme.isDark ? 'hsl(0deg 0% 80%)' : 'hsl(0deg 0% 20%)');
@@ -587,9 +587,18 @@ export class Timeline {
 
     #samplerMedia?: MMedia;
 
+    async close() {
+        assert(this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed);
+        await this.#samplerMedia?.close();
+        this.#samplerMedia = undefined;
+        this.#sampler = null;
+        this.setCursorPosPassive(0);
+        this.#manager.requestRender();
+    }
+
     async load(rawurl: string) {
         if (this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed) {
-            this.#samplerMedia.close();
+            await this.close();
         }
         if (DebugConfig.data.disableWaveform) return;
 
@@ -739,12 +748,12 @@ export class Timeline {
         }
         const baseline = (this.#height - HEADER_HEIGHT) / 2 + HEADER_HEIGHT;
         ctx.beginPath();
-        ctx.moveTo(start * width, this.#height - 1);
+        ctx.moveTo(start * width, baseline);
         points.forEach(
-            ({x, y}) => ctx.lineTo(x, baseline + y));
-        ctx.lineTo(end * width, this.#height - 1);
+            ({x, y}) => ctx.lineTo(x, baseline + 0.5 / devicePixelRatio + y));
+        ctx.lineTo(end * width, baseline);
         points.reverse().forEach(
-            ({x, y}) => ctx.lineTo(x, baseline - y));
+            ({x, y}) => ctx.lineTo(x, baseline - 0.5 / devicePixelRatio - y));
         ctx.closePath();
         ctx.fillStyle = WAVEFORM_COLOR;
         ctx.fill();

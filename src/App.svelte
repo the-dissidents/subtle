@@ -68,6 +68,7 @@ let undoRedoUpdateCounter = $state(0);
 
 let status = Interface.status;
 let uiFocus = Interface.uiFocus;
+let isMediaLoaded = Playback.isLoaded;
 let filenameDisplay = 
   derived([Source.currentFile, Source.fileChanged, _], 
     ([x, y]) => `${x ? Basic.getFilename(x) : $_('untitled')}${y ? '*' : ''}`);
@@ -79,11 +80,10 @@ Source.onUndoBufferChanged.bind(me, () => {
 });
 
 Playback.onRefreshPlaybackControl = () => {
-  sliderDisabled = !Playback.isLoaded;
+  sliderDisabled = !$isMediaLoaded;
+  playPos = $isMediaLoaded ? Playback.position / Playback.duration : 0;
   isPlaying = Playback.isPlaying;
   playPosInput = Playback.position ?? 0;
-  playPos = Playback.isLoaded 
-    ? Playback.position / Playback.duration : 0;
 };
 
 let setupVideoView: Action = () => {
@@ -225,6 +225,9 @@ appWindow.onDragDropEvent(async (ev) => {
         </svg>
         &nbsp;{$_('menu.open-video')}
       </button></li>
+      <li><button disabled={!$isMediaLoaded} onclick={() => Playback.close()}>
+        {$_('menu.close-video')}
+      </button></li>
       <li class='separator'></li>
       <li class="label">{$filenameDisplay}</li>
       <li><button title={$_('menu.configuration')} aria-label={$_('menu.configuration')}
@@ -258,7 +261,7 @@ appWindow.onDragDropEvent(async (ev) => {
           step="any" max="1" min="0" disabled={sliderDisabled}
           bind:value={playPos}
           oninput={() => {
-            if (!Playback.isLoaded) {
+            if (!$isMediaLoaded) {
               playPos = 0;
               return;
             }

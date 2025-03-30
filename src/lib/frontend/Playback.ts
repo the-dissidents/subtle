@@ -5,6 +5,7 @@ import { VideoPlayer } from "../VideoPlayer";
 import { Timeline } from "../Timeline.svelte";
 import { ChangeType, Source } from "./Source";
 import { tick } from "svelte";
+import { get, readable, writable, type Readable } from "svelte/store";
 
 export type PlayArea = {
     start: number | undefined,
@@ -12,7 +13,7 @@ export type PlayArea = {
     loop: boolean
 }
 
-let isLoaded = false,
+let isLoaded = writable(false),
     position = 0,
     duration = 0;
 
@@ -57,7 +58,7 @@ async function handlePlayArea() {
 export const Playback = {
     get position() { return position; },
     get duration() { return duration; },
-    get isLoaded() { return isLoaded; },
+    get isLoaded(): Readable<boolean> { return isLoaded; },
     get isPlaying() { return this.video?.isPlaying ?? false; },
 
     video: null as VideoPlayer | null,
@@ -102,8 +103,22 @@ export const Playback = {
             this.video.load(rawurl),
             this.timeline.load(rawurl)
         ]);
-        isLoaded = true;
+        isLoaded.set(true);
         duration = this.video.duration!;
+        this.onRefreshPlaybackControl();
+    },
+
+    async close() {
+        if (!get(isLoaded)) return;
+        
+        assert(this.video !== null);
+        assert(this.timeline !== null);
+        isLoaded.set(false);
+        await Promise.all([
+            this.video.close(),
+            this.timeline.close()
+        ]);
+        duration = 0;
         this.onRefreshPlaybackControl();
     },
 
