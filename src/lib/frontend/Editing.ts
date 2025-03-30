@@ -30,6 +30,11 @@ export enum SelectMode {
     Sequence
 }
 
+export enum KeepInViewMode {
+    SamePosition,
+    KeepInSight
+}
+
 export function getSelectMode(ev: MouseEvent | KeyboardEvent) {
     if (ev.shiftKey) return SelectMode.Sequence;
     if (ev.getModifierState(Basic.ctrlKey())) return SelectMode.Multiple;
@@ -55,6 +60,7 @@ export const Editing = {
     isEditingVirtualEntry: writable(false),
     onSelectionChanged: new EventHost<[cause: ChangeCause]>(),
     onKeepEntryInView: new EventHost<[entry: SubtitleEntry | 'virtual']>(),
+    onKeepEntryAtPosition: new EventHost<[entry: SubtitleEntry, previous: SubtitleEntry]>(),
 
     getFocusedEntry() {
         return get(this.focused.entry);
@@ -195,20 +201,25 @@ export const Editing = {
         this.onSelectionChanged.dispatch(cause);
     },
 
-    offsetFocus(n: number, mode: SelectMode) {
+    offsetFocus(n: number, mode: SelectMode, keepType = KeepInViewMode.KeepInSight) {
         let focused = this.getFocusedEntry();
         if (focused == 'virtual' && mode == SelectMode.Single) {
-            if (n == -1 && Source.subs.entries.length > 0)
-                this.selectEntry(Source.subs.entries.at(-1)!, mode);
+            if (n == -1 && Source.subs.entries.length > 0) {
+                this.selectEntry(Source.subs.entries.at(-1)!, mode, ChangeCause.UIList, keepType);
+                return;
+            }
         }
+
         if (!(focused instanceof SubtitleEntry)) return;
         let i = Source.subs.entries.indexOf(focused) + n;
         if (i >= Source.subs.entries.length) {
-            if (mode == SelectMode.Single)
+            if (mode == SelectMode.Single) {
                 this.selectVirtualEntry();
+                return;
+            }
         }
-        else if (i < 0) return;
-        else this.selectEntry(Source.subs.entries[i], mode);
+        if (i < 0) return;
+        this.selectEntry(Source.subs.entries[i], mode, ChangeCause.UIList, keepType);
     },
 
     toggleEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {
@@ -239,7 +250,10 @@ export const Editing = {
         this.onKeepEntryInView.dispatch("virtual");
     },
   
-    selectEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {
+    selectEntry(
+        ent: SubtitleEntry, mode: SelectMode, 
+        cause = ChangeCause.UIList, keepType = KeepInViewMode.KeepInSight
+    ) {
         switch (mode) {
             case SelectMode.Sequence:
                 if (this.selection.focused == null) {
@@ -270,11 +284,17 @@ export const Editing = {
                 break;
         }
         if (this.getFocusedEntry() != ent) {
+            const oldFocus = this.getFocusedEntry();
+
             this.isEditingVirtualEntry.set(false);
             this.clearFocus();
             this.focused.entry.set(ent);
             // TODO: focus on current style
-            this.onKeepEntryInView.dispatch(ent);
+            if (keepType == KeepInViewMode.SamePosition && oldFocus instanceof SubtitleEntry) {
+                this.onKeepEntryAtPosition.dispatch(ent, oldFocus);
+            } else {
+                this.onKeepEntryInView.dispatch(ent);
+            }
             this.onSelectionChanged.dispatch(cause);
         }
     },

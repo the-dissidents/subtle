@@ -47,6 +47,8 @@
     "will-be-combined-in": "将被合并为"
   },
   "config": {
+    "arrow-navigation-type": "上下方向键选择设置",
+    "arrow-navigation-type-d": "指定按上下方向键选择时，新选中的字幕条应该滚动到什么位置",
     "arrow-skip-amount": "方向键跳转时长",
     "arrow-skip-amount-d": "已加载媒体文件时，通过按左或右箭头按钮来跳过的时长，以秒为单位",
     "auto-scroll-exponent": "自动滚动指数",
@@ -56,6 +58,8 @@
     "dark": "深色",
     "debug": "调试",
     "debug-d": "⚠️ 仅用于调试，通常不需要修改",
+    "enter-navigation-type": "回车选择设置",
+    "enter-navigation-type-d": "指定在编辑框里按回车前往下一条字幕时，这条字幕应该滚动到什么位置",
     "font-size": "字号",
     "input": "输入",
     "interface": "界面",
@@ -70,6 +74,8 @@
     "mouse-scroll-sensitivity-d": "使用鼠标滚轮时的滚动速度系数。调整以使滚动速度与触控板保持一致",
     "mouse-zoom-sensitivity": "鼠标缩放灵敏度",
     "mouse-zoom-sensitivity-d": "使用鼠标滚轮时的缩放速度系数。调整以使滚动速度与触控板保持一致",
+    "navigation-keep-in-view": "仅保证字幕条在可见区域内",
+    "navigation-keep-position": "保持新选择的字幕条属于同样屏幕位置",
     "preload-amount": "预加载量",
     "preload-amount-d": "视频和音频播放的预加载量，以秒为单位。设置过高可能导致大量内存消耗",
     "resize-area-size": "调整区域大小",

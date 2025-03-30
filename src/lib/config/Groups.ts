@@ -69,31 +69,51 @@ export const InputConfig = new PublicConfigGroup(
             bounds: [0, null],
             default: 1
         },
+        arrowNavigationType: {
+            localizedName: () => $_('config.arrow-navigation-type'),
+            type: 'dropdown',
+            description: () => $_('config.arrow-navigation-type-d'),
+            options: {
+                keepPosition: { localizedName: () => $_('config.navigation-keep-position') },
+                keepInView: { localizedName: () => $_('config.navigation-keep-in-view') }
+            },
+            default: 'keepInView'
+        },
+        enterNavigationType: {
+            localizedName: () => $_('config.enter-navigation-type'),
+            type: 'dropdown',
+            description: () => $_('config.enter-navigation-type-d'),
+            options: {
+                keepPosition: { localizedName: () => $_('config.navigation-keep-position') },
+                keepInView: { localizedName: () => $_('config.navigation-keep-in-view') }
+            },
+            default: 'keepPosition'
+        },
         mouseScrollFactor: {
             localizedName: () => $_('config.mouse-scroll-sensitivity'),
             type: 'number',
-            description: () => $_('config.mouse-scroll-sensitivity-d'),
+            // description: () => $_('config.mouse-scroll-sensitivity-d'),
             bounds: [0.1, 5],
             default: 1
         },
         mouseZoomFactor: {
             localizedName: () => $_('config.mouse-zoom-sensitivity'),
             type: 'number',
-            description: () => $_('config.mouse-zoom-sensitivity-d'),
+            // description: () => $_('config.mouse-zoom-sensitivity-d'),
             bounds: [0.005, 0.25],
             default: 0.05
         },
         trackpadScrollFactor: {
             localizedName: () => $_('config.trackpad-scroll-sensitivity'),
             type: 'number',
-            description: () => $_('config.trackpad-scroll-sensitivity-d'),
+            // description: () => $_('config.trackpad-scroll-sensitivity-d'),
             bounds: [0.5, 25],
             default: 5
         },
         trackpadZoomFactor: {
             localizedName: () => $_('config.trackpad-zoom-sensitivity'),
             type: 'number',
-            description: () => $_('config.trackpad-zoom-sensitivity-d'),
+            // description: () => $_('config.trackpad-zoom-sensitivity-d'),
             bounds: [0.1, 5],
             default: 1
         },

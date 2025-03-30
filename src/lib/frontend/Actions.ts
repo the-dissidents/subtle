@@ -8,7 +8,7 @@ import { ASS } from "../core/ASS";
 import { type LabelTypes, Labels, SubtitleEntry, SubtitleTools, Subtitles } from "../core/Subtitles.svelte";
 import { LinearFormatCombineStrategy, SimpleFormats } from "../core/SimpleFormats";
 
-import { Editing, getSelectMode, SelectMode } from "./Editing";
+import { Editing, getSelectMode, KeepInViewMode, SelectMode } from "./Editing";
 import { Utils } from "./Utils";
 import { ChangeCause, ChangeType, Source } from "./Source";
 import { Interface, UIFocus } from "./Interface";
@@ -107,12 +107,18 @@ export const Actions = {
         else if (ev.key == 'ArrowUp' && altOrTableOrTimeline && !ctrlOrMeta) {
             // previous entry
             ev.preventDefault();
-            Editing.offsetFocus(-1, getSelectMode(ev));
+            Editing.offsetFocus(-1, getSelectMode(ev), 
+                InputConfig.data.arrowNavigationType == 'keepPosition' 
+                ? KeepInViewMode.SamePosition 
+                : KeepInViewMode.KeepInSight);
         }
         else if (ev.key == 'ArrowDown' && altOrTableOrTimeline && !ctrlOrMeta) {
             // next entry
             ev.preventDefault();
-            Editing.offsetFocus(1, getSelectMode(ev));
+            Editing.offsetFocus(1, getSelectMode(ev), 
+                InputConfig.data.arrowNavigationType == 'keepPosition' 
+                ? KeepInViewMode.SamePosition 
+                : KeepInViewMode.KeepInSight);
         }
         else if (ev.code == 'Space' && altOrTableOrTimeline) {
             // play/pause
@@ -187,7 +193,10 @@ export const Actions = {
             if (i == Source.subs.entries.length)
                 Editing.startEditingNewVirtualEntry();
             else
-                Editing.offsetFocus(1, SelectMode.Single);
+                Editing.offsetFocus(1, SelectMode.Single, 
+                    InputConfig.data.enterNavigationType == 'keepPosition' 
+                    ? KeepInViewMode.SamePosition 
+                    : KeepInViewMode.KeepInSight);
         }
     },
 

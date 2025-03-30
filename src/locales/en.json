@@ -47,6 +47,8 @@
     "will-be-combined-in": "will be combined in"
   },
   "config": {
+    "arrow-navigation-type": "arrow navigation preference",
+    "arrow-navigation-type-d": "The preferred position of the newly selected entry when navigating the subtitle table with Up/Down arrow keys.",
     "arrow-skip-amount": "arrow skip amount",
     "arrow-skip-amount-d": "Amount of time to skip by pressing the left or right arrow button when a media file is loaded, in seconds.",
     "auto-scroll-exponent": "auto scroll exponent",
@@ -56,6 +58,8 @@
     "dark": "dark",
     "debug": "debug",
     "debug-d": "⚠️ Advanced options for debug purpose only. You shouldn't change them unless you know what you're doing.",
+    "enter-navigation-type": "enter navigation preference",
+    "enter-navigation-type-d": "The preferred position of the newly selected entry when moving to it by pressing Enter in the input boxes.",
     "font-size": "font size",
     "input": "input",
     "interface": "interface",
@@ -70,6 +74,8 @@
     "mouse-scroll-sensitivity-d": "Multiplier for scrolling speed using mouse wheel. Adjust to make scrolling speed desirable and consistent with trackpad.",
     "mouse-zoom-sensitivity": "mouse zoom sensitivity",
     "mouse-zoom-sensitivity-d": "Multiplier for zooming speed using mouse wheel while holding Control. Adjust to make zooming speed desirable and consistent with trackpad.",
+    "navigation-keep-in-view": "keep entry in sight only",
+    "navigation-keep-position": "keep entry at the same screen position",
     "preload-amount": "preload amount",
     "preload-amount-d": "Amount of preloading for video and audio playback, in seconds. A high value can lead to high memory consumption.",
     "resize-area-size": "resize area size",

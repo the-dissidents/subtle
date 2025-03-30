@@ -264,6 +264,20 @@ Editing.onSelectionChanged.bind(me, () => {
   manager.requestRender();
 });
 
+Editing.onKeepEntryAtPosition.bind(me, (ent, old) => {
+  if (manager.dragType !== 'none') return;
+
+  const posNew = lineMap.get(ent);
+  const posOld = lineMap.get(old);
+  if (posNew === undefined || posOld === undefined) {
+    console.warn('?!row', ent, old);
+    return;
+  }
+  const sy = (posNew.line - posOld.line) * lineHeight + manager.scroll[1];
+  manager.setScroll({y: sy})
+  manager.requestRender();
+});
+
 Editing.onKeepEntryInView.bind(me, (ent) => {
   // otherwise dragging outside/auto scrolling becomes unusable
   if (manager.dragType !== 'none') return;
@@ -271,8 +285,8 @@ Editing.onKeepEntryInView.bind(me, (ent) => {
   if (ent instanceof SubtitleEntry) {
     const pos = lineMap.get(ent);
     if (pos === undefined) {
-        console.warn('?!row', ent);
-        return;
+      console.warn('?!row', ent);
+      return;
     }
     const sy = Math.max(
       (pos.line + pos.height + 1) * lineHeight - manager.size[1] / manager.scale, 
