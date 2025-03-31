@@ -89,7 +89,9 @@
     "ui-font-family": "UI 字型",
     "ui-font-family-d": "用逗號分隔列表指定優先順序。包含空格的字型名稱需要放在直引號（\"\"）裡",
     "ui-font-size": "UI 字型大小",
-    "use-system-theme": "使用系統主題"
+    "use-system-theme": "使用系統主題",
+    "waveform-resolution": "波形解析度",
+    "waveform-resolution-d": "每秒用於波形顯示的取樣點的數量；解析度越高，載入越慢"
   },
   "configdialog": {
     "all-items-are-automatically-saved": "所有設定項目均自動儲存",

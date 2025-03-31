@@ -1,12 +1,11 @@
 import { MMedia } from "./API";
 import { assert } from "./Basic";
+import { AggregationTree } from "./details/AggregationTree";
 
 export class AudioSampler {
     #length: number;
     #sampleRate: number;
     #size: number;
-    // TODO: implement a fixed buffer size, adjust resolution dynamically since data retreival is very fast now
-    // #bufferSize = 250000;
 
     #sampleStart = 0;
     #sampleEnd = 0;
@@ -15,13 +14,13 @@ export class AudioSampler {
     #isSampling = false;
     #media: MMedia;
 
-    static SAMPLE_LENGTH = 512;
-    data: Float32Array;
+    data: AggregationTree;
     detail: Float32Array;
 
     onProgress?: () => void;
 
-    get resolution() {return this.#sampleRate / AudioSampler.SAMPLE_LENGTH;}
+    /** points per second */
+    get resolution() {return this.#sampleRate / this.sampleLength;}
     get sampleRate() {return this.#sampleRate;}
     get duration() {return this.#length / this.#sampleRate;}
     get isSampling() {return this.#isSampling;}
@@ -29,22 +28,26 @@ export class AudioSampler {
     get sampleEnd() {return this.#sampleEnd / this.#sampleRate;}
     get sampleProgress() {return this.#sampleProgress / this.#sampleRate;}
 
-    private constructor(length: number, rate: number, media: MMedia) {
+    private constructor(
+        length: number, rate: number, media: MMedia,
+        public readonly sampleLength: number
+    ) {
         this.#media = media;
         this.#length = length;
         this.#sampleRate = rate;
-        this.#size = length / AudioSampler.SAMPLE_LENGTH;
-        this.data = new Float32Array(this.#size);
+        this.#size = length / sampleLength;
+        this.data = new AggregationTree(this.#size, Math.max);
+        // this.data = new AggregationTree(this.#size, (a, b) => (a + b) / 2);
         this.detail = new Float32Array(this.#size);
     }
 
-    static async open(media: MMedia) {
+    static async open(media: MMedia, resolution: number) {
         await media.openAudio(-1);
         let info = await media.audioStatus();
         if (info == null)
             throw Error("Unable to open audio");
         return new AudioSampler(
-            info.length, info.sampleRate, media);
+            info.length, info.sampleRate, media, Math.ceil(info.sampleRate / resolution));
     }
 
     async close() {
@@ -81,10 +84,10 @@ export class AudioSampler {
         await this.#media.waitUntilAvailable();
         await this.#media.seekAudio(a);
         let doSampling = async () => {
-            let next = this.#sampleProgress + AudioSampler.SAMPLE_LENGTH * 500;
+            let next = this.#sampleProgress + this.sampleLength * 500;
             if (next > b) next = b;
             await this.#media.waitUntilAvailable();
-            const data = await this.#media.getIntensities(next, AudioSampler.SAMPLE_LENGTH);
+            const data = await this.#media.getIntensities(next, this.sampleLength);
             if (data.start < 0 || data.start == data.end) {
                 console.log(`sampling done upon EOF`, data.end, `(${from}-${current / this.#sampleRate}-${to})`);
                 this.#isSampling = false;
@@ -93,7 +96,7 @@ export class AudioSampler {
                 return;
             }
             
-            const start = Math.round(data.start / AudioSampler.SAMPLE_LENGTH);
+            const start = Math.round(data.start / this.sampleLength);
             const end = start + data.data.length + 1;
             this.data.set(data.data, start);
             this.detail.fill(1, start, end);
@@ -106,7 +109,7 @@ export class AudioSampler {
                 this.#isSampling = false;
                 return;
             }
-            if (this.#cancelling && this.#sampleProgress - a > AudioSampler.SAMPLE_LENGTH) {
+            if (this.#cancelling && this.#sampleProgress - a > this.sampleLength) {
                 // console.log('sucessfully cancelled');
                 this.#isSampling = false;
                 return;

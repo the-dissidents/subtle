@@ -95,7 +95,9 @@
     "ui-font-family": "UI font family",
     "ui-font-family-d": "Specify fallbacks with a comma-separated list, as in CSS. Font names containing spaces should be wrapped in straight quotes (\"\").",
     "ui-font-size": "UI font size",
-    "use-system-theme": "use system theme"
+    "use-system-theme": "use system theme",
+    "waveform-resolution": "waveform resolution",
+    "waveform-resolution-d": "The number of sample point per second for the waveform display. Larger value results in slower loading."
   },
   "configdialog": {
     "all-items-are-automatically-saved": "All items are automatically saved.",

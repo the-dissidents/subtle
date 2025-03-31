@@ -26,6 +26,13 @@ export const TimelineConfig = new PublicConfigGroup(
         bounds: [5, null],
         default: 12
     },
+    waveformResolution: {
+        localizedName: () => get(_)('config.waveform-resolution'),
+        description: () => get(_)('config.waveform-resolution-d'),
+        type: 'number',
+        bounds: [50, 800],
+        default: 700
+    },
     dragResizeArea: {
         localizedName: () => get(_)('config.resize-area-size'),
         type: 'number',
@@ -67,12 +74,12 @@ const TRACK_AREA_MARGIN = 20;
 
 const ENTRY_WIDTH = 1;
 const ENTRY_WIDTH_FOCUS = 2;
-const ENTRY_BACK_OPACITY = 0.6;
+const ENTRY_BACK_OPACITY = 0.4;
 const ENTRY_BACK = 
-    $derived(theme.isDark ? 'hsl(0deg 0% 40%/50%)' : 'hsl(0deg 0% 100%/40%)');
+    $derived(theme.isDark ? 'hsl(0deg 0% 20%/40%)' : 'hsl(0deg 0% 80%/40%)');
 const ENTRY_BORDER       = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 80%)');
 const ENTRY_BORDER_FOCUS = $derived(theme.isDark ? 'goldenrod' : 'oklch(70.94% 0.136 258.06)');
-const ENTRY_TEXT         = $derived(theme.isDark ? 'hsl(0deg 0% 80%)' : 'hsl(0deg 0% 20%)');
+const ENTRY_TEXT         = $derived(theme.isDark ? 'hsl(0deg 0% 90%)' : 'hsl(0deg 0% 20%)');
 const INOUT_TEXT         = $derived(theme.isDark ? 'lightgreen' : 'oklch(52.77% 0.138 145.41)');
 
 const CURSOR_COLOR = 
@@ -149,7 +156,8 @@ export class Timeline {
     #requestedSampler = false;
 
     #sampler: AudioSampler | null = null;
-    #scale = 1; // pixel per second
+    /** pixels per second */
+    #scale = 1;
     #cursorPos = 0;
 
     #width = 100;
@@ -449,7 +457,6 @@ export class Timeline {
                             this.#manager.requestRender();
                         } else afterUp = () => {
                             // if hasn't dragged
-                            console.log('afterup');
                             this.#selection.delete(ents[0]);
                             this.#dispatchSelectionChanged();
                             this.#manager.requestRender();
@@ -458,7 +465,6 @@ export class Timeline {
                         // single select
                         if (this.#selection.size > 1) {
                             afterUp = () => {
-                                console.log('afterup');
                                 this.#selection.clear();
                                 this.#selection.add(ents[0]);
                                 Editing.selectEntry(ents[0], 
@@ -603,7 +609,8 @@ export class Timeline {
         if (DebugConfig.data.disableWaveform) return;
 
         this.#samplerMedia = await MMedia.open(rawurl);
-        this.#sampler = await AudioSampler.open(this.#samplerMedia);
+        this.#sampler = await AudioSampler.open(
+            this.#samplerMedia, TimelineConfig.data.waveformResolution);
         this.#sampler.onProgress = () => this.#manager.requestRender();
         this.setViewScale(Math.max(this.#width / this.#sampler.duration, 10));
         this.setViewOffset(0);
@@ -632,7 +639,7 @@ export class Timeline {
                 || this.#sampler.sampleProgress > end + preload) 
                     this.#sampler.tryCancelSampling();
             else if (this.#sampler.sampleEnd < end + preload) {
-                console.log('extending to', end);
+                // console.log('extending to', end);
                 this.#sampler.extendSampling(end + preload);
             }
         }
@@ -644,11 +651,9 @@ export class Timeline {
               i_end = Math.ceil(end * resolution);
         const subarray = this.#sampler.detail.subarray(i, i_end);
         const first0 = subarray.findIndex((x) => x == 0);
-        // const firstLarge = subarray.findIndex((x) => x > 5);
         if (Playback.isPlaying) {
             if (first0 < 0) {
-                // if (firstLarge < 0)
-                    this.#requestedSampler = false;
+                this.#requestedSampler = false;
                 return;
             }
         } else {
@@ -665,11 +670,11 @@ export class Timeline {
         if (start < 0) start = 0;
         if (end > this.#sampler.duration) end = this.#sampler.duration;
         if (end <= start) {
-            console.log(start, '>=', end);
+            // console.log(start, '>=', end);
             return;
         }
 
-        console.log('sampling', start, end);
+        // console.log('sampling', start, end);
         this.#sampler.startSampling(start, end);
         this.#manager.requestRender();
     }
@@ -721,28 +726,33 @@ export class Timeline {
     // 2. Render incrementally when scrolling
     #renderWaveform(ctx: CanvasRenderingContext2D) {
         if (!this.#sampler) return;
-        if (this.#requestedSampler) this.#processSampler();
-
 
         const resolution = this.#sampler.resolution;
-        const start = Math.max(0, Math.floor(this.#offset * resolution));
+        const pointsPerPixel = Math.max(1, Math.floor(resolution / this.#scale / devicePixelRatio));
+        const step = 2 ** Math.floor(Math.log2(pointsPerPixel));
+        const data = this.#sampler.data.getLevel(step);
+        
+        const start = Math.max(0, Math.floor(this.#offset * resolution / step));
         const end = Math.min(
-            Math.ceil((this.#offset + this.#width / this.#scale) * resolution),
-            this.#sampler.data.length - 1);
-        const width = 1 / resolution * this.#scale;
+            Math.ceil((this.#offset + this.#width / this.#scale) * resolution / step),
+            data.length - 1);
+        const width = 1 / resolution * this.#scale * step;
         const drawWidth = Math.max(1 / devicePixelRatio, width);
-        const step = Math.max(1, Math.floor(1 / this.#scale * resolution));
 
         let points: {x: number, y: number}[] = [];
         ctx.fillStyle = PENDING_WAVEFORM_COLOR;
-        for (let i = start; i < end; i += step) {
-            const detail = this.#sampler.detail[i];
+        for (let i = start; i < end; i++) {
+            const detail = this.#sampler.detail[i * step];
             const x = i * width;
 
-            let dh = (1 - detail) * this.#height;
-            ctx.fillRect(x, this.#height - dh, drawWidth, dh);
-            // if (detail == 0) continue;
-            let value = Math.sqrt(this.#sampler.data[i]) * (this.#height - HEADER_HEIGHT);
+            if (detail == 0) {
+                ctx.fillRect(x, 0, drawWidth, this.#height);
+                this.#requestedSampler = true;
+            }
+
+            let value = detail == 0 
+                ? 0 
+                : data[i] * (this.#height - HEADER_HEIGHT);
             const point = {x, y: value / 2};
             points.push(point);
         }
@@ -757,6 +767,13 @@ export class Timeline {
         ctx.closePath();
         ctx.fillStyle = WAVEFORM_COLOR;
         ctx.fill();
+
+        if (TimelineConfig.data.showDebug) {
+            ctx.font = `${fontSize(8)}px Courier, monospace`;
+            ctx.fillText(`using step=${step}`, this.#manager.scroll[0] + 120, 35);
+        }
+
+        if (this.#requestedSampler) this.#processSampler();
     }
 
     #renderRulerAndScroller(ctx: CanvasRenderingContext2D) {

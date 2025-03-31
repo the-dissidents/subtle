@@ -477,10 +477,10 @@ pub fn get_intensities(
 
         let data: &[f32] = frame.decoded.plane(0);
         for sample in data {
-            sum += (*sample) * (*sample);
+            sum = sum.max(sample.abs());
             counter += 1;
             if counter == step {
-                vector.push(sum / step as f32);
+                vector.push(sum);
                 counter = 0;
                 sum = 0.0;
             }
