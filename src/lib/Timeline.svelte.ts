@@ -53,6 +53,16 @@ export const TimelineConfig = new PublicConfigGroup(
         bounds: [1, 10],
         default: 5
     },
+    multiselectDragReference: {
+        localizedName: () => get(_)('config.multiselect-drag-reference'),
+        type: 'dropdown',
+        options: {
+            whole: { localizedName: () => get(_)('config.whole-of-selection') },
+            eachStyleofWhole: { localizedName: () => get(_)('config.each-style-of-selection') },
+            one: { localizedName: () => get(_)('config.the-entry-under-the-mouse') }
+        },
+        default: 'eachStyleofWhole'
+    },
     showDebug: {
         localizedName: () => get(_)('config.show-debug-info'),
         type: 'boolean',
@@ -264,22 +274,15 @@ export class Timeline {
         return result;
     }
 
-    #snapMove(focus: SubtitleEntry, desiredStart: number) {
-        const flen = focus.end - focus.start;
+    #snapMove(points: number[], origStart: number, desiredStart: number) {
         const snap = (x: number, y1: number, y2: number) => {
-            // start
-            let d = Math.abs(desiredStart - x);
-            if (d < minDist) {
-                this.#alignmentLine = {x: x * this.#scale, y1, y2};
-                snapped = x;
-                minDist = d;
-            }
-            // end
-            d = Math.abs(desiredStart + flen - x);
-            if (d < minDist) {
-                this.#alignmentLine = {x: x * this.#scale, y1, y2};
-                snapped = x - flen;
-                minDist = d;
+            for (const point of points) {
+                let d = Math.abs(desiredStart - x + point - origStart);
+                if (d < minDist) {
+                    this.#alignmentLine = {x: x * this.#scale, y1, y2};
+                    snapped = x - point + origStart;
+                    minDist = d;
+                }
             }
         };
         let minDist = TimelineConfig.data.snapDistance / this.#scale;
@@ -297,10 +300,10 @@ export class Timeline {
         return snapped;
     }
 
-    #snapEnds(ent: SubtitleEntry, desired: number, isStart: boolean) {
+    #snapEnds(start: number, end: number, desired: number, isStart: boolean) {
         const ok = isStart 
-            ? (x: number) => x < ent.end 
-            : (x: number) => x > ent.start;
+            ? (x: number) => x < end 
+            : (x: number) => x > start;
         const snap = (x: number, y1: number, y2: number) => {
             if (!ok(x)) return;
             let d = Math.abs(desired - x);
@@ -314,8 +317,8 @@ export class Timeline {
         let snapped = desired;
         this.#alignmentLine = null;
         snap(this.#cursorPos, 0, this.#height);
-        for (let e of this.#getVisibleEntries()) {
-            if (e == ent) continue;
+        for (const e of this.#getVisibleEntries()) {
+            if (this.#selection.has(e)) continue;
             let positions = this.#getEntryPositions(e);
             let y1 = Math.min(...positions.map((x) => x.y));
             let y2 = Math.max(...positions.map((x) => x.y + x.h));
@@ -396,9 +399,9 @@ export class Timeline {
                     await this.setCursorPos((e1.offsetX + scrollX) / this.#scale);
                 onMove(e0);
             } else {
-                let ents = this.#findEntriesByPosition(
+                let underMouse = this.#findEntriesByPosition(
                     e0.offsetX + scrollX, e0.offsetY);
-                if (ents.length == 0) {
+                if (underMouse.length == 0) {
                     // clicked on nothing
                     if (Basic.ctrlKey() == 'Meta' ? !e0.metaKey : !e0.ctrlKey) {
                         // clear selection
@@ -438,9 +441,9 @@ export class Timeline {
                 } else if (e0.button == 2) {
                     // right-clicked on something
                     // clear selection and re-select only if it's not selected
-                    if (!ents.some((x) => this.#selection.has(x))) {
+                    if (!underMouse.some((x) => this.#selection.has(x))) {
                         Editing.clearSelection(ChangeCause.Timeline);
-                        Editing.selectEntry(ents[0], 
+                        Editing.selectEntry(underMouse[0], 
                             SelectMode.Single, ChangeCause.Action);
                     }
                     // you can't drag in this case! no onMove.
@@ -453,13 +456,13 @@ export class Timeline {
                     let afterUp = () => {};
                     if (Basic.ctrlKey() == 'Meta' ? e0.metaKey : e0.ctrlKey) {
                         // multiple select. Only the first entry counts
-                        if (!this.#selection.has(ents[0])) {
-                            this.#selection.add(ents[0]);
+                        if (!this.#selection.has(underMouse[0])) {
+                            this.#selection.add(underMouse[0]);
                             this.#dispatchSelectionChanged();
                             this.#manager.requestRender();
                         } else afterUp = () => {
                             // if hasn't dragged
-                            this.#selection.delete(ents[0]);
+                            this.#selection.delete(underMouse[0]);
                             this.#dispatchSelectionChanged();
                             this.#manager.requestRender();
                         }
@@ -468,47 +471,77 @@ export class Timeline {
                         if (this.#selection.size > 1) {
                             afterUp = () => {
                                 this.#selection.clear();
-                                this.#selection.add(ents[0]);
-                                Editing.selectEntry(ents[0], 
+                                this.#selection.add(underMouse[0]);
+                                Editing.selectEntry(underMouse[0], 
                                     SelectMode.Single, ChangeCause.Timeline);
                             };
                         } else {
                             // cycle through the overlapping entries under the cursor
                             let one = [...this.#selection][0];
-                            let index = (ents.indexOf(one) + 1) % ents.length;
+                            let index = (underMouse.indexOf(one) + 1) % underMouse.length;
                             this.#selection.clear();
-                            this.#selection.add(ents[index]);
-                            Editing.selectEntry(ents[index], 
+                            this.#selection.add(underMouse[index]);
+                            Editing.selectEntry(underMouse[index], 
                                 SelectMode.Single, ChangeCause.Timeline);
                         }
                         this.#manager.requestRender();
                     }
                     // drag if necessary
                     const sels = [...this.#selection];
-                    const origL = Math.min(...sels.map((x) => x.start)),
-                          origR = Math.max(...sels.map((x) => x.end));
-                    const distL = origPos - origL, distR = origR - origPos;
-                    // console.log(distL * this.#scale, distR * this.#scale);
-                    if (this.#selection.size > 1 
-                        || (distL * this.#scale > TimelineConfig.data.dragResizeArea 
-                        &&  distR * this.#scale > TimelineConfig.data.dragResizeArea))
+                    if (sels.length == 0) return;
+
+                    // save original positions
+                    const origPositions = new Map(sels.map((x) => [x, {
+                        start: x.start,
+                        end: x.end
+                    }]));
+                    const [first, last] = sels.reduce<[SubtitleEntry, SubtitleEntry]>(
+                        ([pf, pl], current) => [
+                            current.start < pf.start ? current : pf,
+                            current.end > pl.end ? current : pf], 
+                        [sels[0], sels[0]]);
+                    const distL = (origPos - first.start) * this.#scale, 
+                          distR = (last.end - origPos) * this.#scale;
+
+                    if (distL > TimelineConfig.data.dragResizeArea 
+                     && distR > TimelineConfig.data.dragResizeArea)
                     {
-                        // dragging the whole
-                        const one = ents.find((x) => this.#selection.has(x));
-                        const origStarts = new Map(sels.map((x) => [x, x.start]));
+                        // drag-move
                         let dragged = false;
+                        const one = underMouse.find((x) => this.#selection.has(x))!;
+                        const points = 
+                              TimelineConfig.data.multiselectDragReference == 'eachStyleofWhole' 
+                            ? [...new Set([...sels.reduce(
+                                (prev, current) => {
+                                    const start = current.start;
+                                    const end = current.end;
+                                    current.texts.forEach((x) => {
+                                        let tuple = prev.get(x.style.name);
+                                        if (tuple) {
+                                            if (start < tuple[0]) tuple[0] = start;
+                                            if (end > tuple[1]) tuple[1] = end;
+                                        } else
+                                            prev.set(x.style.name, [start, end]);
+                                    });
+                                    return prev;
+                                }, 
+                                new Map<string, [number, number]>()).values()].flat())]
+                            : TimelineConfig.data.multiselectDragReference == 'whole' 
+                            ? [first.start, last.end]
+                            : [one.start, one.end];
+                        const origStart = Math.min(...points);
+                        const firstStart = first.start;
                         onMove = (e1) => {
                             const newPos = 
                                 e1.offsetX / this.#scale + this.#offset;
                             let dval = newPos - origPos;
-                            if ((e1.altKey !== TimelineConfig.data.enableSnap) && one)
-                                dval = this.#snapMove(one, origStarts.get(one)! + dval) 
-                                    - origStarts.get(one)!;
+                            if (e1.altKey !== TimelineConfig.data.enableSnap)
+                                dval = this.#snapMove(
+                                    points, origStart, firstStart + dval) - firstStart;
                             dragged = newPos != origPos;
-                            for (let ent of sels) {
-                                const len = ent.end - ent.start;
-                                ent.start = origStarts.get(ent)! + dval;
-                                ent.end = ent.start + len;
+                            for (const [ent, pos] of origPositions.entries()) {
+                                ent.start = pos.start + dval;
+                                ent.end = pos.end + dval;
                             }
                             this.#manager.requestRender();
                         };
@@ -520,19 +553,32 @@ export class Timeline {
                             } else afterUp();
                         };
                     } else {
-                        // dragging endpoints
-                        const isStart = distL * this.#scale <= TimelineConfig.data.dragResizeArea;
-                        const entry = sels[0];
-                        const origVal = isStart ? entry.start : entry.end;
+                        // drag-resize
+                        const isStart = distL <= TimelineConfig.data.dragResizeArea;
+                        const origVal = isStart ? first.start : last.end;
+                        const firstStart = first.start;
+                        const lastEnd = last.end;
                         let dragged = false;
                         onMove = (e1) => {
                             const newPos = 
                                 e1.offsetX / this.#scale + this.#offset;
                             let val = origVal + newPos - origPos;
                             if (e1.altKey !== TimelineConfig.data.enableSnap)
-                                val = this.#snapEnds(entry, val, isStart);
-                            if (isStart) entry.start = Math.min(entry.end, val);
-                            else entry.end = Math.max(entry.start, val);
+                                val = this.#snapEnds(firstStart, lastEnd, val, isStart);
+                            let newStart: number, newEnd: number;
+                            if (isStart) {
+                                newStart = Math.min(lastEnd, val);
+                                newEnd = lastEnd;
+                            } else {
+                                newStart = firstStart;
+                                newEnd = Math.max(firstStart, val);
+                            }
+                            // transform selection
+                            const factor = (newEnd - newStart) / (lastEnd - firstStart);
+                            for (const [ent, pos] of origPositions.entries()) {
+                                ent.start = (pos.start - firstStart) * factor + newStart;
+                                ent.end = (pos.end - firstStart) * factor + newStart;
+                            }
                             dragged = val != origVal;
                             this.#keepPosInSafeArea(val);
                             this.#manager.requestRender();

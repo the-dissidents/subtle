@@ -58,6 +58,7 @@
     "dark": "深色",
     "debug": "调试",
     "debug-d": "⚠️ 仅用于调试，通常不需要修改",
+    "each-style-of-selection": "选区中每种样式的头尾",
     "enter-navigation-type": "回车选择设置",
     "enter-navigation-type-d": "指定在编辑框里按回车前往下一条字幕时，这条字幕应该滚动到什么位置",
     "font-size": "字号",
@@ -74,6 +75,7 @@
     "mouse-scroll-sensitivity-d": "使用鼠标滚轮时的滚动速度系数。调整以使滚动速度与触控板保持一致",
     "mouse-zoom-sensitivity": "鼠标缩放灵敏度",
     "mouse-zoom-sensitivity-d": "使用鼠标滚轮时的缩放速度系数。调整以使滚动速度与触控板保持一致",
+    "multiselect-drag-reference": "拖动多选时的吸附基准",
     "navigation-keep-in-view": "仅保证字幕条在可见区域内",
     "navigation-keep-position": "保持新选择的字幕条属于同样屏幕位置",
     "preload-amount": "预加载量",
@@ -86,6 +88,7 @@
     "snapping": "吸附",
     "snapping-d": "是否默认启用吸附。如果打开，按住Alt/Option会暂时禁用它；如果关闭，则会暂时启用它",
     "table-view": "字幕表格",
+    "the-entry-under-the-mouse": "鼠标下的那个项目",
     "theme": "主题",
     "timeline": "时间线",
     "trackpad-scroll-sensitivity": "触控板滚动灵敏度",
@@ -97,7 +100,8 @@
     "ui-font-size": "UI字号",
     "use-system-theme": "使用系统主题",
     "waveform-resolution": "波形分辨率",
-    "waveform-resolution-d": "每秒用于波形显示的采样点的数量；分辨率越高，加载越慢"
+    "waveform-resolution-d": "每秒用于波形显示的采样点的数量；分辨率越高，加载越慢",
+    "whole-of-selection": "整个选区的头尾"
   },
   "configdialog": {
     "all-items-are-automatically-saved": "所有设置项均自动保存",

@@ -58,6 +58,7 @@
     "dark": "dark",
     "debug": "debug",
     "debug-d": "⚠️ Advanced options for debug purpose only. You shouldn't change them unless you know what you're doing.",
+    "each-style-of-selection": "endpoints of each styles in the selection",
     "enter-navigation-type": "enter navigation preference",
     "enter-navigation-type-d": "The preferred position of the newly selected entry when moving to it by pressing Enter in the input boxes.",
     "font-size": "font size",
@@ -74,6 +75,7 @@
     "mouse-scroll-sensitivity-d": "Multiplier for scrolling speed using mouse wheel. Adjust to make scrolling speed desirable and consistent with trackpad.",
     "mouse-zoom-sensitivity": "mouse zoom sensitivity",
     "mouse-zoom-sensitivity-d": "Multiplier for zooming speed using mouse wheel while holding Control. Adjust to make zooming speed desirable and consistent with trackpad.",
+    "multiselect-drag-reference": "snap reference when dragging multiple",
     "navigation-keep-in-view": "keep entry in sight only",
     "navigation-keep-position": "keep entry at the same screen position",
     "preload-amount": "preload amount",
@@ -86,6 +88,7 @@
     "snapping": "snapping",
     "snapping-d": "Whether to enable snapping by default. If true, holding down Alt/Option temporarily disables it; if false, temporarily enables it.",
     "table-view": "table view",
+    "the-entry-under-the-mouse": "the entry under the mouse",
     "theme": "theme",
     "timeline": "timeline",
     "trackpad-scroll-sensitivity": "trackpad scroll sensitivity",
@@ -97,7 +100,8 @@
     "ui-font-size": "UI font size",
     "use-system-theme": "use system theme",
     "waveform-resolution": "waveform resolution",
-    "waveform-resolution-d": "The number of sample point per second for the waveform display. Larger value results in slower loading."
+    "waveform-resolution-d": "The number of sample point per second for the waveform display. Larger value results in slower loading.",
+    "whole-of-selection": "endpoints of the whole selection"
   },
   "configdialog": {
     "all-items-are-automatically-saved": "All items are automatically saved.",
