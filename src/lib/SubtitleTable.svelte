@@ -31,8 +31,8 @@ export const TableConfig = new PublicConfigGroup(
 import { onDestroy, onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
 
-import { assert } from "./Basic";
-import { SubtitleEntry, SubtitleUtil } from "./core/Subtitles.svelte";
+import { assert, Basic } from "./Basic";
+import { SubtitleEntry } from "./core/Subtitles.svelte";
 import { theme, LabelColor } from "./Theming.svelte";
 
 import { CanvasManager } from "./CanvasManager";
@@ -192,9 +192,9 @@ function render(cxt: CanvasRenderingContext2D) {
     cxt.fillText(`${i}`, 
       colPos[1] - cellPadding, y + h * 0.5);
     cxt.textAlign = 'start';
-    cxt.fillText(SubtitleUtil.formatTimestamp(entry.start), 
+    cxt.fillText(Basic.formatTimestamp(entry.start), 
       colPos[1] + cellPadding, y + h * 0.5);
-    cxt.fillText(SubtitleUtil.formatTimestamp(entry.end), 
+    cxt.fillText(Basic.formatTimestamp(entry.end), 
       colPos[2] + cellPadding, y + h * 0.5);
 
     // outer horizontal line
@@ -333,8 +333,13 @@ function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
   return e1 && e2 && e1.start < e2.end && e1.end > e2.start;
 }
 
+
+function getTextLength(s: string) {
+  return [...s.matchAll(/[\w\u4E00-\u9FFF]/g)].length;
+}
+
 function getNpS(ent: SubtitleEntry, text: string) {
-  let num = SubtitleUtil.getTextLength(text) / (ent.end - ent.start);
+  let num = getTextLength(text) / (ent.end - ent.start);
   return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
 }
 

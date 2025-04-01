@@ -19,15 +19,15 @@ let {
 let inner: DialogHandler<void, string> = {};
 handler.showModal = async () => {
   let subs = Source.subs;
-  let map = new Map<number, number>();
+  let map = new Map<string, number>();
   for (const entry of subs.entries) {
     for (const text of entry.texts) {
-      map.set(text.style.uniqueID, (map.get(text.style.uniqueID) ?? 0) + 1);
+      map.set(text.style.name, (map.get(text.style.name) ?? 0) + 1);
     }
   }
   console.log(map);
   styles = [subs.defaultStyle, ...subs.styles].map((x) => 
-    ({style: x, count: map.get(x.uniqueID) ?? 0, use: true}));
+    ({style: x, count: map.get(x.name) ?? 0, use: true}));
   makePreview();
   let btn = await inner!.showModal!();
   if (btn !== 'ok') return null;
@@ -53,10 +53,10 @@ const extensions = {
 function makePreview() {
   let styleSet = new Set(styles
     .filter((x) => x.use)
-    .map((x) => x.style.uniqueID));
+    .map((x) => x.style.name));
   let entries: SubtitleEntry[] = [];
   for (const e of Source.subs.entries) {
-    const txts = e.texts.filter((x) => styleSet.has(x.style.uniqueID));
+    const txts = e.texts.filter((x) => styleSet.has(x.style.name));
     if (txts.length > 0)
       entries.push(new SubtitleEntry(e.start, e.end, ...txts));
   }

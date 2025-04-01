@@ -1,5 +1,6 @@
+import { Basic } from "../Basic";
 import { CSSColors, parseCSSColor } from "../colorparser";
-import { AlignMode, SubtitleEntry, Subtitles, SubtitleStyle, SubtitleUtil, type SubtitleChannel } from "./Subtitles.svelte";
+import { AlignMode, SubtitleEntry, Subtitles, type SubtitleStyle, type SubtitleChannel } from "./Subtitles.svelte";
 
 export const ASS = {
     parse(source: string) {
@@ -14,8 +15,8 @@ export const ASS = {
     exportFragment(subs: Subtitles) {
         let result = '';
         for (let entry of subs.entries) {
-            let t0 = SubtitleUtil.formatTimestamp(entry.start, 2);
-            let t1 = SubtitleUtil.formatTimestamp(entry.end, 2);
+            let t0 = Basic.formatTimestamp(entry.start, 2);
+            let t1 = Basic.formatTimestamp(entry.end, 2);
             for (let channel of entry.texts)
                 result += `Dialogue: 0,${t0},${t1},${channel.style.name},,0,0,0,,${channel.text.replaceAll('\n', '\\N')}\n`;
         }
@@ -142,7 +143,7 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
             const name = items[styleFieldMap.get('Name')!];
             let style = styles.get(name);
             if (style === undefined) {
-                style = new SubtitleStyle(name);
+                style = Subtitles.createStyle(name);
                 if (first === null)
                     first = style;
                 else
@@ -224,7 +225,7 @@ function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
         let style = styles.get(styleName);
         if (!style) {
             console.log(`warning: style not found: ${styleName}`);
-            style = new SubtitleStyle(styleName);
+            style = Subtitles.createStyle(styleName);
             styles.set(styleName, style);
             subs.styles.push(style);
         }
@@ -248,8 +249,8 @@ function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
         [subs.defaultStyle, ...subs.styles].map((x) => [x.name, x]));
     for (const match of text.matchAll(regex)) {
         const opts = match[1].split(',');
-        const start = SubtitleUtil.parseTimestamp(opts[fieldMap.get('Start')!]),
-              end   = SubtitleUtil.parseTimestamp(opts[fieldMap.get('End')!]);
+        const start = Basic.parseTimestamp(opts[fieldMap.get('Start')!]),
+              end   = Basic.parseTimestamp(opts[fieldMap.get('End')!]);
         if (start === null || end === null) continue;
         let styleName = opts[fieldMap.get('Style')!];
         let style = getStyleOrCreate(styleName);

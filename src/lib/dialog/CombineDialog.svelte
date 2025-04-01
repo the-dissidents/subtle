@@ -37,7 +37,7 @@ function run(doit: boolean, s: number, e: number,
     let s = Editing.getSelection();
     if (s.length > 0) selection = s;
     else selection = [...Source.subs.entries];
-  } else   selection = [...Source.subs.entries];
+  } else selection = [...Source.subs.entries];
 
   let done = new Set<SubtitleEntry>();
   for (let i = 0; i < selection.length - 1; i++) {

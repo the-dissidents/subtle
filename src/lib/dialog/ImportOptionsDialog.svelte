@@ -1,6 +1,6 @@
 <script lang="ts">
 import { assert } from '../Basic';
-import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from '../core/Subtitles.svelte';
+import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from "../core/SubtitleUtil";
 import type { DialogHandler } from '../frontend/Dialogs';
 import { Source } from '../frontend/Source';
 

@@ -1,5 +1,5 @@
-import { assert } from "../Basic";
-import { Subtitles, SubtitleUtil, SubtitleEntry } from "./Subtitles.svelte";
+import { assert, Basic } from "../Basic";
+import { Subtitles, SubtitleEntry } from "./Subtitles.svelte";
 
 export enum LinearFormatCombineStrategy {
     /**
@@ -92,8 +92,8 @@ export const SimpleFormats = {
     
             let subs = new Subtitles();
             for (let match of matches) {
-                let start = SubtitleUtil.parseTimestamp(match[1]),
-                    end = SubtitleUtil.parseTimestamp(match[2]);
+                let start = Basic.parseTimestamp(match[1]),
+                    end = Basic.parseTimestamp(match[2]);
                 if (start === null || end === null) continue;
                 subs.entries.push(new SubtitleEntry(
                     start, end, {style: subs.defaultStyle, text: match[3].trimEnd()}))
@@ -109,7 +109,9 @@ export const SimpleFormats = {
             const linear = ToLinearFormat[strategy](subs);
             let result = '', i = 1;
             for (let entry of linear) {
-                result += `${i}\n${SubtitleUtil.formatTimestamp(entry.start, 3, ',')} --> ${SubtitleUtil.formatTimestamp(entry.end, 3, ',')}\n${entry.text}\n\n`;
+                result += `${i}\n${
+                    Basic.formatTimestamp(entry.start, 3, ',')} --> ${
+                    Basic.formatTimestamp(entry.end, 3, ',')}\n${entry.text}\n\n`;
                 i += 1;
             }
             return result;
@@ -119,8 +121,8 @@ export const SimpleFormats = {
             let result = '', i = 1;
             for (let entry of linear) {
                 result += `${
-                    SubtitleUtil.formatTimestamp(entry.start, 3, '.')}\t${
-                    SubtitleUtil.formatTimestamp(entry.end, 3, '.')}\t${
+                    Basic.formatTimestamp(entry.start, 3, '.')}\t${
+                        Basic.formatTimestamp(entry.end, 3, '.')}\t${
                     entry.text
                         .replace('\n', '\\N')
                         .replace('\t', '\\T')}\n`;

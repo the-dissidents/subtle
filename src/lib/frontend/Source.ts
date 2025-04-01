@@ -1,7 +1,8 @@
 console.info('Source loading');
 
 import { get, writable } from "svelte/store";
-import { Subtitles, SubtitleTools } from "../core/Subtitles.svelte";
+import { Subtitles } from "../core/Subtitles.svelte";
+import { SubtitleTools } from "../core/SubtitleUtil";
 
 import * as fs from "@tauri-apps/plugin-fs";
 import { guardAsync, Interface } from "./Interface";

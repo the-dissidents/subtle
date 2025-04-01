@@ -2,7 +2,8 @@ console.info('Utils loading');
 
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import { assert } from "../Basic";
-import { MergePosition, MergeStyleBehavior, SubtitleEntry, Subtitles, type SubtitleChannel, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { SubtitleEntry, Subtitles, type SubtitleChannel, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { MergePosition, MergeStyleBehavior, SubtitleUtil } from "../core/SubtitleUtil";
 import { Editing, SelectMode } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
 import { Interface } from "./Interface";
@@ -59,7 +60,7 @@ export const Utils = {
             Editing.clearSelection();
         } else position = Source.subs.entries.length;
 
-        let entries = Source.subs.merge(portion, {
+        let entries = SubtitleUtil.merge(Source.subs, portion, {
             position: MergePosition.Custom,
             customPosition: position,
             style: MergeStyleBehavior.KeepDifferent

@@ -1,9 +1,10 @@
 console.info('Frontend loading');
 
+import { Basic } from "../Basic";
 import { DebugConfig, InputConfig } from "../config/Groups";
 import { ASS } from "../core/ASS";
 import { SimpleFormats } from "../core/SimpleFormats";
-import { Subtitles, SubtitleUtil } from "../core/Subtitles.svelte";
+import { Subtitles } from "../core/Subtitles.svelte";
 
 export type TranslatedWheelEvent = {
     isZoom: true;
@@ -44,7 +45,7 @@ export class EventHost<T extends unknown[] = []> {
 export function parseSubtitleSource(source: string): [Subtitles | null, boolean] {
     let newSub = SimpleFormats.parse.JSON(source);
     if (newSub) return [newSub, true];
-    source = SubtitleUtil.normalizeNewlines(source);
+    source = Basic.normalizeNewlines(source);
     newSub = SimpleFormats.parse.SRT_VTT(source);
     if (newSub) return [newSub, false];
     newSub = ASS.parse(source);

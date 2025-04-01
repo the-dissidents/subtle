@@ -65,7 +65,7 @@ function fuzzyMatch() {
   if (!fuzzy.enabled) return;
 
   let current = Editing.selection.focused?.texts.find(
-    (x) => x.style.uniqueID == fuzzy.channel.uniqueID);
+    (x) => x.style.name == fuzzy.channel.name);
   if (!current || current.text == '' || textarea.value == '') {
     console.log('no current', Editing.selection)
     fuzzy.currentChannel = null;

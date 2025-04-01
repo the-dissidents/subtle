@@ -1,10 +1,11 @@
 <script lang="ts">
 import { assert } from "./Basic";
-import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./core/Subtitles.svelte";
+import { AlignMode, type SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
+import { SubtitleTools } from "./core/SubtitleUtil";
 import { Menu } from "@tauri-apps/api/menu";
 import Collapsible from "./ui/Collapsible.svelte";
 import { writable } from 'svelte/store';
-import { ChangeCause, ChangeType, Source } from "./frontend/Source";
+import { ChangeType, Source } from "./frontend/Source";
 
 import { _ } from 'svelte-i18n';
 
@@ -50,7 +51,7 @@ async function contextMenu() {
     {
       text: $_('style.duplicate'),
       action() {
-        let clone = $style.clone();
+        let clone = structuredClone($style);
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
         subtitles.styles = subtitles.styles;
@@ -99,7 +100,7 @@ async function contextMenu() {
       onclick={() => {
         let i = subtitles.styles.indexOf($style);
         assert(i >= 0);
-        let newStyle = new SubtitleStyle('new');
+        let newStyle = Subtitles.createStyle('new');
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();

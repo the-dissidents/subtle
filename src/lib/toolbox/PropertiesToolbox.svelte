@@ -1,11 +1,11 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
 
-import { SubtitleStyle } from '../core/Subtitles.svelte'
+import { Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte'
 import Collapsible from '../ui/Collapsible.svelte';
 import StyleEdit from '../StyleEdit.svelte';
 
-import { ChangeCause, ChangeType, Source } from '../frontend/Source';
+import { ChangeType, Source } from '../frontend/Source';
 import { Playback } from '../frontend/Playback';
 import { EventHost } from '../frontend/Frontend';
 
@@ -35,7 +35,7 @@ Source.onSubtitleObjectReload.bind(me, () => {
 
 
 function newStyle() {
-  let newStyle = new SubtitleStyle('new');
+  let newStyle = Subtitles.createStyle('new');
   Source.subs.styles.push(newStyle);
   Source.markChanged(ChangeType.StyleDefinitions);
 }
@@ -94,7 +94,7 @@ function changeResolution() {
       <StyleEdit style={Source.subs.defaultStyle} {subtitles} />
       <hr>
       <h5>{$_('ppty.other')}</h5>
-      {#each styles as style (style.uniqueID)}
+      {#each styles as style}
         <StyleEdit style={style} {subtitles}
           onsubmit={() => styles = Source.subs.styles}/>
         <hr>

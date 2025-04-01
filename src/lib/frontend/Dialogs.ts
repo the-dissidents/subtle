@@ -1,7 +1,7 @@
 console.info('Dialogs loading');
 
 import type { AnalyseResult, EncodingName } from "chardet"
-import type { MergeOptions, TimeShiftOptions } from "../core/Subtitles.svelte"
+import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil";
 
 export class DialogHandler<TInput = void, TOutput = string> {
     showModal?: (i: TInput) => Promise<TOutput>;

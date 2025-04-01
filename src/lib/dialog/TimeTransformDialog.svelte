@@ -1,7 +1,8 @@
 <script lang="ts">
 import DialogBase from '../DialogBase.svelte';
-import { SubtitleEntry, SubtitleUtil, type TimeShiftOptions } from '../core/Subtitles.svelte';
-import { assert } from '../Basic';
+import { SubtitleEntry } from '../core/Subtitles.svelte';
+import { type TimeShiftOptions } from "../core/SubtitleUtil";
+import { assert, Basic } from '../Basic';
 import { Editing } from '../frontend/Editing';
 import type { DialogHandler } from '../frontend/Dialogs';
 import TimestampInput from '../TimestampInput.svelte';
@@ -157,12 +158,12 @@ function fromTransformed() {
       <tr>
         <td>{$_('transformdialog.range')}</td>
         <td>
-          {SubtitleUtil.formatTimestamp(selectionStart)}
+          {Basic.formatTimestamp(selectionStart)}
           →
           <TimestampInput bind:timestamp={transStart}
             oninput={() => fromTransformed()}/>
           <br/>
-          {SubtitleUtil.formatTimestamp(selectionEnd)}
+          {Basic.formatTimestamp(selectionEnd)}
           →
           <TimestampInput bind:timestamp={transEnd}
             oninput={() => fromTransformed()}/>

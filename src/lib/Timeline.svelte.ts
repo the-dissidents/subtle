@@ -5,7 +5,7 @@ import { CanvasManager } from "./CanvasManager";
 import { MMedia } from "./API";
 import { LabelColor, theme } from "./Theming.svelte";
 
-import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleChannel, type SubtitleStyle } from "./core/Subtitles.svelte";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 import { Editing, SelectMode } from "./frontend/Editing";
 import { Playback } from "./frontend/Playback";
@@ -106,12 +106,13 @@ type Box = {
 
 function getTick(scale: number): [small: number, nMed: number, nBig: number] {
     const UNITS = [0.001, 0.01, 0.1, 1, 10, 60, 600, 3600];
+    // const UNITS = [1/60, 1/24, 1, 10, 60, 600, 3600];
     for (let i = 0; i < UNITS.length - 3; i++)
         if (scale * UNITS[i] > 2 / devicePixelRatio) return [
             UNITS[i], 
             UNITS[i+1] / UNITS[i], 
             UNITS[i+2] / UNITS[i]];
-    return [60, 600, 3600];
+    return [60, 10, 60];
 }
 
 let ellipsisWidth = -1;
@@ -794,7 +795,7 @@ export class Timeline {
         ctx.lineWidth = 0.5;
         for (let i = 0; i < n; i++) {
             let t = start + i * small;
-            let pos = Math.round(t * this.#scale);
+            let pos = t * this.#scale;
             let height = 5;
             if (i % nBig == 0) {
                 height = HEADER_HEIGHT;
@@ -814,8 +815,7 @@ export class Timeline {
         ctx.textBaseline = 'bottom';
         for (let t = start; t < end; t += nBig * small) {
             const pos = Math.round(t * this.#scale);
-            ctx.fillText(SubtitleUtil.formatTimestamp(t, 2), 
-                pos + 5, HEADER_HEIGHT);
+            ctx.fillText(Basic.formatTimestamp(t, 2), pos + 5, HEADER_HEIGHT);
         }
     }
 

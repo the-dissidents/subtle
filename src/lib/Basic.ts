@@ -58,5 +58,29 @@ export const Basic = {
             };
             wait();
         });
-    }
+    },
+
+    parseTimestamp: (t: string) => {
+        const reg = /(\d+):(\d+):(\d+)[,.](\d+)/;
+        let match = reg.exec(t);
+        if (!match) return null;
+        let h = parseInt(match[1]),
+            m = parseInt(match[2]),
+            s = parseFloat(match[3] + '.' + match[4]);
+        let result = h * 3600 + m * 60 + s;
+        if (isNaN(result)) return null;
+        return result;
+    },
+
+    formatTimestamp: (t: number, n: number = 3, char = '.') => {
+        let h = Math.floor(t / 3600).toString().padStart(2, '0');
+        let m = Math.floor((t % 3600) / 60).toString().padStart(2, '0');
+        let s = Math.floor(t % 60).toString().padStart(2, '0');
+        let ms = (t % 1).toFixed(n).slice(2);
+        return `${h}:${m}:${s}${char}${ms}`;
+    },
+    
+    normalizeNewlines: (s: string) => {
+        return s.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    },
 }

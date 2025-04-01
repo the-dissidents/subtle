@@ -37,7 +37,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
     <option selected={currentStyle == Source.subs.defaultStyle}>
       {Source.subs.defaultStyle.name}
     </option>
-    {#each styles as style (style.uniqueID)}
+    {#each styles as style}
       <option selected={currentStyle == style}>{style.name}</option>
     {/each}
   {/key}

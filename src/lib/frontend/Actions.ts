@@ -5,7 +5,8 @@ import { Basic } from "../Basic";
 import { InputConfig } from "../config/Groups";
 
 import { ASS } from "../core/ASS";
-import { type LabelTypes, Labels, SubtitleEntry, SubtitleTools, Subtitles } from "../core/Subtitles.svelte";
+import { type LabelTypes, Labels, SubtitleEntry, Subtitles } from "../core/Subtitles.svelte";
+import { SubtitleTools, SubtitleUtil } from "../core/SubtitleUtil";
 import { LinearFormatCombineStrategy, SimpleFormats } from "../core/SimpleFormats";
 
 import { Editing, getSelectMode, KeepInViewMode, SelectMode } from "./Editing";
@@ -361,7 +362,7 @@ export const Actions = {
                     text: $_('action.transform-times'),
                     action: async () => {
                         let options = await Dialogs.timeTransform.showModal!();
-                        if (options && Source.subs.shiftTimes(options))
+                        if (options && SubtitleUtil.shiftTimes(Source.subs, options))
                             Source.markChanged(ChangeType.Times);
                     }
                 },
