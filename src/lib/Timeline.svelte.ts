@@ -271,19 +271,19 @@ export class Timeline {
             let d = Math.abs(desiredStart - x);
             if (d < minDist) {
                 this.#alignmentLine = {x: x * this.#scale, y1, y2};
-                newStart = x;
+                snapped = x;
                 minDist = d;
             }
             // end
             d = Math.abs(desiredStart + flen - x);
             if (d < minDist) {
                 this.#alignmentLine = {x: x * this.#scale, y1, y2};
-                newStart = x - flen;
+                snapped = x - flen;
                 minDist = d;
             }
         };
         let minDist = TimelineConfig.data.snapDistance / this.#scale;
-        let newStart: number = desiredStart;
+        let snapped = desiredStart; 
         this.#alignmentLine = null;
         snap(this.#cursorPos, 0, this.#height);
         for (const e of this.#getVisibleEntries()) {
@@ -294,7 +294,7 @@ export class Timeline {
             snap(e.start, y1, y2);
             snap(e.end, y1, y2);
         }
-        return newStart;
+        return snapped;
     }
 
     #snapEnds(ent: SubtitleEntry, desired: number, isStart: boolean) {
@@ -305,11 +305,13 @@ export class Timeline {
             if (!ok(x)) return;
             let d = Math.abs(desired - x);
             if (d < minDist) {
-                this.#alignmentLine = {x: x * this.#scale, y1, y2};
                 minDist = d;
+                this.#alignmentLine = {x: x * this.#scale, y1, y2};
+                snapped = x;
             }
         };
         let minDist = TimelineConfig.data.snapDistance / this.#scale;
+        let snapped = desired;
         this.#alignmentLine = null;
         snap(this.#cursorPos, 0, this.#height);
         for (let e of this.#getVisibleEntries()) {
@@ -320,7 +322,7 @@ export class Timeline {
             snap(e.start, y1, y2);
             snap(e.end, y1, y2);
         }
-        return this.#alignmentLine!.x ?? desired;
+        return snapped;
     }
 
     #keepEntryInView(ent: SubtitleEntry) {
