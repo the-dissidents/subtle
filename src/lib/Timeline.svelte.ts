@@ -381,8 +381,9 @@ export class Timeline {
 
     #processMouseDown(e0: MouseEvent) {
         e0.preventDefault();
-        let onMove = (_: MouseEvent) => {};
-        let onUp = (_: MouseEvent) => {};
+        let onMove = (_: MouseEvent, offsetX: number, offsetY: number) => {};
+        let onUp = (_: MouseEvent, offsetX: number, offsetY: number) => {};
+        let onReset = () => {};
         const origPos = this.#offset + e0.offsetX / this.#scale;
         const scrollX = this.#manager.scroll[0];
         if (e0.button == 1) {
@@ -395,9 +396,9 @@ export class Timeline {
         } else {
             if (e0.offsetY < HEADER_HEIGHT) {
                 // move cursor
-                onMove = async (e1) => 
-                    await this.setCursorPos((e1.offsetX + scrollX) / this.#scale);
-                onMove(e0);
+                onMove = async (_, offsetX: number, offsetY: number) => 
+                    await this.setCursorPos((offsetX + scrollX) / this.#scale);
+                onMove(e0, e0.offsetX, e0.offsetY);
             } else {
                 let underMouse = this.#findEntriesByPosition(
                     e0.offsetX + scrollX, e0.offsetY);
@@ -413,11 +414,11 @@ export class Timeline {
                     this.#selectBox = null;
                     const originalSelection = [...this.#selection];
                     let thisGroup = [];
-                    onMove = (e1) => {
+                    onMove = (_, offsetX: number, offsetY: number) => {
                         let x1 = origPos * this.#scale,
-                            x2 = e1.offsetX + scrollX,
+                            x2 = offsetX + scrollX,
                             y1 = e0.offsetY,
-                            y2 = e1.offsetY;
+                            y2 = offsetY;
                         let b: Box = {
                             x: Math.min(x1, x2), y: Math.min(y1, y2), 
                             w: Math.abs(x1 - x2), h: Math.abs(y1 - y2)};
@@ -431,6 +432,13 @@ export class Timeline {
                             this.#dispatchSelectionChanged();
                         }
                         this.#keepPosInSafeArea(x2 / this.#scale);
+                        this.#manager.requestRender();
+                    };
+                    // reset box select
+                    onReset = () => {
+                        this.#selectBox = null;
+                        this.#selection = new Set(originalSelection);
+                        this.#dispatchSelectionChanged();
                         this.#manager.requestRender();
                     };
                     // stop box select
@@ -495,6 +503,16 @@ export class Timeline {
                         start: x.start,
                         end: x.end
                     }]));
+
+                    onReset = () => {
+                        this.#alignmentLine = null;
+                        for (const [ent, pos] of origPositions.entries()) {
+                            ent.start = pos.start;
+                            ent.end = pos.end;
+                        }
+                        this.#manager.requestRender();
+                    }
+
                     const [first, last] = sels.reduce<[SubtitleEntry, SubtitleEntry]>(
                         ([pf, pl], current) => [
                             current.start < pf.start ? current : pf,
@@ -502,7 +520,6 @@ export class Timeline {
                         [sels[0], sels[0]]);
                     const distL = (origPos - first.start) * this.#scale, 
                           distR = (last.end - origPos) * this.#scale;
-
                     if (distL > TimelineConfig.data.dragResizeArea 
                      && distR > TimelineConfig.data.dragResizeArea)
                     {
@@ -529,13 +546,14 @@ export class Timeline {
                             : TimelineConfig.data.multiselectDragReference == 'whole' 
                             ? [first.start, last.end]
                             : [one.start, one.end];
+
                         const origStart = Math.min(...points);
                         const firstStart = first.start;
-                        onMove = (e1) => {
+                        onMove = (e, offsetX: number, offsetY: number) => {
                             const newPos = 
-                                e1.offsetX / this.#scale + this.#offset;
+                                offsetX / this.#scale + this.#offset;
                             let dval = newPos - origPos;
-                            if (e1.altKey !== TimelineConfig.data.enableSnap)
+                            if (e.altKey !== TimelineConfig.data.enableSnap)
                                 dval = this.#snapMove(
                                     points, origStart, firstStart + dval) - firstStart;
                             dragged = newPos != origPos;
@@ -559,11 +577,11 @@ export class Timeline {
                         const firstStart = first.start;
                         const lastEnd = last.end;
                         let dragged = false;
-                        onMove = (e1) => {
+                        onMove = (e, offsetX: number, offsetY: number) => {
                             const newPos = 
-                                e1.offsetX / this.#scale + this.#offset;
+                                offsetX / this.#scale + this.#offset;
                             let val = origVal + newPos - origPos;
-                            if (e1.altKey !== TimelineConfig.data.enableSnap)
+                            if (e.altKey !== TimelineConfig.data.enableSnap)
                                 val = this.#snapEnds(firstStart, lastEnd, val, isStart);
                             let newStart: number, newEnd: number;
                             if (isStart) {
@@ -594,14 +612,32 @@ export class Timeline {
                 }
             }
         };
-
-        const handler = (ev: MouseEvent) => {
-            onUp(ev);
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', handler);
+        
+        const onKey = (ev: KeyboardEvent) => {
+            if (ev.key == 'Escape') {
+                onReset();
+                document.removeEventListener('keydown', onKey);
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
         };
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', handler);
+        const onMouseMove = (ev: MouseEvent) => {
+            let rect = this.#manager.canvas.getBoundingClientRect();
+            const offsetX = ev.clientX - rect.left;
+            const offsetY = ev.clientY - rect.top;
+            onMove(ev, offsetX, offsetY);
+        }
+        const onMouseUp = (ev: MouseEvent) => {
+            let rect = this.#manager.canvas.getBoundingClientRect();
+            const offsetX = ev.clientX - rect.left;
+            const offsetY = ev.clientY - rect.top;
+            onUp(ev, offsetX, offsetY);
+            document.removeEventListener('keydown', onKey);
+            document.removeEventListener('mousemove', onMouseMove);
+        };
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp, { once: true });
     }
 
     #precessDoubleClick() {
