@@ -6,7 +6,7 @@ import { EventHost } from "./frontend/Frontend";
 
 interface Props {
   currentStyle: SubtitleStyle;
-  onsubmit?: () => void;
+  onsubmit?: (style: SubtitleStyle) => void;
 }
 
 let { currentStyle = $bindable(), onsubmit }: Props = $props();
@@ -27,10 +27,8 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 
 <select tabindex='-1'
   oninput={(ev) => {
-    let index = ev.currentTarget.selectedIndex;
-    if (index <= 0) currentStyle = Source.subs.defaultStyle;
-    else currentStyle = styles[index - 1];
-    onsubmit?.();
+    currentStyle = styles[ev.currentTarget.selectedIndex];
+    onsubmit?.(currentStyle);
   }}
   onclick={() => refresh++}
 >

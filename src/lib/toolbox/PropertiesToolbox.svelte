@@ -10,6 +10,7 @@ import { Playback } from '../frontend/Playback';
 import { EventHost } from '../frontend/Frontend';
 
 import { _ } from 'svelte-i18n';
+    import { flip } from 'svelte/animate';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
@@ -21,8 +22,9 @@ onDestroy(() => EventHost.unbind(me));
 
 Source.onSubtitlesChanged.bind(me, (t) => {
   if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
-    styles = Source.subs.styles;
-    updateCounter += 1;
+    // TODO: see if commenting out this breaks things
+    // styles = Source.subs.styles;
+    // updateCounter += 1;
   }
 });
 
@@ -89,10 +91,12 @@ function changeResolution() {
   </table>
   <Collapsible header={$_('ppty.styles')} active={true}>
     {#key updateCounter}
-      {#each styles as style}
-        <StyleEdit style={style} {subtitles}
-          onsubmit={() => styles = Source.subs.styles}/>
-        <hr>
+      {#each styles as style (style)}
+        <div animate:flip={{duration: 200}}>
+          <StyleEdit style={style} {subtitles}
+            onsubmit={() => styles = Source.subs.styles}/>
+          <hr>
+        </div>
       {/each}
     {/key}
     <button style="width: 25px"

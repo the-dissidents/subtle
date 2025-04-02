@@ -2,6 +2,8 @@
 import { assert } from "./Basic";
 import { AlignMode, type SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
 import { SubtitleTools } from "./core/SubtitleUtil";
+
+import * as dialog from "@tauri-apps/plugin-dialog";
 import { Menu } from "@tauri-apps/api/menu";
 import Collapsible from "./ui/Collapsible.svelte";
 import { writable } from 'svelte/store';
@@ -18,11 +20,12 @@ interface Props {
 let { style: _style, subtitles = $bindable(), onsubmit }: Props = $props();
 let alignSelector: HTMLSelectElement | undefined = $state();
 let button: HTMLButtonElement | undefined = $state();
+let duplicateWarning = $state(false);
 let style = writable(_style);
 
 function isDuplicate(name: string) {
   for (let s of [...subtitles.styles]) {
-    if (s === _style) continue;
+    if (s === $style) continue;
     if (s.name == name) return true;
   }
   return false;
@@ -31,14 +34,17 @@ function isDuplicate(name: string) {
 async function contextMenu() {
   let isDefault = $style == subtitles.defaultStyle;
   let used = subtitles.entries.filter((x) => x.texts.has($style));
-  let withoutThis = subtitles.styles.filter((x) => x !== $style);
   
   let menu = await Menu.new({
     items: [
     {
       text: $_('style.delete'),
-      enabled: used.length == 0 && !isDefault,
+      enabled: used.length == 0,
       action() {
+        if (isDefault) {
+          dialog.message($_('msg.you-cant-delete-a-default-style'));
+          return;
+        }
         let i = subtitles.styles.indexOf($style);
         if (i < 0) return;
         subtitles.styles.splice(i, 1);
@@ -88,7 +94,6 @@ async function contextMenu() {
 <div class='hlayout'>
   <!-- toolbar -->
   <div class="toolbar">
-    {#if $style !== subtitles.defaultStyle}
     <!-- add style -->
     <button
       onclick={() => {
@@ -113,7 +118,6 @@ async function contextMenu() {
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }}>↑</button><br/>
-
     <!-- move down -->
     <button disabled={$style === subtitles.styles.at(-1)}
       onclick={() => {
@@ -128,7 +132,6 @@ async function contextMenu() {
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }}>↓</button><br/>
-    {/if}
     <button bind:this={button} onclick={() => contextMenu()}>...</button>
   </div>
   <!-- properties -->
@@ -138,11 +141,27 @@ async function contextMenu() {
       <tbody>
         <tr>
           <td>{$_('style.name')}</td>
-          <td><input type='text'
-            bind:value={$style.name}
-            class={isDuplicate($style.name) ? 'duplicate' : ''}
-            onchange={() => 
-              Source.markChanged(ChangeType.InPlace)}/></td>
+          <td class='hlayout'>
+            <input type='text'
+              value={$style.name}
+              class={{duplicate: duplicateWarning, flexgrow: true}}
+              oninput={(ev) => duplicateWarning = isDuplicate(ev.currentTarget.value)}
+              onchange={(ev) => {
+                if (isDuplicate(ev.currentTarget.value)) {
+                  ev.currentTarget.value = $style.name;
+                  duplicateWarning = false;
+                } else {
+                  $style.name = ev.currentTarget.value;
+                  Source.markChanged(ChangeType.InPlace);
+                }
+              }}/>
+            <label style="padding-left: 5px;">
+              <input type='checkbox'
+                checked={subtitles.defaultStyle == $style}
+                onchange={() => subtitles.defaultStyle = $style}/>
+              {$_('style.default')}
+            </label>
+          </td>
         </tr>
         <tr>
           <td>{$_('style.font')}</td>

@@ -3,7 +3,7 @@ import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
 
 import { assert } from './Basic';
-import { Labels, SubtitleEntry, type LabelTypes } from './core/Subtitles.svelte'
+import { Labels, SubtitleEntry, type LabelTypes, type SubtitleStyle } from './core/Subtitles.svelte'
 import { LabelColor } from './Theming.svelte';
 import { tick } from 'svelte';
 import { ChangeType, Source } from './frontend/Source';
@@ -11,6 +11,8 @@ import { Editing } from './frontend/Editing';
 import { Interface, UIFocus } from './frontend/Interface';
 
 import { _ } from 'svelte-i18n';
+import * as dialog from "@tauri-apps/plugin-dialog";
+import { Menu } from '@tauri-apps/api/menu';
 
 let editFormUpdateCounter = $state(0);
 let editMode = $state(0);
@@ -61,21 +63,14 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
   elem.style.height = `${elem.scrollHeight + 3}px`; // grows to fit content
 }
 
-// function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
-//   channel.gui = node;
-//   node.value = channel.text;
-//   return {
-//     update: (newChannel: SubtitleChannel) => {
-//       // note that svelte calls this every time the channel object changes in any way, but it's only relevant if it's really changing into ANOTHER one
-//       if (newChannel != channel) {
-//         channel.gui = undefined;
-//         newChannel.gui = node;
-//         node.value = newChannel.text;
-//         channel = newChannel;
-//       }
-//     }
-//   };
-// }
+function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
+  Editing.styleToEditor.set(style, node);
+  return {
+    update: (style: SubtitleStyle) => {
+      Editing.styleToEditor.set(style, node);
+    }
+  };
+}
 </script>
 
 <div class="outer hlayout">
@@ -153,10 +148,21 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
       <tr>
         <td class="vlayout">
           <StyleSelect currentStyle={style}
-            onsubmit={() => Source.markChanged(ChangeType.InPlace)} />
+            onsubmit={async (newStyle) => {
+              if (focused.texts.has(newStyle) && !await dialog.confirm(
+                  $_('editbox.overwrite-style', {values: {style: newStyle.name}})))
+                return;
+              focused.texts.set(newStyle, focused.texts.get(style)!);
+              focused.texts.delete(style);
+              Source.markChanged(ChangeType.InPlace);
+            }} />
+          <button onclick={() => {
+            // replace, delete
+          }}>...</button>
         </td>
         <td style='width:100%'>
           <textarea class='contentarea' tabindex=0
+            use:setupTextArea={style}
             value={focused.texts.get(style)!}
             onkeydown={(ev) => {
               if (ev.key == "Escape") {
@@ -174,7 +180,6 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
               if ($uiFocus === UIFocus.EditingField)
                 $uiFocus = UIFocus.Other;
               Editing.submitFocusedEntry();
-              Editing.focused.style = null;
             }}
             oninput={(x) => {
               $uiFocus = UIFocus.EditingField;
@@ -185,6 +190,19 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
       </tr>
       {/if}
       {/each}
+      <tr>
+        <td>
+          <button onclick={async () => {
+            const menu = await Menu.new({
+              items: Source.subs.styles.filter((x) => !focused.texts.has(x)).map((x) => ({
+                text: x.name,
+                action: () => Editing.insertChannel(x)
+              }))
+            });
+            menu.popup();
+          }}>+</button>
+        </td>
+      </tr>
     </tbody>
   </table>
   {:else}

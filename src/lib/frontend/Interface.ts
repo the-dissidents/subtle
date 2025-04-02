@@ -116,10 +116,9 @@ export const Interface = {
             this.status.set($_('msg.failed-to-parse-as-subtitles-path', {values: {path}}));
             return;
         }
-        if (newSubs.migrated) {
-            dialog.message($_('msg.note-file-is-migrated-path', {values: {path}}));
-        }
         await Source.openDocument(newSubs, path, !isJSON);
+        if (newSubs.migrated) await dialog.message(
+            $_('msg.note-file-is-migrated-path', {values: {path}}));
         const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);
         else await Playback.close();
@@ -229,15 +228,19 @@ export const Interface = {
   
     async askSaveFile(saveAs = false) {
         let file = get(Source.currentFile);
-        if (file == '' || saveAs) {
+        if (file == '' || saveAs || Source.subs.migrated) {
             const selected = await dialog.save({
-                filters: [{name: $_('filter.subtle-archive'), extensions: ['json']}]});
+                filters: [{name: $_('filter.subtle-archive'), extensions: ['json']}],
+                defaultPath: file ?? undefined
+            });
             if (typeof selected != 'string') return;
             file = selected;
         }
-        const text = JSON.stringify(Source.subs.toSerializable());
-        if (await Source.saveTo(file, text) && Playback.video?.source)
+        const text = JSON.stringify(Source.subs.toSerializable(), undefined, 2);
+        if (await Source.saveTo(file, text) && Playback.video?.source) {
             PrivateConfig.rememberVideo(file, Playback.video.source);
+            Source.subs.migrated = false;
+        }
     },
 
     async savePublicConfig() {

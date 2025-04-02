@@ -102,11 +102,11 @@ export const Source = {
         this.subs = newSubs;
         Editing.clearFocus(false);
         Editing.clearSelection();
+        this.clearUndoRedo();
         Editing.focused.style = newSubs.defaultStyle;
         this.currentFile.set(isImport ? '' : path);
+        this.fileChanged.set(newSubs.migrated);
         this.onSubtitleObjectReload.dispatch();
-        this.clearUndoRedo();
-        this.fileChanged.set(false);
         this.onSubtitlesChanged.dispatch(ChangeType.General);
         this.onSubtitlesChanged.dispatch(ChangeType.StyleDefinitions);
     },

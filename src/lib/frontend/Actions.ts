@@ -202,7 +202,7 @@ export const Actions = {
     },
 
     async contextMenu() {
-        let selection = Editing.getSelection();
+        const selection = Editing.getSelection();
         if (selection.length == 0) return;
         const isDisjunct = Utils.isSelectionDisjunct();
         let label: LabelTypes | undefined = selection[0].label;
@@ -212,8 +212,11 @@ export const Actions = {
                 break;
             }
         }
-        let styles = selection.map((x) => [...x.texts.keys()]).flat();
-        const canCombine = styles.length == new Set(styles).size;
+        const styles = selection.map((x) => [...x.texts.keys()]).flat();
+        const distinctStyles = Source.subs.styles.filter((x) => styles.includes(x));
+        const commonStyles = distinctStyles
+            .filter((x) => selection.every((y) => y.texts.has(x)));
+        const canCombine = styles.length == distinctStyles.length;
 
         let menu = await Menu.new({items: [
         {
@@ -384,6 +387,7 @@ export const Actions = {
                     text: $_('action.create-channel'),
                     items: Source.subs.styles.map((x) => ({
                         text: x.name,
+                        enabled: !commonStyles.includes(x),
                         action: () => {
                             let done = false;
                             for (let ent of selection)
@@ -399,7 +403,7 @@ export const Actions = {
                 {
                     text: $_('action.exchange-channel'),
                     enabled: Source.subs.styles.length > 1,
-                    items: Source.subs.styles.map((x) => ({
+                    items: distinctStyles.map((x) => ({
                         text: x.name,
                         items: [{
                             text: $_('cxtmenu.and'),
@@ -416,7 +420,7 @@ export const Actions = {
                 {
                     text: $_('action.remove-channel'),
                     enabled: Source.subs.styles.length > 0,
-                    items: Source.subs.styles.map((x) => ({
+                    items: distinctStyles.map((x) => ({
                         text: x.name,
                         action: () => {
                             let done = 0;

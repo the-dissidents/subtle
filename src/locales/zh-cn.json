@@ -121,7 +121,8 @@
     "anchor-start": "锚定开头",
     "at-virtual-entry": "双击或按回车可添加新条目",
     "keep-duration": "保持持续时间",
-    "no-selection": "选择一行开始编辑"
+    "no-selection": "选择一行开始编辑",
+    "overwrite-style": "确认要覆盖样式 {style} 的已有内容？"
   },
   "encodingdialog": {
     "conclusion": "选择一个编码，检查预览，确认正确后单击“确定”将文件转换为UTF-8。",
@@ -207,7 +208,8 @@
     "search-expression-is-empty": "查找表达式为空",
     "search-failed": "查找失败：",
     "unable-to-read-file-path": "无法读取文件：{path}",
-    "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的要继续吗？这可能会使应用程序崩溃。"
+    "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的要继续吗？这可能会使应用程序崩溃。",
+    "you-cant-delete-a-default-style": "无法删除默认样式；请先把别的一个样式设置为默认"
   },
   "not-implemented-yet": "（暂时没有用）",
   "ok": "确认",
@@ -251,6 +253,7 @@
     "center": "居中",
     "center-left": "左侧居中",
     "center-right": "右侧居中",
+    "default": "默认",
     "delete": "删除",
     "duplicate": "复制",
     "font": "字体",
