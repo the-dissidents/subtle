@@ -3,10 +3,10 @@ import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
 
 import { assert } from './Basic';
-import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './core/Subtitles.svelte'
+import { Labels, SubtitleEntry, type LabelTypes } from './core/Subtitles.svelte'
 import { LabelColor } from './Theming.svelte';
 import { tick } from 'svelte';
-import { ChangeCause, ChangeType, Source } from './frontend/Source';
+import { ChangeType, Source } from './frontend/Source';
 import { Editing } from './frontend/Editing';
 import { Interface, UIFocus } from './frontend/Interface';
 
@@ -61,21 +61,21 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
   elem.style.height = `${elem.scrollHeight + 3}px`; // grows to fit content
 }
 
-function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
-  channel.gui = node;
-  node.value = channel.text;
-  return {
-    update: (newChannel: SubtitleChannel) => {
-      // note that svelte calls this every time the channel object changes in any way, but it's only relevant if it's really changing into ANOTHER one
-      if (newChannel != channel) {
-        channel.gui = undefined;
-        newChannel.gui = node;
-        node.value = newChannel.text;
-        channel = newChannel;
-      }
-    }
-  };
-}
+// function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
+//   channel.gui = node;
+//   node.value = channel.text;
+//   return {
+//     update: (newChannel: SubtitleChannel) => {
+//       // note that svelte calls this every time the channel object changes in any way, but it's only relevant if it's really changing into ANOTHER one
+//       if (newChannel != channel) {
+//         channel.gui = undefined;
+//         newChannel.gui = node;
+//         node.value = newChannel.text;
+//         channel = newChannel;
+//       }
+//     }
+//   };
+// }
 </script>
 
 <div class="outer hlayout">
@@ -148,39 +148,33 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
   {@const focused = Editing.getFocusedEntry() as SubtitleEntry}
   <table class='fields'>
     <tbody>
-      {#each focused.texts as line, i}
+      {#each Source.subs.styles as style, i}
+      {#if focused.texts.has(style)}
       <tr>
         <td class="vlayout">
-          <StyleSelect bind:currentStyle={line.style}
+          <StyleSelect currentStyle={style}
             onsubmit={() => Source.markChanged(ChangeType.InPlace)} />
-          <div class="hlayout">
-            <button tabindex='-1' class="flexgrow"
-              onclick={() => Editing.insertChannelAt(i)}>+</button>
-            <button tabindex='-1' class="flexgrow"
-              onclick={() => Editing.deleteChannelAt(i)}
-              disabled={focused.texts.length == 1}>-</button>
-          </div>
         </td>
         <td style='width:100%'>
           <textarea class='contentarea' tabindex=0
-            use:setupTextEditGUI={line}
+            value={focused.texts.get(style)!}
             onkeydown={(ev) => {
               if (ev.key == "Escape") {
                 ev.currentTarget.blur();
                 $uiFocus = UIFocus.Table;
               }
             }}
-            onfocus={() => {
+            onfocus={(ev) => {
               $uiFocus = UIFocus.EditingField;
-              Editing.focused.channel = line;
-              Editing.focused.style = line.style;
+              Editing.focused.style = style;
+              Editing.focused.control = ev.currentTarget;
             }}
             onblur={(x) => {
               // TODO: this works but looks like nonsense
               if ($uiFocus === UIFocus.EditingField)
                 $uiFocus = UIFocus.Other;
               Editing.submitFocusedEntry();
-              Editing.focused.channel = null;
+              Editing.focused.style = null;
             }}
             oninput={(x) => {
               $uiFocus = UIFocus.EditingField;
@@ -189,6 +183,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
             }}></textarea>
         </td>
       </tr>
+      {/if}
       {/each}
     </tbody>
   </table>

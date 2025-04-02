@@ -21,7 +21,7 @@ let button: HTMLButtonElement | undefined = $state();
 let style = writable(_style);
 
 function isDuplicate(name: string) {
-  for (let s of [...subtitles.styles, subtitles.defaultStyle]) {
+  for (let s of [...subtitles.styles]) {
     if (s === _style) continue;
     if (s.name == name) return true;
   }
@@ -30,10 +30,8 @@ function isDuplicate(name: string) {
 
 async function contextMenu() {
   let isDefault = $style == subtitles.defaultStyle;
-  let used = subtitles.entries.filter(
-    (x) => x.texts.find((c) => c.style == $style) !== undefined);
-  let withoutThis = isDefault ? [] : [subtitles.defaultStyle];
-  withoutThis.push(...subtitles.styles.filter((x) => x !== $style));
+  let used = subtitles.entries.filter((x) => x.texts.has($style));
+  let withoutThis = subtitles.styles.filter((x) => x !== $style);
   
   let menu = await Menu.new({
     items: [
@@ -59,29 +57,25 @@ async function contextMenu() {
         onsubmit?.();
       }
     },
-    {
-      text: $_('style.replace-by'),
-      enabled: withoutThis.length > 0,
-      items: withoutThis.map((x, i) => ({
-        id: i.toString(),
-        text: x.name,
-        action(id) {
-          let n = Number.parseInt(id);
-          let other = withoutThis[n];
-          if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
-            Source.markChanged(ChangeType.InPlace);
-        }
-      }))
-    },
+    // {
+    //   text: $_('style.replace-by'),
+    //   enabled: withoutThis.length > 0,
+    //   items: withoutThis.map((x, i) => ({
+    //     id: i.toString(),
+    //     text: x.name,
+    //     action(id) {
+    //       let n = Number.parseInt(id);
+    //       let other = withoutThis[n];
+    //       if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
+    //         Source.markChanged(ChangeType.InPlace);
+    //     }
+    //   }))
+    // },
     {
       text: $_('style.set-as-default'),
       enabled: subtitles.defaultStyle != $style,
       action() {
-        let oldDefault = subtitles.defaultStyle;
         subtitles.defaultStyle = $style;
-        const index = subtitles.styles.indexOf($style);
-        subtitles.styles.splice(index, 1);
-        subtitles.styles.splice(0, 0, oldDefault);
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }

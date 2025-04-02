@@ -8,6 +8,7 @@
     "cut": "cut",
     "delete": "delete",
     "down": "down",
+    "exchange-channel": "exchange channels",
     "fix-erroneous-overlapping": "fix erroneous overlapping",
     "insert-after": "insert after",
     "insert-before": "insert before",
@@ -104,6 +105,7 @@
     "show-config-file-advanced": "Show config file (advanced)"
   },
   "cxtmenu": {
+    "and": "and:",
     "ass-fragment": "ASS fragment",
     "by": "by:",
     "json-internal": "JSON (internal)",
@@ -196,6 +198,7 @@
     "failed-to-parse-clipboard-data-as-subtitles": "failed to parse clipboard data as subtitles",
     "new-entry-appended": "new entry appended",
     "not-a-file": "not a file: {path}",
+    "note-file-is-migrated-path": "Note: this file is from an older version and will be updated. Small changes in styles may occur. After you save the updated file, older versions of this software will probably be unable to open it.",
     "nothing-to-paste": "nothing to paste",
     "opened-path": "opened: {path}",
     "pasted": "pasted",

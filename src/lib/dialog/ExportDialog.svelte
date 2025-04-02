@@ -20,14 +20,13 @@ let inner: DialogHandler<void, string> = {};
 handler.showModal = async () => {
   let subs = Source.subs;
   let map = new Map<string, number>();
-  for (const entry of subs.entries) {
-    for (const text of entry.texts) {
-      map.set(text.style.name, (map.get(text.style.name) ?? 0) + 1);
-    }
-  }
+  for (const entry of subs.entries)
+    for (const [style, _] of entry.texts)
+      map.set(style.name, (map.get(style.name) ?? 0) + 1);
+
   console.log(map);
-  styles = [subs.defaultStyle, ...subs.styles].map((x) => 
-    ({style: x, count: map.get(x.name) ?? 0, use: true}));
+  styles = subs.styles.map(
+    (x) => ({style: x, count: map.get(x.name) ?? 0, use: true}));
   makePreview();
   let btn = await inner!.showModal!();
   if (btn !== 'ok') return null;
@@ -52,15 +51,17 @@ const extensions = {
 
 function makePreview() {
   let styleSet = new Set(styles
-    .filter((x) => x.use)
-    .map((x) => x.style.name));
+    .filter((x) => x.use).map((x) => x.style));
   let entries: SubtitleEntry[] = [];
+  const usedStyles = Source.subs.styles.filter((x) => styleSet.has(x));
   for (const e of Source.subs.entries) {
-    const txts = e.texts.filter((x) => styleSet.has(x.style.name));
-    if (txts.length > 0)
-      entries.push(new SubtitleEntry(e.start, e.end, ...txts));
+    let entry = new SubtitleEntry(e.start, e.end);
+    for (const style of usedStyles)
+      if (e.texts.has(style))
+        entry.texts.set(style, e.texts.get(style)!);
+      entries.push(entry);
   }
-  preview = formatters[format](entries, combine);
+  preview = formatters[format](Source.subs, entries, combine);
 }
 
 async function copy() {

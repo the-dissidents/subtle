@@ -8,6 +8,7 @@
     "cut": "剪切",
     "delete": "删除",
     "down": "向下",
+    "exchange-channel": "交换频道",
     "fix-erroneous-overlapping": "修复错误的重叠",
     "insert-after": "在之后插入",
     "insert-before": "在之前插入",
@@ -18,7 +19,7 @@
     "merge-overlapping-duplicates": "处理重叠的重复项",
     "move": "移动",
     "paste": "粘贴",
-    "remove-channel": "删除通道",
+    "remove-channel": "删除频道",
     "remove-empty": "删除空频道",
     "replace-channel": "替换频道",
     "replace-n-th-channel": "替换第N个频道",
@@ -104,6 +105,7 @@
     "show-config-file-advanced": "显示配置文件（高级）"
   },
   "cxtmenu": {
+    "and": "和：",
     "ass-fragment": "ASS片段",
     "by": "为：",
     "json-internal": "JSON（内部格式）",
@@ -196,6 +198,7 @@
     "failed-to-parse-clipboard-data-as-subtitles": "无法将剪贴板数据解析为字幕",
     "new-entry-appended": "已添加新条目",
     "not-a-file": "不是文件：{path}",
+    "note-file-is-migrated-path": "注意：正在打开旧版本存档文件；我们会自动将其转换为新版，过程中可能会产生一些样式上的变化。如果保存更新的文件，旧版本软件很可能将无法打开它。",
     "nothing-to-paste": "没有可以粘贴的东西",
     "opened-path": "已打开：{path}",
     "pasted": "粘贴",

@@ -20,9 +20,9 @@ import { unwrapFunctionStore, _ } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 const toSRT = (x: Subtitles) => 
-    SimpleFormats.export.SRT(x.entries, LinearFormatCombineStrategy.Recombine);
+    SimpleFormats.export.SRT(x, x.entries, LinearFormatCombineStrategy.Recombine);
 const toPlaintext = (x: Subtitles) => 
-    SimpleFormats.export.plaintext(x.entries, LinearFormatCombineStrategy.KeepOrder);
+    SimpleFormats.export.plaintext(x, x.entries, LinearFormatCombineStrategy.KeepOrder);
 
 export const Actions = {
     processGlobalKeydown(ev: KeyboardEvent) {
@@ -204,9 +204,7 @@ export const Actions = {
     async contextMenu() {
         let selection = Editing.getSelection();
         if (selection.length == 0) return;
-        let isDisjunct = Utils.isSelectionDisjunct();
-        let allStyles = [Source.subs.defaultStyle, ...Source.subs.styles];
-        let maxLines = Math.max(...selection.map((x) => x.texts.length));
+        const isDisjunct = Utils.isSelectionDisjunct();
         let label: LabelTypes | undefined = selection[0].label;
         for (const entry of selection) {
             if (entry.label != selection[0].label) {
@@ -214,6 +212,8 @@ export const Actions = {
                 break;
             }
         }
+        let styles = selection.map((x) => [...x.texts.keys()]).flat();
+        const canCombine = styles.length == new Set(styles).size;
 
         let menu = await Menu.new({items: [
         {
@@ -265,14 +265,13 @@ export const Actions = {
         },
         {
             text: $_('action.select-all-by-channel'),
-            items: allStyles.map((x) => ({
+            items: Source.subs.styles.map((x) => ({
                 text: x.name,
                 action: () => {
                     Editing.selection.currentGroup = [];
                     Editing.selection.focused = null;
                     Editing.selection.submitted = new Set(
-                        Source.subs.entries
-                            .filter((e) => e.texts.some((c) => c.style == x)));
+                        Source.subs.entries.filter((e) => e.texts.has(x)));
                     Editing.onSelectionChanged.dispatch(ChangeCause.Action);
                 }
             }))
@@ -320,8 +319,16 @@ export const Actions = {
         { item: 'Separator' },
         {
             text: $_('action.combine'),
-            enabled: selection.length > 1,
-            action: () => Utils.combineSelection(selection)
+            enabled: selection.length > 1 && canCombine,
+            action: () => {
+                const first = selection[0];
+                for (let i = 1; i < selection.length; i++) {
+                    const entry = selection[i];
+                    for (const [style, text] of entry.texts)
+                        first.texts.set(style, text);
+                }
+                Source.markChanged(ChangeType.Times);
+            }
         },
         {
             text: $_('action.split-simultaneous'),
@@ -370,27 +377,18 @@ export const Actions = {
                 {
                     text: $_('action.sort-by-time'),
                     enabled: !isDisjunct && selection.length > 1,
-                    action: () => Utils.sortSelection(selection, false)
-                },
-                {
-                    text: $_('action.sort-by-first-style'),
-                    enabled: !isDisjunct && selection.length > 1,
-                    action: () => Utils.sortSelection(selection, true)
-                },
-                {
-                    text: $_('action.sort-channels'),
-                    action: () => Utils.sortChannels(selection)
+                    action: () => Utils.sortSelection(selection)
                 },
                 { item: 'Separator' },
                 {
                     text: $_('action.create-channel'),
-                    items: allStyles.map((x) => ({
+                    items: Source.subs.styles.map((x) => ({
                         text: x.name,
                         action: () => {
                             let done = false;
                             for (let ent of selection)
-                                if (!ent.texts.find((t) => t.style == x)) {
-                                    ent.texts.push({style: x, text: ''});
+                                if (!ent.texts.has(x)) {
+                                    ent.texts.set(x, '');
                                     done = true;
                                 }
                             if (done)
@@ -399,39 +397,17 @@ export const Actions = {
                     }))
                 },
                 {
-                    text: $_('action.replace-channel'),
-                    enabled: Source.subs.styles.length > 0,
-                    items: allStyles.map((x) => ({
+                    text: $_('action.exchange-channel'),
+                    enabled: Source.subs.styles.length > 1,
+                    items: Source.subs.styles.map((x) => ({
                         text: x.name,
                         items: [{
-                            text: $_('cxtmenu.by'),
+                            text: $_('cxtmenu.and'),
                             enabled: false,
-                        }, ...allStyles.filter((y) => y != x).map((y) => ({
+                        }, ...Source.subs.styles.filter((y) => y != x).map((y) => ({
                             text: y.name,
                             action: () => {
-                                if (SubtitleTools.replaceStyle(selection, x, y)) 
-                                    Source.markChanged(ChangeType.InPlace);
-                            }
-                        }))]
-                    }))
-                },
-                {
-                    text: $_('action.replace-n-th-channel'),
-                    items: [...Array(maxLines).keys()].map((x) => ({
-                        text: (x+1).toString(),
-                        items: [{
-                            text: $_('cxtmenu.by'),
-                            enabled: false,
-                        }, ...allStyles.map((y) => ({
-                            text: y.name,
-                            action: () => {
-                                let changed = false;
-                                for (let ent of selection)
-                                    if (ent.texts.length > x) {
-                                        ent.texts[x].style = y;
-                                        changed = true;
-                                    }
-                                if (changed)
+                                if (SubtitleTools.exchangeStyle(selection, x, y)) 
                                     Source.markChanged(ChangeType.InPlace);
                             }
                         }))]
@@ -442,12 +418,34 @@ export const Actions = {
                     enabled: Source.subs.styles.length > 0,
                     items: Source.subs.styles.map((x) => ({
                         text: x.name,
-                        action: () => Utils.removeChannel(selection, (t) => t.style == x)
+                        action: () => {
+                            let done = 0;
+                            for (const ent of selection)
+                                if (ent.texts.has(x)) {
+                                    ent.texts.delete(x);
+                                    done++;
+                                }
+                            Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+                            if (done)
+                                Source.markChanged(ChangeType.InPlace);
+                        }
                     }))
                 },
                 {
                     text: $_('action.remove-empty'),
-                    action: () => Utils.removeChannel(selection, (t) => t.text == '')
+                    action: () => {
+                        let done = 0;
+                        for (const ent of selection) {
+                            for (const [style, text] of ent.texts)
+                                if (text === '') {
+                                    ent.texts.delete(style);
+                                    done++;
+                                }
+                        }
+                        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+                        if (done)
+                            Source.markChanged(ChangeType.InPlace);
+                    }
                 },
                 { item: 'Separator' },
                 {
@@ -459,11 +457,6 @@ export const Actions = {
                     text: $_('action.combine-by-matching-time'),
                     enabled: selection.length > 1,
                     action: () => Dialogs.combine.showModal!()
-                },
-                {
-                    text: $_('action.split-by-line'),
-                    enabled: selection.length >= 1,
-                    action: () => Utils.splitByNewline(selection)
                 },
                 {
                     text: $_('action.fix-erroneous-overlapping'),

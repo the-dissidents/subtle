@@ -41,9 +41,8 @@ function newStyle() {
 }
 
 function removeUnusedStyles() {
-  let usedStyles = new Set<SubtitleStyle>();
-  Source.subs.entries.forEach((x) => 
-    x.texts.forEach((t) => usedStyles.add(t.style)));
+  let usedStyles = new Set<SubtitleStyle>(
+    Source.subs.entries.flatMap((x) => [...x.texts.keys()]));
   Source.subs.styles = Source.subs.styles.filter((x) => usedStyles.has(x));
   Source.markChanged(ChangeType.StyleDefinitions);
 }
@@ -90,10 +89,6 @@ function changeResolution() {
   </table>
   <Collapsible header={$_('ppty.styles')} active={true}>
     {#key updateCounter}
-      <h5>{$_('ppty.default')}</h5>
-      <StyleEdit style={Source.subs.defaultStyle} {subtitles} />
-      <hr>
-      <h5>{$_('ppty.other')}</h5>
       {#each styles as style}
         <StyleEdit style={style} {subtitles}
           onsubmit={() => styles = Source.subs.styles}/>

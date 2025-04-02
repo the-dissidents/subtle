@@ -50,27 +50,28 @@ export type TimeShiftOptions = {
             }
         }
     },
-    replaceStyle: (entries: SubtitleEntry[], from: SubtitleStyle, to: SubtitleStyle) => {
+    exchangeStyle: (entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) => {
         let changed = false;
-        for (let ent of entries) {
-            let thisChanged = false;
-            for (let channel of ent.texts)
-                if (channel.style.name == from.name) {
-                    channel.style = to;
-                    thisChanged = true;
-                }
-            if (thisChanged) {
+        for (const ent of entries) {
+            let textA = ent.texts.get(a);
+            let textB = ent.texts.get(b);
+
+            if (textA == undefined) ent.texts.delete(b);
+            else ent.texts.set(b, textA);
+            if (textB == undefined) ent.texts.delete(a);
+            else ent.texts.set(a, textB);
+
+            if (textA !== undefined || textB !== undefined)
                 changed = true;
-                // ent.update.dispatch();
-            }
         }
         return changed;
     },
     makeTestSubtitles: () => {
         let subs = new Subtitles();
         for (let i = 0; i < 10; i++) {
-            subs.entries.push(new SubtitleEntry(i * 5, i * 5 + 5,
-                { style: subs.defaultStyle, text: `测试第${i}行` }));
+            let entry = new SubtitleEntry(i * 5, i * 5 + 5);
+            entry.texts.set(subs.defaultStyle, `测试第${i}行`);
+            subs.entries.push(entry);
         }
         return subs;
     },
@@ -99,19 +100,14 @@ export const SubtitleUtil = {
         let processStyle = (s: SubtitleStyle) => {
             if (styleMap.has(s)) return styleMap.get(s)!;
             let iLocal = original.styles.findIndex((x) => x.name == s.name);
-            let namedDefault = s.name == original.defaultStyle.name;
-            if (iLocal < 0 && !namedDefault) {
+            if (iLocal < 0) {
                 original.styles.push(s);
                 styleMap.set(s, s);
                 return s;
             } else switch (options.style ?? MergeStyleBehavior.KeepDifferent) {
                 case MergeStyleBehavior.KeepDifferent:
-                    if (deepEqual(s, namedDefault 
-                        ? original.defaultStyle 
-                        : original.styles[iLocal]))
-                    {
-                        if (namedDefault) styleMap.set(s, original.defaultStyle);
-                        else styleMap.set(s, original.styles[iLocal]);
+                    if (deepEqual(s, original.styles[iLocal])) {
+                        styleMap.set(s, original.styles[iLocal]);
                         return styleMap.get(s)!;
                     } // else, fallthrough
                 case MergeStyleBehavior.KeepAll:
@@ -122,17 +118,19 @@ export const SubtitleUtil = {
                     styleMap.set(s, newStyle);
                     return newStyle;
                 case MergeStyleBehavior.UseLocalByName:
-                    if (namedDefault) styleMap.set(s, original.defaultStyle);
-                    else styleMap.set(s, original.styles[iLocal]);
+                    styleMap.set(s, original.styles[iLocal]);
                     return styleMap.get(s)!;
                 case MergeStyleBehavior.Overwrite:
+                    if (original.defaultStyle === original.styles[iLocal])
+                        original.defaultStyle = s;
                     original.styles.splice(iLocal, 1, s);
                     styleMap.set(s, s);
                     return s;
                 case MergeStyleBehavior.UseOverrideForAll:
                     styleMap.set(s, options.overrideStyle ?? original.defaultStyle);
                     return styleMap.get(s)!;
-                default: assert(false);
+                default:
+                    assert(false);
             }
         };
         if (options.selection) switch (options.selection) {
@@ -177,8 +175,9 @@ export const SubtitleUtil = {
 
         for (let ent of other.entries) {
             insertEntry(ent);
-            for (let channel of ent.texts)
-                channel.style = processStyle(channel.style);
+            let newTexts: [SubtitleStyle, string][] = [];
+            for (let [style, text] of ent.texts)
+                newTexts.push([processStyle(style), text]);
         }
         return other.entries;
     },

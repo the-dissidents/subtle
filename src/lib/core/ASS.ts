@@ -1,6 +1,6 @@
 import { Basic } from "../Basic";
 import { CSSColors, parseCSSColor } from "../colorparser";
-import { AlignMode, SubtitleEntry, Subtitles, type SubtitleStyle, type SubtitleChannel } from "./Subtitles.svelte";
+import { AlignMode, SubtitleEntry, Subtitles, type SubtitleStyle } from "./Subtitles.svelte";
 
 export const ASS = {
     parse(source: string) {
@@ -17,8 +17,9 @@ export const ASS = {
         for (let entry of subs.entries) {
             let t0 = Basic.formatTimestamp(entry.start, 2);
             let t1 = Basic.formatTimestamp(entry.end, 2);
-            for (let channel of entry.texts)
-                result += `Dialogue: 0,${t0},${t1},${channel.style.name},,0,0,0,,${channel.text.replaceAll('\n', '\\N')}\n`;
+            for (const [style, text] of entry.texts)
+                result += `Dialogue: 0,${t0},${t1},${style},,0,0,0,,${
+                    text.replaceAll('\n', '\\N')}\n`;
         }
         return result;
     },
@@ -71,7 +72,7 @@ LayoutResY: ${subs.metadata.height}
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 `;
-    for (let s of [subs.defaultStyle, ...subs.styles])
+    for (let s of subs.styles)
         result += `Style: ${s.name},`
                 + `${s.font == '' ? 'Arial' : s.font},${s.size},`
                 + `${toASSColor(s.color)},`
@@ -134,21 +135,19 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
     console.log(styleFieldMap);
 
     const stylesRegex   = /Style:\s*(.*)\n/g;
-    let styles: Map<string, SubtitleStyle> = new Map();
+    let nameToStyle: Map<string, SubtitleStyle> = new Map();
     let first: SubtitleStyle | null = null;
     const styleMatches = text.matchAll(stylesRegex);
     for (const match of styleMatches) {
         const items = match[1].split(',');
         try {
             const name = items[styleFieldMap.get('Name')!];
-            let style = styles.get(name);
+            let style = nameToStyle.get(name);
             if (style === undefined) {
                 style = Subtitles.createStyle(name);
-                if (first === null)
-                    first = style;
-                else
-                    subs.styles.push(style);
-                styles.set(name, style);
+                subs.styles.push(style);
+                nameToStyle.set(name, style);
+                if (first === null) first = style;
             } else {
                 // warn
                 console.warn('duplicate style definition:', name);
@@ -214,24 +213,13 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
     
     if (first == null) {
         // no styles
-        console.warn('no style defined', name);
+        console.warn('no style defined');
     } else {
         subs.defaultStyle = first;
     }
 }
 
 function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
-    function getStyleOrCreate(styleName: string) {
-        let style = styles.get(styleName);
-        if (!style) {
-            console.log(`warning: style not found: ${styleName}`);
-            style = Subtitles.createStyle(styleName);
-            styles.set(styleName, style);
-            subs.styles.push(style);
-        }
-        return style;
-    }
-
     let text = sections.get('Events');
     if (text === undefined) return;
 
@@ -243,36 +231,54 @@ function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
         || !fieldMap.has('Text')) return subs;
     console.log(fieldMap);
 
+    const nameToStyle = new Map(subs.styles.map((x) => [x.name, x]));
+    function getStyleOrCreate(styleName: string) {
+        let style = nameToStyle.get(styleName);
+        if (!style) {
+            console.log(`warning: style not found: ${styleName}`);
+            style = Subtitles.createStyle(styleName);
+            nameToStyle.set(styleName, style);
+            subs.styles.push(style);
+        }
+        return style;
+    }
+
     const regex = RegExp(String.raw
         `^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
-    let styles: Map<string, SubtitleStyle> = new Map(
-        [subs.defaultStyle, ...subs.styles].map((x) => [x.name, x]));
     for (const match of text.matchAll(regex)) {
         const opts = match[1].split(',');
         const start = Basic.parseTimestamp(opts[fieldMap.get('Start')!]),
               end   = Basic.parseTimestamp(opts[fieldMap.get('End')!]);
         if (start === null || end === null) continue;
+        let entry = new SubtitleEntry(start, end);
+
         let styleName = opts[fieldMap.get('Style')!];
         let style = getStyleOrCreate(styleName);
         let text = match[2].replaceAll('\\N', '\n').trimEnd();
         let breaks = [...text.matchAll(/\n{\\r(.*?)}/g)];
         if (breaks.length == 0) {
             // regular entry
-            subs.entries.push(new SubtitleEntry(start, end, { style, text }));
+            entry.texts.set(style, text);
         } else {
             // multiple channels
             let startIndex = 0, currentStyle = style;
-            let channels: SubtitleChannel[] = [];
             breaks.forEach((x) => {
-                channels.push({ 
-                    style: currentStyle, 
-                    text: text.substring(startIndex, x.index) 
-                });
+                let oldText = entry.texts.get(currentStyle);
+                let newText = text.substring(startIndex, x.index);
+                entry.texts.set(currentStyle, 
+                    oldText === undefined 
+                    ? newText 
+                    : oldText + '\n' + newText);
                 currentStyle = x[1] ? getStyleOrCreate(x[1]) : style;
                 startIndex = x.index + x[0].length;
             });
-            channels.push({ style: currentStyle, text: text.substring(startIndex) });
-            subs.entries.push(new SubtitleEntry(start, end, ...channels));
+            let oldText = entry.texts.get(currentStyle);
+            let newText = text.substring(startIndex);
+            entry.texts.set(currentStyle, 
+                oldText === undefined 
+                ? newText 
+                : oldText + '\n' + newText);
         }
+        subs.entries.push(entry);
     }
 }

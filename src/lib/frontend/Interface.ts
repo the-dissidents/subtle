@@ -116,6 +116,9 @@ export const Interface = {
             this.status.set($_('msg.failed-to-parse-as-subtitles-path', {values: {path}}));
             return;
         }
+        if (newSubs.migrated) {
+            dialog.message($_('msg.note-file-is-migrated-path', {values: {path}}));
+        }
         await Source.openDocument(newSubs, path, !isJSON);
         const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);

@@ -19,6 +19,7 @@ onDestroy(() => EventHost.unbind(me));
 Source.onSubtitlesChanged.bind(me, (t) => {
   if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
     styles = Source.subs.styles;
+    currentStyle = Source.subs.defaultStyle;
     refresh++;
   }
 });
@@ -34,9 +35,6 @@ Source.onSubtitlesChanged.bind(me, (t) => {
   onclick={() => refresh++}
 >
   {#key refresh}
-    <option selected={currentStyle == Source.subs.defaultStyle}>
-      {Source.subs.defaultStyle.name}
-    </option>
     {#each styles as style}
       <option selected={currentStyle == style}>{style.name}</option>
     {/each}

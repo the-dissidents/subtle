@@ -2,7 +2,7 @@
 import { type SubtitleEntry } from '../core/Subtitles.svelte';
 import { assert } from '../Basic';
 import { Editing } from '../frontend/Editing';
-import { ChangeCause, ChangeType, Source } from '../frontend/Source';
+import { ChangeType, Source } from '../frontend/Source';
 import type { DialogHandler } from '../frontend/Dialogs';
 import DialogBase from '../DialogBase.svelte';
 
@@ -17,10 +17,11 @@ let {
 }: Props = $props();
 
 let inner: DialogHandler<void> = {}
-let start = $state(0.005);
-let end = $state(0.005);
+let start = $state(0.005),
+    end = $state(0.005);
 let number = $state([0, 0]);
-let only = $state(true), different = $state(false), hasbeen = $state(false);
+let only = $state(true), 
+    hasbeen = $state(false);
 
 handler.showModal = async () => {
   assert(inner !== undefined);
@@ -28,7 +29,7 @@ handler.showModal = async () => {
 }
 
 function run(doit: boolean, s: number, e: number, 
-    selectionOnly: boolean, differentOnly: boolean) 
+    selectionOnly: boolean) 
 {
   number = [0, 0];
 
@@ -42,7 +43,7 @@ function run(doit: boolean, s: number, e: number,
   let done = new Set<SubtitleEntry>();
   for (let i = 0; i < selection.length - 1; i++) {
     let entry0 = selection[i];
-    let styles = new Set<string>(entry0.texts.map((x) => x.style.name));
+    let styles = new Set(entry0.texts.keys());
     let n = 1;
     if (done.has(entry0)) continue;
     for (let j = i+1; j < selection.length; j++) {
@@ -51,14 +52,13 @@ function run(doit: boolean, s: number, e: number,
       if (Math.abs(entry0.start - entry1.start) < start && 
         Math.abs(entry0.end - entry1.end) < end)
       {
-        if (differentOnly) {
-          let s2 = entry1.texts.map((x) => x.style.name);
-          if (s2.some((x) => styles.has(x)))
-            continue;
-          s2.forEach((x) => styles.add(x));
-        }
+        let s2 = [...entry1.texts.keys()];
+        if (s2.some((x) => styles.has(x)))
+          continue; // only combine different styles
+        s2.forEach((x) => styles.add(x));
         if (doit) {
-          entry0.texts.push(...entry1.texts);
+          for (const [style, text] of entry1.texts)
+            entry0.texts.set(style, text);
           Source.subs.entries.splice(
             Source.subs.entries.indexOf(entry1), 1);
         }
@@ -84,7 +84,7 @@ function run(doit: boolean, s: number, e: number,
     hasbeen = false;
 }
 $effect(() => {
-  run(false, start, end, only, different);
+  run(false, start, end, only);
 });
 </script>
 
@@ -104,8 +104,6 @@ $effect(() => {
         <td>
           <input type="checkbox" bind:checked={only}>
           {$_('combinedialog.selection-only')}<br>
-          <input type="checkbox" bind:checked={different}>
-          {$_('combinedialog.different-style-only')}
         </td>
       </tr>
       <tr>
@@ -122,7 +120,7 @@ $effect(() => {
       </tr>
       <tr>
         <td colspan="2"><button style="width: 100%;" 
-          onclick={() => run(true, start, end, only, different)}
+          onclick={() => run(true, start, end, only)}
         >{$_('combinedialog.combine')}</button></td>
       </tr>
       <tr>
