@@ -147,7 +147,7 @@ export class CanvasManager {
     }
 
     constructor(public canvas: HTMLCanvasElement)  {
-        let context = canvas.getContext('2d', { alpha: false });
+        let context = canvas.getContext('2d', { alpha: true });
         assert(context !== null);
         this.#cxt = context;
 

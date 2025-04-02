@@ -133,6 +133,7 @@ function render(cxt: CanvasRenderingContext2D) {
   const [sx, sy] = manager.scroll;
   const [width, height] = manager.size;
 
+
   // table
   let selection = new Set(Editing.getSelection());
   let focused = Editing.getFocusedEntry();
