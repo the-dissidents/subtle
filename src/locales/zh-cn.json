@@ -55,6 +55,8 @@
     "auto-scroll-exponent-d": "在字幕表格中拖动选择时自动滚动的指数。每秒自动滚动速率用如下方法计算：（ 到边缘的距离 * 系数 ) ^ 指数",
     "auto-scroll-factor": "自动滚动系数",
     "auto-scroll-factor-d": "在字幕表格中拖动选择时自动滚动的系数",
+    "autosave-interval": "自动保存时间间隔",
+    "autosave-interval-d": "自动保存的时间间隔，以分钟为单位。设置为0表示禁用自动保存",
     "dark": "深色",
     "debug": "调试",
     "debug-d": "⚠️ 仅用于调试，通常不需要修改",
@@ -105,7 +107,8 @@
   },
   "configdialog": {
     "all-items-are-automatically-saved": "所有设置项均自动保存",
-    "show-config-file-advanced": "显示配置文件（高级）"
+    "show-config-file-advanced": "显示配置文件（高级）",
+    "show-autosave-path": "显示自动保存文件夹"
   },
   "cxtmenu": {
     "ass-fragment": "ASS片段",
@@ -188,6 +191,8 @@
     "undo": "撤消"
   },
   "msg": {
+    "autosave-complete": "自动保存完成 {time}",
+    "autosave-failed": "自动保存失败",
     "changed-n-entries": "{n,plural,=0 {没有可修改的东西} one {修改了 {n} 项} other {修改了 {n} 项}}",
     "combined-n-entries": "合并了 {n} 项",
     "copied-exported-data": "导出数据已复制",

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { assert, never } from '../Basic';
 import { MainConfig } from "../config/Groups";
 import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
@@ -7,7 +7,8 @@ import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
 
 import { _, locale } from 'svelte-i18n';
-    import { Interface } from '../frontend/Interface';
+import { Interface } from '../frontend/Interface';
+import { appLocalDataDir } from "@tauri-apps/api/path";
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -47,6 +48,9 @@ locale.subscribe(() => refresh++);
     <button onclick={() => {
       revealItemInDir(MainConfig.configPath);
     }}>{$_('configdialog.show-config-file-advanced')}</button>
+    <button onclick={async () => {
+      openPath(await appLocalDataDir());
+    }}>{$_('configdialog.show-autosave-path')}</button>
   </div>
   
   {#key refresh}

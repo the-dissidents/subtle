@@ -55,6 +55,8 @@
     "auto-scroll-exponent-d": "Exponent for the automatic scrolling when dragging outside of the table area. The magnitude of autoscroll speed per second is calculated as: (distanceFromEdge * factor) ^ exponent.",
     "auto-scroll-factor": "auto scroll factor",
     "auto-scroll-factor-d": "Multiplier for the automatic scrolling when dragging outside of the table area.",
+    "autosave-interval": "autosave interval",
+    "autosave-interval-d": "Interval for autosaving the current file, in minutes. Set to 0 to disable autosave.",
     "dark": "dark",
     "debug": "debug",
     "debug-d": "⚠️ Advanced options for debug purpose only. You shouldn't change them unless you know what you're doing.",
@@ -105,7 +107,8 @@
   },
   "configdialog": {
     "all-items-are-automatically-saved": "All items are automatically saved.",
-    "show-config-file-advanced": "Show config file (advanced)"
+    "show-config-file-advanced": "Show config file (advanced)",
+    "show-autosave-path": "Show autosave path"
   },
   "cxtmenu": {
     "ass-fragment": "ASS fragment",
@@ -188,6 +191,8 @@
     "undo": "undo"
   },
   "msg": {
+    "autosave-complete": "autosave complete at {time}",
+    "autosave-failed": "autosave failed",
     "changed-n-entries": "{n,plural,=0 {changed nothing} one {changed {n} entry} other {changed {n} entries}}",
     "combined-n-entries": "{n, plural,\n  one {combined {n, number} entry}\n  other {combined {n, number} entries}\n}",
     "copied-exported-data": "copied exported data",

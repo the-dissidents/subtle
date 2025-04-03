@@ -125,6 +125,11 @@ $effect(() => {
   locale.set(InterfaceConfig.data.language);
 });
 
+$effect(() => {
+  InterfaceConfig.data.autosaveInterval;
+  Source.startAutoSave();
+});
+
 let settingTheme = false;
 async function updateTheme() {
   if (settingTheme) return;
