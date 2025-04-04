@@ -20,6 +20,15 @@ export enum LogLevelFilter {
     Trace = 5,
 }
 
+export const GetLevelFilter = {
+    Off: 0,
+    Error: 1,
+    Warn: 2,
+    Info: 3,
+    Debug: 4,
+    Trace: 5,
+};
+
 const FilterToLevel = [0, 5, 4, 3, 2, 1];
 
 async function callLog(level: LogLevel, message: string, location?: string) {
@@ -47,6 +56,7 @@ function stacktrace() {
 
 export const Debug: {
     filterLevel: LogLevelFilter,
+    redirectNative: boolean,
     setPersistentFilterLevel(level: LogLevelFilter): Promise<void>,
     init(): Promise<void>,
     trace(msg: string): Promise<void>,
@@ -59,12 +69,14 @@ export const Debug: {
     never(value: never): never
 } = {
     filterLevel: LogLevelFilter.Debug,
+    redirectNative: true,
     async setPersistentFilterLevel(level: LogLevelFilter) {
-        await invoke('set_log_filter_level', { level });
+        await invoke('set_log_filter_level', { u: level });
     },
     async init() {
         await log.attachLogger(({level, message}) => {
             if (level < FilterToLevel[this.filterLevel]
+             || (!this.redirectNative && !message.includes('][webview'))
             //  || message.includes('!!!WEBVIEW_STACKTRACE')
             ) return;
 

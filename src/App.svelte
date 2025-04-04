@@ -3,7 +3,7 @@ console.info('App loading');
 
 import { _, locale } from 'svelte-i18n';
 
-import { InterfaceConfig, MainConfig } from "./lib/config/Groups";
+import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
 
 import { TableConfig } from "./lib/SubtitleTable.svelte";
@@ -52,7 +52,7 @@ import { Interface, UIFocus } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
 
-import { Debug } from './lib/Debug';
+import { Debug, GetLevelFilter, LogLevelFilter } from './lib/Debug';
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow()
@@ -132,6 +132,20 @@ $effect(() => {
 $effect(() => {
   InterfaceConfig.data.autosaveInterval;
   Source.startAutoSave();
+});
+
+$effect(() => {
+  Debug.redirectNative = DebugConfig.data.redirectLogs;
+});
+
+$effect(() => {
+  Debug.filterLevel = GetLevelFilter[
+    DebugConfig.data.logLevel as keyof typeof GetLevelFilter];
+});
+
+$effect(() => {
+  Debug.setPersistentFilterLevel(GetLevelFilter[
+    DebugConfig.data.persistentLogLevel as keyof typeof GetLevelFilter]);
 });
 
 let settingTheme = false;

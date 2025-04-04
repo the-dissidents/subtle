@@ -131,6 +131,37 @@ export const DebugConfig = new PublicConfigGroup(
     () => $_('config.debug'),
     () => $_('config.debug-d'), 10,
     {
+        persistentLogLevel: {
+            localizedName: () => 'persistent log level',
+            type: 'dropdown',
+            options: {
+                ['Off']: { localizedName: () => 'off' },
+                ['Trace']: { localizedName: () => 'trace' },
+                ['Debug']: { localizedName: () => 'debug' },
+                ['Info']: { localizedName: () => 'info' },
+                ['Warn']: { localizedName: () => 'warn' },
+                ['Error']: { localizedName: () => 'error' },
+            },
+            default: 'Debug'
+        },
+        logLevel: {
+            localizedName: () => 'webview log level',
+            type: 'dropdown',
+            options: {
+                ['Off']: { localizedName: () => 'off' },
+                ['Trace']: { localizedName: () => 'trace' },
+                ['Debug']: { localizedName: () => 'debug' },
+                ['Info']: { localizedName: () => 'info' },
+                ['Warn']: { localizedName: () => 'warn' },
+                ['Error']: { localizedName: () => 'error' },
+            },
+            default: 'Debug'
+        },
+        redirectLogs: {
+            localizedName: () => 'redirect native log to devtools',
+            type: 'boolean',
+            default: true
+        },
         disableWaveform: {
             localizedName: () => 'disable waveform in timeline',
             type: 'boolean',
@@ -139,12 +170,6 @@ export const DebugConfig = new PublicConfigGroup(
         disableVideo: {
             localizedName: () => 'disable video rendering',
             type: 'boolean',
-            default: false
-        },
-        redirectLogs: {
-            localizedName: () => 'redirect native log to devtools',
-            type: 'boolean',
-            description: () => $_('not-implemented-yet'),
             default: false
         },
         disableTry: {
