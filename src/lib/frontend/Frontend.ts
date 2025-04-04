@@ -26,19 +26,24 @@ export class EventHost<T extends unknown[] = []> {
     }
 
     dispatch(...args: [...T]) {
-        for (const [_, l] of this.#listeners)
-            l.forEach((x) => x(...args));
+        for (const [obj, f] of this.#listeners) {
+            // console.log(`dispatch`, obj, f, this);
+            f.forEach((x) => x(...args));
+        }
     };
     
     bind(obj: object, f: (...args: [...T]) => void) {
         if (!this.#listeners.has(obj))
             this.#listeners.set(obj, []);
         this.#listeners.get(obj)!.push(f);
+        // console.log(`bind`, obj, f, this);
     }
 
     static unbind(obj: object) {
-        for (const host of EventHost.globalEventHosts)
+        for (const host of EventHost.globalEventHosts) {
+            // console.log(`unbind`, host.#listeners.get(obj), this);
             host.#listeners.delete(obj);
+        }
     }
 }
 

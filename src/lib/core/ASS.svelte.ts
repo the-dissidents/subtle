@@ -135,6 +135,8 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
     if (styleFieldMap == null) return subs;
     console.log(styleFieldMap);
 
+    subs.styles = [];
+
     const stylesRegex   = /Style:\s*(.*)\n/g;
     let nameToStyle: Map<string, SubtitleStyle> = new Map();
     let first: SubtitleStyle | null = null;

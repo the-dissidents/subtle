@@ -64,10 +64,14 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
 }
 
 function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
-  Editing.styleToEditor.set(style, node);
+  const state = Source.subs.styles.find((x) => x.name == style.name);
+  Debug.assert(state !== undefined);
+  Editing.styleToEditor.set(state, node);
   return {
     update: (style: SubtitleStyle) => {
-      Editing.styleToEditor.set(style, node);
+      const state = Source.subs.styles.find((x) => x.name == style.name);
+      Debug.assert(state !== undefined);
+      Editing.styleToEditor.set(state, node);
     }
   };
 }
@@ -177,8 +181,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
                   text: $_('style.delete'),
                   enabled: focused.texts.size > 1,
                   action() {
-                    focused.texts.delete(style);
-                    Source.markChanged(ChangeType.InPlace);
+                    Editing.deleteChannel(style);
                   }
                 }
               ]

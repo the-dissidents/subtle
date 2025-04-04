@@ -76,15 +76,14 @@ export const Editing = {
     startEditingFocusedEntry() {
         let focused = this.getFocusedEntry();
         Debug.assert(focused instanceof SubtitleEntry);
-        if (this.focused.style === null) {
+        if (this.focused.style === null || !this.styleToEditor.has(this.focused.style)) {
             const first = focused.texts.has(Source.subs.defaultStyle) 
                 ? Source.subs.defaultStyle
                 : Source.subs.styles.find((x) => focused.texts.has(x));
             Debug.assert(first !== undefined);
             this.focused.style = first;
         }
-        let elem = this.styleToEditor.get(this.focused.style);
-        if (!elem) return Debug.warn('no styleToEditor');
+        let elem = this.styleToEditor.get(this.focused.style)!;
         elem.focus();
         elem.scrollIntoView();
     },
@@ -171,6 +170,7 @@ export const Editing = {
         if (trySubmit && focused instanceof SubtitleEntry)
             this.submitFocusedEntry();
         this.focused.entry.set(null);
+        this.focused.style = null;
     },
 
     setSelection(entries: SubtitleEntry[]) {

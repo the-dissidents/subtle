@@ -284,7 +284,7 @@ Editing.onKeepEntryAtPosition.bind(me, (ent, old) => {
   }
   const sy = (posNew.line - posOld.line) * lineHeight + manager.scroll[1];
   manager.setScroll({y: sy})
-  manager.requestRender();
+  Editing.onKeepEntryInView.dispatch(ent);
 });
 
 Editing.onKeepEntryInView.bind(me, (ent) => {

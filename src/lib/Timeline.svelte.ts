@@ -193,7 +193,7 @@ export class Timeline {
         this.#height = h;
         this.#preprocessStyles();
         const offset = this.#offset;
-        this.setViewScale(this.#scale);
+        this.updateContentArea();
         this.setViewOffset(offset);
         this.#manager.requestRender();
     }
@@ -229,14 +229,16 @@ export class Timeline {
             }
         });
         Source.onSubtitlesChanged.bind(this, (type) => {
-            if (type == ChangeType.StyleDefinitions || type == ChangeType.General) {
+            if (type == ChangeType.StyleDefinitions || type == ChangeType.General)
                 this.#preprocessStyles();
-            }
+            if (type == ChangeType.Times || type == ChangeType.General)
+                this.updateContentArea();
             if (type != ChangeType.Metadata)
                 this.#manager.requestRender();
         });
         Source.onSubtitleObjectReload.bind(this, () => {
             this.#preprocessStyles();
+            this.updateContentArea();
             this.#manager.requestRender();
         });
     }
@@ -788,13 +790,17 @@ export class Timeline {
         Playback.setPosition(pos);
     }
 
+    updateContentArea() {
+        this.#manager.setContentRect({r: this.#maxPosition * this.#scale});
+    }
+
     setViewScale(v: number) {
         Debug.assert(v > 0);
         v = Math.max(v, this.#width / this.#maxPosition, 0.15);
         v = Math.min(v, 500);
         if (v == this.#scale) return;
         this.#scale = v;
-        this.#manager.setContentRect({r: this.#maxPosition * this.#scale})
+        this.updateContentArea();
         this.#manager.requestRender();
         this.#requestedSampler = true;
     }
