@@ -5,11 +5,12 @@ import { ChangeType, Source } from "./frontend/Source";
 import { EventHost } from "./frontend/Frontend";
 
 interface Props {
+  disabled?: boolean,
   currentStyle: SubtitleStyle;
   onsubmit?: (style: SubtitleStyle) => void;
 }
 
-let { currentStyle = $bindable(), onsubmit }: Props = $props();
+let { disabled = false, currentStyle = $bindable(), onsubmit }: Props = $props();
 let refresh = $state(0);
 let styles = $state(Source.subs.styles);
 
@@ -26,6 +27,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 </script>
 
 <select tabindex='-1'
+  disabled={disabled}
   oninput={(ev) => {
     currentStyle = styles[ev.currentTarget.selectedIndex];
     onsubmit?.(currentStyle);

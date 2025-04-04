@@ -10,6 +10,7 @@ import { writable } from 'svelte/store';
 import { ChangeType, Source } from "./frontend/Source";
 
 import { _ } from 'svelte-i18n';
+    import { Utils } from "./frontend/Utils";
 
 interface Props {
   style: SubtitleStyle;
@@ -34,6 +35,7 @@ function isDuplicate(name: string) {
 async function contextMenu() {
   let isDefault = $style == subtitles.defaultStyle;
   let used = subtitles.entries.filter((x) => x.texts.has($style));
+  let withoutThis = subtitles.styles.filter((x) => x !== $style);
   
   let menu = await Menu.new({
     items: [
@@ -55,36 +57,39 @@ async function contextMenu() {
     {
       text: $_('style.duplicate'),
       action() {
-        let clone = structuredClone($style);
+        let clone = structuredClone($state.snapshot($style));
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
-        subtitles.styles = subtitles.styles;
+        // subtitles.styles = subtitles.styles;
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }
     },
-    // {
-    //   text: $_('style.replace-by'),
-    //   enabled: withoutThis.length > 0,
-    //   items: withoutThis.map((x, i) => ({
-    //     id: i.toString(),
-    //     text: x.name,
-    //     action(id) {
-    //       let n = Number.parseInt(id);
-    //       let other = withoutThis[n];
-    //       if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
-    //         Source.markChanged(ChangeType.InPlace);
-    //     }
-    //   }))
-    // },
     {
-      text: $_('style.set-as-default'),
-      enabled: subtitles.defaultStyle != $style,
-      action() {
-        subtitles.defaultStyle = $style;
-        Source.markChanged(ChangeType.StyleDefinitions);
-        onsubmit?.();
-      }
+      text: $_('style.replace-by'),
+      enabled: Source.subs.styles.length > 1 && used.length > 0,
+      items: withoutThis.map((x, i) => ({
+        id: i.toString(),
+        text: x.name,
+        async action(id) {
+          let n = Number.parseInt(id);
+          let other = withoutThis[n];
+          await Utils.replaceStyle(subtitles.entries, $style, other);
+        }
+      }))
+    },
+    {
+      text: $_('style.exchange-with'),
+      enabled: Source.subs.styles.length > 1 && used.length > 0,
+      items: withoutThis.map((x, i) => ({
+        id: i.toString(),
+        text: x.name,
+        action(id) {
+          let n = Number.parseInt(id);
+          let other = withoutThis[n];
+          Utils.exchangeStyle(subtitles.entries, $style, other);
+        }
+      }))
     },
   ]});
   menu.popup();

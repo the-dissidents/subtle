@@ -36,7 +36,7 @@ let inner: DialogHandler<void, string> = {};
 }
 
 let selectedEncoding: EncodingName | undefined = $state();
-let okButton = $state({name: 'ok', localizedName: () => $_('ok'), disabled: true});
+let okDisabled = $state(false);
 let preview = $state('');
 let source: Uint8Array;
 let candidates: AnalyseResult | undefined = $state();
@@ -45,15 +45,15 @@ function makePreview() {
   if (selectedEncoding && source) {
     try {
       preview = iconv.decode(
-          source.subarray(0, Math.min(6000, source.length)), selectedEncoding);
-      okButton.disabled = false;
+        source.subarray(0, Math.min(6000, source.length)), selectedEncoding);
+      okDisabled = false;
     } catch {
       preview = '';
-      okButton.disabled = true;
+      okDisabled = true;
     }
   } else {
     preview = '';
-    okButton.disabled = true;
+    okDisabled = true;
   }
 }
 </script>
@@ -62,7 +62,11 @@ function makePreview() {
   buttons={[{
     name: 'cancel',
     localizedName: () => $_('cancel')
-  }, okButton]}
+  }, {
+    name: 'ok', 
+    localizedName: () => $_('ok'), 
+    disabled: () => okDisabled
+  }]}
 >
   {#snippet header()}
   <h4>{$_('encodingdialog.header')}</h4>

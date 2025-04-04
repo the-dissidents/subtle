@@ -87,6 +87,10 @@ function layout(cxt: CanvasRenderingContext2D) {
   for (const entry of Source.subs.entries) {
     let height = 0;
     for (const [style, text] of entry.texts) {
+      // if (!Source.subs.styles.includes(style)) {
+      //   Source.subs.styles.forEach((x) => console.warn('styles:', x));
+      //   console.warn('missing:', style);
+      // }
       let splitLines = text.split('\n');
       height += splitLines.length;
       textWidth = Math.max(textWidth, ...splitLines.map((x) => cxt.measureText(x).width));
@@ -331,7 +335,6 @@ onMount(() => {
     manager.setMaxZoom(TableConfig.data.maxZoom);
   });
 });
-
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
   return e1 && e2 && e1.start < e2.end && e1.end > e2.start;

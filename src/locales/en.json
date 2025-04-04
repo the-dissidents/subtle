@@ -28,7 +28,7 @@
     "sort-by-first-style": "sort by first style",
     "sort-by-time": "sort by time",
     "sort-channels": "sort channels",
-    "split-by-line": "split into channels by line",
+    "split-by-line": "split into channels by line...",
     "split-simultaneous": "split into different entries",
     "to-the-beginning": "to the beginning",
     "to-the-end": "to the end",
@@ -121,8 +121,8 @@
     "anchor-start": "anchor start",
     "at-virtual-entry": "double-click or press enter to append new entry",
     "keep-duration": "keep duration",
-    "no-selection": "select a line to start editing",
-    "overwrite-style": "Overwrite existing text of style {style}?"
+    "label": "Label",
+    "no-selection": "select a line to start editing"
   },
   "encodingdialog": {
     "conclusion": "Choose an encoding, check the preview for correctness, then click 'ok' to convert the file to UTF-8 for use in modern applications.",
@@ -175,6 +175,15 @@
     "use-for-all": "use for all:",
     "use-local-styles-when-names-match": "use local styles when names match"
   },
+  "label": {
+    "blue": "blue",
+    "green": "green",
+    "none": "none",
+    "orange": "orange",
+    "purple": "purple",
+    "red": "red",
+    "yellow": "yellow"
+  },
   "menu": {
     "close-video": "close",
     "configuration": "configuration",
@@ -202,6 +211,7 @@
     "note-file-is-migrated-path": "Note: this file is from an older version and will be updated. Small changes in styles may occur. After you save the updated file, older versions of this software will probably be unable to open it.",
     "nothing-to-paste": "nothing to paste",
     "opened-path": "opened: {path}",
+    "overwrite-style": "Overwrite existing text of style {style}?",
     "pasted": "pasted",
     "proceed-without-saving": "Proceed without saving?",
     "saved-to-file": "saved to {file}",
@@ -244,6 +254,20 @@
     "selected-n-lines": "selected {n} {n,plural,one{line} other{lines}}",
     "use-regular-expressions": "use regular expressions"
   },
+  "splitbylinedialog": {
+    "as": " = ",
+    "create-new": "create new",
+    "error": "'Split by line' works only on entries with a single channel, but the selection you provided has multiple channels. You probably didn't want to do this.",
+    "fewer-than": "fewer than",
+    "header": "split by line",
+    "line-number": "line",
+    "mark-those-entries": "Mark entries by line count",
+    "original": "original",
+    "preview": "Preview",
+    "remove-empty-lines": "remove empty lines",
+    "settings": "Settings",
+    "with-lines-more-than": "more than"
+  },
   "style": {
     "alignment": "alignment:",
     "bottom": "bottom:",
@@ -256,6 +280,7 @@
     "default": "default",
     "delete": "delete",
     "duplicate": "duplicate",
+    "exchange-with": "exchange with",
     "font": "font:",
     "left": "left:",
     "line-color": "line color:",

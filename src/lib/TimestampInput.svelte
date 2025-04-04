@@ -21,7 +21,7 @@ $effect(() => {
 });
 </script>
 
-<input class={'timestamp ' + (stretch ? 'stretch' : '')}
+<input class={{timestamp: true, stretch}}
   type="text"
   bind:value={value}
   onbeforeinput={(ev) => {

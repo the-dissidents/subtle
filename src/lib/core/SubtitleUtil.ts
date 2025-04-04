@@ -50,22 +50,6 @@ export type TimeShiftOptions = {
             }
         }
     },
-    exchangeStyle: (entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) => {
-        let changed = false;
-        for (const ent of entries) {
-            let textA = ent.texts.get(a);
-            let textB = ent.texts.get(b);
-
-            if (textA == undefined) ent.texts.delete(b);
-            else ent.texts.set(b, textA);
-            if (textB == undefined) ent.texts.delete(a);
-            else ent.texts.set(a, textB);
-
-            if (textA !== undefined || textB !== undefined)
-                changed = true;
-        }
-        return changed;
-    },
     makeTestSubtitles: () => {
         let subs = new Subtitles();
         for (let i = 0; i < 10; i++) {
@@ -78,8 +62,7 @@ export type TimeShiftOptions = {
     getUniqueStyleName: (subs: Subtitles, base: string) => {
         let i = 1;
         let newName = base;
-        while (subs.styles.find((x) => x.name == newName) ||
-            newName == subs.defaultStyle.name) {
+        while (subs.styles.find((x) => x.name == newName)) {
             newName = base + `_${i}`;
             i++;
         }

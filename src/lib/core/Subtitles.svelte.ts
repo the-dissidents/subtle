@@ -107,7 +107,7 @@ const MetadataSchema: JSONSchemaType<SubtitleMetadata> = {
             required: []
         }
     },
-    required: []
+    required: ['special']
 }
 
 const validateStyle = ajv.compile(StyleSchema);
@@ -211,7 +211,7 @@ export class Subtitles {
     }
 
     static #createMetadata() {
-        return parseObject({}, validateMetadata);
+        return parseObject({special: {}}, validateMetadata);
     }
 
     /** Note: only copies styles from base */

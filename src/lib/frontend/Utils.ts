@@ -1,6 +1,8 @@
 console.info('Utils loading');
 
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
+import * as dialog from "@tauri-apps/plugin-dialog";
+
 import { assert } from "../Basic";
 import { SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { MergePosition, MergeStyleBehavior, SubtitleUtil } from "../core/SubtitleUtil";
@@ -240,6 +242,73 @@ export const Utils = {
             Source.subs.entries.splice(index, 1);
         }
         Source.markChanged(ChangeType.Times);
+    },
+
+    exchangeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
+        let done = 0;
+        for (const ent of entries) {
+            let textA = ent.texts.get(a);
+            let textB = ent.texts.get(b);
+
+            if (textA == undefined) ent.texts.delete(b);
+            else ent.texts.set(b, textA);
+            if (textB == undefined) ent.texts.delete(a);
+            else ent.texts.set(a, textB);
+
+            if (textA !== undefined || textB !== undefined)
+                done++;
+        }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
+    },
+
+    removeBlankChannels(entries: SubtitleEntry[]) {
+        let done = 0;
+        for (const ent of entries) {
+            for (const [style, text] of ent.texts) {
+                if (text === '') {
+                    ent.texts.delete(style);
+                    done++;
+                }
+                if (ent.texts.size == 0) {
+                    Source.subs.entries.splice(
+                        Source.subs.entries.indexOf(ent), 1);
+                }
+            }
+        }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
+    },
+
+    async replaceStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
+        if (entries.some((x) => x.texts.has(a) && x.texts.has(b))
+         && !await dialog.confirm($_('msg.overwrite-style', {values: {style: b.name}}))) return;
+        let done = 0;
+        for (const ent of entries) {
+            let textA = ent.texts.get(a);
+            if (textA !== undefined) {
+                ent.texts.delete(a);
+                ent.texts.set(b, textA);
+                done++;
+            }
+        }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
+    },
+
+    removeStyle(entries: SubtitleEntry[], style: SubtitleStyle) {
+        let done = 0;
+        for (const ent of entries)
+            if (ent.texts.has(style)) {
+                ent.texts.delete(style);
+                done++;
+            }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
     },
 
     mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {

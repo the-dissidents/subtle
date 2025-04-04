@@ -28,7 +28,7 @@
     "sort-by-first-style": "按第一個樣式排序",
     "sort-by-time": "按時間排序",
     "sort-channels": "排序各頻道",
-    "split-by-line": "按行拆分為頻道",
+    "split-by-line": "按行拆分為頻道...",
     "split-simultaneous": "拆散",
     "to-the-beginning": "至最前",
     "to-the-end": "至最後",
@@ -167,6 +167,15 @@
     "styles": "樣式",
     "use-for-all": "全都使用這個樣式：",
     "use-local-styles-when-names-match": "名稱匹配時使用本地樣式"
+  },
+  "label": {
+    "blue": "藍色",
+    "green": "綠色",
+    "none": "無",
+    "orange": "橘色",
+    "purple": "紫色",
+    "red": "紅色",
+    "yellow": "黃色"
   },
   "menu": {
     "close-video": "關閉",

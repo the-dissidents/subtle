@@ -9,8 +9,6 @@ import TimestampInput from '../TimestampInput.svelte';
 
 import { _ } from 'svelte-i18n';
 
-let form: HTMLFormElement;
-
 interface Props {
   handler: DialogHandler<void, TimeShiftOptions | null>;
 }
@@ -95,7 +93,7 @@ function fromTransformed() {
 }
 </script>
 
-<DialogBase handler={inner}><form bind:this={form}>
+<DialogBase handler={inner}>
   <table class='config'>
     <tbody>
       <tr>
@@ -171,7 +169,7 @@ function fromTransformed() {
       </tr>
     </tbody>
   </table>
-</form></DialogBase>
+</DialogBase>
 
 <style>
   .number {

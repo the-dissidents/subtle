@@ -11,6 +11,7 @@ import { EventHost } from '../frontend/Frontend';
 
 import { _ } from 'svelte-i18n';
     import { flip } from 'svelte/animate';
+    import { SubtitleTools, SubtitleUtil } from '../core/SubtitleUtil';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
@@ -37,7 +38,8 @@ Source.onSubtitleObjectReload.bind(me, () => {
 
 
 function newStyle() {
-  let newStyle = Subtitles.createStyle('new');
+  let newStyle = Subtitles.createStyle(
+    SubtitleTools.getUniqueStyleName(Source.subs, 'new'));
   Source.subs.styles.push(newStyle);
   Source.markChanged(ChangeType.StyleDefinitions);
 }

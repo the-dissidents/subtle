@@ -6,7 +6,7 @@ import { InputConfig } from "../config/Groups";
 
 import { ASS } from "../core/ASS";
 import { type LabelTypes, Labels, SubtitleEntry, Subtitles } from "../core/Subtitles.svelte";
-import { SubtitleTools, SubtitleUtil } from "../core/SubtitleUtil";
+import { SubtitleUtil } from "../core/SubtitleUtil";
 import { LinearFormatCombineStrategy, SimpleFormats } from "../core/SimpleFormats";
 
 import { Editing, getSelectMode, KeepInViewMode, SelectMode } from "./Editing";
@@ -401,19 +401,30 @@ export const Actions = {
                     }))
                 },
                 {
-                    text: $_('action.exchange-channel'),
+                    text: $_('action.replace-channel'),
                     enabled: Source.subs.styles.length > 1,
+                    items: distinctStyles.map((x) => ({
+                        text: x.name,
+                        items: [{
+                            text: $_('cxtmenu.by'),
+                            enabled: false,
+                        }, ...Source.subs.styles.filter((y) => y != x).map((y) => ({
+                            text: y.name,
+                            action: () => Utils.replaceStyle(selection, x, y)
+                        }))]
+                    }))
+                },
+                {
+                    text: $_('action.exchange-channel'),
+                    enabled: distinctStyles.length > 1,
                     items: distinctStyles.map((x) => ({
                         text: x.name,
                         items: [{
                             text: $_('cxtmenu.and'),
                             enabled: false,
-                        }, ...Source.subs.styles.filter((y) => y != x).map((y) => ({
+                        }, ...distinctStyles.filter((y) => y != x).map((y) => ({
                             text: y.name,
-                            action: () => {
-                                if (SubtitleTools.exchangeStyle(selection, x, y)) 
-                                    Source.markChanged(ChangeType.InPlace);
-                            }
+                            action: () => Utils.exchangeStyle(selection, x, y)
                         }))]
                     }))
                 },
@@ -422,34 +433,12 @@ export const Actions = {
                     enabled: Source.subs.styles.length > 0,
                     items: distinctStyles.map((x) => ({
                         text: x.name,
-                        action: () => {
-                            let done = 0;
-                            for (const ent of selection)
-                                if (ent.texts.has(x)) {
-                                    ent.texts.delete(x);
-                                    done++;
-                                }
-                            Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
-                            if (done)
-                                Source.markChanged(ChangeType.InPlace);
-                        }
+                        action: () => Utils.removeStyle(selection, x)
                     }))
                 },
                 {
                     text: $_('action.remove-empty'),
-                    action: () => {
-                        let done = 0;
-                        for (const ent of selection) {
-                            for (const [style, text] of ent.texts)
-                                if (text === '') {
-                                    ent.texts.delete(style);
-                                    done++;
-                                }
-                        }
-                        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
-                        if (done)
-                            Source.markChanged(ChangeType.InPlace);
-                    }
+                    action: () => Utils.removeBlankChannels(selection)
                 },
                 { item: 'Separator' },
                 {
@@ -461,6 +450,11 @@ export const Actions = {
                     text: $_('action.combine-by-matching-time'),
                     enabled: selection.length > 1,
                     action: () => Dialogs.combine.showModal!()
+                },
+                {
+                    text: $_('action.split-by-line'),
+                    enabled: selection.length > 0,
+                    action: () => Dialogs.splitByLine.showModal!()
                 },
                 {
                     text: $_('action.fix-erroneous-overlapping'),
