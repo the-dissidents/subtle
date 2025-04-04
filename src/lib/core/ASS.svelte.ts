@@ -144,9 +144,10 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
             const name = items[styleFieldMap.get('Name')!];
             let style = nameToStyle.get(name);
             if (style === undefined) {
-                style = Subtitles.createStyle(name);
-                subs.styles.push(style);
-                nameToStyle.set(name, style);
+                let newStyle = $state(Subtitles.createStyle(name));
+                style = newStyle;
+                subs.styles.push(newStyle);
+                nameToStyle.set(name, newStyle);
                 if (first === null) first = style;
             } else {
                 // warn
@@ -205,7 +206,7 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
                 const n = Number.parseFloat(items[styleFieldMap.get('MarginV')!]);
                 if (!Number.isNaN(n)) style.margin.top = style.margin.bottom = n;
             }
-            console.log('imported style:', name, style);
+            // console.log('imported style:', name, style);
         } catch {
             console.log('error when importing style');
         }
@@ -236,9 +237,10 @@ function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
         let style = nameToStyle.get(styleName);
         if (!style) {
             console.log(`warning: style not found: ${styleName}`);
-            style = Subtitles.createStyle(styleName);
-            nameToStyle.set(styleName, style);
-            subs.styles.push(style);
+            let newStyle = $state(Subtitles.createStyle(styleName));
+            style = newStyle;
+            nameToStyle.set(styleName, newStyle);
+            subs.styles.push(newStyle);
         }
         return style;
     }

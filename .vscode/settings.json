@@ -15,5 +15,6 @@
     "i18n-ally.usage.scanningIgnore": [
         "src-tauri/**"
     ],
-    "i18n-ally.sourceLanguage": "en"
+    "i18n-ally.sourceLanguage": "zh-cn",
+    // "typescript.tsserver.experimental.enableProjectDiagnostics": true
 }

@@ -4,7 +4,7 @@ import { Menu } from "@tauri-apps/api/menu";
 import { Basic } from "../Basic";
 import { InputConfig } from "../config/Groups";
 
-import { ASS } from "../core/ASS";
+import { ASS } from "../core/ASS.svelte";
 import { type LabelTypes, Labels, SubtitleEntry, Subtitles } from "../core/Subtitles.svelte";
 import { SubtitleUtil } from "../core/SubtitleUtil";
 import { LinearFormatCombineStrategy, SimpleFormats } from "../core/SimpleFormats";

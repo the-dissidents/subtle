@@ -35,17 +35,24 @@
     "transform-times": "變換時間...",
     "up": "向上"
   },
+  "back": "返回",
   "cancel": "取消",
   "combinedialog": {
     "combine": "合併",
+    "combine-those": "將這些項目合併：",
     "different-style-only": "僅不同的樣式",
     "end-time-threshold": "結束時間閾值",
     "entries": "項目",
+    "explanation": "說明：只有不同樣式的項目才會被合併；可能有問題的項目指達到上述閾值但未達到合併閾值的項目，以及本來可以合併但樣式重複的項目。",
     "groups": "群組",
-    "have-been-combined-in": "已合併為",
+    "have-been-combined-in": "項目已合併為",
+    "have-been-labeled": "項目已被標記為 {color}",
+    "label-as": "標記為",
+    "label-possibly-problematic-entries": "將可能有問題的項目帶上標記：",
     "selection-only": "僅選擇區域內",
     "start-time-threshold": "開始時間閾值",
-    "will-be-combined-in": "將合併為"
+    "will-be-combined-in": "項目將合併為",
+    "will-be-labeled": "項目將被標記為 {color}"
   },
   "config": {
     "arrow-navigation-type": "上下方向鍵選擇設定",
@@ -185,7 +192,7 @@
   "label": {
     "blue": "藍色",
     "green": "綠色",
-    "none": "無",
+    "none": "無色",
     "orange": "橘色",
     "purple": "紫色",
     "red": "紅色",

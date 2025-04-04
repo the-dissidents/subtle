@@ -35,17 +35,24 @@
     "transform-times": "变换时间...",
     "up": "向上"
   },
+  "back": "返回",
   "cancel": "取消",
   "combinedialog": {
     "combine": "合并",
+    "combine-those": "将这些条目合并：",
     "different-style-only": "仅不同的样式",
     "end-time-threshold": "结束时间阈值",
     "entries": "条目",
+    "explanation": "说明：只有不同样式的条目才会被合并；可能有问题的条目指达到上述阈值但未达到合并阈值的条目，以及本可以合并但样式重复的条目。",
     "groups": "组",
-    "have-been-combined-in": "已被合并为",
+    "have-been-combined-in": "条目已被合并为",
+    "have-been-labeled": "条目已被标记为 {color}",
+    "label-as": "标记为",
+    "label-possibly-problematic-entries": "将可能有问题的条目带上标记：",
     "selection-only": "仅选择区域内",
     "start-time-threshold": "开始时间阈值",
-    "will-be-combined-in": "将被合并为"
+    "will-be-combined-in": "条目将被合并为",
+    "will-be-labeled": "条目将被标记为 {color}"
   },
   "config": {
     "arrow-navigation-type": "上下方向键选择设置",
@@ -185,7 +192,7 @@
   "label": {
     "blue": "蓝色",
     "green": "绿色",
-    "none": "无",
+    "none": "无色",
     "orange": "橙色",
     "purple": "紫色",
     "red": "红色",

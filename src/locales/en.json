@@ -35,17 +35,24 @@
     "transform-times": "transform times...",
     "up": "up"
   },
+  "back": "back",
   "cancel": "cancel",
   "combinedialog": {
     "combine": "combine",
+    "combine-those": "Combine those:",
     "different-style-only": "different style only",
     "end-time-threshold": "end time threshold",
     "entries": "{n,plural,one{entry} other{entries}}",
+    "explanation": "Only entries with different styles can be combined. “Problematic entries” refer to ones that fit in the “label as” thresholds but not in the combine thresholds, and ones that can't be combined only because of having same styles.",
     "groups": "{n,plural,one{group} other{groups}}",
-    "have-been-combined-in": "{n,plural,one{has} other{have}} been combined in",
+    "have-been-combined-in": "{n,plural,one{entries has} other{entry have}} been combined in",
+    "have-been-labeled": "{n,plural,one{entries has} other{entry have}} been labeled {color}",
+    "label-as": "label as",
+    "label-possibly-problematic-entries": "Label possibly problematic entries:",
     "selection-only": "selection only",
     "start-time-threshold": "start time threshold",
-    "will-be-combined-in": "will be combined in"
+    "will-be-combined-in": "{n,plural,one{entries} other{entry}} will be combined in",
+    "will-be-labeled": "{n,plural,one{entries} other{entry}} will be labeled {color}"
   },
   "config": {
     "arrow-navigation-type": "arrow navigation preference",

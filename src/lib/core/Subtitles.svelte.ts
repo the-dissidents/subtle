@@ -250,12 +250,18 @@ export class Subtitles {
 
         if (version < '000400') {
             // pre 0.4: the default style is defined outside the styles array
-            subs.defaultStyle = parseObject(o.defaultStyle, validateStyle);
-            subs.styles = [subs.defaultStyle, 
-                ...o.styles.map((x) => parseObject(x, validateStyle))];
+            let defaultStyle = $state(parseObject(o.defaultStyle, validateStyle))
+            subs.defaultStyle = defaultStyle;
+            subs.styles = [defaultStyle, ...o.styles.map((x) => {
+                let style = $state(parseObject(x, validateStyle));
+                return style;
+            })];
             subs.migrated = true;
         } else {
-            subs.styles = o.styles.map((x) => parseObject(x, validateStyle));
+            subs.styles = o.styles.map((x) => {
+                let style = $state(parseObject(x, validateStyle));
+                return style;
+            });
             const def = subs.styles.find((x) => x.name == o.defaultStyle);
             if (def === undefined) throw new SubtitlesParseError('invalid default style name');
         }

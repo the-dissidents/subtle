@@ -8,7 +8,7 @@ import { Menu } from "@tauri-apps/api/menu";
 import chardet from 'chardet';
 import * as iconv from 'iconv-lite';
 
-import { ASS } from "../core/ASS";
+import { ASS } from "../core/ASS.svelte";
 import { type Subtitles } from "../core/Subtitles.svelte";
 
 import { Dialogs } from "./Dialogs";

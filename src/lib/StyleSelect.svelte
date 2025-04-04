@@ -36,7 +36,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 >
   {#key refresh}
     {#each styles as style}
-      <option selected={currentStyle == style}>{style.name}</option>
+      <option selected={currentStyle.name == style.name}>{style.name}</option>
     {/each}
   {/key}
 </select>

@@ -2,7 +2,7 @@ console.info('Frontend loading');
 
 import { Basic } from "../Basic";
 import { DebugConfig, InputConfig } from "../config/Groups";
-import { ASS } from "../core/ASS";
+import { ASS } from "../core/ASS.svelte";
 import { SimpleFormats } from "../core/SimpleFormats";
 import { Subtitles } from "../core/Subtitles.svelte";
 

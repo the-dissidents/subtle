@@ -533,14 +533,14 @@ export class Timeline {
                                 (prev, current) => {
                                     const start = current.start;
                                     const end = current.end;
-                                    current.texts.forEach((x) => {
-                                        let tuple = prev.get(x.style.name);
+                                    for (const style of current.texts.keys()) {
+                                        let tuple = prev.get(style.name);
                                         if (tuple) {
                                             if (start < tuple[0]) tuple[0] = start;
                                             if (end > tuple[1]) tuple[1] = end;
                                         } else
-                                            prev.set(x.style.name, [start, end]);
-                                    });
+                                            prev.set(style.name, [start, end]);
+                                    };
                                     return prev;
                                 }, 
                                 new Map<string, [number, number]>()).values()].flat())]

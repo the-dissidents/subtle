@@ -25,7 +25,7 @@ let duplicateWarning = $state(false);
 let style = writable(_style);
 
 function isDuplicate(name: string) {
-  for (let s of [...subtitles.styles]) {
+  for (let s of subtitles.styles) {
     if (s === $style) continue;
     if (s.name == name) return true;
   }

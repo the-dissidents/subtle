@@ -218,12 +218,12 @@ export const Utils = {
             let entry = selection[i];
             if (deletion.has(entry)) continue;
             
-            for (let j = 0; j < selection.length; j++) {
+            search: for (let j = 0; j < selection.length; j++) {
                 if (i == j) continue;
                 let other = selection[j];
                 if (deletion.has(other)) continue;
                 for (const [style, text] of other.texts) {
-                    if (entry.texts.get(style) !== text) continue;
+                    if (entry.texts.get(style) !== text) continue search;
                 }
 
                 if (Math.abs(other.start - entry.end) < this.timeEpsilon 
@@ -241,7 +241,10 @@ export const Utils = {
             assert(index > 0);
             Source.subs.entries.splice(index, 1);
         }
-        Source.markChanged(ChangeType.Times);
+
+        Interface.status.set($_('msg.combined-n-entries', {values: {n: deletion.size}}));
+        if (deletion.size > 0)
+            Source.markChanged(ChangeType.Times);
     },
 
     exchangeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
