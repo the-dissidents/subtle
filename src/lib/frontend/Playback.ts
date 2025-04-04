@@ -1,11 +1,11 @@
 console.info('Playback loading');
 
-import { assert } from "../Basic";
-import { VideoPlayer } from "../VideoPlayer";
-import { Timeline } from "../Timeline.svelte";
-import { ChangeType, Source } from "./Source";
 import { tick } from "svelte";
-import { get, readable, writable, type Readable } from "svelte/store";
+import { get, writable, type Readable } from "svelte/store";
+import { Debug } from "../Debug";
+import { Timeline } from "../Timeline.svelte";
+import { VideoPlayer } from "../VideoPlayer";
+import { ChangeType, Source } from "./Source";
 
 export type PlayArea = {
     start: number | undefined,
@@ -21,7 +21,7 @@ const me = {};
 
 tick().then(() => {
     Source.onSubtitlesChanged.bind(me, (type) => {
-        if (!Playback.video?.subRenderer) return;
+        if (!Playback.video?.subRenderer) return Debug.early('no subRenderer');
         if (type == ChangeType.Times || type == ChangeType.General)
             Playback.video.subRenderer.updateTimes();
         Playback.video.requestRender();
@@ -75,30 +75,30 @@ export const Playback = {
     onRefreshPlaybackControl: () => { },
 
     createVideo(canvas: HTMLCanvasElement) {
-        assert(this.video == null);
+        Debug.assert(this.video == null);
         this.video = new VideoPlayer(canvas);
         this.video.setSubtitles(Source.subs);
         this.video.onVideoPositionChange = () => {
-            assert(this.video != null);
+            Debug.assert(this.video != null);
             updateProgress(this.video.currentTimestamp);
             handlePlayArea();
         };
         this.video.onPlayStateChange = () => {
-            assert(this.video != null);
+            Debug.assert(this.video != null);
             this.onRefreshPlaybackControl();
         };
         return this.video;
     },
 
     createTimeline(canvas: HTMLCanvasElement) {
-        assert(this.timeline == null);
+        Debug.assert(this.timeline == null);
         this.timeline = new Timeline(canvas);
         return this.timeline;
     },
 
     async load(rawurl: string) {
-        assert(this.video !== null);
-        assert(this.timeline !== null);
+        Debug.assert(this.video !== null);
+        Debug.assert(this.timeline !== null);
         await Promise.all([
             this.video.load(rawurl),
             this.timeline.load(rawurl)
@@ -109,10 +109,10 @@ export const Playback = {
     },
 
     async close() {
-        if (!get(isLoaded)) return;
+        if (!get(isLoaded)) return Debug.early('not loaded');
         
-        assert(this.video !== null);
-        assert(this.timeline !== null);
+        Debug.assert(this.video !== null);
+        Debug.assert(this.timeline !== null);
         isLoaded.set(false);
         await Promise.all([
             this.video.close(),
@@ -131,17 +131,17 @@ export const Playback = {
     },
 
     async forceSetPosition(pos: number) {
-        assert(this.video !== null);
+        Debug.assert(this.video !== null);
         await this.video.forceSetPosition(pos);
     },
 
     async play(state = true) {
-        assert(this.video !== null);
+        Debug.assert(this.video !== null);
         await this.video.play(state);
     },
 
     async toggle() {
-        assert(this.video !== null);
+        Debug.assert(this.video !== null);
         await this.video.play(!this.video.isPlaying);
     }
 }

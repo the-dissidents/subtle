@@ -1,8 +1,8 @@
 <script lang="ts">
 import { tick } from "svelte";
-import { assert } from "./Basic";
-import { DialogHandler, Dialogs } from "./frontend/Dialogs";
 import { _ } from 'svelte-i18n';
+import { Debug } from "./Debug";
+import { DialogHandler, Dialogs } from "./frontend/Dialogs";
 
 export type DialogButton = {
   name: string,
@@ -40,13 +40,13 @@ let posx: number = $state(0), posy: number = $state(0);
 let shadow = $state(false);
 
 function makeCenter() {
-  assert(dialog !== undefined);
+  Debug.assert(dialog !== undefined);
   posx = (window.innerWidth - dialog.clientWidth) / 2;
   posy = (window.innerHeight - dialog.clientHeight) / 2;
 }
 
 function checkScroll() {
-  assert(dialogBody !== undefined);
+  Debug.assert(dialogBody !== undefined);
   shadow = dialogBody.scrollHeight - dialogBody.scrollTop > dialogBody.clientHeight + 10;
 }
 
@@ -67,7 +67,7 @@ function startDrag(ev: MouseEvent) {
 }
 
 let resolve: ((btn: string) => void) | undefined;
-assert(handler !== null);
+Debug.assert(handler !== null);
 handler.showModal = async () => {
   return new Promise((r) => {
     resolve = (btn) => {
@@ -75,8 +75,8 @@ handler.showModal = async () => {
       dialog?.close();
       resolve = undefined;
     };
-    assert(dialog !== undefined);
-    assert(!dialog.open);
+    Debug.assert(dialog !== undefined);
+    Debug.assert(!dialog.open);
     dialog.showModal();
     tick().then(() => {
       makeCenter();
@@ -111,7 +111,7 @@ handler.showModal = async () => {
           ? btn.disabled() 
           : (btn.disabled ?? false)}
         onclick={() => {
-          assert(resolve !== undefined);
+          Debug.assert(resolve !== undefined);
           resolve(btn.name);
         }}
       >{btn.localizedName()}</button>

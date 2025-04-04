@@ -1,14 +1,14 @@
 <script lang="ts">
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
-import { assert, never } from '../Basic';
 import { MainConfig } from "../config/Groups";
 import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
+import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
 
+import { appLocalDataDir } from "@tauri-apps/api/path";
 import { _, locale } from 'svelte-i18n';
 import { Interface } from '../frontend/Interface';
-import { appLocalDataDir } from "@tauri-apps/api/path";
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -19,7 +19,7 @@ let {
 }: Props = $props();
 
 handler.showModal = async () => {
-  assert(inner !== undefined);
+  Debug.assert(inner !== undefined);
   groups = Object.entries(MainConfig.groups);
   groups.sort((a, b) => a[1].priority - b[1].priority);
   await inner.showModal!();
@@ -137,7 +137,7 @@ locale.subscribe(() => refresh++);
             {/if}
 
           {:else}
-            {never(item)}
+            {Debug.never(item)}
           {/if}
         </td>
         <td style="text-align: end;">

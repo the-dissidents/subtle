@@ -1,10 +1,10 @@
 console.info('PublicConfig loading');
 
-import Ajv, { type JSONSchemaType, type ValidateFunction } from "ajv";
-import { assert, never } from "../Basic";
 import { path } from "@tauri-apps/api";
-import * as fs from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
+import * as fs from "@tauri-apps/plugin-fs";
+import Ajv, { type JSONSchemaType, type ValidateFunction } from "ajv";
+import { Debug } from "../Debug";
 
 const ajv = new Ajv({
     removeAdditional: true,
@@ -99,7 +99,7 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
                     prop.default = def.default;
                     break;
                 default:
-                    never(def);
+                    Debug.never(def);
             }
         }
         
@@ -112,7 +112,7 @@ export class PublicConfig {
     groups: Record<string, PublicConfigGroup<PublicConfigGroupDefinition>> = {};
 
     get configPath() {
-        assert(this.#initialized);
+        Debug.assert(this.#initialized);
         return this.#configPath;
     }
 
@@ -123,8 +123,8 @@ export class PublicConfig {
     constructor(public readonly name: string) {}
 
     addGroup(name: string, group: PublicConfigGroup<PublicConfigGroupDefinition>) {
-        assert(!this.#initialized);
-        assert(this.groups[name] === undefined);
+        Debug.assert(!this.#initialized);
+        Debug.assert(this.groups[name] === undefined);
         console.log(`added group ${name} for ${this.name}`);
         this.groups[name] = group;
     }

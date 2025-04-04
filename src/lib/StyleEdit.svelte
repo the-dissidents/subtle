@@ -1,16 +1,16 @@
 <script lang="ts">
-import { assert } from "./Basic";
 import { AlignMode, type SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
 import { SubtitleTools } from "./core/SubtitleUtil";
 
-import * as dialog from "@tauri-apps/plugin-dialog";
 import { Menu } from "@tauri-apps/api/menu";
-import Collapsible from "./ui/Collapsible.svelte";
+import * as dialog from "@tauri-apps/plugin-dialog";
 import { writable } from 'svelte/store';
 import { ChangeType, Source } from "./frontend/Source";
+import Collapsible from "./ui/Collapsible.svelte";
 
 import { _ } from 'svelte-i18n';
-    import { Utils } from "./frontend/Utils";
+import { Debug } from "./Debug";
+import { Utils } from "./frontend/Utils";
 
 interface Props {
   style: SubtitleStyle;
@@ -48,7 +48,7 @@ async function contextMenu() {
           return;
         }
         let i = subtitles.styles.indexOf($style);
-        if (i < 0) return;
+        if (i < 0) return Debug.early('style not found');
         subtitles.styles.splice(i, 1);
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
@@ -103,7 +103,7 @@ async function contextMenu() {
     <button
       onclick={() => {
         let i = subtitles.styles.indexOf($style);
-        assert(i >= 0);
+        Debug.assert(i >= 0);
         let newStyle = Subtitles.createStyle('new');
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
         Source.markChanged(ChangeType.StyleDefinitions);
@@ -113,7 +113,7 @@ async function contextMenu() {
     <button disabled={$style === subtitles.styles[0]}
       onclick={() => {
         let i = subtitles.styles.indexOf($style);
-        assert(i >= 0);
+        Debug.assert(i >= 0);
         subtitles.styles = [
           ...subtitles.styles.slice(0, i-1), 
           $style, 
@@ -127,7 +127,7 @@ async function contextMenu() {
     <button disabled={$style === subtitles.styles.at(-1)}
       onclick={() => {
         let i = subtitles.styles.indexOf($style);
-        assert(i >= 0);
+        Debug.assert(i >= 0);
         subtitles.styles = [
           ...subtitles.styles.slice(0, i), 
           subtitles.styles[i+1],

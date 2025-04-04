@@ -2,12 +2,13 @@ console.info('Editing loading');
 
 import { get, writable, type Writable } from "svelte/store";
 import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
-import { assert, Basic } from "../Basic";
+import { Basic } from "../Basic";
 import { Interface } from "./Interface";
 import { ChangeCause, ChangeType, Source } from "./Source";
 import { EventHost } from "./Frontend";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
@@ -74,16 +75,16 @@ export const Editing = {
 
     startEditingFocusedEntry() {
         let focused = this.getFocusedEntry();
-        assert(focused instanceof SubtitleEntry);
+        Debug.assert(focused instanceof SubtitleEntry);
         if (this.focused.style === null) {
             const first = focused.texts.has(Source.subs.defaultStyle) 
                 ? Source.subs.defaultStyle
                 : Source.subs.styles.find((x) => focused.texts.has(x));
-            assert(first !== undefined);
+            Debug.assert(first !== undefined);
             this.focused.style = first;
         }
         let elem = this.styleToEditor.get(this.focused.style);
-        if (!elem) return;
+        if (!elem) return Debug.warn('no styleToEditor');
         elem.focus();
         elem.scrollIntoView();
     },
@@ -130,7 +131,7 @@ export const Editing = {
 
     insertChannel(style: SubtitleStyle) {
         let focused = this.getFocusedEntry();
-        assert(focused instanceof SubtitleEntry);
+        Debug.assert(focused instanceof SubtitleEntry);
         if (focused.texts.has(style)) return;
         focused.texts.set(style, '');
         this.focused.style = style;
@@ -140,7 +141,7 @@ export const Editing = {
 
     deleteChannel(style: SubtitleStyle) {
         let focused = this.getFocusedEntry();
-        assert(focused instanceof SubtitleEntry);
+        Debug.assert(focused instanceof SubtitleEntry);
         if (!focused.texts.has(style)) return;
         focused.texts.delete(style);
         if (this.focused.style == style)
@@ -154,12 +155,12 @@ export const Editing = {
 
     submitFocusedEntry() {
         let focused = this.getFocusedEntry();
-        assert(focused instanceof SubtitleEntry);
+        Debug.assert(focused instanceof SubtitleEntry);
         if (!this.editChanged) return;
 
         const style = this.focused.style;
         const control = this.focused.control;
-        assert(style !== null && control !== null);
+        Debug.assert(style !== null && control !== null);
         focused.texts.set(style, control.value);
         Source.markChanged(ChangeType.InPlace);
     },
@@ -267,7 +268,7 @@ export const Editing = {
                 } else {
                     let a = Source.subs.entries.indexOf(this.selection.focused);
                     let b = Source.subs.entries.indexOf(ent);
-                    assert(a >= 0 && b >= 0);
+                    Debug.assert(a >= 0 && b >= 0);
                     this.selection.currentGroup = 
                     Source.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1);
                     // this.#status = 'seqselect updated';

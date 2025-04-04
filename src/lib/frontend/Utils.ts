@@ -3,18 +3,18 @@ console.info('Utils loading');
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import * as dialog from "@tauri-apps/plugin-dialog";
 
-import { assert } from "../Basic";
+import { SimpleFormats } from "../core/SimpleFormats";
 import { SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { MergePosition, MergeStyleBehavior, SubtitleUtil } from "../core/SubtitleUtil";
 import { Editing, SelectMode } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
 import { Interface } from "./Interface";
-import { ChangeCause, ChangeType, Source } from "./Source";
-import { SimpleFormats } from "../core/SimpleFormats";
 import { Playback } from "./Playback";
+import { ChangeCause, ChangeType, Source } from "./Source";
 
-import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { get } from "svelte/store";
+import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
 
 export const Utils = {
@@ -89,7 +89,7 @@ export const Utils = {
             start = Math.max(Math.min(pos, first.start - 2), 0);
             end = Math.min(start + 2, first.start);
         } else {
-            assert(ent !== undefined);
+            Debug.assert(ent !== undefined);
             let last = Source.subs.entries[index - 1];
             if (last.end <= ent.start) {
                 start = Math.max(Math.min(pos, ent.start - 2), last.end);
@@ -112,7 +112,7 @@ export const Utils = {
             start = Math.max(pos, last?.end ?? 0);
             end = start + 2;
         } else {
-            assert(ent !== undefined);
+            Debug.assert(ent !== undefined);
             let next = Source.subs.entries[index];
             if (next.start >= ent.end) {
                 start = Math.max(Math.min(next.start, pos), ent.end);
@@ -148,9 +148,9 @@ export const Utils = {
 
     sortSelection(selection: SubtitleEntry[]) {
         // assumes selection is not disjunct
-        if (selection.length == 0) return;
+        if (selection.length == 0) return Debug.early('empty selection');
         let start = Source.subs.entries.indexOf(selection[0]);
-        if (start < 0) return;
+        if (start < 0) return Debug.early();
         let positionMap = new Map<SubtitleEntry, number>();
         for (let i = 0; i < Source.subs.entries.length; i++)
             positionMap.set(Source.subs.entries[i], i);
@@ -160,9 +160,9 @@ export const Utils = {
     },
 
     moveSelectionContinuous(selection: SubtitleEntry[], direction: number) {
-        if (this.isSelectionDisjunct()) return;
-        
-        if (selection.length == 0 || direction == 0) return;
+        if (this.isSelectionDisjunct()) return Debug.early('disjunct selection');
+        if (selection.length == 0 || direction == 0) return Debug.early();
+
         let index = Source.subs.entries.indexOf(selection[0]);
         if (index + direction < 0 || index + direction > Source.subs.entries.length) return;
         Source.subs.entries.splice(index, selection.length);
@@ -176,7 +176,7 @@ export const Utils = {
     },
 
     moveSelectionTo(selection: SubtitleEntry[], to: 'beginning' | 'end') {
-        if (selection.length == 0) return;
+        if (selection.length == 0) return Debug.early();
         let selectionSet = new Set(selection);
         let newEntries = Source.subs.entries.filter((x) => !selectionSet.has(x));
         switch (to) {
@@ -238,7 +238,7 @@ export const Utils = {
         }
         for (const entry of deletion) {
             const index = Source.subs.entries.indexOf(entry);
-            assert(index > 0);
+            Debug.assert(index > 0);
             Source.subs.entries.splice(index, 1);
         }
 
@@ -335,7 +335,7 @@ export const Utils = {
     },
 
     splitSimultaneous(selection: SubtitleEntry[]) {
-        if (selection.length == 0) return;
+        if (selection.length == 0) return Debug.early();
         let newSelection: SubtitleEntry[] = [];
         for (let i = 0; i < selection.length; i++) {
             let entry = selection[i];

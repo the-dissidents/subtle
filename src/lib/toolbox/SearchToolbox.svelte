@@ -1,11 +1,12 @@
 <script lang="ts">
-import { Labels, SubtitleEntry, type LabelTypes, type SubtitleStyle } from '../core/Subtitles.svelte'
+import { Basic } from '../Basic';
+import { Labels, SubtitleEntry, type LabelTypes, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { Debug } from "../Debug";
 import StyleSelect from '../StyleSelect.svelte';
-import { assert, Basic } from '../Basic';
 
-import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 import { Editing, SelectMode } from '../frontend/Editing';
 import { Interface } from '../frontend/Interface';
+import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 
 import { _ } from 'svelte-i18n';
 
@@ -59,7 +60,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
         useRegex ? searchTerm : Basic.escapeRegexp(searchTerm), 
         `g${caseSensitive ? '' : 'i'}`);
     } catch (e) {
-      assert(e instanceof Error);
+      Debug.assert(e instanceof Error);
       Interface.status.set($_('msg.search-failed') + e.message);
       return;
     }

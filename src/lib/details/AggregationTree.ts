@@ -1,4 +1,4 @@
-import { assert } from "../Basic";
+import { Debug } from "../Debug";
 
 export class AggregationTree {
     #data: Float32Array;
@@ -11,7 +11,7 @@ export class AggregationTree {
         public readonly aggregator: (a: number, b: number) => number,
         initial = NaN
     ) {
-        assert(length > 1);
+        Debug.assert(length > 1);
         this.#layers = Math.ceil(Math.log2(length)) + 1;
         this.#leafStart = 2 ** (this.#layers - 1) - 1;
         this.#data = new Float32Array(this.#leafStart + length);
@@ -21,7 +21,7 @@ export class AggregationTree {
     set(values: ArrayLike<number>, start: number) {
         let first: number | null = this.#leafStart + start;
         let last: number | null = first + values.length - 1;
-        assert(start >= 0 && last < this.#data.length);
+        Debug.assert(start >= 0 && last < this.#data.length);
         this.#data.set(values, first);
 
         while (true) {
@@ -38,7 +38,7 @@ export class AggregationTree {
      */
     getLevel(resolution: number): Readonly<Float32Array> {
         let level = Math.log2(resolution);
-        assert(level % 1 == 0 && resolution <= this.length);
+        Debug.assert(level % 1 == 0 && resolution <= this.length);
         const layer = this.#layers - level;
         return this.#data.subarray(2 ** (layer - 1) - 1, 2 ** layer - 1);
     }
@@ -49,7 +49,7 @@ export class AggregationTree {
     }
 
     #aggregateNode(index: number) {
-        assert(index >= 0 && index * 2 + 1 < this.#data.length);
+        Debug.assert(index >= 0 && index * 2 + 1 < this.#data.length);
         const left  = this.#data[index * 2 + 1];
         const right = index * 2 + 2 < this.#data.length ? this.#data[index * 2 + 2] : NaN;
         let value: number;

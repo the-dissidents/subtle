@@ -1,13 +1,13 @@
 <script lang="ts">
 import { SubtitleEntry, type LabelTypes } from '../core/Subtitles.svelte';
-import { assert } from '../Basic';
+import { Debug } from "../Debug";
+import DialogBase from '../DialogBase.svelte';
+import type { DialogHandler } from '../frontend/Dialogs';
 import { Editing } from '../frontend/Editing';
 import { ChangeType, Source } from '../frontend/Source';
-import type { DialogHandler } from '../frontend/Dialogs';
-import DialogBase from '../DialogBase.svelte';
 
 import { _ } from 'svelte-i18n';
-    import LabelSelect from '../LabelSelect.svelte';
+import LabelSelect from '../LabelSelect.svelte';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -29,7 +29,7 @@ let selectionOnly = $state(true),
     hasbeen = $state(false);
 
 handler.showModal = async () => {
-  assert(inner !== undefined);
+  Debug.assert(inner !== undefined);
   run(false);
   await inner.showModal!();
 }

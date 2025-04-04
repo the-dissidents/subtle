@@ -1,6 +1,6 @@
 import deepEqual from "deep-equal";
+import { Debug } from "../Debug";
 import { type SubtitleStyle, SubtitleEntry, Subtitles } from "./Subtitles.svelte";
-import { assert } from "../Basic";
 
 export enum MergeStyleSelection {
     UsedOnly,
@@ -113,7 +113,7 @@ export const SubtitleUtil = {
                     styleMap.set(s, options.overrideStyle ?? original.defaultStyle);
                     return styleMap.get(s)!;
                 default:
-                    assert(false);
+                    Debug.assert(false);
             }
         };
         if (options.selection) switch (options.selection) {
@@ -153,7 +153,8 @@ export const SubtitleUtil = {
                 insertEntry = (e) => {
                     original.entries.push(e);
                 }; break;
-            default: assert(false);
+            default:
+                Debug.never(position);
         }
 
         for (let ent of other.entries) {

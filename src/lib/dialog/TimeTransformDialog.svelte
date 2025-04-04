@@ -1,10 +1,11 @@
 <script lang="ts">
-import DialogBase from '../DialogBase.svelte';
+import { Basic } from '../Basic';
 import { SubtitleEntry } from '../core/Subtitles.svelte';
 import { type TimeShiftOptions } from "../core/SubtitleUtil";
-import { assert, Basic } from '../Basic';
-import { Editing } from '../frontend/Editing';
+import { Debug } from "../Debug";
+import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
+import { Editing } from '../frontend/Editing';
 import TimestampInput from '../TimestampInput.svelte';
 
 import { _ } from 'svelte-i18n';
@@ -36,7 +37,7 @@ let anchorOption: 'zero' | 'start' | 'end' | 'custom' = $state('start');
 
 let inner: DialogHandler<void> = {};
 handler.showModal = async () => {
-  assert(inner !== undefined);
+  Debug.assert(inner !== undefined);
   updateSelection();
   toTransformed();
   let btn = await inner.showModal!();

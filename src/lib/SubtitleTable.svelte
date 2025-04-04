@@ -31,7 +31,8 @@ export const TableConfig = new PublicConfigGroup(
 import { onDestroy, onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
 
-import { assert, Basic } from "./Basic";
+import { Basic } from "./Basic";
+import { Debug } from "./Debug";
 import { SubtitleEntry } from "./core/Subtitles.svelte";
 import { theme, LabelColor } from "./Theming.svelte";
 
@@ -309,7 +310,7 @@ Editing.onKeepEntryInView.bind(me, (ent) => {
 });
 
 onMount(() => {
-  assert(canvas !== undefined);
+  Debug.assert(canvas !== undefined);
   manager = new CanvasManager(canvas);
   manager.onDisplaySizeChanged.bind(me, (w, h) => {
     manager.requestRender();
@@ -432,7 +433,7 @@ function onDrag(offsetX: number, offsetY: number) {
   ondblclick={() => {
     onFocus();
     let focused = Editing.getFocusedEntry();
-    assert(focused !== null);
+    Debug.assert(focused !== null);
     if (focused == 'virtual') {
       Editing.startEditingNewVirtualEntry();
     } else {

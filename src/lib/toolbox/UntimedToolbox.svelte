@@ -3,8 +3,9 @@ import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import * as dialog from "@tauri-apps/plugin-dialog";
 import { onDestroy } from "svelte";
 
-import { assert, Basic } from "../Basic";
+import { Basic } from "../Basic";
 import type { SubtitleEntry } from "../core/Subtitles.svelte";
+import { Debug } from "../Debug";
 import * as fuzzyAlgorithm from "../Fuzzy";
 
 import StyleSelect from "../StyleSelect.svelte";
@@ -127,7 +128,7 @@ function offset(from: number, right: boolean) {
   let result = right 
     ? prefix.find((x) => x > from) 
     : prefix.findLast((x) => x < from);
-  assert(result !== undefined);
+  Debug.assert(result !== undefined);
   return result;
 }
 
@@ -195,7 +196,7 @@ function clear() {
         let str = textarea.value.substring(
           textarea.selectionStart, textarea.selectionEnd);
 
-        assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
+        Debug.assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
         if (fuzzy.currentEntry.texts.get(fuzzy.useStyle) != str) {
           fuzzy.currentEntry.texts.set(fuzzy.useStyle, str);
           Source.markChanged(ChangeType.InPlace);

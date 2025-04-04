@@ -19,8 +19,8 @@ import ConfigDialog from './lib/dialog/ConfigDialog.svelte';
 import EncodingDialog from './lib/dialog/EncodingDialog.svelte';
 import ExportDialog from './lib/dialog/ExportDialog.svelte';
 import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
-import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import SplitByLineDialog from './lib/dialog/SplitByLineDialog.svelte';
+import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/SubtitleTable.svelte';
@@ -35,14 +35,14 @@ import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
 import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 
-import { assert, Basic } from './lib/Basic';
+import { Basic } from './lib/Basic';
 import { theme } from './lib/Theming.svelte';
 
 import { getVersion } from '@tauri-apps/api/app';
-import { arch, platform, version } from '@tauri-apps/plugin-os';
+import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
-import { invoke } from '@tauri-apps/api/core';
+import { arch, platform, version } from '@tauri-apps/plugin-os';
 import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
 
@@ -91,12 +91,12 @@ Playback.onRefreshPlaybackControl = () => {
 };
 
 let setupVideoView: Action = () => {
-  assert(videoCanvasContainer !== undefined && videoCanvas !== undefined);
+  Debug.assert(videoCanvasContainer !== undefined && videoCanvas !== undefined);
   Playback.createVideo(videoCanvas);
 };
 
 let setupTimelineView: Action = () => {
-  assert(timelineCanvas !== undefined);
+  Debug.assert(timelineCanvas !== undefined);
   Playback.createTimeline(timelineCanvas);
 };
 
@@ -181,7 +181,7 @@ appWindow.onCloseRequested(async (ev) => {
 appWindow.onDragDropEvent(async (ev) => {
   if (ev.payload.type == 'drop') {
     const path = ev.payload.paths.at(0);
-    if (!path) return;
+    if (!path) return Debug.early('no path in dropped payload');
     if (!await Interface.warnIfNotSaved()) return;
     await Interface.openFile(path);
   }
@@ -193,7 +193,7 @@ appWindow.onDragDropEvent(async (ev) => {
 <svelte:window
   onload={() => {
     let time = performance.now();
-    console.log('load time:', time);
+    Debug.info(`load time: ${time}`);
   }}
   onbeforeunload={(ev) => {
     if (get(Source.fileChanged)) ev.preventDefault();

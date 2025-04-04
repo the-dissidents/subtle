@@ -1,17 +1,17 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
 
-import { Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte'
-import Collapsible from '../ui/Collapsible.svelte';
+import { Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte';
 import StyleEdit from '../StyleEdit.svelte';
+import Collapsible from '../ui/Collapsible.svelte';
 
-import { ChangeType, Source } from '../frontend/Source';
-import { Playback } from '../frontend/Playback';
 import { EventHost } from '../frontend/Frontend';
+import { Playback } from '../frontend/Playback';
+import { ChangeType, Source } from '../frontend/Source';
 
 import { _ } from 'svelte-i18n';
-    import { flip } from 'svelte/animate';
-    import { SubtitleTools, SubtitleUtil } from '../core/SubtitleUtil';
+import { flip } from 'svelte/animate';
+import { SubtitleTools } from '../core/SubtitleUtil';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);

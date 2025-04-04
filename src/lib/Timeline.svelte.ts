@@ -1,20 +1,21 @@
-import { AudioSampler } from "./AudioSampler";
-import { Basic, assert } from "./Basic";
-import { DebugConfig, InterfaceConfig } from "./config/Groups";
-import { CanvasManager } from "./CanvasManager";
 import { MMedia } from "./API";
+import { AudioSampler } from "./AudioSampler";
+import { Basic } from "./Basic";
+import { CanvasManager } from "./CanvasManager";
+import { DebugConfig, InterfaceConfig } from "./config/Groups";
 import { LabelColor, theme } from "./Theming.svelte";
 
-import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
-import { ChangeCause, ChangeType, Source } from "./frontend/Source";
-import { Editing, SelectMode } from "./frontend/Editing";
-import { Playback } from "./frontend/Playback";
-import { Actions } from "./frontend/Actions";
 import { PublicConfigGroup } from "./config/PublicConfig.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
+import { Actions } from "./frontend/Actions";
+import { Editing, SelectMode } from "./frontend/Editing";
 import { type TranslatedWheelEvent } from "./frontend/Frontend";
+import { Playback } from "./frontend/Playback";
+import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
 import { _ } from 'svelte-i18n';
 import { get } from "svelte/store";
+import { Debug } from "./Debug";
 
 export const TimelineConfig = new PublicConfigGroup(
     () => get(_)('config.timeline'),
@@ -679,7 +680,7 @@ export class Timeline {
     #samplerMedia?: MMedia;
 
     async close() {
-        assert(this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed);
+        Debug.assert(this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed);
         await this.#samplerMedia?.close();
         this.#samplerMedia = undefined;
         this.#sampler = null;
@@ -788,7 +789,7 @@ export class Timeline {
     }
 
     setViewScale(v: number) {
-        assert(v > 0);
+        Debug.assert(v > 0);
         v = Math.max(v, this.#width / this.#maxPosition, 0.15);
         v = Math.min(v, 500);
         if (v == this.#scale) return;

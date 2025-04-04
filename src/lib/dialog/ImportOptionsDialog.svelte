@@ -1,6 +1,6 @@
 <script lang="ts">
-import { assert } from '../Basic';
-import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from "../core/SubtitleUtil";
+import { Debug } from "../Debug";
+import { MergePosition, MergeStyleBehavior, MergeStyleSelection, type MergeOptions } from "../core/SubtitleUtil";
 import type { DialogHandler } from '../frontend/Dialogs';
 import { Source } from '../frontend/Source';
 
@@ -19,7 +19,7 @@ let {
 
 let inner: DialogHandler<void> = {};
 handler.showModal = async () => {
-  assert(inner !== undefined);
+  Debug.assert(inner !== undefined);
   let btn = await inner.showModal!();
   if (btn !== 'ok') return null;
   return {

@@ -14,6 +14,7 @@ export type TabAPI = {
 <script lang="ts">
 import { onDestroy, setContext } from "svelte";
 import { writable, get } from "svelte/store";
+    import { Debug } from "../Debug";
 
 interface Props {
   children: import('svelte').Snippet;
@@ -35,7 +36,7 @@ setContext<TabAPI>(TabAPIContext, {
 
     onDestroy(() => {
       const i = Pages.findIndex((x) => x[0] === id);
-      if (i < 0) return;
+      if (i < 0) return Debug.early('page not found');
       Pages.splice(i, 1);
       if (Pages.length == 0) $Selected = undefined;
       else Selected.update((x) => x === id 

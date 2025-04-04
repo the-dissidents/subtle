@@ -1,16 +1,16 @@
 <script lang="ts">
 import * as dialog from "@tauri-apps/plugin-dialog";
 
+import { Subtitles, type LabelTypes, type SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
-import { assert, never } from '../Basic';
 import type { DialogHandler } from '../frontend/Dialogs';
 import { Editing } from '../frontend/Editing';
-import { Subtitles, type LabelTypes, type SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
 
 import { _ } from 'svelte-i18n';
 import { ChangeType, Source } from "../frontend/Source";
-import StyleSelect from "../StyleSelect.svelte";
 import LabelSelect from "../LabelSelect.svelte";
+import StyleSelect from "../StyleSelect.svelte";
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -22,9 +22,9 @@ let {
 
 let inner: DialogHandler<void> = {};
 handler.showModal = async () => {
-  assert(inner !== undefined);
+  Debug.assert(inner !== undefined);
   selection = Editing.getSelection();
-  assert(selection.length > 0);
+  Debug.assert(selection.length > 0);
   if (selection.some((x) => x.texts.size > 1)) {
     await dialog.message($_('splitbylinedialog.error'));
     return;
@@ -47,13 +47,13 @@ handler.showModal = async () => {
       let style: SubtitleStyle | undefined;
       switch (d.type) {
         case "use":
-          assert(d.style !== undefined);
+          Debug.assert(d.style !== undefined);
           style = d.style!;
           break;
         case "useNew":
           style = newStyles.get(d.styleName);
           if (!style) {
-            assert(Source.subs.styles.every((x) => x.name !== d.styleName));
+            Debug.assert(Source.subs.styles.every((x) => x.name !== d.styleName));
             // debugger;
             let n = $state(Subtitles.createStyle(d.styleName));
             style = Subtitles.createStyle(d.styleName);
@@ -63,7 +63,7 @@ handler.showModal = async () => {
           }
           break;
         default:
-          never(d.type);
+          Debug.never(d.type);
       }
       ent.texts.set(style, lines[i]);
     }

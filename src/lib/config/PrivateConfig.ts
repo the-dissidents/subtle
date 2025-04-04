@@ -2,10 +2,10 @@ console.info('PrivateConfig loading');
 
 import { path } from "@tauri-apps/api";
 import * as fs from "@tauri-apps/plugin-fs"
-import { assert } from "../Basic";
 import { guardAsync } from "../frontend/Interface";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
 
 const configPath = 'config.json';
@@ -67,16 +67,16 @@ export const PrivateConfig = {
     },
 
     async set<prop extends ConfigKey>(key: prop, value: ConfigType[prop]) {
-        assert(initialized);
+        Debug.assert(initialized);
         configData[key] = value;
         await saveConfig();
     },
     get<prop extends ConfigKey>(key: prop): ConfigType[prop] {
-        assert(initialized);
+        Debug.assert(initialized);
         return configData[key];
     },
     pushRecent(file: string) {
-        assert(initialized);
+        Debug.assert(initialized);
         const i = configData.paths.findIndex((x) => x.name == file);
         if (i >= 0)
             configData.paths.unshift(...configData.paths.splice(i, 1));
@@ -87,12 +87,12 @@ export const PrivateConfig = {
         saveConfig();
     },
     getVideo(file: string): string | undefined {
-        assert(initialized);
+        Debug.assert(initialized);
         return configData.paths.find((x) => x.name == file)?.video;
     },
     rememberVideo(file: string, video: string) {
-        assert(initialized);
-        assert(configData.paths.length > 0 && configData.paths[0].name == file);
+        Debug.assert(initialized);
+        Debug.assert(configData.paths.length > 0 && configData.paths[0].name == file);
         configData.paths[0].video = video;
         saveConfig();
     }

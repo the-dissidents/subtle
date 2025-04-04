@@ -1,17 +1,18 @@
 console.info('VideoPlayer loading');
 
-import { SubtitleRenderer } from "./SubtitleRenderer";
-import type { Subtitles } from "./core/Subtitles.svelte";
-import { CanvasManager } from "./CanvasManager";
 import { MMedia, type AudioFrameData, type VideoFrameData } from "./API";
-import { assert, Basic } from "./Basic";
+import { Basic } from "./Basic";
+import { CanvasManager } from "./CanvasManager";
+import { SubtitleRenderer } from "./SubtitleRenderer";
 import { DebugConfig } from "./config/Groups";
+import type { Subtitles } from "./core/Subtitles.svelte";
 
-import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
-import type { AudioFeedbackData, AudioInputData } from "./worker/DecodedAudioLoader";
 import { PublicConfigGroup } from "./config/PublicConfig.svelte";
+import type { AudioFeedbackData, AudioInputData } from "./worker/DecodedAudioLoader";
+import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 
-import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { _, unwrapFunctionStore } from 'svelte-i18n';
+import { Debug } from "./Debug";
 const $_ = unwrapFunctionStore(_);
 
 export const MediaConfig = new PublicConfigGroup(
@@ -151,7 +152,7 @@ export class VideoPlayer {
     }
 
     async #updateOutputSize() {
-        assert(this.#opened !== undefined);
+        Debug.assert(this.#opened !== undefined);
         let [w, h] = this.#manager.physicalSize;
         let [width, height] = this.#opened.media.videoSize!;
         let ratio = width / height;
@@ -183,7 +184,7 @@ export class VideoPlayer {
 
     async close() {
         console.log('开始');
-        assert(this.#opened !== undefined && !this.#opened.media.isClosed);
+        Debug.assert(this.#opened !== undefined && !this.#opened.media.isClosed);
         this.#requestedSetPositionTarget = -1;
         this.#requestedPreload = false;
         await Basic.waitUntil(() => !this.isPreloading && !this.#setPositionInProgress);
@@ -207,8 +208,8 @@ export class VideoPlayer {
 
         const audioStatus = await media.audioStatus();
         const videoStatus = await media.videoStatus();
-        assert(audioStatus !== null);
-        assert(videoStatus !== null);
+        Debug.assert(audioStatus !== null);
+        Debug.assert(videoStatus !== null);
 
         let audioCxt = new AudioContext({ sampleRate: audioStatus.sampleRate });
         await audioCxt.audioWorklet.addModule(decodedAudioLoaderUrl);
@@ -254,9 +255,9 @@ export class VideoPlayer {
                 reject(new Error('postAudioMessage timed out'));
             }, 1000);
 
-            assert(this.#opened !== undefined);
+            Debug.assert(this.#opened !== undefined);
             this.#opened.onAudioFeedback = (data) => {
-                assert(this.#opened !== undefined);
+                Debug.assert(this.#opened !== undefined);
                 this.#playing = data.isPlaying;
                 this.#opened.audioSize = data.bufferSize;
                 this.#opened.audioBufferLength = data.bufferLength;
@@ -272,7 +273,7 @@ export class VideoPlayer {
     }
 
     async #clearCache() {
-        if (!this.#opened) return;
+        if (!this.#opened) return Debug.early();
         this.#opened.videoCache = [];
         this.#opened.preloadEOF = false;
         this.#opened.playEOF = false;
@@ -397,14 +398,14 @@ export class VideoPlayer {
         if (first) {
             (async () => {
                 let pos = this.#requestedSetPositionTarget;
-                assert(pos >= 0);
+                Debug.assert(pos >= 0);
 
                 // wait until target stops changing
                 while (true) {
                     if (this.#requestedSetPositionTarget == pos 
                         && !this.#setPositionInProgress) break;
                     pos = this.#requestedSetPositionTarget;
-                    assert(pos >= 0);
+                    Debug.assert(pos >= 0);
                     console.log('delaying forceSetPositionFrame');
                     await Basic.wait(10);
                 }
@@ -433,7 +434,7 @@ export class VideoPlayer {
     async forceSetPositionFrame(position: number) {
         if (position < 0) position = 0;
 
-        assert(this.#opened !== undefined);
+        Debug.assert(this.#opened !== undefined);
         await Basic.waitUntil(() => !this.#setPositionInProgress);
         this.#setPositionInProgress = true;
         
@@ -482,7 +483,8 @@ export class VideoPlayer {
     }
 
     async requestNextFrame() {
-        if (!this.#opened || this.#opened.playEOF) return;
+        if (!this.#opened) return Debug.early('not opened');
+        if (this.#opened.playEOF) return;
         const pos = this.currentPosition;
         if (pos === null) {
             console.warn('requestNextFrame: invalid position');
@@ -492,7 +494,7 @@ export class VideoPlayer {
     }
 
     async requestPreviousFrame() {
-        if (!this.#opened) return;
+        if (!this.#opened) return Debug.early('not opened');
         const pos = this.currentPosition;
         if (pos === null) {
             console.warn('requestPreviousFrame: invalid position');
@@ -502,7 +504,7 @@ export class VideoPlayer {
     }
 
     #drawFrame(frame: VideoFrameData) {
-        assert(this.#opened !== undefined);
+        Debug.assert(this.#opened !== undefined);
         this.subRenderer?.setTime(frame.time);
 
         let [nw, nh] = this.#opened.media.videoOutputSize;
@@ -565,7 +567,7 @@ export class VideoPlayer {
         if (this.#opened.playEOF) {
             // display last frame
             console.log('playeof has been true');
-            assert(this.#opened.lastFrame !== undefined);
+            Debug.assert(this.#opened.lastFrame !== undefined);
             this.onVideoPositionChange();
             this.#drawFrame(this.#opened.lastFrame);
             this.#manager.requestRender();
@@ -623,7 +625,7 @@ export class VideoPlayer {
     }
 
     async play(state = true) {
-        if (!this.#opened) return;
+        if (!this.#opened) return Debug.early('not opened');
         
         if (!state && this.#playing) {
             // console.log('playing -> false');

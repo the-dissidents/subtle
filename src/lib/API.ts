@@ -1,5 +1,5 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
-import { assert } from './Basic';
+import { Debug } from './Debug';
 
 type MediaEvent = {
     event: 'done'
@@ -146,7 +146,7 @@ export class MMedia {
     }
 
     get hasJob() {
-        assert(this.#currentJobs >= 0);
+        Debug.assert(this.#currentJobs >= 0);
         return this.#currentJobs != 0;
     }
 
@@ -202,7 +202,7 @@ export class MMedia {
     }
 
     async close() {
-        assert(!this.#destroyed);
+        Debug.assert(!this.#destroyed);
         await new Promise<void>((resolve, reject) => {
             setTimeout(() => reject(new MediaError('timed out')), 1000);
             let channel = createChannel({
@@ -228,7 +228,7 @@ export class MMedia {
     }
 
     async openAudio(audioId: number) {
-        assert(!this.#destroyed);
+        Debug.assert(!this.#destroyed);
         await new Promise<void>((resolve, reject) => {
             setTimeout(() => reject(new MediaError('timed out')), 1000);
             let channel = createChannel({
@@ -239,7 +239,7 @@ export class MMedia {
     }
 
     async openVideo(videoId: number) {
-        assert(!this.#destroyed);
+        Debug.assert(!this.#destroyed);
         await new Promise<void>((resolve, reject) => {
             setTimeout(() => reject(new MediaError('timed out')), 1000);
             let channel = createChannel({
@@ -248,11 +248,11 @@ export class MMedia {
             invoke('open_video', {id: this.id, videoId, channel});
         });
         let status = await this.videoStatus();
-        assert(status !== null);
+        Debug.assert(status !== null);
     }
 
     async status() {
-        assert(!this.#destroyed);
+        Debug.assert(!this.#destroyed);
         return await new Promise<{
             audioIndex: number,
             videoIndex: number
@@ -266,7 +266,7 @@ export class MMedia {
     }
 
     async audioStatus() {
-        assert(!this.#destroyed);
+        Debug.assert(!this.#destroyed);
         return await new Promise<{
             sampleRate: number,
             length: number
@@ -281,7 +281,7 @@ export class MMedia {
     }
 
     async videoStatus() {
-        assert(!this.#destroyed);
+        Debug.assert(!this.#destroyed);
         let status = await new Promise<{
             length: number,
             framerate: number,
@@ -305,7 +305,7 @@ export class MMedia {
     }
 
     async setVideoSize(width: number, height: number) {
-        assert(!this.#destroyed);
+        Debug.assert(!this.#destroyed);
         width = Math.max(1, Math.floor(width));
         height = Math.max(1, Math.floor(height));
         await new Promise<void>((resolve, reject) => {
@@ -320,8 +320,8 @@ export class MMedia {
     }
 
     async readNextFrame() {
-        assert(!this.#destroyed);
-        assert(this.#currentJobs == 0);
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
         try {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
@@ -342,8 +342,8 @@ export class MMedia {
     }
 
     async seekAudio(position: number) {
-        assert(!this.#destroyed);
-        assert(this.#currentJobs == 0);
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
         try {
             return await new Promise<void>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
@@ -359,8 +359,8 @@ export class MMedia {
     }
 
     async seekVideo(position: number) {
-        assert(!this.#destroyed);
-        assert(this.#currentJobs == 0);
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
         try {
             return await new Promise<void>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
@@ -376,8 +376,8 @@ export class MMedia {
     }
 
     async seekVideoPrecise(position: number) {
-        assert(!this.#destroyed);
-        assert(this.#currentJobs == 0);
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
         try {
             return await new Promise<AudioFrameData | VideoFrameData | null>((resolve, reject) => {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
@@ -397,8 +397,8 @@ export class MMedia {
     }
 
     async getIntensities(until: number, step: number) {
-        assert(!this.#destroyed);
-        assert(this.#currentJobs == 0);
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
         return await new Promise<{
             start: number,
             end: number,

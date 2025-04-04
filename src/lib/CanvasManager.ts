@@ -1,5 +1,5 @@
-import { assert } from "./Basic";
 import { InterfaceConfig } from "./config/Groups";
+import { Debug } from "./Debug";
 import { EventHost, translateWheelEvent, type TranslatedWheelEvent } from "./frontend/Frontend";
 import { theme } from "./Theming.svelte";
 
@@ -108,7 +108,7 @@ export class CanvasManager {
     }
 
     setScale(s: number) {
-        assert(s > 0);
+        Debug.assert(s > 0);
         const oldScale = this.#scale;
         this.#scale = Math.min(s, this.#maxZoom);
         if (this.#scale !== oldScale) {
@@ -122,7 +122,7 @@ export class CanvasManager {
     }
 
     setMaxZoom(x: number) {
-        assert(x > 0);
+        Debug.assert(x > 0);
         this.#maxZoom = x;
         if (this.#scale > x)
             this.setScale(x);
@@ -148,7 +148,7 @@ export class CanvasManager {
 
     constructor(public canvas: HTMLCanvasElement)  {
         let context = canvas.getContext('2d', { alpha: true });
-        assert(context !== null);
+        Debug.assert(context !== null);
         this.#cxt = context;
 
         new ResizeObserver(() => this.#update()).observe(canvas);
@@ -295,7 +295,7 @@ export class CanvasManager {
 
     #render() {
         this.#requestedRender = false;
-        if (!this.renderer) return;
+        if (!this.renderer) return Debug.early('no renderer');
 
         this.#cxt.resetTransform();
         if (this.doNotPrescaleHighDPI) {

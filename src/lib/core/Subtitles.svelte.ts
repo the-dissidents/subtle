@@ -1,6 +1,6 @@
 import { Ajv, type JSONSchemaType, type ValidateFunction } from "ajv";
-import { assert } from "../Basic";
 import { SvelteMap } from "svelte/reactivity";
+import { Debug } from "../Debug";
 
 const SubtitleFormatVersion = '000400';
 
@@ -223,7 +223,7 @@ export class Subtitles {
                 if (x == base.defaultStyle) def = clone;
                 return clone;
             });
-            assert(def !== undefined);
+            Debug.assert(def !== undefined);
             this.defaultStyle = def;
         }
     }

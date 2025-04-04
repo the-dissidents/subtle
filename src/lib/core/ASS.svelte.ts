@@ -1,5 +1,6 @@
 import { Basic } from "../Basic";
 import { CSSColors, parseCSSColor } from "../colorparser";
+import { Debug } from "../Debug";
 import { AlignMode, SubtitleEntry, Subtitles, type SubtitleStyle } from "./Subtitles.svelte";
 
 export const ASS = {
@@ -128,7 +129,7 @@ function parseASSScriptInfo(sections: Map<string, string>, subs: Subtitles) {
 
 function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
     let text = sections.get('V4 Styles') ?? sections.get('V4+ Styles');
-    if (text === undefined) return;
+    if (text === undefined) return Debug.early();
 
     const styleFieldMap = getASSFormatFieldMap(text);
     if (styleFieldMap == null) return subs;
@@ -222,7 +223,7 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
 
 function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
     let text = sections.get('Events');
-    if (text === undefined) return;
+    if (text === undefined) return Debug.early();
 
     const fieldMap = getASSFormatFieldMap(text);
     if (fieldMap == null 

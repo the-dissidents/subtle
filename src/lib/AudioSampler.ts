@@ -1,5 +1,5 @@
 import { MMedia } from "./API";
-import { assert } from "./Basic";
+import { Debug } from "./Debug";
 import { AggregationTree } from "./details/AggregationTree";
 
 export class AudioSampler {
@@ -55,26 +55,26 @@ export class AudioSampler {
     }
 
     tryCancelSampling() {
-        assert(this.#isSampling);
+        Debug.assert(this.#isSampling);
         this.#cancelling = true;
     }
 
     extendSampling(to: number) {
-        assert(this.#isSampling);
+        Debug.assert(this.#isSampling);
         let pos = Math.floor(to * this.#sampleRate);
         if (pos > this.#length) to = this.#length;
-        assert(this.#sampleProgress < pos);
-        assert(this.#sampleEnd <= pos);
+        Debug.assert(this.#sampleProgress < pos);
+        Debug.assert(this.#sampleEnd <= pos);
         this.#sampleEnd = pos;
     }
 
     async startSampling(from: number, to: number): Promise<void> {
-        assert(!this.#isSampling);
+        Debug.assert(!this.#isSampling);
 
         let a = Math.floor(from * this.#sampleRate);
         let b = Math.floor(to * this.#sampleRate);
         if (b > this.#length) b = this.#length;
-        assert(b > a);
+        Debug.assert(b > a);
 
         this.#isSampling = true;
         this.#cancelling = false;

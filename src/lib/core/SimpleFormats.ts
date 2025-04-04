@@ -1,5 +1,6 @@
-import { assert, Basic } from "../Basic";
-import { Subtitles, SubtitleEntry } from "./Subtitles.svelte";
+import { Basic } from "../Basic";
+import { Debug } from "../Debug";
+import { SubtitleEntry, Subtitles } from "./Subtitles.svelte";
 
 export enum LinearFormatCombineStrategy {
     /**
@@ -63,7 +64,7 @@ const ToLinearFormat = {
                         activeTexts.push({text, i: event.i});
                     } else {
                         let index = activeTexts.findIndex((x) => x.i == event.i);
-                        assert(index >= 0);
+                        Debug.assert(index >= 0);
                         activeTexts.splice(index, 1);
                     }
                     i++;

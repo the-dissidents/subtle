@@ -2,9 +2,9 @@
 import { type AnalyseResult, type EncodingName } from 'chardet';
 import * as iconv from 'iconv-lite';
 
-import { assert } from '../Basic';
-import type { DialogHandler } from '../frontend/Dialogs';
+import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
+import type { DialogHandler } from '../frontend/Dialogs';
 
 import { _ } from 'svelte-i18n';
 
@@ -20,7 +20,7 @@ let {
 
 let inner: DialogHandler<void, string> = {};
   handler.showModal = async ({source: s, result}) => {
-  assert(inner !== undefined);
+  Debug.assert(inner !== undefined);
   source = s;
   candidates = result;
   if (candidates.length > 0) {

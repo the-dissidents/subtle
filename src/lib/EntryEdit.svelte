@@ -1,18 +1,17 @@
 <script lang="ts">
-import StyleSelect from './StyleSelect.svelte';
 import LabelSelect from './LabelSelect.svelte';
+import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
 
-import { assert } from './Basic';
-import { SubtitleEntry, type LabelTypes, type SubtitleStyle } from './core/Subtitles.svelte'
-import { ChangeType, Source } from './frontend/Source';
+import { SubtitleEntry, type LabelTypes, type SubtitleStyle } from './core/Subtitles.svelte';
 import { Editing } from './frontend/Editing';
 import { Interface, UIFocus } from './frontend/Interface';
+import { ChangeType, Source } from './frontend/Source';
 
+import { Menu } from '@tauri-apps/api/menu';
+import * as dialog from "@tauri-apps/plugin-dialog";
 import { tick } from 'svelte';
 import { _ } from 'svelte-i18n';
-import * as dialog from "@tauri-apps/plugin-dialog";
-import { Menu } from '@tauri-apps/api/menu';
 import { Debug } from './Debug';
 
 let editFormUpdateCounter = $state(0);
@@ -52,7 +51,7 @@ Editing.onSelectionChanged.bind(me, () => {
 
 function applyEditForm() {
   let focused = Editing.getFocusedEntry();
-  assert(focused instanceof SubtitleEntry);
+  Debug.assert(focused instanceof SubtitleEntry);
   focused.start = editingT0;
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
@@ -167,7 +166,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
                     action() {
                       let textA = focused.texts.get(style);
                       let textB = focused.texts.get(x);
-                      assert(textA !== undefined && textB !== undefined);
+                      Debug.assert(textA !== undefined && textB !== undefined);
                       focused.texts.set(x, textA);
                       focused.texts.set(style, textB);
                       Source.markChanged(ChangeType.InPlace);

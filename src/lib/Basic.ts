@@ -14,14 +14,14 @@ addMessages('zh-cn', zh_cn);
 addMessages('zh-tw', zh_tw);
 locale.set('en');
 
-export function assert(val: boolean): asserts val {
-    console.assert(val);
-    if (!val) throw new Error('assertion failed');
-}
+// export function assert(val: boolean): asserts val {
+//     console.assert(val);
+//     if (!val) throw new Error('assertion failed');
+// }
 
-export function never(x: never): never {
-    throw new Error(`should be never: ${x}`);
-}
+// export function never(x: never): never {
+//     throw new Error(`should be never: ${x}`);
+// }
 
 export const Basic = {
     OSType: os.type(),
