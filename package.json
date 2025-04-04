@@ -15,12 +15,14 @@
     "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
+    "@tauri-apps/plugin-log": "^2.3.1",
     "@tauri-apps/plugin-opener": "^2.2.6",
     "@tauri-apps/plugin-os": "^2.0.0",
     "ajv": "^8.17.1",
     "chardet": "^2.1.0",
     "deep-equal": "^2.2.3",
     "iconv-lite": "^0.6.3",
+    "stacktrace-js": "^2.0.2",
     "svelte-i18n": "^4.0.1"
   },
   "devDependencies": {

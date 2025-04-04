@@ -3,9 +3,10 @@
 
 extern crate ffmpeg_next as ffmpeg;
 mod media;
+mod redirect_log;
 
+use redirect_log::init_ffmpeg_logging;
 use std::sync::Mutex;
-use tauri::ipc::InvokeResponseBody;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::State;
@@ -16,11 +17,19 @@ struct SetupState {
 }
 
 fn main() {
-    simple_logger::init_with_level(log::Level::Debug).unwrap();
     ffmpeg::init().unwrap();
+    init_ffmpeg_logging();
 
     let mut ctx = tauri::generate_context!();
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Debug)
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Webview,
+                ))
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -48,18 +57,10 @@ fn main() {
             media::get_next_frame_data,
             media::get_intensities,
             media::video_set_size,
-            // request_something,
-            test_response
+            redirect_log::set_log_filter_level,
         ])
         .run(ctx)
         .expect("error while running tauri application");
-}
-
-#[tauri::command]
-async fn test_response() -> Result<tauri::ipc::Response, ()> {
-    Ok(tauri::ipc::Response::new(InvokeResponseBody::Raw(vec![
-        1, 2, 3, 4, 5, 6,
-    ])))
 }
 
 #[tauri::command]

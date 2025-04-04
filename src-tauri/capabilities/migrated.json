@@ -64,6 +64,7 @@
       ]
     },
     "opener:allow-reveal-item-in-dir",
-    "opener:default"
+    "opener:default",
+    "log:default"
   ]
 }

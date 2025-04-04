@@ -13,6 +13,7 @@ import { tick } from 'svelte';
 import { _ } from 'svelte-i18n';
 import * as dialog from "@tauri-apps/plugin-dialog";
 import { Menu } from '@tauri-apps/api/menu';
+import { Debug } from './Debug';
 
 let editFormUpdateCounter = $state(0);
 let editMode = $state(0);
@@ -27,7 +28,7 @@ const me = {};
 
 Source.onSubtitlesChanged.bind(me, (type: ChangeType) => {
   editFormUpdateCounter++;
-  console.log('changed', ChangeType[type]);
+  Debug.debug(`changed - ${ChangeType[type]}`);
 });
 
 Editing.onSelectionChanged.bind(me, () => {

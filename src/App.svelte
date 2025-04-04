@@ -52,6 +52,9 @@ import { Interface, UIFocus } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
 
+import { Debug } from './lib/Debug';
+Debug.init();
+
 const appWindow = getCurrentWebviewWindow()
 
 let leftPane: HTMLElement | undefined = $state();
