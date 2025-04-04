@@ -1,15 +1,17 @@
 <script lang="ts">
 import { onDestroy } from 'svelte';
 
-import { SubtitleStyle } from '../core/Subtitles.svelte'
+import { Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte'
 import Collapsible from '../ui/Collapsible.svelte';
 import StyleEdit from '../StyleEdit.svelte';
 
-import { ChangeCause, ChangeType, Source } from '../frontend/Source';
+import { ChangeType, Source } from '../frontend/Source';
 import { Playback } from '../frontend/Playback';
 import { EventHost } from '../frontend/Frontend';
 
 import { _ } from 'svelte-i18n';
+    import { flip } from 'svelte/animate';
+    import { SubtitleTools, SubtitleUtil } from '../core/SubtitleUtil';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
@@ -21,8 +23,9 @@ onDestroy(() => EventHost.unbind(me));
 
 Source.onSubtitlesChanged.bind(me, (t) => {
   if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
-    styles = Source.subs.styles;
-    updateCounter += 1;
+    // TODO: see if commenting out this breaks things
+    // styles = Source.subs.styles;
+    // updateCounter += 1;
   }
 });
 
@@ -35,15 +38,15 @@ Source.onSubtitleObjectReload.bind(me, () => {
 
 
 function newStyle() {
-  let newStyle = new SubtitleStyle('new');
+  let newStyle = Subtitles.createStyle(
+    SubtitleTools.getUniqueStyleName(Source.subs, 'new'));
   Source.subs.styles.push(newStyle);
   Source.markChanged(ChangeType.StyleDefinitions);
 }
 
 function removeUnusedStyles() {
-  let usedStyles = new Set<SubtitleStyle>();
-  Source.subs.entries.forEach((x) => 
-    x.texts.forEach((t) => usedStyles.add(t.style)));
+  let usedStyles = new Set<SubtitleStyle>(
+    Source.subs.entries.flatMap((x) => [...x.texts.keys()]));
   Source.subs.styles = Source.subs.styles.filter((x) => usedStyles.has(x));
   Source.markChanged(ChangeType.StyleDefinitions);
 }
@@ -90,14 +93,12 @@ function changeResolution() {
   </table>
   <Collapsible header={$_('ppty.styles')} active={true}>
     {#key updateCounter}
-      <h5>{$_('ppty.default')}</h5>
-      <StyleEdit style={Source.subs.defaultStyle} {subtitles} />
-      <hr>
-      <h5>{$_('ppty.other')}</h5>
-      {#each styles as style (style.uniqueID)}
-        <StyleEdit style={style} {subtitles}
-          onsubmit={() => styles = Source.subs.styles}/>
-        <hr>
+      {#each styles as style (style)}
+        <div animate:flip={{duration: 200}}>
+          <StyleEdit style={style} {subtitles}
+            onsubmit={() => styles = Source.subs.styles}/>
+          <hr>
+        </div>
       {/each}
     {/key}
     <button style="width: 25px"

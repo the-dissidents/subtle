@@ -5,7 +5,8 @@ import { Basic } from "../Basic";
 import { InputConfig } from "../config/Groups";
 
 import { ASS } from "../core/ASS";
-import { type LabelTypes, Labels, SubtitleEntry, SubtitleTools, Subtitles } from "../core/Subtitles.svelte";
+import { type LabelTypes, Labels, SubtitleEntry, Subtitles } from "../core/Subtitles.svelte";
+import { SubtitleUtil } from "../core/SubtitleUtil";
 import { LinearFormatCombineStrategy, SimpleFormats } from "../core/SimpleFormats";
 
 import { Editing, getSelectMode, KeepInViewMode, SelectMode } from "./Editing";
@@ -19,9 +20,9 @@ import { unwrapFunctionStore, _ } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 const toSRT = (x: Subtitles) => 
-    SimpleFormats.export.SRT(x.entries, LinearFormatCombineStrategy.Recombine);
+    SimpleFormats.export.SRT(x, x.entries, LinearFormatCombineStrategy.Recombine);
 const toPlaintext = (x: Subtitles) => 
-    SimpleFormats.export.plaintext(x.entries, LinearFormatCombineStrategy.KeepOrder);
+    SimpleFormats.export.plaintext(x, x.entries, LinearFormatCombineStrategy.KeepOrder);
 
 export const Actions = {
     processGlobalKeydown(ev: KeyboardEvent) {
@@ -201,11 +202,9 @@ export const Actions = {
     },
 
     async contextMenu() {
-        let selection = Editing.getSelection();
+        const selection = Editing.getSelection();
         if (selection.length == 0) return;
-        let isDisjunct = Utils.isSelectionDisjunct();
-        let allStyles = [Source.subs.defaultStyle, ...Source.subs.styles];
-        let maxLines = Math.max(...selection.map((x) => x.texts.length));
+        const isDisjunct = Utils.isSelectionDisjunct();
         let label: LabelTypes | undefined = selection[0].label;
         for (const entry of selection) {
             if (entry.label != selection[0].label) {
@@ -213,6 +212,11 @@ export const Actions = {
                 break;
             }
         }
+        const styles = selection.map((x) => [...x.texts.keys()]).flat();
+        const distinctStyles = Source.subs.styles.filter((x) => styles.includes(x));
+        const commonStyles = distinctStyles
+            .filter((x) => selection.every((y) => y.texts.has(x)));
+        const canCombine = styles.length == distinctStyles.length;
 
         let menu = await Menu.new({items: [
         {
@@ -264,14 +268,13 @@ export const Actions = {
         },
         {
             text: $_('action.select-all-by-channel'),
-            items: allStyles.map((x) => ({
+            items: Source.subs.styles.map((x) => ({
                 text: x.name,
                 action: () => {
                     Editing.selection.currentGroup = [];
                     Editing.selection.focused = null;
                     Editing.selection.submitted = new Set(
-                        Source.subs.entries
-                            .filter((e) => e.texts.some((c) => c.style == x)));
+                        Source.subs.entries.filter((e) => e.texts.has(x)));
                     Editing.onSelectionChanged.dispatch(ChangeCause.Action);
                 }
             }))
@@ -319,8 +322,16 @@ export const Actions = {
         { item: 'Separator' },
         {
             text: $_('action.combine'),
-            enabled: selection.length > 1,
-            action: () => Utils.combineSelection(selection)
+            enabled: selection.length > 1 && canCombine,
+            action: () => {
+                const first = selection[0];
+                for (let i = 1; i < selection.length; i++) {
+                    const entry = selection[i];
+                    for (const [style, text] of entry.texts)
+                        first.texts.set(style, text);
+                }
+                Source.markChanged(ChangeType.Times);
+            }
         },
         {
             text: $_('action.split-simultaneous'),
@@ -361,7 +372,7 @@ export const Actions = {
                     text: $_('action.transform-times'),
                     action: async () => {
                         let options = await Dialogs.timeTransform.showModal!();
-                        if (options && Source.subs.shiftTimes(options))
+                        if (options && SubtitleUtil.shiftTimes(Source.subs, options))
                             Source.markChanged(ChangeType.Times);
                     }
                 },
@@ -369,27 +380,19 @@ export const Actions = {
                 {
                     text: $_('action.sort-by-time'),
                     enabled: !isDisjunct && selection.length > 1,
-                    action: () => Utils.sortSelection(selection, false)
-                },
-                {
-                    text: $_('action.sort-by-first-style'),
-                    enabled: !isDisjunct && selection.length > 1,
-                    action: () => Utils.sortSelection(selection, true)
-                },
-                {
-                    text: $_('action.sort-channels'),
-                    action: () => Utils.sortChannels(selection)
+                    action: () => Utils.sortSelection(selection)
                 },
                 { item: 'Separator' },
                 {
                     text: $_('action.create-channel'),
-                    items: allStyles.map((x) => ({
+                    items: Source.subs.styles.map((x) => ({
                         text: x.name,
+                        enabled: !commonStyles.includes(x),
                         action: () => {
                             let done = false;
                             for (let ent of selection)
-                                if (!ent.texts.find((t) => t.style == x)) {
-                                    ent.texts.push({style: x, text: ''});
+                                if (!ent.texts.has(x)) {
+                                    ent.texts.set(x, '');
                                     done = true;
                                 }
                             if (done)
@@ -399,54 +402,43 @@ export const Actions = {
                 },
                 {
                     text: $_('action.replace-channel'),
-                    enabled: Source.subs.styles.length > 0,
-                    items: allStyles.map((x) => ({
+                    enabled: Source.subs.styles.length > 1,
+                    items: distinctStyles.map((x) => ({
                         text: x.name,
                         items: [{
                             text: $_('cxtmenu.by'),
                             enabled: false,
-                        }, ...allStyles.filter((y) => y != x).map((y) => ({
+                        }, ...Source.subs.styles.filter((y) => y != x).map((y) => ({
                             text: y.name,
-                            action: () => {
-                                if (SubtitleTools.replaceStyle(selection, x, y)) 
-                                    Source.markChanged(ChangeType.InPlace);
-                            }
+                            action: () => Utils.replaceStyle(selection, x, y)
                         }))]
                     }))
                 },
                 {
-                    text: $_('action.replace-n-th-channel'),
-                    items: [...Array(maxLines).keys()].map((x) => ({
-                        text: (x+1).toString(),
+                    text: $_('action.exchange-channel'),
+                    enabled: distinctStyles.length > 1,
+                    items: distinctStyles.map((x) => ({
+                        text: x.name,
                         items: [{
-                            text: $_('cxtmenu.by'),
+                            text: $_('cxtmenu.and'),
                             enabled: false,
-                        }, ...allStyles.map((y) => ({
+                        }, ...distinctStyles.filter((y) => y != x).map((y) => ({
                             text: y.name,
-                            action: () => {
-                                let changed = false;
-                                for (let ent of selection)
-                                    if (ent.texts.length > x) {
-                                        ent.texts[x].style = y;
-                                        changed = true;
-                                    }
-                                if (changed)
-                                    Source.markChanged(ChangeType.InPlace);
-                            }
+                            action: () => Utils.exchangeStyle(selection, x, y)
                         }))]
                     }))
                 },
                 {
                     text: $_('action.remove-channel'),
                     enabled: Source.subs.styles.length > 0,
-                    items: Source.subs.styles.map((x) => ({
+                    items: distinctStyles.map((x) => ({
                         text: x.name,
-                        action: () => Utils.removeChannel(selection, (t) => t.style == x)
+                        action: () => Utils.removeStyle(selection, x)
                     }))
                 },
                 {
                     text: $_('action.remove-empty'),
-                    action: () => Utils.removeChannel(selection, (t) => t.text == '')
+                    action: () => Utils.removeBlankChannels(selection)
                 },
                 { item: 'Separator' },
                 {
@@ -461,8 +453,8 @@ export const Actions = {
                 },
                 {
                     text: $_('action.split-by-line'),
-                    enabled: selection.length >= 1,
-                    action: () => Utils.splitByNewline(selection)
+                    enabled: selection.length > 0,
+                    action: () => Dialogs.splitByLine.showModal!()
                 },
                 {
                     text: $_('action.fix-erroneous-overlapping'),

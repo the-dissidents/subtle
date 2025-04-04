@@ -1,8 +1,11 @@
 console.info('Utils loading');
 
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
+import * as dialog from "@tauri-apps/plugin-dialog";
+
 import { assert } from "../Basic";
-import { MergePosition, MergeStyleBehavior, SubtitleEntry, Subtitles, type SubtitleChannel, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { MergePosition, MergeStyleBehavior, SubtitleUtil } from "../core/SubtitleUtil";
 import { Editing, SelectMode } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
 import { Interface } from "./Interface";
@@ -59,7 +62,7 @@ export const Utils = {
             Editing.clearSelection();
         } else position = Source.subs.entries.length;
 
-        let entries = Source.subs.merge(portion, {
+        let entries = SubtitleUtil.merge(Source.subs, portion, {
             position: MergePosition.Custom,
             customPosition: position,
             style: MergeStyleBehavior.KeepDifferent
@@ -122,29 +125,6 @@ export const Utils = {
         return Editing.insertEntry(ent, start, end, index);
     },
 
-    removeChannel(selection: SubtitleEntry[], pred: (ch: SubtitleChannel) => boolean) {
-        console.log(selection);
-        let done = 0;
-        let newSelection: SubtitleEntry[] = [];
-        for (let ent of selection)
-            if (ent.texts.find((t) => pred(t))) {
-                ent.texts = ent.texts.filter((t) => !pred(t));
-                console.log(ent.texts);
-                if (ent.texts.length > 0) newSelection.push(ent);
-                else Source.subs.entries.splice(
-                    Source.subs.entries.indexOf(ent), 1);
-                // ent.update.dispatch();
-                done++;
-            }
-
-        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
-        if (done > 0) {
-            Editing.clearSelection();
-            Editing.selection.submitted = new Set(newSelection);
-            Source.markChanged(ChangeType.InPlace);
-        }
-    },
-
     selectAll() {
         Editing.selection.focused = null;
         Editing.selection.currentGroup = [];
@@ -166,7 +146,7 @@ export const Utils = {
     },
 
 
-    sortSelection(selection: SubtitleEntry[], byStyle: boolean) {
+    sortSelection(selection: SubtitleEntry[]) {
         // assumes selection is not disjunct
         if (selection.length == 0) return;
         let start = Source.subs.entries.indexOf(selection[0]);
@@ -174,24 +154,9 @@ export const Utils = {
         let positionMap = new Map<SubtitleEntry, number>();
         for (let i = 0; i < Source.subs.entries.length; i++)
             positionMap.set(Source.subs.entries[i], i);
-        if (byStyle) selection.sort((a, b) => 
-            a.texts[0].style.name.localeCompare(b.texts[0].style.name)); 
-        else selection.sort((a, b) => a.start - b.start);
+        selection.sort((a, b) => a.start - b.start);
         Source.subs.entries.splice(start, selection.length, ...selection);
         Source.markChanged(ChangeType.Order);
-    },
-
-    sortChannels(selection: SubtitleEntry[]) {
-        let indices = new Map<SubtitleStyle, number>();
-        indices.set(Source.subs.defaultStyle, 0);
-        for (let i = 0; i < Source.subs.styles.length; i++)
-            indices.set(Source.subs.styles[i], i+1);
-        for (let ent of selection) {
-            ent.texts.sort((a, b) => 
-                (indices.get(a.style) ?? 0) - (indices.get(b.style) ?? 0));
-            // ent.update.dispatch();
-        }
-        Source.markChanged(ChangeType.InPlace);
     },
 
     moveSelectionContinuous(selection: SubtitleEntry[], direction: number) {
@@ -247,39 +212,25 @@ export const Utils = {
             Source.markChanged(ChangeType.Times);
     },
 
-    combineSelection(selection: SubtitleEntry[]) {
-        if (selection.length <= 1) return;
-        let main = selection[0];
-        for (let i = 1; i < selection.length; i++) {
-            let other = selection[i];
-            main.texts.push(...other.texts);
-            const index = Source.subs.entries.indexOf(other);
-            assert(index > 0);
-            Source.subs.entries.splice(index, 1);
-        }
-        // main.update.dispatch();
-        Source.markChanged(ChangeType.Times);
-        Interface.status.set($_('msg.combined-n-entries', {values: {n: selection.length}}));
-    },
-
     mergeDuplicate(selection: SubtitleEntry[]) {
         let deletion = new Set<SubtitleEntry>;
         for (let i = 0; i < selection.length; i++) {
             let entry = selection[i];
-            if (deletion.has(entry) || entry.texts.length > 1) continue;
+            if (deletion.has(entry)) continue;
             
             for (let j = 0; j < selection.length; j++) {
                 if (i == j) continue;
                 let other = selection[j];
-                if (deletion.has(other) || other.texts.length > 1) continue;
-                if (other.texts[0].text != entry.texts[0].text) continue;
+                if (deletion.has(other)) continue;
+                for (const [style, text] of other.texts) {
+                    if (entry.texts.get(style) !== text) continue;
+                }
 
                 if (Math.abs(other.start - entry.end) < this.timeEpsilon 
-                    || Math.abs(other.end - entry.start) < this.timeEpsilon) 
+                 || Math.abs(other.end - entry.start) < this.timeEpsilon) 
                 {
                     entry.start = Math.min(entry.start, other.start);
                     entry.end = Math.max(entry.end, other.end);
-                    // entry.update.dispatch();
                     deletion.add(other);
                     break;
                 }
@@ -293,15 +244,80 @@ export const Utils = {
         Source.markChanged(ChangeType.Times);
     },
 
+    exchangeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
+        let done = 0;
+        for (const ent of entries) {
+            let textA = ent.texts.get(a);
+            let textB = ent.texts.get(b);
+
+            if (textA == undefined) ent.texts.delete(b);
+            else ent.texts.set(b, textA);
+            if (textB == undefined) ent.texts.delete(a);
+            else ent.texts.set(a, textB);
+
+            if (textA !== undefined || textB !== undefined)
+                done++;
+        }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
+    },
+
+    removeBlankChannels(entries: SubtitleEntry[]) {
+        let done = 0;
+        for (const ent of entries) {
+            for (const [style, text] of ent.texts) {
+                if (text === '') {
+                    ent.texts.delete(style);
+                    done++;
+                }
+                if (ent.texts.size == 0) {
+                    Source.subs.entries.splice(
+                        Source.subs.entries.indexOf(ent), 1);
+                }
+            }
+        }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
+    },
+
+    async replaceStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
+        if (entries.some((x) => x.texts.has(a) && x.texts.has(b))
+         && !await dialog.confirm($_('msg.overwrite-style', {values: {style: b.name}}))) return;
+        let done = 0;
+        for (const ent of entries) {
+            let textA = ent.texts.get(a);
+            if (textA !== undefined) {
+                ent.texts.delete(a);
+                ent.texts.set(b, textA);
+                done++;
+            }
+        }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
+    },
+
+    removeStyle(entries: SubtitleEntry[], style: SubtitleStyle) {
+        let done = 0;
+        for (const ent of entries)
+            if (ent.texts.has(style)) {
+                ent.texts.delete(style);
+                done++;
+            }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
+    },
+
     mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {
         let entry = selection[0];
         let start = entry.start, end = entry.end;
         for (let i = 1; i < selection.length; i++) {
-            if (keepAll) for (const text of selection[i].texts) {
-                const last = entry.texts.findLast(
-                    (x) => x.style.name == text.style.name);
-                if (last) last.text += ' ' + text.text;
-                else entry.texts.push(text);
+            if (keepAll) for (const [style, text] of selection[i].texts) {
+                let oldText = entry.texts.get(style);
+                entry.texts.set(style, (oldText ?? '') + text);
             }
             start = Math.min(start, selection[i].start);
             end = Math.max(end, selection[i].end);
@@ -315,35 +331,23 @@ export const Utils = {
         Source.markChanged(ChangeType.Times);
     },
 
-    splitByNewline(selection: SubtitleEntry[]) {
-        for (const entry of selection) {
-            let newChannels: SubtitleChannel[] = [];
-            for (const channel of entry.texts) {
-                let split = channel.text.split('\n');
-                if (split.length > 1) {
-                    newChannels.push(...split.map(
-                        (x) => ({style: channel.style, text: x})));
-                } else newChannels.push(channel);
-            }
-            entry.texts = newChannels;
-        }
-        Source.markChanged(ChangeType.Times);
-    },
-
     splitSimultaneous(selection: SubtitleEntry[]) {
         if (selection.length == 0) return;
         let newSelection: SubtitleEntry[] = [];
         for (let i = 0; i < selection.length; i++) {
             let entry = selection[i];
             let index = Source.subs.entries.indexOf(entry);
-            newSelection.push(entry);
-            for (let j = 1; j < entry.texts.length; j++) {
-                index++;
-                let newEntry = new SubtitleEntry(entry.start, entry.end, entry.texts[j]);
-                Source.subs.entries.splice(index, 0, newEntry);
-                newSelection.push(newEntry);
+            let newEntries: SubtitleEntry[] = [];
+            for (const style of Source.subs.styles) {
+                const text = entry.texts.get(style);
+                if (text !== undefined) {
+                    let newEntry = new SubtitleEntry(entry.start, entry.end);
+                    newEntry.texts.set(style, text);
+                    newEntries.push(newEntry);
+                }
             }
-            entry.texts = [entry.texts[0]];
+            Source.subs.entries.splice(index, 1, ...newEntries);
+            newSelection.push(...newEntries);
         }
         if (newSelection.length != selection.length) {
             Editing.clearSelection();

@@ -1,5 +1,5 @@
 import { Basic } from "./Basic";
-import { SubtitleEntry, SubtitleStyle, Subtitles, AlignMode } from "./core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle, Subtitles, AlignMode } from "./core/Subtitles.svelte";
 
 type WrappedEntry = {
     oldIndex: number,
@@ -187,17 +187,20 @@ export class SubtitleRenderer {
         ctx.rect(this.#hMargin, this.#vMargin, 
             this.width - 2 * this.#hMargin, this.height - 2 * this.#vMargin);
         ctx.stroke();
-        for (let ent of this.#currentEntries)
-        for (let channel of ent.entry.texts) {
-            if (isLeft(channel.style.alignment)) ctx.textAlign = 'left';
-            if (isCenterH(channel.style.alignment)) ctx.textAlign = 'center';
-            if (isRight(channel.style.alignment)) ctx.textAlign = 'right';
+        for (const ent of this.#currentEntries)
+        for (const style of this.#subs.styles) {
+            const text = ent.entry.texts.get(style);
+            if (!text) continue;
+
+            if (isLeft(style.alignment)) ctx.textAlign = 'left';
+            if (isCenterH(style.alignment)) ctx.textAlign = 'center';
+            if (isRight(style.alignment)) ctx.textAlign = 'right';
     
-            let size = channel.style.size;
-            let font = channel.style.font;
-            let color = channel.style.color;
-            let lineColor = channel.style.outlineColor;
-            let lineWidth = channel.style.outline;
+            let size = style.size;
+            let font = style.font;
+            let color = style.color;
+            let lineColor = style.outlineColor;
+            let lineWidth = style.outline;
             if (isNaN(size)) size = 48;
             if (isNaN(lineWidth)) lineWidth = 0;
             if (font == '') font = 'sans-serif';
@@ -205,15 +208,15 @@ export class SubtitleRenderer {
             if (lineColor == '') lineColor = 'black';
             // I'm making sure this is compatible to libass, though I believe 3/4 is
             // a mistake for 4/3
-            ctx.font = `${channel.style.styles.bold ? 'bold ' : ''}${channel.style.styles.italic ? 'italic ' : ''}${size * this.#scale * 3/4}px "${font}", sans-serif`;
+            ctx.font = `${style.styles.bold ? 'bold ' : ''}${style.styles.italic ? 'italic ' : ''}${size * this.#scale * 3/4}px "${font}", sans-serif`;
             ctx.fillStyle = color;
 
             let width = this.width - this.#hMargin * 2 - 
-                (channel.style.margin.left + channel.style.margin.right) * this.#scale;
-            let lines = this.#breakWords(channel.text, width, ctx);
+                (style.margin.left + style.margin.right) * this.#scale;
+            let lines = this.#breakWords(text, width, ctx);
             
             // loop for each line, starting from the bottom
-            let [bx, by, dy] = this.#basePoint(channel.style);
+            let [bx, by, dy] = this.#basePoint(style);
             if (dy < 0) lines.reverse();
             for (let line of lines) {
                 // TODO: revise the algorithm
@@ -221,9 +224,9 @@ export class SubtitleRenderer {
                 let [x, y] = [bx, by];
                 let newBox = getBoxFromMetrics(metrics, x, y);
                 let yOffset = 0;
-                if (isTop(channel.style.alignment))
+                if (isTop(style.alignment))
                     yOffset = newBox.h;
-                if (isCenterV(channel.style.alignment))
+                if (isCenterV(style.alignment))
                     yOffset = newBox.h * 0.5;
                 newBox.y += yOffset;
                 while (true) {

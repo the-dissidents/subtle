@@ -1,16 +1,18 @@
 <script lang="ts">
 import StyleSelect from './StyleSelect.svelte';
+import LabelSelect from './LabelSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
 
 import { assert } from './Basic';
-import { Labels, SubtitleEntry, type LabelTypes, type SubtitleChannel } from './core/Subtitles.svelte'
-import { LabelColor } from './Theming.svelte';
-import { tick } from 'svelte';
-import { ChangeCause, ChangeType, Source } from './frontend/Source';
+import { SubtitleEntry, type LabelTypes, type SubtitleStyle } from './core/Subtitles.svelte'
+import { ChangeType, Source } from './frontend/Source';
 import { Editing } from './frontend/Editing';
 import { Interface, UIFocus } from './frontend/Interface';
 
+import { tick } from 'svelte';
 import { _ } from 'svelte-i18n';
+import * as dialog from "@tauri-apps/plugin-dialog";
+import { Menu } from '@tauri-apps/api/menu';
 
 let editFormUpdateCounter = $state(0);
 let editMode = $state(0);
@@ -61,18 +63,11 @@ function contentSelfAdjust(elem: HTMLTextAreaElement) {
   elem.style.height = `${elem.scrollHeight + 3}px`; // grows to fit content
 }
 
-function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
-  channel.gui = node;
-  node.value = channel.text;
+function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
+  Editing.styleToEditor.set(style, node);
   return {
-    update: (newChannel: SubtitleChannel) => {
-      // note that svelte calls this every time the channel object changes in any way, but it's only relevant if it's really changing into ANOTHER one
-      if (newChannel != channel) {
-        channel.gui = undefined;
-        newChannel.gui = node;
-        node.value = newChannel.text;
-        channel = newChannel;
-      }
+    update: (style: SubtitleStyle) => {
+      Editing.styleToEditor.set(style, node);
     }
   };
 }
@@ -83,7 +78,7 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
 <!-- timestamp fields -->
 {#key `${editFormUpdateCounter}`}
 <fieldset disabled={!(Editing.getFocusedEntry() instanceof SubtitleEntry)}>
-  <span>
+  <span class="hlayout center-items">
     <select
       oninput={(ev) => editMode = ev.currentTarget.selectedIndex}>
       <option>{$_('editbox.anchor-start')}</option>
@@ -92,7 +87,6 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
     <input type='checkbox' id='keepd' bind:checked={keepDuration}/>
     <label for='keepd'>{$_('editbox.keep-duration')}</label>
   </span>
-  <br>
   <TimestampInput bind:timestamp={editingT0}
     stretch={true}
     oninput={() => {
@@ -127,20 +121,18 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
     onchange={() => 
       Source.markChanged(ChangeType.Times)}/>
   <hr>
-  <div class="hlayout">
-    <div style={`height: auto; width: 25px; border: solid 1px;
-      margin: 2px; background-color: ${LabelColor(editingLabel)}`}></div>
-    <select
+  <label class="hlayout center-items">
+    <span style="padding-right: 5px; white-space: pre;">
+      {$_('editbox.label')}
+    </span>
+    <LabelSelect 
       bind:value={editingLabel}
-      class="flexgrow"
-      onchange={() => {
+      stretch={true}
+      onsubmit={() => {
         applyEditForm();
-        Source.markChanged(ChangeType.InPlace);}}>
-      {#each Labels as color}
-        <option value={color}>{color}</option>
-      {/each}
-    </select>
-  </div>
+        Source.markChanged(ChangeType.InPlace);
+      }}/>
+  </label>
 </fieldset>
 <!-- channels view -->
 <div class="channels flexgrow isolated">
@@ -148,39 +140,72 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
   {@const focused = Editing.getFocusedEntry() as SubtitleEntry}
   <table class='fields'>
     <tbody>
-      {#each focused.texts as line, i}
+      {#each Source.subs.styles as style}
+      {#if focused.texts.has(style)}
       <tr>
         <td class="vlayout">
-          <StyleSelect bind:currentStyle={line.style}
-            onsubmit={() => Source.markChanged(ChangeType.InPlace)} />
-          <div class="hlayout">
-            <button tabindex='-1' class="flexgrow"
-              onclick={() => Editing.insertChannelAt(i)}>+</button>
-            <button tabindex='-1' class="flexgrow"
-              onclick={() => Editing.deleteChannelAt(i)}
-              disabled={focused.texts.length == 1}>-</button>
-          </div>
+          <StyleSelect currentStyle={style}
+            onsubmit={async (newStyle) => {
+              if (focused.texts.has(newStyle) && !await dialog.confirm(
+                  $_('msg.overwrite-style', {values: {style: newStyle.name}})))
+                return;
+              focused.texts.set(newStyle, focused.texts.get(style)!);
+              focused.texts.delete(style);
+              Source.markChanged(ChangeType.InPlace);
+            }} />
+          <button onclick={async () => {
+            let otherUsed = [...focused.texts.keys()].filter((x) => x !== style);
+            const menu = await Menu.new({
+              items: [
+                {
+                  text: $_('action.exchange-channel'),
+                  enabled: Source.subs.styles.length > 1,
+                  items: otherUsed.map((x, i) => ({
+                    id: i.toString(),
+                    text: x.name,
+                    action() {
+                      let textA = focused.texts.get(style);
+                      let textB = focused.texts.get(x);
+                      assert(textA !== undefined && textB !== undefined);
+                      focused.texts.set(x, textA);
+                      focused.texts.set(style, textB);
+                      Source.markChanged(ChangeType.InPlace);
+                    }
+                  }))
+                },
+                {
+                  text: $_('style.delete'),
+                  enabled: focused.texts.size > 1,
+                  action() {
+                    focused.texts.delete(style);
+                    Source.markChanged(ChangeType.InPlace);
+                  }
+                }
+              ]
+            });
+            menu.popup();
+          }}>...</button>
         </td>
         <td style='width:100%'>
           <textarea class='contentarea' tabindex=0
-            use:setupTextEditGUI={line}
+            use:setupTextArea={style}
+            value={focused.texts.get(style)!}
             onkeydown={(ev) => {
               if (ev.key == "Escape") {
                 ev.currentTarget.blur();
                 $uiFocus = UIFocus.Table;
               }
             }}
-            onfocus={() => {
+            onfocus={(ev) => {
               $uiFocus = UIFocus.EditingField;
-              Editing.focused.channel = line;
-              Editing.focused.style = line.style;
+              Editing.focused.style = style;
+              Editing.focused.control = ev.currentTarget;
             }}
             onblur={(x) => {
               // TODO: this works but looks like nonsense
               if ($uiFocus === UIFocus.EditingField)
                 $uiFocus = UIFocus.Other;
               Editing.submitFocusedEntry();
-              Editing.focused.channel = null;
             }}
             oninput={(x) => {
               $uiFocus = UIFocus.EditingField;
@@ -189,7 +214,21 @@ function setupTextEditGUI(node: HTMLTextAreaElement, channel: SubtitleChannel) {
             }}></textarea>
         </td>
       </tr>
+      {/if}
       {/each}
+      <tr>
+        <td class="vlayout">
+          <button onclick={async () => {
+            const menu = await Menu.new({
+              items: Source.subs.styles.filter((x) => !focused.texts.has(x)).map((x) => ({
+                text: x.name,
+                action: () => Editing.insertChannel(x)
+              }))
+            });
+            menu.popup();
+          }}>+</button>
+        </td>
+      </tr>
     </tbody>
   </table>
   {:else}

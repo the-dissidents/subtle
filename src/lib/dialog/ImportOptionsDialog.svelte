@@ -1,6 +1,6 @@
 <script lang="ts">
 import { assert } from '../Basic';
-import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from '../core/Subtitles.svelte';
+import { MergeStyleBehavior, type MergeOptions, MergePosition, MergeStyleSelection } from "../core/SubtitleUtil";
 import type { DialogHandler } from '../frontend/Dialogs';
 import { Source } from '../frontend/Source';
 
@@ -34,8 +34,6 @@ handler.showModal = async () => {
   };
 }
 
-let form: HTMLFormElement;
-let select: StyleSelect;
 let overrideStyle = $state(Source.subs.defaultStyle);
 let styleOption = $state('KeepDifferent');
 let selectOption = $state('UsedOnly');
@@ -43,7 +41,7 @@ let posOption = $state('After');
 let overrideMetadata = $state(false);
 </script>
 
-<DialogBase handler={inner}><form bind:this={form}>
+<DialogBase handler={inner}><form>
   <table class='config'>
     <tbody>
       <tr>
@@ -66,7 +64,6 @@ let overrideMetadata = $state(false);
           <label for="is4">{$_('importdialog.overwrite-local-styles-when-names-match')}</label><br/>
           <input type="radio" id="is5" value="UseOverrideForAll" bind:group={styleOption}/>
           <label for="is5">{$_('importdialog.use-for-all')}<StyleSelect 
-            bind:this={select}
             bind:currentStyle={overrideStyle}/></label><br/>
         </td>
       </tr>

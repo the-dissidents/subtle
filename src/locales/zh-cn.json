@@ -8,6 +8,7 @@
     "cut": "剪切",
     "delete": "删除",
     "down": "向下",
+    "exchange-channel": "交换频道",
     "fix-erroneous-overlapping": "修复错误的重叠",
     "insert-after": "在之后插入",
     "insert-before": "在之前插入",
@@ -18,7 +19,7 @@
     "merge-overlapping-duplicates": "处理重叠的重复项",
     "move": "移动",
     "paste": "粘贴",
-    "remove-channel": "删除通道",
+    "remove-channel": "删除频道",
     "remove-empty": "删除空频道",
     "replace-channel": "替换频道",
     "replace-n-th-channel": "替换第N个频道",
@@ -27,7 +28,7 @@
     "sort-by-first-style": "按第一个样式排序",
     "sort-by-time": "按时间排序",
     "sort-channels": "排序各频道",
-    "split-by-line": "按行拆分为频道",
+    "split-by-line": "按行拆分为频道...",
     "split-simultaneous": "拆散",
     "to-the-beginning": "至最前",
     "to-the-end": "至最后",
@@ -111,6 +112,7 @@
     "show-autosave-path": "显示自动保存文件夹"
   },
   "cxtmenu": {
+    "and": "和：",
     "ass-fragment": "ASS片段",
     "by": "为：",
     "json-internal": "JSON（内部格式）",
@@ -126,6 +128,7 @@
     "anchor-start": "锚定开头",
     "at-virtual-entry": "双击或按回车可添加新条目",
     "keep-duration": "保持持续时间",
+    "label": "标签",
     "no-selection": "选择一行开始编辑"
   },
   "encodingdialog": {
@@ -179,6 +182,15 @@
     "use-for-all": "全都使用这个样式：",
     "use-local-styles-when-names-match": "名称匹配时使用本地样式"
   },
+  "label": {
+    "blue": "蓝色",
+    "green": "绿色",
+    "none": "无",
+    "orange": "橙色",
+    "purple": "紫色",
+    "red": "红色",
+    "yellow": "黄色"
+  },
   "menu": {
     "close-video": "关闭",
     "configuration": "配置",
@@ -205,15 +217,18 @@
     "failed-to-parse-clipboard-data-as-subtitles": "无法将剪贴板数据解析为字幕",
     "new-entry-appended": "已添加新条目",
     "not-a-file": "不是文件：{path}",
+    "note-file-is-migrated-path": "注意：正在打开旧版本存档文件；我们会自动将其转换为新版，过程中可能会产生一些样式上的变化。如果保存更新的文件，旧版本软件很可能将无法打开它。",
     "nothing-to-paste": "没有可以粘贴的东西",
     "opened-path": "已打开：{path}",
+    "overwrite-style": "确认要覆盖样式 {style} 的已有内容？",
     "pasted": "粘贴",
     "proceed-without-saving": "文件还没有保存，确认继续？",
     "saved-to-file": "已保存：{file}",
     "search-expression-is-empty": "查找表达式为空",
     "search-failed": "查找失败：",
     "unable-to-read-file-path": "无法读取文件：{path}",
-    "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的要继续吗？这可能会使应用程序崩溃。"
+    "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的要继续吗？这可能会使应用程序崩溃。",
+    "you-cant-delete-a-default-style": "无法删除默认样式；请先把别的一个样式设置为默认"
   },
   "not-implemented-yet": "（暂时没有用）",
   "ok": "确认",
@@ -248,6 +263,22 @@
     "selected-n-lines": "已选择 {n} 行",
     "use-regular-expressions": "使用正则表达式"
   },
+  "splitbylinedialog": {
+    "as": "标为",
+    "create-new": "新建",
+    "fewer-than": "少于",
+    "header": "按行拆分",
+    "label": "标签",
+    "line-number": "行号",
+    "mark-those-entries": "根据行数标记",
+    "original": "不变",
+    "preview": "预览",
+    "remove-empty-lines": "移除空行",
+    "settings": "设置",
+    "to-style": "拆分为样式",
+    "usage": "使用量",
+    "with-lines-more-than": "多于"
+  },
   "style": {
     "alignment": "对齐",
     "bottom": "下",
@@ -257,8 +288,10 @@
     "center": "居中",
     "center-left": "左侧居中",
     "center-right": "右侧居中",
+    "default": "默认",
     "delete": "删除",
     "duplicate": "复制",
+    "exchange-with": "交换",
     "font": "字体",
     "left": "左",
     "line-color": "轮廓颜色",

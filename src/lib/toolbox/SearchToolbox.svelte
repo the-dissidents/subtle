@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Labels, SubtitleEntry, type LabelTypes } from '../core/Subtitles.svelte'
+import { Labels, SubtitleEntry, type LabelTypes, type SubtitleStyle } from '../core/Subtitles.svelte'
 import StyleSelect from '../StyleSelect.svelte';
 import { assert, Basic } from '../Basic';
 
@@ -25,7 +25,7 @@ let style1 = $state(Source.subs.defaultStyle),
 let label: LabelTypes = $state('none');
 
 let currentEntry: SubtitleEntry | null = null;
-let currentTextIndex = 0;
+let currentStyle: SubtitleStyle | null = null;
 
 enum SearchAction {
   Find, Select,
@@ -48,7 +48,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 
   if (focus !== currentEntry || option == SearchOption.Global) {
     currentEntry = null;
-    currentTextIndex = 0;
+    currentStyle = null;
   }
 
   let expr: RegExp;
@@ -78,6 +78,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
   let nDone = 0;
   const repl = type == SearchAction.Replace ? replaceTerm : '';
   let i = option == SearchOption.Global ? 0 : Math.max(entries.indexOf(focus), 0);
+  let currentTextIndex = currentStyle ? Source.subs.styles.indexOf(currentStyle) : -1;
 
   outerLoop: while (i < entries.length && i >= 0) 
   {
@@ -86,30 +87,40 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
       && !(useLabel && ent.label != label)
       && !(usingEmptyTerm && ent === currentEntry))
     {
-      for (let j = (ent === currentEntry ? currentTextIndex + 1 : 0); 
-        j < ent.texts.length; j++) 
+      for (
+        let j = (ent === currentEntry ? currentTextIndex + 1 : 0); 
+        j < Source.subs.styles.length; j++) 
       {
-        let channel = ent.texts[j];
-        if (useStyle && channel.style.name != style1.name) continue;
+        const style = Source.subs.styles[j];
+        if (useStyle && style.name != style1.name) continue;
 
-        let replaced = channel.text.replace(expr, repl);
-        if (replaced != channel.text) {
+        let text = ent.texts.get(style);
+        if (text === undefined) continue;
+
+        let replaced = text.replace(expr, repl);
+        if (replaced != text) {
           console.log(j, currentTextIndex, ent, currentEntry);
           nDone++;
           if (type == SearchAction.Select) {
             Editing.selection.submitted.add(ent);
             break; // selecting one channel suffices
+          }
+          let focusStyle = style1;
+          if (type == SearchAction.ReplaceStyleOnly
+           || (replaceStyle && type == SearchAction.Replace))
+          {
+            // FIXME: should warn when overwriting? or add an option
+            ent.texts.delete(style);
+            ent.texts.set(style2, replaced);
+            focusStyle = style2;
           } else if (type == SearchAction.Replace) {
-            channel.text = replaced;
-            if (replaceStyle) channel.style = style2;
-          } else if (type == SearchAction.ReplaceStyleOnly) {
-            channel.style = style2;
+            ent.texts.set(style, replaced);
           }
           if (option != SearchOption.Global) {
             currentEntry = ent;
             currentTextIndex = j;
             Editing.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
-            Editing.focused.style = channel.style;
+            Editing.focused.style = focusStyle;
             break outerLoop;
           }
         }

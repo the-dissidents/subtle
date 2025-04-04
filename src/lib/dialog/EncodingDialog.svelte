@@ -9,52 +9,52 @@ import DialogBase from '../DialogBase.svelte';
 import { _ } from 'svelte-i18n';
 
 interface Props {
-handler: DialogHandler<
+  handler: DialogHandler<
     {source: Uint8Array, result: AnalyseResult}, 
     {decoded: string, encoding: EncodingName} | null>;
 }
 
 let {
-handler = $bindable(),
+  handler = $bindable(),
 }: Props = $props();
 
 let inner: DialogHandler<void, string> = {};
-handler.showModal = async ({source: s, result}) => {
-assert(inner !== undefined);
-source = s;
-candidates = result;
-if (candidates.length > 0) {
+  handler.showModal = async ({source: s, result}) => {
+  assert(inner !== undefined);
+  source = s;
+  candidates = result;
+  if (candidates.length > 0) {
     selectedEncoding = candidates[0].name;
     makePreview();
-}
-let btn = await inner.showModal!();
-if (btn !== 'ok' || !selectedEncoding) return null;
-return {
+  }
+  let btn = await inner.showModal!();
+  if (btn !== 'ok' || !selectedEncoding) return null;
+  return {
     encoding: selectedEncoding, 
     decoded: iconv.decode(source, selectedEncoding)
-};
+  };
 }
 
 let selectedEncoding: EncodingName | undefined = $state();
-let okButton = $state({name: 'ok', localizedName: () => $_('ok'), disabled: true});
+let okDisabled = $state(false);
 let preview = $state('');
 let source: Uint8Array;
 let candidates: AnalyseResult | undefined = $state();
 
 function makePreview() {
-if (selectedEncoding && source) {
+  if (selectedEncoding && source) {
     try {
-    preview = iconv.decode(
+      preview = iconv.decode(
         source.subarray(0, Math.min(6000, source.length)), selectedEncoding);
-    okButton.disabled = false;
+      okDisabled = false;
     } catch {
-    preview = '';
-    okButton.disabled = true;
+      preview = '';
+      okDisabled = true;
     }
-} else {
+  } else {
     preview = '';
-    okButton.disabled = true;
-}
+    okDisabled = true;
+  }
 }
 </script>
 
@@ -62,7 +62,11 @@ if (selectedEncoding && source) {
   buttons={[{
     name: 'cancel',
     localizedName: () => $_('cancel')
-  }, okButton]}
+  }, {
+    name: 'ok', 
+    localizedName: () => $_('ok'), 
+    disabled: () => okDisabled
+  }]}
 >
   {#snippet header()}
   <h4>{$_('encodingdialog.header')}</h4>

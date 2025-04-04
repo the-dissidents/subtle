@@ -391,6 +391,10 @@ table.config td:first-child {
   contain: layout size style;
 }
 
+.center-items {
+  align-items: center;
+}
+
 .vlayout {
   display: flex;
   flex-direction: column;

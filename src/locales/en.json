@@ -8,6 +8,7 @@
     "cut": "cut",
     "delete": "delete",
     "down": "down",
+    "exchange-channel": "exchange channels",
     "fix-erroneous-overlapping": "fix erroneous overlapping",
     "insert-after": "insert after",
     "insert-before": "insert before",
@@ -27,7 +28,7 @@
     "sort-by-first-style": "sort by first style",
     "sort-by-time": "sort by time",
     "sort-channels": "sort channels",
-    "split-by-line": "split into channels by line",
+    "split-by-line": "split into channels by line...",
     "split-simultaneous": "split into different entries",
     "to-the-beginning": "to the beginning",
     "to-the-end": "to the end",
@@ -111,6 +112,7 @@
     "show-autosave-path": "Show autosave path"
   },
   "cxtmenu": {
+    "and": "and:",
     "ass-fragment": "ASS fragment",
     "by": "by:",
     "json-internal": "JSON (internal)",
@@ -126,6 +128,7 @@
     "anchor-start": "anchor start",
     "at-virtual-entry": "double-click or press enter to append new entry",
     "keep-duration": "keep duration",
+    "label": "Label",
     "no-selection": "select a line to start editing"
   },
   "encodingdialog": {
@@ -179,6 +182,15 @@
     "use-for-all": "use for all:",
     "use-local-styles-when-names-match": "use local styles when names match"
   },
+  "label": {
+    "blue": "blue",
+    "green": "green",
+    "none": "none",
+    "orange": "orange",
+    "purple": "purple",
+    "red": "red",
+    "yellow": "yellow"
+  },
   "menu": {
     "close-video": "close",
     "configuration": "configuration",
@@ -205,15 +217,18 @@
     "failed-to-parse-clipboard-data-as-subtitles": "failed to parse clipboard data as subtitles",
     "new-entry-appended": "new entry appended",
     "not-a-file": "not a file: {path}",
+    "note-file-is-migrated-path": "Note: this file is from an older version and will be updated. Small changes in styles may occur. After you save the updated file, older versions of this software will probably be unable to open it.",
     "nothing-to-paste": "nothing to paste",
     "opened-path": "opened: {path}",
+    "overwrite-style": "Overwrite existing text of style {style}?",
     "pasted": "pasted",
     "proceed-without-saving": "Proceed without saving?",
     "saved-to-file": "saved to {file}",
     "search-expression-is-empty": "search expression is empty",
     "search-failed": "search failed:",
     "unable-to-read-file-path": "unable to read file {path}",
-    "very-large-file-warning": "The file you're opening is very large and likely not a supported subtitle file.\nDo you really want to proceed?\nThis may crash the application."
+    "very-large-file-warning": "The file you're opening is very large and likely not a supported subtitle file.\nDo you really want to proceed?\nThis may crash the application.",
+    "you-cant-delete-a-default-style": "You can't delete a default style. If you want to delete it, make something other default first."
   },
   "not-implemented-yet": "Not implemented yet",
   "ok": "ok",
@@ -248,6 +263,20 @@
     "selected-n-lines": "selected {n} {n,plural,one{line} other{lines}}",
     "use-regular-expressions": "use regular expressions"
   },
+  "splitbylinedialog": {
+    "as": " = ",
+    "create-new": "create new",
+    "error": "'Split by line' works only on entries with a single channel, but the selection you provided has multiple channels. You probably didn't want to do this.",
+    "fewer-than": "fewer than",
+    "header": "split by line",
+    "line-number": "line",
+    "mark-those-entries": "Mark entries by line count",
+    "original": "original",
+    "preview": "Preview",
+    "remove-empty-lines": "remove empty lines",
+    "settings": "Settings",
+    "with-lines-more-than": "more than"
+  },
   "style": {
     "alignment": "alignment:",
     "bottom": "bottom:",
@@ -257,8 +286,10 @@
     "center": "center",
     "center-left": "center left",
     "center-right": "center right",
+    "default": "default",
     "delete": "delete",
     "duplicate": "duplicate",
+    "exchange-with": "exchange with",
     "font": "font:",
     "left": "left:",
     "line-color": "line color:",

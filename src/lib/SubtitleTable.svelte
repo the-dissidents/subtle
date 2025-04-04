@@ -31,8 +31,8 @@ export const TableConfig = new PublicConfigGroup(
 import { onDestroy, onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
 
-import { assert } from "./Basic";
-import { SubtitleEntry, SubtitleUtil } from "./core/Subtitles.svelte";
+import { assert, Basic } from "./Basic";
+import { SubtitleEntry } from "./core/Subtitles.svelte";
 import { theme, LabelColor } from "./Theming.svelte";
 
 import { CanvasManager } from "./CanvasManager";
@@ -86,8 +86,12 @@ function layout(cxt: CanvasRenderingContext2D) {
   let textWidth = 0;
   for (const entry of Source.subs.entries) {
     let height = 0;
-    for (const channel of entry.texts) {
-      let splitLines = channel.text.split('\n');
+    for (const [style, text] of entry.texts) {
+      // if (!Source.subs.styles.includes(style)) {
+      //   Source.subs.styles.forEach((x) => console.warn('styles:', x));
+      //   console.warn('missing:', style);
+      // }
+      let splitLines = text.split('\n');
       height += splitLines.length;
       textWidth = Math.max(textWidth, ...splitLines.map((x) => cxt.measureText(x).width));
     }
@@ -102,8 +106,7 @@ function layout(cxt: CanvasRenderingContext2D) {
   colPos[2] = colPos[1] + cellPadding * 2 + timestampWidth;
   colPos[3] = colPos[2] + cellPadding * 2 + timestampWidth;
   colPos[4] = colPos[3] + cellPadding * 2 + Math.max(
-    ...[Source.subs.defaultStyle, ...Source.subs.styles]
-      .map((x) => cxt.measureText(x.name).width), 
+    ...Source.subs.styles.map((x) => cxt.measureText(x.name).width), 
     cxt.measureText('style').width);
   colPos[5] = colPos[4] + cellPadding * 2 + cxt.measureText(`999.9`).width;
 
@@ -132,7 +135,6 @@ function render(cxt: CanvasRenderingContext2D) {
 
   const [sx, sy] = manager.scroll;
   const [width, height] = manager.size;
-
 
   // table
   let selection = new Set(Editing.getSelection());
@@ -167,25 +169,30 @@ function render(cxt: CanvasRenderingContext2D) {
         && overlappingTime(focused, entry)) ? overlapColor : textColor;
     cxt.strokeStyle = gridColor;
     let y0 = y;
-    entry.texts.forEach((channel, i) => {
-      // lines
+    
+    // lines; in the order of Source.subs.styles
+    let j = 0;
+    for (const style of Source.subs.styles) {
+      const text = entry.texts.get(style);
+      if (text === undefined) continue;
+
       cxt.textBaseline = 'middle';
       cxt.textAlign = 'start';
-      const splitLines = channel.text.split('\n');
+      const splitLines = text.split('\n');
       splitLines.forEach((x, i) => 
         cxt.fillText(x, colPos[5] + cellPadding, y0 + (i + 0.5) * lineHeight));
 
       const cellY = y0 + (splitLines.length * lineHeight) / 2;
-      cxt.fillText(channel.style.name, colPos[3] + cellPadding, cellY);
+      cxt.fillText(style.name, colPos[3] + cellPadding, cellY);
       cxt.textAlign = 'end';
-      cxt.fillText(getNpS(entry, channel.text), colPos[5] - cellPadding, cellY);
+      cxt.fillText(getNpS(entry, text), colPos[5] - cellPadding, cellY);
 
       // inner horizontal lines
       y0 += splitLines.length * lineHeight;
-      if (i != entry.texts.length - 1) {
+      if (j != entry.texts.size - 1)
         drawLine(colPos[3], y0, width + sx, y0);
-      }
-    });
+      j++;
+    }
 
     // entry cells
     cxt.textBaseline = 'middle';
@@ -193,9 +200,9 @@ function render(cxt: CanvasRenderingContext2D) {
     cxt.fillText(`${i}`, 
       colPos[1] - cellPadding, y + h * 0.5);
     cxt.textAlign = 'start';
-    cxt.fillText(SubtitleUtil.formatTimestamp(entry.start), 
+    cxt.fillText(Basic.formatTimestamp(entry.start), 
       colPos[1] + cellPadding, y + h * 0.5);
-    cxt.fillText(SubtitleUtil.formatTimestamp(entry.end), 
+    cxt.fillText(Basic.formatTimestamp(entry.end), 
       colPos[2] + cellPadding, y + h * 0.5);
 
     // outer horizontal line
@@ -329,13 +336,17 @@ onMount(() => {
   });
 });
 
-
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
   return e1 && e2 && e1.start < e2.end && e1.end > e2.start;
 }
 
+
+function getTextLength(s: string) {
+  return [...s.matchAll(/[\w\u4E00-\u9FFF]/g)].length;
+}
+
 function getNpS(ent: SubtitleEntry, text: string) {
-  let num = SubtitleUtil.getTextLength(text) / (ent.end - ent.start);
+  let num = getTextLength(text) / (ent.end - ent.start);
   return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
 }
 

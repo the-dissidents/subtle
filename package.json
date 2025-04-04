@@ -1,7 +1,7 @@
 {
   "name": "subtle",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,6 +19,7 @@
     "@tauri-apps/plugin-os": "^2.0.0",
     "ajv": "^8.17.1",
     "chardet": "^2.1.0",
+    "deep-equal": "^2.2.3",
     "iconv-lite": "^0.6.3",
     "svelte-i18n": "^4.0.1"
   },
@@ -26,6 +27,7 @@
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@tauri-apps/cli": "^2.0.1",
     "@tsconfig/svelte": "^5.0.2",
+    "@types/deep-equal": "^1.0.4",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "tslib": "^2.6.0",

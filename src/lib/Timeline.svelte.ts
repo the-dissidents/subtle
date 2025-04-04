@@ -5,7 +5,7 @@ import { CanvasManager } from "./CanvasManager";
 import { MMedia } from "./API";
 import { LabelColor, theme } from "./Theming.svelte";
 
-import { SubtitleEntry, SubtitleUtil, type SubtitleChannel, SubtitleStyle } from "./core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 import { Editing, SelectMode } from "./frontend/Editing";
 import { Playback } from "./frontend/Playback";
@@ -111,17 +111,18 @@ const ALIGNLINE_WIDTH = 1.5;
 
 type Box = {
     x: number, y: number,
-    w: number, h: number, channel?: SubtitleChannel
+    w: number, h: number
 };
 
 function getTick(scale: number): [small: number, nMed: number, nBig: number] {
     const UNITS = [0.001, 0.01, 0.1, 1, 10, 60, 600, 3600];
+    // const UNITS = [1/60, 1/24, 1, 10, 60, 600, 3600];
     for (let i = 0; i < UNITS.length - 3; i++)
         if (scale * UNITS[i] > 2 / devicePixelRatio) return [
             UNITS[i], 
             UNITS[i+1] / UNITS[i], 
             UNITS[i+2] / UNITS[i]];
-    return [60, 600, 3600];
+    return [60, 10, 60];
 }
 
 let ellipsisWidth = -1;
@@ -200,8 +201,7 @@ export class Timeline {
         const subs = Source.subs;
         this.#entryHeight = (this.#height - HEADER_HEIGHT - TRACK_AREA_MARGIN * 2) 
             / (subs.styles.length+1);
-        this.#stylesMap = new Map(
-            [[subs.defaultStyle, 0], ...subs.styles.map((x, i) => [x, i+1])] as any);
+        this.#stylesMap = new Map(subs.styles.map((x, i) => [x, i]));
     }
 
     constructor(canvas: HTMLCanvasElement) {
@@ -248,13 +248,14 @@ export class Timeline {
             (ent) => ent.end > this.#offset && ent.start < end);
     }
 
-    #getEntryPositions(ent: SubtitleEntry): Box[] {
+    #getEntryPositions(ent: SubtitleEntry): (Box & {text: string})[] {
         const w = (ent.end - ent.start) * this.#scale,
               x = ent.start * this.#scale;
-        return ent.texts.map((channel) => {
-            let i = this.#stylesMap.get(channel.style) ?? 0;
+        
+        return [...ent.texts.entries()].map(([style, text]) => {
+            let i = this.#stylesMap.get(style) ?? 0;
             let y = this.#entryHeight * i + HEADER_HEIGHT + TRACK_AREA_MARGIN;
-            return {x: x, y: y, w: w, h: this.#entryHeight, channel: channel};
+            return {x: x, y: y, w: w, h: this.#entryHeight, text};
         });
     }
 
@@ -878,7 +879,7 @@ export class Timeline {
         ctx.lineWidth = 0.5;
         for (let i = 0; i < n; i++) {
             let t = start + i * small;
-            let pos = Math.round(t * this.#scale);
+            let pos = t * this.#scale;
             let height = 5;
             if (i % nBig == 0) {
                 height = HEADER_HEIGHT;
@@ -898,8 +899,7 @@ export class Timeline {
         ctx.textBaseline = 'bottom';
         for (let t = start; t < end; t += nBig * small) {
             const pos = Math.round(t * this.#scale);
-            ctx.fillText(SubtitleUtil.formatTimestamp(t, 2), 
-                pos + 5, HEADER_HEIGHT);
+            ctx.fillText(Basic.formatTimestamp(t, 2), pos + 5, HEADER_HEIGHT);
         }
     }
 
@@ -926,7 +926,7 @@ export class Timeline {
                 if (b.w > 50) {
                     ctx.fillStyle = ENTRY_TEXT;
                     ctx.fillText(
-                        ellipsisText(ctx, b.channel!.text, b.w - 8), 
+                        ellipsisText(ctx, b.text, b.w - 8), 
                         b.x + 4, b.y + 4);
                 }
             });

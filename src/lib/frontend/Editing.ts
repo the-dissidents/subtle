@@ -1,7 +1,7 @@
 console.info('Editing loading');
 
 import { get, writable, type Writable } from "svelte/store";
-import { SubtitleEntry, type SubtitleChannel, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { assert, Basic } from "../Basic";
 import { Interface } from "./Interface";
 import { ChangeCause, ChangeType, Source } from "./Source";
@@ -18,9 +18,7 @@ export type SelectionState = {
 
 export type FocusState = {
     entry: Writable<SubtitleEntry | null | 'virtual'>,
-    channel: SubtitleChannel | null,
     control: HTMLTextAreaElement | null,
-    // TODO: maybe separate this, it's not really part of the focus, but a kind of current default
     style: SubtitleStyle | null
 }
 
@@ -58,6 +56,8 @@ export const Editing = {
 
     editChanged: false,
     isEditingVirtualEntry: writable(false),
+    styleToEditor: new WeakMap<SubtitleStyle, HTMLTextAreaElement>(),
+
     onSelectionChanged: new EventHost<[cause: ChangeCause]>(),
     onKeepEntryInView: new EventHost<[entry: SubtitleEntry | 'virtual']>(),
     onKeepEntryAtPosition: new EventHost<[entry: SubtitleEntry, previous: SubtitleEntry]>(),
@@ -75,24 +75,27 @@ export const Editing = {
     startEditingFocusedEntry() {
         let focused = this.getFocusedEntry();
         assert(focused instanceof SubtitleEntry);
-        let channel = focused.texts.find((x) => x.style == this.focused.style);
-        if (!channel) {
-            channel = focused!.texts[0];
+        if (this.focused.style === null) {
+            const first = focused.texts.has(Source.subs.defaultStyle) 
+                ? Source.subs.defaultStyle
+                : Source.subs.styles.find((x) => focused.texts.has(x));
+            assert(first !== undefined);
+            this.focused.style = first;
         }
-        this.focused.style = channel.style;
-        this.focused.channel = channel;
-        if (!channel.gui) return;
-        // this.status = 'focused on ' + channel.style.name + ' of ' + channel.text;
-        channel.gui.focus();
-        channel.gui.scrollIntoView();
+        let elem = this.styleToEditor.get(this.focused.style);
+        if (!elem) return;
+        elem.focus();
+        elem.scrollIntoView();
     },
 
-    insertEntry(ent: SubtitleEntry | undefined, start: number, end: number, index: number) {
-        let entry = ent
-            ? new SubtitleEntry(start, end,
-                ...ent.texts.map((x) => ({ style: x.style, text: '' })))
-            : new SubtitleEntry(start, end, 
-                { style: Source.subs.defaultStyle, text: '' });
+    insertEntry(like: SubtitleEntry | undefined, start: number, end: number, index: number) {
+        let entry = new SubtitleEntry(start, end);
+        if (like) {
+            for (const [style, _] of like.texts)
+                entry.texts.set(style, '');
+        } else {
+            entry.texts.set(Source.subs.defaultStyle, '');
+        }
         Source.subs.entries.splice(index, 0, entry);
         Source.markChanged(ChangeType.Times);
         setTimeout(() => this.selectEntry(entry, SelectMode.Single), 0);
@@ -103,16 +106,21 @@ export const Editing = {
         Interface.status.set($_('msg.new-entry-appended'));
         let last = Source.subs.entries.at(-1);
         let entry = last 
-            ? new SubtitleEntry(last.end, last.end + 2, 
-                ...last.texts.map((x) => ({style: x.style, text: ''}))) 
-            : new SubtitleEntry(0, 2, {style: Source.subs.defaultStyle, text: ''});
+            ? new SubtitleEntry(last.end, last.end + 2) 
+            : new SubtitleEntry(0, 2);
+        if (last) {
+            for (const [style, _] of last.texts)
+                entry.texts.set(style, '');
+        } else {
+            entry.texts.set(Source.subs.defaultStyle, '');
+        }
         Source.subs.entries.push(entry);
         Source.markChanged(ChangeType.Times);
 
         // focus on the new entry
         this.clearSelection();
         this.selectEntry(entry, SelectMode.Single);
-        this.focused.style = entry.texts[0].style;
+        this.focused.style = Source.subs.styles.find((x) => entry.texts.has(x))!;
         setTimeout(() => {
             this.onKeepEntryInView.dispatch(entry);
             this.startEditingFocusedEntry();
@@ -120,28 +128,27 @@ export const Editing = {
         this.isEditingVirtualEntry.set(true);
     },
 
-    insertChannelAt(index: number) {
+    insertChannel(style: SubtitleStyle) {
         let focused = this.getFocusedEntry();
         assert(focused instanceof SubtitleEntry);
-        let newChannel: SubtitleChannel = {style: focused.texts[index].style, text: ''};
-        focused.texts = focused.texts.toSpliced(index + 1, 0, newChannel);
-        // focused.update.dispatch();
+        if (focused.texts.has(style)) return;
+        focused.texts.set(style, '');
+        this.focused.style = style;
         Source.markChanged(ChangeType.InPlace);
-        setTimeout(() => {
-            // GUI is generated by this time
-            newChannel.gui?.focus();
-            newChannel.gui?.scrollIntoView();
-        }, 0);
+        this.startEditingFocusedEntry();
     },
 
-    deleteChannelAt(index: number) {
+    deleteChannel(style: SubtitleStyle) {
         let focused = this.getFocusedEntry();
         assert(focused instanceof SubtitleEntry);
-        let channel = focused.texts[index];
-        if (channel == this.focused.channel)
-            this.clearFocus(false); // don't try to submit since we're deleting it
-        focused.texts = focused.texts.toSpliced(index, 1);
-        // focused.update.dispatch();
+        if (!focused.texts.has(style)) return;
+        focused.texts.delete(style);
+        if (this.focused.style == style)
+            this.focused.style = null;
+        // let channel = focused.texts[index];
+        // if (channel == this.focused.channel)
+        //     this.clearFocus(false); // don't try to submit since we're deleting it
+        // focused.texts = focused.texts.toSpliced(index, 1);
         Source.markChanged(ChangeType.InPlace);
     },
 
@@ -150,22 +157,19 @@ export const Editing = {
         assert(focused instanceof SubtitleEntry);
         if (!this.editChanged) return;
 
-        let channel = this.focused.channel;
-        assert(channel !== null);
-        let node = channel.gui;
-        assert(node !== undefined);
-
-        channel.text = node.value;
-        // focused.update.dispatch();
+        const style = this.focused.style;
+        const control = this.focused.control;
+        assert(style !== null && control !== null);
+        focused.texts.set(style, control.value);
         Source.markChanged(ChangeType.InPlace);
     },
 
     clearFocus(trySubmit = true) {
-        if(this.getFocusedEntry() == null) return;
-        if (trySubmit && this.focused.channel !== null)
+        let focused = this.getFocusedEntry();
+        if (focused == null) return;
+        if (trySubmit && focused instanceof SubtitleEntry)
             this.submitFocusedEntry();
         this.focused.entry.set(null);
-        this.focused.channel = null;
     },
 
     setSelection(entries: SubtitleEntry[]) {

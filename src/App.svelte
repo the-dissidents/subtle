@@ -20,6 +20,7 @@ import EncodingDialog from './lib/dialog/EncodingDialog.svelte';
 import ExportDialog from './lib/dialog/ExportDialog.svelte';
 import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
 import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
+import SplitByLineDialog from './lib/dialog/SplitByLineDialog.svelte';
 
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/SubtitleTable.svelte';
@@ -35,6 +36,7 @@ import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 
 import { assert, Basic } from './lib/Basic';
+import { theme } from './lib/Theming.svelte';
 
 import { getVersion } from '@tauri-apps/api/app';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
@@ -49,7 +51,6 @@ import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface, UIFocus } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
-    import { theme } from './lib/Theming.svelte';
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -204,6 +205,7 @@ appWindow.onDragDropEvent(async (ev) => {
 <TimeAdjustmentDialog handler={Dialogs.timeTransform}/>
 <ImportOptionsDialog  handler={Dialogs.importOptions}/>
 <CombineDialog        handler={Dialogs.combine}/>
+<SplitByLineDialog    handler={Dialogs.splitByLine}/>
 <EncodingDialog       handler={Dialogs.encoding}/>
 <ExportDialog         handler={Dialogs.export}/>
 <ConfigDialog         handler={Dialogs.configuration}/>

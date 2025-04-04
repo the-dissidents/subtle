@@ -1,5 +1,5 @@
 <script lang='ts'>
-import { SubtitleUtil } from './core/Subtitles.svelte';
+import { Basic } from './Basic';
 
 interface Props {
   timestamp?: number;
@@ -13,7 +13,7 @@ let value = $state('00:00:00.000');
 let changed = false;
 
 $effect(() => {
-  let newValue = SubtitleUtil.formatTimestamp(timestamp);
+  let newValue = Basic.formatTimestamp(timestamp);
   if (newValue != value) {
     changed = true;
     value = newValue;
@@ -21,7 +21,7 @@ $effect(() => {
 });
 </script>
 
-<input class={'timestamp ' + (stretch ? 'stretch' : '')}
+<input class={{timestamp: true, stretch}}
   type="text"
   bind:value={value}
   onbeforeinput={(ev) => {
@@ -38,7 +38,7 @@ $effect(() => {
         text.slice(0, pos) + data + text.slice(pos+1);
       ev.currentTarget.selectionStart = pos+1;
       ev.currentTarget.selectionEnd = pos+1;
-      timestamp = SubtitleUtil.parseTimestamp(ev.currentTarget.value) ?? 0;
+      timestamp = Basic.parseTimestamp(ev.currentTarget.value) ?? 0;
       changed = true;
       oninput?.();
     } 
@@ -53,14 +53,14 @@ $effect(() => {
       ev.currentTarget.selectionStart = pos-1;
       ev.currentTarget.selectionEnd = pos-1;
       ev.preventDefault();
-      timestamp = SubtitleUtil.parseTimestamp(ev.currentTarget.value) ?? 0;
+      timestamp = Basic.parseTimestamp(ev.currentTarget.value) ?? 0;
       changed = true;
       oninput?.();
     };
   }}
   onblur={(ev) => {
     if (!changed) return;
-    timestamp = SubtitleUtil.parseTimestamp(ev.currentTarget.value) ?? 0;
+    timestamp = Basic.parseTimestamp(ev.currentTarget.value) ?? 0;
     onchange?.();
   }}/>
 

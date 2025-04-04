@@ -7,7 +7,7 @@ import { _ } from 'svelte-i18n';
 export type DialogButton = {
   name: string,
   localizedName: () => string,
-  disabled?: boolean
+  disabled?: boolean | (() => boolean)
 };
 
 interface Props {
@@ -21,7 +21,7 @@ interface Props {
 
 let {
   handler = $bindable(),
-  maxWidth = '32em',
+  maxWidth = '40em',
   header,
   children,
   buttons = [{
@@ -107,7 +107,9 @@ handler.showModal = async () => {
     {#each buttons as btn}
       <button 
         class='submit'
-        disabled={btn.disabled ?? false}
+        disabled={typeof btn.disabled == 'function' 
+          ? btn.disabled() 
+          : (btn.disabled ?? false)}
         onclick={() => {
           assert(resolve !== undefined);
           resolve(btn.name);

@@ -67,7 +67,8 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
 
         let schema: GroupSchema<T> = {
             type: "object",
-            properties: {}
+            properties: {},
+            required: []
         };
         for (const key in definition) {
             const def = definition[key];

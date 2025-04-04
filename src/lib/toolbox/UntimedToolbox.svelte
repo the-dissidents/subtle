@@ -4,7 +4,7 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import { onDestroy } from "svelte";
 
 import { assert, Basic } from "../Basic";
-import type { SubtitleChannel, SubtitleEntry } from "../core/Subtitles.svelte";
+import type { SubtitleEntry } from "../core/Subtitles.svelte";
 import * as fuzzyAlgorithm from "../Fuzzy";
 
 import StyleSelect from "../StyleSelect.svelte";
@@ -26,11 +26,10 @@ let fuzzy = $state({
   enabled: false,
   maxSkip: 3,
   minScore: 0.5,
-  channel: Source.subs.defaultStyle,
   snapToPunct: true,
   tokenizer: 'default',
+  useStyle: Source.subs.defaultStyle,
   engine: null as fuzzyAlgorithm.Searcher | null,
-  currentChannel: null as SubtitleChannel | null,
   currentEntry: null as SubtitleEntry | null
 });
 
@@ -58,24 +57,20 @@ function updateToSubs() {
 
 function readFromSubs() {
   textarea.value = Source.subs.metadata.special.untimedText;
-  fuzzy.channel = Source.subs.defaultStyle;
+  fuzzy.useStyle = Source.subs.defaultStyle;
 }
 
 function fuzzyMatch() {
   if (!fuzzy.enabled) return;
 
-  let current = Editing.selection.focused?.texts.find(
-    (x) => x.style.uniqueID == fuzzy.channel.uniqueID);
-  if (!current || current.text == '' || textarea.value == '') {
-    console.log('no current', Editing.selection)
-    fuzzy.currentChannel = null;
+  fuzzy.currentEntry = Editing.selection.focused;
+  let current = fuzzy.currentEntry?.texts?.get(fuzzy.useStyle);
+  if (!current || textarea.value == '') {
+    console.log('no current', Editing.selection);
     fuzzy.currentEntry = null;
     textarea.selectionEnd = textarea.selectionStart;
     return;
   }
-  if (current.text == fuzzy.currentChannel?.text) return;
-  fuzzy.currentChannel = current;
-  fuzzy.currentEntry = Editing.selection.focused;
 
   // create engine if necessary
   if (fuzzy.engine === null) {
@@ -97,7 +92,7 @@ function fuzzyMatch() {
     textarea.selectionEnd = textarea.selectionStart;
     Interface.status.set($_('untimed.fuzzy-search-failed-to-find-anything'));
   };
-  let result = fuzzy.engine.search(current.text, fuzzy.maxSkip);
+  let result = fuzzy.engine.search(current, fuzzy.maxSkip);
   if (!result) {
     fail();
     return;
@@ -200,15 +195,15 @@ function clear() {
         let str = textarea.value.substring(
           textarea.selectionStart, textarea.selectionEnd);
 
-        assert(fuzzy.currentChannel !== null);
-        if (fuzzy.currentChannel.text != str) {
-          fuzzy.currentChannel.text = str;
+        assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
+        if (fuzzy.currentEntry.texts.get(fuzzy.useStyle) != str) {
+          fuzzy.currentEntry.texts.set(fuzzy.useStyle, str);
           Source.markChanged(ChangeType.InPlace);
         }
         // the above causes the UI to refresh, so we delay a bit
         setTimeout(() => {
           Editing.selection.focused = fuzzy.currentEntry;
-          Editing.focused.style = fuzzy.channel;
+          Editing.focused.style = fuzzy.useStyle;
           Editing.onSelectionChanged.dispatch(ChangeCause.Action);
           Editing.startEditingFocusedEntry();
         }, 0);
@@ -253,7 +248,7 @@ function clear() {
         <tbody>
           <tr>
             <td>{$_('untimed.channel')}</td>
-            <td><StyleSelect bind:currentStyle={fuzzy.channel} /></td>
+            <td><StyleSelect bind:currentStyle={fuzzy.useStyle} /></td>
           </tr>
           <tr>
             <td>{$_('untimed.tokenizer')}</td>

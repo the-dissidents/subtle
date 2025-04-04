@@ -1,22 +1,21 @@
-import {get, writable} from "svelte/store";
-import {Subtitles, SubtitleTools} from "../core/Subtitles.svelte";
-
-import * as fs from "@tauri-apps/plugin-fs";
-import {BaseDirectory} from "@tauri-apps/plugin-fs";
-import {guardAsync, Interface} from "./Interface";
-import {PrivateConfig} from "../config/PrivateConfig";
-import {Editing} from "./Editing";
-import {EventHost} from "./Frontend";
-import {basename} from '@tauri-apps/api/path';
-
-import {_, unwrapFunctionStore} from 'svelte-i18n';
-import {InterfaceConfig} from "../config/Groups";
-
 console.info('Source loading');
 
+import { get, writable } from "svelte/store";
+import { Subtitles } from "../core/Subtitles.svelte";
+import { SubtitleTools } from "../core/SubtitleUtil";
+
+import * as fs from "@tauri-apps/plugin-fs";
+import { basename } from '@tauri-apps/api/path';
+import { guardAsync, Interface } from "./Interface";
+import { PrivateConfig } from "../config/PrivateConfig";
+import { InterfaceConfig } from "../config/Groups";
+import { Editing } from "./Editing";
+import { EventHost } from "./Frontend";
+
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
-let intervalId = 1
+let intervalId = 0;
 
 export type Snapshot = {
     archive: string,
@@ -107,11 +106,11 @@ export const Source = {
         this.subs = newSubs;
         Editing.clearFocus(false);
         Editing.clearSelection();
+        this.clearUndoRedo();
         Editing.focused.style = newSubs.defaultStyle;
         this.currentFile.set(isImport ? '' : path);
+        this.fileChanged.set(newSubs.migrated);
         this.onSubtitleObjectReload.dispatch();
-        this.clearUndoRedo();
-        this.fileChanged.set(false);
         this.onSubtitlesChanged.dispatch(ChangeType.General);
         this.onSubtitlesChanged.dispatch(ChangeType.StyleDefinitions);
     },
@@ -158,7 +157,7 @@ export const Source = {
                 (currentFile == '' ? 'untitled' : await basename(currentFile, '.json'))
                 + '_' + getCurrentTimestampForFilename() + '.json';
             const text = JSON.stringify(Source.subs.toSerializable());
-            await fs.writeTextFile(autoSaveName, text, { baseDir: BaseDirectory.AppLocalData });
+            await fs.writeTextFile(autoSaveName, text, { baseDir: fs.BaseDirectory.AppLocalData });
             Interface.status.set($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
         }, $_('msg.autosave-failed'));
     },

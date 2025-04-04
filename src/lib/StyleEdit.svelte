@@ -1,12 +1,16 @@
 <script lang="ts">
 import { assert } from "./Basic";
-import { AlignMode, SubtitleStyle, SubtitleTools, type Subtitles } from "./core/Subtitles.svelte";
+import { AlignMode, type SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
+import { SubtitleTools } from "./core/SubtitleUtil";
+
+import * as dialog from "@tauri-apps/plugin-dialog";
 import { Menu } from "@tauri-apps/api/menu";
 import Collapsible from "./ui/Collapsible.svelte";
 import { writable } from 'svelte/store';
-import { ChangeCause, ChangeType, Source } from "./frontend/Source";
+import { ChangeType, Source } from "./frontend/Source";
 
 import { _ } from 'svelte-i18n';
+    import { Utils } from "./frontend/Utils";
 
 interface Props {
   style: SubtitleStyle;
@@ -17,11 +21,12 @@ interface Props {
 let { style: _style, subtitles = $bindable(), onsubmit }: Props = $props();
 let alignSelector: HTMLSelectElement | undefined = $state();
 let button: HTMLButtonElement | undefined = $state();
+let duplicateWarning = $state(false);
 let style = writable(_style);
 
 function isDuplicate(name: string) {
-  for (let s of [...subtitles.styles, subtitles.defaultStyle]) {
-    if (s === _style) continue;
+  for (let s of [...subtitles.styles]) {
+    if (s === $style) continue;
     if (s.name == name) return true;
   }
   return false;
@@ -29,17 +34,19 @@ function isDuplicate(name: string) {
 
 async function contextMenu() {
   let isDefault = $style == subtitles.defaultStyle;
-  let used = subtitles.entries.filter(
-    (x) => x.texts.find((c) => c.style == $style) !== undefined);
-  let withoutThis = isDefault ? [] : [subtitles.defaultStyle];
-  withoutThis.push(...subtitles.styles.filter((x) => x !== $style));
+  let used = subtitles.entries.filter((x) => x.texts.has($style));
+  let withoutThis = subtitles.styles.filter((x) => x !== $style);
   
   let menu = await Menu.new({
     items: [
     {
       text: $_('style.delete'),
-      enabled: used.length == 0 && !isDefault,
+      enabled: used.length == 0,
       action() {
+        if (isDefault) {
+          dialog.message($_('msg.you-cant-delete-a-default-style'));
+          return;
+        }
         let i = subtitles.styles.indexOf($style);
         if (i < 0) return;
         subtitles.styles.splice(i, 1);
@@ -50,40 +57,39 @@ async function contextMenu() {
     {
       text: $_('style.duplicate'),
       action() {
-        let clone = $style.clone();
+        let clone = structuredClone($state.snapshot($style));
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
-        subtitles.styles = subtitles.styles;
+        // subtitles.styles = subtitles.styles;
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }
     },
     {
       text: $_('style.replace-by'),
-      enabled: withoutThis.length > 0,
+      enabled: Source.subs.styles.length > 1 && used.length > 0,
+      items: withoutThis.map((x, i) => ({
+        id: i.toString(),
+        text: x.name,
+        async action(id) {
+          let n = Number.parseInt(id);
+          let other = withoutThis[n];
+          await Utils.replaceStyle(subtitles.entries, $style, other);
+        }
+      }))
+    },
+    {
+      text: $_('style.exchange-with'),
+      enabled: Source.subs.styles.length > 1 && used.length > 0,
       items: withoutThis.map((x, i) => ({
         id: i.toString(),
         text: x.name,
         action(id) {
           let n = Number.parseInt(id);
           let other = withoutThis[n];
-          if (SubtitleTools.replaceStyle(subtitles.entries, $style, other))
-            Source.markChanged(ChangeType.InPlace);
+          Utils.exchangeStyle(subtitles.entries, $style, other);
         }
       }))
-    },
-    {
-      text: $_('style.set-as-default'),
-      enabled: subtitles.defaultStyle != $style,
-      action() {
-        let oldDefault = subtitles.defaultStyle;
-        subtitles.defaultStyle = $style;
-        const index = subtitles.styles.indexOf($style);
-        subtitles.styles.splice(index, 1);
-        subtitles.styles.splice(0, 0, oldDefault);
-        Source.markChanged(ChangeType.StyleDefinitions);
-        onsubmit?.();
-      }
     },
   ]});
   menu.popup();
@@ -93,13 +99,12 @@ async function contextMenu() {
 <div class='hlayout'>
   <!-- toolbar -->
   <div class="toolbar">
-    {#if $style !== subtitles.defaultStyle}
     <!-- add style -->
     <button
       onclick={() => {
         let i = subtitles.styles.indexOf($style);
         assert(i >= 0);
-        let newStyle = new SubtitleStyle('new');
+        let newStyle = Subtitles.createStyle('new');
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
@@ -118,7 +123,6 @@ async function contextMenu() {
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }}>↑</button><br/>
-
     <!-- move down -->
     <button disabled={$style === subtitles.styles.at(-1)}
       onclick={() => {
@@ -133,7 +137,6 @@ async function contextMenu() {
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
       }}>↓</button><br/>
-    {/if}
     <button bind:this={button} onclick={() => contextMenu()}>...</button>
   </div>
   <!-- properties -->
@@ -143,11 +146,27 @@ async function contextMenu() {
       <tbody>
         <tr>
           <td>{$_('style.name')}</td>
-          <td><input type='text'
-            bind:value={$style.name}
-            class={isDuplicate($style.name) ? 'duplicate' : ''}
-            onchange={() => 
-              Source.markChanged(ChangeType.InPlace)}/></td>
+          <td class='hlayout'>
+            <input type='text'
+              value={$style.name}
+              class={{duplicate: duplicateWarning, flexgrow: true}}
+              oninput={(ev) => duplicateWarning = isDuplicate(ev.currentTarget.value)}
+              onchange={(ev) => {
+                if (isDuplicate(ev.currentTarget.value)) {
+                  ev.currentTarget.value = $style.name;
+                  duplicateWarning = false;
+                } else {
+                  $style.name = ev.currentTarget.value;
+                  Source.markChanged(ChangeType.InPlace);
+                }
+              }}/>
+            <label style="padding-left: 5px;">
+              <input type='checkbox'
+                checked={subtitles.defaultStyle == $style}
+                onchange={() => subtitles.defaultStyle = $style}/>
+              {$_('style.default')}
+            </label>
+          </td>
         </tr>
         <tr>
           <td>{$_('style.font')}</td>

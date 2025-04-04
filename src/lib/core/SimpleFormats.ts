@@ -1,5 +1,5 @@
-import { assert } from "../Basic";
-import { Subtitles, SubtitleUtil, SubtitleEntry } from "./Subtitles.svelte";
+import { assert, Basic } from "../Basic";
+import { Subtitles, SubtitleEntry } from "./Subtitles.svelte";
 
 export enum LinearFormatCombineStrategy {
     /**
@@ -22,20 +22,24 @@ type LinearEntry = {
 
 const ToLinearFormat = {
     [LinearFormatCombineStrategy.KeepOrder]: 
-        (entries: SubtitleEntry[]): LinearEntry[] => entries
+        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => entries
             .map((x) => ({ 
                 start: x.start, end: x.end, 
-                text: x.texts.map((t) => t.text).join('\n') 
+                text: subs.styles
+                    .map((s) => x.texts.get(s))
+                    .filter((x) => x).join('\n') 
             })),
     [LinearFormatCombineStrategy.Sorted]:
-        (entries: SubtitleEntry[]): LinearEntry[] => entries
+        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => entries
             .toSorted((x, y) => x.start - y.start)
             .map((x) => ({ 
                 start: x.start, end: x.end, 
-                text: x.texts.map((t) => t.text).join('\n') 
+                text: subs.styles
+                    .map((s) => x.texts.get(s))
+                    .filter((x) => x).join('\n') 
             })),
     [LinearFormatCombineStrategy.Recombine]:
-        (entries: SubtitleEntry[]): LinearEntry[] => {
+        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => {
             let events: { type: 'start' | 'end', pos: number, i: number }[] = [];
             entries.forEach(({start, end}, i) => {
                 events.push({ type: 'start', pos: start, i });
@@ -52,7 +56,10 @@ const ToLinearFormat = {
                 while (events[i].pos == pos) {
                     const event = events[i];
                     if (event.type == 'start') {
-                        let text = entries[event.i].texts.map((x) => x.text).join('\n');
+                        const entry = entries[event.i];
+                        let text = subs.styles
+                            .map((s) => entry.texts.get(s))
+                            .filter((x) => x).join('\n');
                         activeTexts.push({text, i: event.i});
                     } else {
                         let index = activeTexts.findIndex((x) => x.i == event.i);
@@ -92,11 +99,12 @@ export const SimpleFormats = {
     
             let subs = new Subtitles();
             for (let match of matches) {
-                let start = SubtitleUtil.parseTimestamp(match[1]),
-                    end = SubtitleUtil.parseTimestamp(match[2]);
+                let start = Basic.parseTimestamp(match[1]),
+                    end = Basic.parseTimestamp(match[2]);
                 if (start === null || end === null) continue;
-                subs.entries.push(new SubtitleEntry(
-                    start, end, {style: subs.defaultStyle, text: match[3].trimEnd()}))
+                let entry = new SubtitleEntry(start, end);
+                entry.texts.set(subs.defaultStyle, match[3].trimEnd());
+                subs.entries.push(entry)
             }
             return subs;
         }
@@ -105,22 +113,27 @@ export const SimpleFormats = {
         JSON(subs: Subtitles) {
             return JSON.stringify(subs.toSerializable());
         },
-        SRT(subs: SubtitleEntry[], strategy: LinearFormatCombineStrategy) {
-            const linear = ToLinearFormat[strategy](subs);
+        SRT(subs: Subtitles, entries: SubtitleEntry[], strategy: LinearFormatCombineStrategy) {
+            const linear = ToLinearFormat[strategy](subs, entries);
             let result = '', i = 1;
             for (let entry of linear) {
-                result += `${i}\n${SubtitleUtil.formatTimestamp(entry.start, 3, ',')} --> ${SubtitleUtil.formatTimestamp(entry.end, 3, ',')}\n${entry.text}\n\n`;
+                result += `${i}\n${
+                    Basic.formatTimestamp(entry.start, 3, ',')} --> ${
+                    Basic.formatTimestamp(entry.end, 3, ',')}\n${entry.text}\n\n`;
                 i += 1;
             }
             return result;
         },
-        tabDelimited(subs: SubtitleEntry[], strategy: LinearFormatCombineStrategy) {
-            const linear = ToLinearFormat[strategy](subs);
+        tabDelimited(
+            subs: Subtitles, entries: SubtitleEntry[], 
+            strategy: LinearFormatCombineStrategy
+        ) {
+            const linear = ToLinearFormat[strategy](subs, entries);
             let result = '', i = 1;
             for (let entry of linear) {
                 result += `${
-                    SubtitleUtil.formatTimestamp(entry.start, 3, '.')}\t${
-                    SubtitleUtil.formatTimestamp(entry.end, 3, '.')}\t${
+                    Basic.formatTimestamp(entry.start, 3, '.')}\t${
+                        Basic.formatTimestamp(entry.end, 3, '.')}\t${
                     entry.text
                         .replace('\n', '\\N')
                         .replace('\t', '\\T')}\n`;
@@ -131,8 +144,11 @@ export const SimpleFormats = {
         /**
          * Plain text of lines, without times.
          */
-        plaintext(subs: SubtitleEntry[], strategy: LinearFormatCombineStrategy) {
-            const linear = ToLinearFormat[strategy](subs);
+        plaintext(
+            subs: Subtitles, entries: SubtitleEntry[], 
+            strategy: LinearFormatCombineStrategy
+        ) {
+            const linear = ToLinearFormat[strategy](subs, entries);
             return linear.map((x) => x.text).join('\n');
         }
     } as const
