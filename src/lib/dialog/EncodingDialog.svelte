@@ -73,7 +73,7 @@ function makePreview() {
   {/snippet}
   <p>{$_('encodingdialog.info')}</p>
   <div class='hlayout'>
-    <table>
+    <table class='data'>
       <thead>
       <tr>
         <th></th>
@@ -121,19 +121,6 @@ function makePreview() {
   textarea {
     resize: none;
     height: auto;
-  }
-  th {
-    background-color: var(--uchu-yin-1);
-    border-collapse: collapse;
-    border-spacing: 0;
-    text-transform: uppercase;
-    color: var(--uchu-yin-6);
-    font-size: 85%;
-  }
-  th, td {
-    border: none;
-    margin: 0;
-    padding: 0 5px;
   }
   table {
     margin-right: 5px;

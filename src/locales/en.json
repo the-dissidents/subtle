@@ -108,8 +108,8 @@
   },
   "configdialog": {
     "all-items-are-automatically-saved": "All items are automatically saved.",
-    "show-config-file-advanced": "Show config file (advanced)",
-    "show-autosave-path": "Show autosave path"
+    "show-autosave-path": "Show autosave path",
+    "show-config-file-advanced": "Show config file (advanced)"
   },
   "cxtmenu": {
     "and": "and:",
@@ -267,14 +267,16 @@
     "as": " = ",
     "create-new": "create new",
     "error": "'Split by line' works only on entries with a single channel, but the selection you provided has multiple channels. You probably didn't want to do this.",
+    "explanation-0": "This tool converts subtitles, such as bilingual SRTs, where language switching is indicated by line breaks instead of style changes, into the correct format. Ensure that each line corresponds to a fixed language or format; for example, a language should not appear sometimes as two lines and sometimes as one line. Then you can select a unique style for each line. If there are too many things mixed up, consider pre-process the file using regular expressions. If there are only a few exceptions, you can use \"Mark by line number\" to label these abnormal entries for proofreading. After splitting, go to the properties page to check the style order and adjust the position to prevent misalignment.",
     "fewer-than": "fewer than",
     "header": "split by line",
     "line-number": "line",
     "mark-those-entries": "Mark entries by line count",
-    "original": "original",
     "preview": "Preview",
     "remove-empty-lines": "remove empty lines",
     "settings": "Settings",
+    "to-style": "to style",
+    "usage": "usage",
     "with-lines-more-than": "more than"
   },
   "style": {

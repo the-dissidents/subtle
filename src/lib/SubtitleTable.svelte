@@ -380,7 +380,7 @@ function requestAutoScroll() {
       return;
     }
     let time = performance.now();
-    manager.setScroll({y: autoScrollY * (time - lastAnimateFrameTime) * 0.001})
+    manager.setScroll({y: manager.scroll[1] + autoScrollY * (time - lastAnimateFrameTime) * 0.001})
     lastAnimateFrameTime = time;
 
     const line = (((autoScrollY < 0) ? 0 : manager.size[1]) / manager.scale + manager.scroll[1] - headerHeight) / lineHeight;

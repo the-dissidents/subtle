@@ -76,7 +76,7 @@ async function copy() {
   {/snippet}
   <div class="hlayout">
     <div>
-      <table class="styles">
+      <table class="data">
         <thead>
         <tr>
           <th></th>
@@ -136,25 +136,11 @@ async function copy() {
 </DialogBase>
 
 <style>
-  th {
-    background-color: var(--uchu-yin-1);
-    border-collapse: collapse;
-    border-spacing: 0;
-    text-transform: uppercase;
-    color: var(--uchu-yin-6);
-    font-size: 85%;
-  }
   .stylename {
     min-width: 100px;
   }
-  th, td {
-    border: none;
-    margin: 0;
-    padding: 0 5px;
-  }
-  table.styles {
+  table {
     margin-right: 5px;
-    /* border-bottom: 1px solid var(--uchu-yin-1); */
     width: 100%;
   }
   .rightpane {

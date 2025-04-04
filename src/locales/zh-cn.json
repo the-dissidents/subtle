@@ -108,8 +108,8 @@
   },
   "configdialog": {
     "all-items-are-automatically-saved": "所有设置项均自动保存",
-    "show-config-file-advanced": "显示配置文件（高级）",
-    "show-autosave-path": "显示自动保存文件夹"
+    "show-autosave-path": "显示自动保存文件夹",
+    "show-config-file-advanced": "显示配置文件（高级）"
   },
   "cxtmenu": {
     "and": "和：",
@@ -228,7 +228,7 @@
     "search-failed": "查找失败：",
     "unable-to-read-file-path": "无法读取文件：{path}",
     "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的要继续吗？这可能会使应用程序崩溃。",
-    "you-cant-delete-a-default-style": "无法删除默认样式；请先把别的一个样式设置为默认"
+    "you-cant-delete-a-default-style": "无法删除默认样式；请先把另一个样式设置为默认"
   },
   "not-implemented-yet": "（暂时没有用）",
   "ok": "确认",
@@ -266,12 +266,12 @@
   "splitbylinedialog": {
     "as": "标为",
     "create-new": "新建",
+    "error": "“按行拆分”仅适用于单一频道的条目，但是您的选区中存在多个频道。是不是选错了？",
+    "explanation-0": "这个工具用于将SRT双语字幕等用换行表达语言切换的字幕转换为正确的格式。请先给每一行选择不重复的格式，在预览中确认基本无混杂：确保每一行都对应固定的语言或格式，例如不能出现某语言时而用两行、时而用一行的情况。如果这些情况过多，请考虑用正则表达式等方法先进行预处理。如果只有极少数地方出现例外，可以通过“根据行数标记”功能将这些非正常条目加上标签，以便校对。拆分完成后请前往属性页核对样式顺序、调整位置，以防出现错位。",
     "fewer-than": "少于",
     "header": "按行拆分",
-    "label": "标签",
     "line-number": "行号",
     "mark-those-entries": "根据行数标记",
-    "original": "不变",
     "preview": "预览",
     "remove-empty-lines": "移除空行",
     "settings": "设置",

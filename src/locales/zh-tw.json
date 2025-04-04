@@ -48,6 +48,8 @@
     "will-be-combined-in": "將合併為"
   },
   "config": {
+    "arrow-navigation-type": "上下方向鍵選擇設定",
+    "arrow-navigation-type-d": "指定按上下方向鍵選擇時，新選取的字幕條應該會捲動到什麼位置",
     "arrow-skip-amount": "方向鍵跳轉時長",
     "arrow-skip-amount-d": "已載入媒體檔案時，透過按下向左或向右箭頭按鈕來跳過的時長，以秒為單位",
     "auto-scroll-exponent": "自動捲動指數",
@@ -60,6 +62,8 @@
     "debug": "偵錯",
     "debug-d": "⚠️ 僅用於偵錯，通常不需要修改",
     "each-style-of-selection": "選取範圍內每種樣式的頭尾",
+    "enter-navigation-type": "回車選擇設定",
+    "enter-navigation-type-d": "指定在編輯框裡按回車前往下一條字幕時，這條字幕應該會捲動到什麼位置",
     "font-size": "字型大小",
     "input": "輸入",
     "interface": "介面",
@@ -75,6 +79,8 @@
     "mouse-zoom-sensitivity": "滑鼠縮放靈敏度",
     "mouse-zoom-sensitivity-d": "使用滑鼠滾輪時的縮放速度係數。調整以使縮放速度與觸控板保持一致",
     "multiselect-drag-reference": "拖曳多選時的吸附基準",
+    "navigation-keep-in-view": "僅保證字幕條在可見區域內",
+    "navigation-keep-position": "保持新選擇的字幕條屬於同樣螢幕位置",
     "preload-amount": "預載入量",
     "preload-amount-d": "影片和音訊播放的預載入量，以秒為單位。設定過高可能導致大量記憶體消耗",
     "resize-area-size": "調整區域大小",
@@ -102,8 +108,8 @@
   },
   "configdialog": {
     "all-items-are-automatically-saved": "所有設定項目均自動儲存",
-    "show-config-file-advanced": "顯示設定檔（進階）",
-    "show-autosave-path": "顯示自動儲存資料夾"
+    "show-autosave-path": "顯示自動儲存資料夾",
+    "show-config-file-advanced": "顯示設定檔（進階）"
   },
   "cxtmenu": {
     "and": "和：",
@@ -122,6 +128,7 @@
     "anchor-start": "錨定開頭",
     "at-virtual-entry": "雙擊或按 Enter 可新增項目",
     "keep-duration": "保持持續時間",
+    "label": "標籤",
     "no-selection": "選擇一行開始編輯"
   },
   "encodingdialog": {
@@ -213,13 +220,15 @@
     "note-file-is-migrated-path": "注意：正在開啟舊版存檔檔案；我們會自動將其轉換為新版，過程中可能會產生一些樣式上的變化。如果儲存更新的文件，舊版本軟體很可能將無法開啟它。",
     "nothing-to-paste": "沒有可以貼上的東西",
     "opened-path": "已開啟：{path}",
+    "overwrite-style": "確認要覆蓋樣式 {style} 的已有內容？",
     "pasted": "已貼上",
     "proceed-without-saving": "檔案尚未儲存，確認繼續？",
     "saved-to-file": "已儲存：{file}",
     "search-expression-is-empty": "搜尋表達式為空",
     "search-failed": "搜尋失敗：",
     "unable-to-read-file-path": "無法讀取檔案：{path}",
-    "very-large-file-warning": "您開啟的檔案非常大，很可能不是支援的字幕檔案。真的要繼續嗎？這可能會使應用程式崩潰。"
+    "very-large-file-warning": "您開啟的檔案非常大，很可能不是支援的字幕檔案。真的要繼續嗎？這可能會使應用程式崩潰。",
+    "you-cant-delete-a-default-style": "無法刪除預設樣式；請先把另一個樣式設定為預設"
   },
   "not-implemented-yet": "（暫時沒有用）",
   "ok": "確認",
@@ -254,6 +263,22 @@
     "selected-n-lines": "已選擇 {n} 行",
     "use-regular-expressions": "使用正規表達式"
   },
+  "splitbylinedialog": {
+    "as": "標為",
+    "create-new": "新建",
+    "error": "「按行拆分」僅適用於單一頻道的條目，但是您的選區中存在多個頻道。是不是選錯了？",
+    "explanation-0": "這個工具用於將 SRT 雙語字幕等以換行表達語言切換的字幕轉換為正確的格式。請先為每一行選擇不重複的格式，並在預覽中確認基本無混雜：確保每一行都對應固定的語言或格式，例如不能出現某語言時而使用兩行、時而使用一行的情況。如果這些情況過多，請考慮使用正則表達式等方法進行預處理。如果只有極少數地方出現例外，可以透過「根據行數標記」功能，將這些非正常條目加上標籤，以便校對。拆分完成後，請前往屬性頁核對樣式順序並調整位置，避免出現錯位。",
+    "fewer-than": "少於",
+    "header": "按行拆分",
+    "line-number": "行號",
+    "mark-those-entries": "根據行數標記",
+    "preview": "預覽",
+    "remove-empty-lines": "移除空行",
+    "settings": "設定",
+    "to-style": "拆分為樣式",
+    "usage": "使用量",
+    "with-lines-more-than": "多於"
+  },
   "style": {
     "alignment": "對齊",
     "bottom": "下",
@@ -263,8 +288,10 @@
     "center": "置中",
     "center-left": "左側置中",
     "center-right": "右側置中",
+    "default": "預設",
     "delete": "刪除",
     "duplicate": "複製",
+    "exchange-with": "交換",
     "font": "字型",
     "left": "左",
     "line-color": "輪廓顏色",

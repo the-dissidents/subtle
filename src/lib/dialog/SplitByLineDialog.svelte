@@ -175,8 +175,8 @@ let hasError = $state(true);
   <h4>{$_('splitbylinedialog.header')}</h4>
   {/snippet}
   <div class="vlayout">
-  <p>这个工具用于将SRT双语字幕等用换行表达语言切换的字幕转换为正确的格式。请先给每一行选择不重复的格式，在预览中确认基本无混杂：确保每一行都对应固定的语言或格式，例如不能出现某语言时而用两行、时而用一行的情况。如果这些情况过多，请考虑用正则表达式等方法先进行预处理。如果只有极少数地方出现例外，可以通过“根据行数标记”功能将这些非正常条目加上标签，以便校对。拆分完成后请前往属性页核对样式顺序、调整位置，以防出现错位。</p>
-  <table>
+  <p>{$_('splitbylinedialog.explanation-0')}</p>
+  <table class='data'>
     <thead>
       <tr>
         <th>{$_('splitbylinedialog.line-number')}</th>
@@ -192,7 +192,7 @@ let hasError = $state(true);
             selectedRow = i;
             makePreview();
           }}>
-        <td>{i + 1}</td>
+        <td class="right">{i + 1}</td>
         <td>{line.usage}</td>
         <td class="hlayout center-items">
           <label>
@@ -278,7 +278,6 @@ let hasError = $state(true);
       </ol>
     </div>
   </div>
-  <p>在拆分之后，可以前往属性页对新添加的格式进行调整。</p>
   </div>
 </DialogBase>
 
@@ -288,49 +287,8 @@ let hasError = $state(true);
     font-weight: bold;
     margin: 1em 0 0;
   }
-  th {
-    background-color: var(--uchu-yin-1);
-    border-collapse: collapse;
-    border-spacing: 0;
-    text-transform: uppercase;
-    color: var(--uchu-yin-6);
-    font-size: 85%;
-  }
-  tr.focused {
-    background-color: var(--uchu-blue-1);
-  }
-  th, td {
-    border: none;
-    margin: 0;
-    padding: 0 5px;
-  }
-  td:first-child {
-    text-align: right;
-  }
   table {
     margin-right: 5px;
-  }
-
-  @media (prefers-color-scheme: light) {
-    ol[role='listbox'] {
-      border: 1px solid var(--uchu-gray-4);
-      background-color: white;
-      color: var(--uchu-yin);
-      &:focus {
-        outline: 2px solid color-mix(in oklab, var(--uchu-blue-3), transparent);
-      }
-      &:disabled {
-        background-color: var(--uchu-gray-1);
-        color: var(--uchu-gray-9);
-      }
-      & li {
-        border-bottom: 1px solid var(--uchu-gray-1);
-      }
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-
   }
 
   .settings {
@@ -348,28 +306,4 @@ let hasError = $state(true);
     width: 50px;
   }
 
-  ol {
-    display: flex;
-    flex-direction: column;
-    width: 25em;
-    height: 200px;
-    white-space: normal;
-    overflow-y: auto;
-
-    padding: 3px 0;
-    margin: 1px;
-    border-radius: 3px;
-    list-style: none;
-  }
-
-  ol[role='listbox'] li {
-    width: auto;
-    display: block;
-    font-family: var(--fontFamily);
-    font-size: 0.85rem;
-    line-height: 1.3;
-    padding: 3px 6px;
-    user-select: auto;
-    -webkit-user-select: auto;
-  }
 </style>

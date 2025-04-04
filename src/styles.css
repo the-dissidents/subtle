@@ -44,7 +44,8 @@
       background: var(--uchu-yin-1);
     }
   }
-  input[type=number], input[type=text], select, textarea {
+  input[type=number], input[type=text], select, 
+  textarea, ol[role='listbox'] {
     border: 1px solid var(--uchu-gray-4);
     background-color: white;
     color: var(--uchu-yin);
@@ -55,6 +56,9 @@
       background-color: var(--uchu-gray-1);
       color: var(--uchu-gray-9);
     }
+  }
+  ol[role='listbox'] > li {
+    border-bottom: 1px solid var(--uchu-gray-1);
   }
   input[type=checkbox], input[type=radio] {
     border: 1px solid var(--uchu-gray-4);
@@ -118,7 +122,8 @@
       background: var(--uchu-yin-7);
     }
   }
-  input[type=number], input[type=text], select, textarea {
+  input[type=number], input[type=text], select, 
+  textarea, ol[role='listbox'] {
     border: none;
     background-color: var(--uchu-yin-8);
     color: var(--uchu-yang);
@@ -129,6 +134,9 @@
       background-color: var(--uchu-yin-8);
       color: var(--uchu-gray-9);
     }
+  }
+  ol[role='listbox'] > li {
+    border-bottom: 1px solid var(--uchu-yin-7);
   }
   input[type=checkbox], input[type=radio] {
     border: 1px solid var(--uchu-yin-7);
@@ -353,6 +361,32 @@ input[type=range] {
   }
 }
 
+
+ol[role='listbox'] {
+  display: flex;
+  flex-direction: column;
+  width: 25em;
+  height: 200px;
+  white-space: normal;
+  overflow-y: auto;
+
+  padding: 3px 0;
+  margin: 1px;
+  border-radius: 3px;
+  list-style: none;
+}
+
+ol[role='listbox'] > li {
+  width: auto;
+  display: block;
+  font-family: var(--fontFamily);
+  font-size: 0.85rem;
+  line-height: 1.3;
+  padding: 3px 6px;
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
 /* HEADER */
 
 h5 {
@@ -383,6 +417,45 @@ table.config td:first-child {
   font-size: 90%;
   /* text-transform: uppercase; */
   /* font-weight: bold; */
+}
+
+/* DATA TABLE */
+
+@media (prefers-color-scheme: light) {
+  table.data th {
+    background-color: var(--uchu-yin-1);
+    color: var(--uchu-yin-6);
+  }
+  table.data tr.focused {
+    background-color: var(--uchu-gray-1);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  table.data th {
+    background-color: var(--uchu-yin-5);
+    color: var(--uchu-gray-1);
+  }
+  table.data tr.focused {
+    background-color: var(--uchu-yin-6);
+  }
+}
+
+table.data th {
+  border-collapse: collapse;
+  border-spacing: 0;
+  text-transform: uppercase;
+  font-size: 85%;
+}
+
+table.data th, table.data  td {
+  border: none;
+  margin: 0;
+  padding: 0 5px;
+}
+
+table.data .right {
+  text-align: right;
 }
 
 /* CLASSES */
