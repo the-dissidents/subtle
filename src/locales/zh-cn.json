@@ -56,9 +56,12 @@
     "auto-scroll-exponent-d": "在字幕表格中拖动选择时自动滚动的指数。每秒自动滚动速率用如下方法计算：（ 到边缘的距离 * 系数 ) ^ 指数",
     "auto-scroll-factor": "自动滚动系数",
     "auto-scroll-factor-d": "在字幕表格中拖动选择时自动滚动的系数",
+    "autosave-interval": "自动保存时间间隔",
+    "autosave-interval-d": "自动保存的时间间隔，以分钟为单位。设置为0表示禁用自动保存",
     "dark": "深色",
     "debug": "调试",
     "debug-d": "⚠️ 仅用于调试，通常不需要修改",
+    "each-style-of-selection": "选区中每种样式的头尾",
     "enter-navigation-type": "回车选择设置",
     "enter-navigation-type-d": "指定在编辑框里按回车前往下一条字幕时，这条字幕应该滚动到什么位置",
     "font-size": "字号",
@@ -75,6 +78,7 @@
     "mouse-scroll-sensitivity-d": "使用鼠标滚轮时的滚动速度系数。调整以使滚动速度与触控板保持一致",
     "mouse-zoom-sensitivity": "鼠标缩放灵敏度",
     "mouse-zoom-sensitivity-d": "使用鼠标滚轮时的缩放速度系数。调整以使滚动速度与触控板保持一致",
+    "multiselect-drag-reference": "拖动多选时的吸附基准",
     "navigation-keep-in-view": "仅保证字幕条在可见区域内",
     "navigation-keep-position": "保持新选择的字幕条属于同样屏幕位置",
     "preload-amount": "预加载量",
@@ -87,6 +91,7 @@
     "snapping": "吸附",
     "snapping-d": "是否默认启用吸附。如果打开，按住Alt/Option会暂时禁用它；如果关闭，则会暂时启用它",
     "table-view": "字幕表格",
+    "the-entry-under-the-mouse": "鼠标下的那个项目",
     "theme": "主题",
     "timeline": "时间线",
     "trackpad-scroll-sensitivity": "触控板滚动灵敏度",
@@ -98,11 +103,13 @@
     "ui-font-size": "UI字号",
     "use-system-theme": "使用系统主题",
     "waveform-resolution": "波形分辨率",
-    "waveform-resolution-d": "每秒用于波形显示的采样点的数量；分辨率越高，加载越慢"
+    "waveform-resolution-d": "每秒用于波形显示的采样点的数量；分辨率越高，加载越慢",
+    "whole-of-selection": "整个选区的头尾"
   },
   "configdialog": {
     "all-items-are-automatically-saved": "所有设置项均自动保存",
-    "show-config-file-advanced": "显示配置文件（高级）"
+    "show-config-file-advanced": "显示配置文件（高级）",
+    "show-autosave-path": "显示自动保存文件夹"
   },
   "cxtmenu": {
     "and": "和：",
@@ -196,6 +203,8 @@
     "undo": "撤消"
   },
   "msg": {
+    "autosave-complete": "自动保存完成 {time}",
+    "autosave-failed": "自动保存失败",
     "changed-n-entries": "{n,plural,=0 {没有可修改的东西} one {修改了 {n} 项} other {修改了 {n} 项}}",
     "combined-n-entries": "合并了 {n} 项",
     "copied-exported-data": "导出数据已复制",

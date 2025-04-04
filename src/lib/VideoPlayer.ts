@@ -182,6 +182,7 @@ export class VideoPlayer {
     }
 
     async close() {
+        console.log('开始');
         assert(this.#opened !== undefined && !this.#opened.media.isClosed);
         this.#requestedSetPositionTarget = -1;
         this.#requestedPreload = false;
@@ -192,6 +193,7 @@ export class VideoPlayer {
         await this.forceSetPosition(0);
         this.#opened = undefined;
         this.#manager.requestRender();
+        console.log('结束');
     }
     
     async load(rawurl: string) {

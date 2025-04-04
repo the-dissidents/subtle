@@ -55,6 +55,14 @@
         }
       ]
     },
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
     "opener:allow-reveal-item-in-dir",
     "opener:default"
   ]

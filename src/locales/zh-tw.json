@@ -54,9 +54,12 @@
     "auto-scroll-exponent-d": "在字幕表格中拖曳選擇時自動捲動的指數。每秒自動捲動速率用以下方法計算：（ 到邊緣的距離 * 係數 ) ^ 指數",
     "auto-scroll-factor": "自動捲動係數",
     "auto-scroll-factor-d": "在字幕表格中拖曳選擇時自動捲動的係數",
+    "autosave-interval": "自動儲存時間間隔",
+    "autosave-interval-d": "自動儲存的時間間隔，以分锺為單位。設定為0表示禁用自動儲存",
     "dark": "深色",
     "debug": "偵錯",
     "debug-d": "⚠️ 僅用於偵錯，通常不需要修改",
+    "each-style-of-selection": "選取範圍內每種樣式的頭尾",
     "font-size": "字型大小",
     "input": "輸入",
     "interface": "介面",
@@ -71,6 +74,7 @@
     "mouse-scroll-sensitivity-d": "使用滑鼠滾輪時的捲動速度係數。調整以使捲動速度與觸控板保持一致",
     "mouse-zoom-sensitivity": "滑鼠縮放靈敏度",
     "mouse-zoom-sensitivity-d": "使用滑鼠滾輪時的縮放速度係數。調整以使縮放速度與觸控板保持一致",
+    "multiselect-drag-reference": "拖曳多選時的吸附基準",
     "preload-amount": "預載入量",
     "preload-amount-d": "影片和音訊播放的預載入量，以秒為單位。設定過高可能導致大量記憶體消耗",
     "resize-area-size": "調整區域大小",
@@ -81,6 +85,7 @@
     "snapping": "吸附",
     "snapping-d": "是否預設啟用吸附。如果開啟，按住 Alt/Option 會暫時停用它；如果關閉，則會暫時啟用它",
     "table-view": "字幕表格",
+    "the-entry-under-the-mouse": "滑鼠下的那個項目",
     "theme": "主題",
     "timeline": "時間軸",
     "trackpad-scroll-sensitivity": "觸控板捲動靈敏度",
@@ -92,11 +97,13 @@
     "ui-font-size": "UI 字型大小",
     "use-system-theme": "使用系統主題",
     "waveform-resolution": "波形解析度",
-    "waveform-resolution-d": "每秒用於波形顯示的取樣點的數量；解析度越高，載入越慢"
+    "waveform-resolution-d": "每秒用於波形顯示的取樣點的數量；解析度越高，載入越慢",
+    "whole-of-selection": "整個選區的頭尾"
   },
   "configdialog": {
     "all-items-are-automatically-saved": "所有設定項目均自動儲存",
-    "show-config-file-advanced": "顯示設定檔（進階）"
+    "show-config-file-advanced": "顯示設定檔（進階）",
+    "show-autosave-path": "顯示自動儲存資料夾"
   },
   "cxtmenu": {
     "and": "和：",
@@ -189,6 +196,8 @@
     "undo": "復原"
   },
   "msg": {
+    "autosave-complete": "自動儲存完成 {time}",
+    "autosave-failed": "自動儲存失敗",
     "changed-n-entries": "{n,plural,=0 {沒有可修改的東西} one {修改了 {n} 個項目} other {修改了 {n} 個項目}}",
     "combined-n-entries": "合併了 {n} 個項目",
     "copied-exported-data": "匯出資料已複製",

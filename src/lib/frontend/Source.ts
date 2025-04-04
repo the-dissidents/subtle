@@ -5,13 +5,17 @@ import { Subtitles } from "../core/Subtitles.svelte";
 import { SubtitleTools } from "../core/SubtitleUtil";
 
 import * as fs from "@tauri-apps/plugin-fs";
+import { basename } from '@tauri-apps/api/path';
 import { guardAsync, Interface } from "./Interface";
 import { PrivateConfig } from "../config/PrivateConfig";
+import { InterfaceConfig } from "../config/Groups";
 import { Editing } from "./Editing";
 import { EventHost } from "./Frontend";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
+
+let intervalId = 0;
 
 export type Snapshot = {
     archive: string,
@@ -131,4 +135,47 @@ export const Source = {
             return true;
         }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
     },
+
+    async doAutoSave() {
+        function getCurrentTimestampForFilename(): string {
+            const now = new Date();
+
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始
+            const day = String(now.getDate()).padStart(2, '0');
+
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            // 格式：YYYYMMDD_HHMMSS
+            return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+        }
+        await guardAsync( async ()=> {
+            const currentFile = get(this.currentFile);
+            const autoSaveName =
+                (currentFile == '' ? 'untitled' : await basename(currentFile, '.json'))
+                + '_' + getCurrentTimestampForFilename() + '.json';
+            const text = JSON.stringify(Source.subs.toSerializable());
+            await fs.writeTextFile(autoSaveName, text, { baseDir: fs.BaseDirectory.AppLocalData });
+            Interface.status.set($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
+        }, $_('msg.autosave-failed'));
+    },
+
+    startAutoSave() {
+        let first = true;
+        if (intervalId) {
+            clearInterval(intervalId);
+        }
+        if (InterfaceConfig.data.autosaveInterval <= 0) {
+            return; // autosave is disabled
+        }
+        intervalId = setInterval(async () => {
+            if (first) {
+                first = false;
+                return; // skip the first interval to avoid immediate autosave
+            }
+            await Source.doAutoSave();
+        }, InterfaceConfig.data.autosaveInterval * 1000 * 60);
+    }
 }

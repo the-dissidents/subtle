@@ -217,6 +217,7 @@ export const Interface = {
         const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
         if (typeof path != 'string') return;
         await this.openFile(path);
+        Source.startAutoSave()
     },
 
     async askOpenVideo() {
@@ -241,6 +242,7 @@ export const Interface = {
             PrivateConfig.rememberVideo(file, Playback.video.source);
             Source.subs.migrated = false;
         }
+        Source.startAutoSave();
     },
 
     async savePublicConfig() {

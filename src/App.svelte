@@ -103,8 +103,8 @@ PrivateConfig.onInitialized(() => {
     PrivateConfig.get('windowX'), 
     PrivateConfig.get('windowY')));
   appWindow.setSize(new LogicalSize(
-    PrivateConfig.get('windowW'), 
-    PrivateConfig.get('windowH')));
+    Math.max(PrivateConfig.get('windowW'), 500),
+    Math.max(PrivateConfig.get('windowH'), 500)));
   videoCanvasContainer!.style.height = `${PrivateConfig.get('videoH')}px`;
   timelineCanvas!.style.height = `${PrivateConfig.get('timelineH')}px`;
   editTable!.style.height = `${PrivateConfig.get('editorH')}px`;
@@ -124,6 +124,11 @@ $effect(() => {
 
 $effect(() => {
   locale.set(InterfaceConfig.data.language);
+});
+
+$effect(() => {
+  InterfaceConfig.data.autosaveInterval;
+  Source.startAutoSave();
 });
 
 let settingTheme = false;
@@ -157,8 +162,10 @@ appWindow.onCloseRequested(async (ev) => {
   const factor = await appWindow.scaleFactor();
   const size = (await appWindow.innerSize()).toLogical(factor);
   const pos = (await appWindow.position()).toLogical(factor);
-  await PrivateConfig.set('windowW', size.width);
-  await PrivateConfig.set('windowH', size.height);
+  if (size.width > 500 && size.height > 500) {
+    await PrivateConfig.set('windowW', size.width);
+    await PrivateConfig.set('windowH', size.height);
+  }
   await PrivateConfig.set('windowX', pos.x);
   await PrivateConfig.set('windowY', pos.y);
   await PrivateConfig.set('videoH', videoCanvasContainer!.clientHeight);

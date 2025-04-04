@@ -55,6 +55,13 @@ export const InterfaceConfig = new PublicConfigGroup(
             bounds: [1, 200],
             default: 20
         },
+        autosaveInterval: {
+            localizedName: () => $_('config.autosave-interval'),
+            type: 'integer',
+            description: () => $_('config.autosave-interval-d'),
+            bounds: [0, 60],
+            default: 5
+        }
     });
 MainConfig.addGroup('interface', InterfaceConfig);
 
