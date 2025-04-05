@@ -193,8 +193,8 @@ export class VideoPlayer {
         await this.#opened.media.waitUntilAvailable();
         await this.#opened.media.close();
         await this.#opened.audioCxt.close();
-        await this.forceSetPosition(0);
         this.#opened = undefined;
+        await this.forceSetPosition(0);
         this.#manager.requestRender();
         await Debug.info('closed video');
     }

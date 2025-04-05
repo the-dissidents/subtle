@@ -14,25 +14,16 @@ export type AudioInputData = {
 };
 
 export type AudioFeedbackData = {
-    type: 'ok',
+    type: 'ok' | 'playing',
     isPlaying: boolean,
     bufferLength: number,
     bufferSize: number,
     headPosition: number | undefined,
     tailPosition: number | undefined
-} | {
-    type: 'playing',
-    isPlaying: boolean,
-    bufferLength: number,
-    bufferSize: number,
-    headPosition: number | undefined,
-    tailPosition: number | undefined,
-    fullness: number
 };
 
 class DecodedAudioLoader extends AudioWorkletProcessor {
     #buffer: AudioFrameData[] = [];
-    #fullness: number[] = [];
     #currentPosition = 0;
     #playing: boolean = false;
     
@@ -75,9 +66,6 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
             bufferSize: this.#buffer.reduce((a, b) => a + b.content.length * 4, 0),
             headPosition: this.#buffer[0]?.position,
             tailPosition: this.#buffer.at(-1)?.position,
-            fullness: type == 'playing' 
-                ? this.#fullness.reduce((a, b) => a + b, 0) / 100 
-                : -1
         } satisfies AudioFeedbackData);
     }
 
@@ -92,8 +80,6 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     ) {
         if (!this.#playing) return true;
 
-        this.#fullness.push(this.#buffer.length);
-        if (this.#fullness.length > 100) this.#fullness.shift();
         this.#postFeedback('playing');
 
         try {
