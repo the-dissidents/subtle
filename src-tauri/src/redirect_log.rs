@@ -1,6 +1,8 @@
 use ffmpeg_sys_next;
 use log::Level;
 use std::ffi::{c_char, c_int, c_void, CStr};
+use lazy_static::lazy_static;
+use std::sync::RwLock;
 
 unsafe extern "C" fn rust_log_callback(
     _ptr: *mut c_void,
@@ -44,6 +46,10 @@ pub fn init_ffmpeg_logging() {
     }
 }
 
+lazy_static! {
+    pub static ref LOG_LEVEL: RwLock<log::LevelFilter> = RwLock::new(log::LevelFilter::Off);
+}
+
 #[tauri::command]
 pub fn set_log_filter_level(u: usize) {
     let level = match u {
@@ -57,5 +63,5 @@ pub fn set_log_filter_level(u: usize) {
             return;
         }
     };
-    log::set_max_level(level);
+    *LOG_LEVEL.write().unwrap() = level;
 }

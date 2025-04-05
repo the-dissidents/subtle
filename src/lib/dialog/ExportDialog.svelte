@@ -24,7 +24,6 @@ handler.showModal = async () => {
     for (const [style, _] of entry.texts)
       map.set(style.name, (map.get(style.name) ?? 0) + 1);
 
-  console.log(map);
   styles = subs.styles.map(
     (x) => ({style: x, count: map.get(x.name) ?? 0, use: true}));
   makePreview();

@@ -43,18 +43,18 @@ async function saveConfig() {
 
 export const PrivateConfig = {
     async init() {
-        console.log(await path.appConfigDir(), configPath);
+        Debug.debug('reading private config:', await path.appConfigDir(), configPath);
         try {
             if (!await fs.exists(configPath, {baseDir: fs.BaseDirectory.AppConfig})) {
-                console.log('no config file found');
+                Debug.info('no config file found');
                 return;
             }
             let obj = JSON.parse(await fs.readTextFile(
                 configPath, {baseDir: fs.BaseDirectory.AppConfig}));
             configData = Object.assign(configData, obj);
-            console.log(configData);
+            Debug.trace(configData);
         } catch (e) {
-            console.error('error reading config file:', e);
+            Debug.warn('error reading config file:', e);
         } finally {
             initialized = true;
             for (const callback of onInitCallbacks)

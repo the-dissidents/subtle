@@ -87,7 +87,7 @@ export const SimpleFormats = {
                 let result = Subtitles.deserialize(JSON.parse(source));
                 return result;
             } catch (e: any) {
-                console.log('note: failed importing json', e);
+                Debug.trace('note: failed importing json', e);
                 return null;
             }
         },
@@ -96,7 +96,6 @@ export const SimpleFormats = {
                 /(?:\n|^)(\d+:\d+:\d+[,.]\d+)\s-->\s(\d+:\d+:\d+[,.]\d+)\s*\n((?:.+\n)*.+)(?:\n|$)/g;
             let matches = [...source.matchAll(regex)];
             if (matches.length == 0) return null;
-            // console.log(matches);
     
             let subs = new Subtitles();
             for (let match of matches) {

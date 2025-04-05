@@ -183,8 +183,10 @@ export class VideoPlayer {
     }
 
     async close() {
-        console.log('开始');
-        Debug.assert(this.#opened !== undefined && !this.#opened.media.isClosed);
+        if (this.#opened == undefined)
+            return Debug.early('already closed');
+        Debug.assert(!this.#opened.media.isClosed);
+        await Debug.info('开始');
         this.#requestedSetPositionTarget = -1;
         this.#requestedPreload = false;
         await Basic.waitUntil(() => !this.isPreloading && !this.#setPositionInProgress);
@@ -194,7 +196,7 @@ export class VideoPlayer {
         await this.forceSetPosition(0);
         this.#opened = undefined;
         this.#manager.requestRender();
-        console.log('结束');
+        await Debug.info('结束');
     }
     
     async load(rawurl: string) {
@@ -204,7 +206,7 @@ export class VideoPlayer {
         let media = await MMedia.open(rawurl);
         await media.openVideo(-1);
         await media.openAudio(-1);
-        console.info('VideoPlayer: opened media');
+        await Debug.debug('VideoPlayer: opened media');
 
         const audioStatus = await media.audioStatus();
         const videoStatus = await media.videoStatus();
@@ -217,7 +219,7 @@ export class VideoPlayer {
         worklet.port.onmessage = (ev) => {
             if (Array.isArray(ev.data)) {
                 // log
-                console.log.apply(console, ev.data);
+                Debug.info.apply(console, ev.data);
             } else {
                 let feedback = ev.data as AudioFeedbackData;
                 if (this.#opened?.onAudioFeedback)
@@ -241,7 +243,7 @@ export class VideoPlayer {
 
         await this.#updateOutputSize();
         this.#requestPreload();
-        console.info('VideoPlayer: loaded media');
+        await Debug.debug('VideoPlayer: loaded media');
     }
 
     #waitingWorklet = false;
@@ -310,7 +312,7 @@ export class VideoPlayer {
     async #receiveFrame(frame: VideoFrameData | AudioFrameData | null) {
         if (!this.#opened) return false;
         if (this.#opened.preloadEOF) {
-            console.log('preloadeof');
+            await Debug.debug('preloadeof');
             return false;
         }
         if (!frame) {
@@ -325,7 +327,7 @@ export class VideoPlayer {
         const video = this.#opened.videoCache;
         if (frame.type == 'audio') {
             if (this.#opened.audioTail !== undefined && frame.time < this.#opened.audioTail) {
-                console.warn('receiveFrame: abnormal audio frame ordering', 
+                await Debug.warn('receiveFrame: abnormal audio frame ordering', 
                     frame.time, this.#opened.audioTail);
                 await this.#clearCache();
                 return true;
@@ -337,12 +339,12 @@ export class VideoPlayer {
                     // skip audio before current video position or before seek target
                     return true;
                 }
-                console.info('receiveFrame: first audio at', frame.position, frame.time);
+                await Debug.trace('receiveFrame: first audio at', frame.position, frame.time);
             }
             await this.#postAudioMessage({ type: 'frame', frame });
         } else {
             if (video.length > 0 && frame.position < video.at(-1)!.position) {
-                console.warn('receiveFrame: abnormal video frame ordering',
+                await Debug.warn('receiveFrame: abnormal video frame ordering',
                     frame.position, video.at(-1)!.position);
                 await this.#clearCache();
                 return true;
@@ -354,7 +356,7 @@ export class VideoPlayer {
             }
             video.push(frame);
             if (video.length == 1) {
-                console.info('receiveFrame: first video at', frame.position, frame.time);
+                await Debug.trace('receiveFrame: first video at', frame.position, frame.time);
                 if (this.#opened.audioHead !== undefined && this.#opened.audioHead < frame.time) {
                     // shift audio buffer until current video position
                     await this.#postAudioMessage(
@@ -372,12 +374,12 @@ export class VideoPlayer {
     #requestPreload() {
         if (this.#requestedPreload) return;
         this.#requestedPreload = true;
-        // console.info('preloading');
+        Debug.trace('preloading');
         const load = async () => {
             if (await this.#populateCache())
                 setTimeout(load, 0);
             else {
-                // console.info('preloading ends');
+                Debug.trace('preloading ends');
                 this.#requestedPreload = false;
             }
         }
@@ -406,7 +408,7 @@ export class VideoPlayer {
                         && !this.#setPositionInProgress) break;
                     pos = this.#requestedSetPositionTarget;
                     Debug.assert(pos >= 0);
-                    console.log('delaying forceSetPositionFrame');
+                    Debug.debug('delaying forceSetPositionFrame');
                     await Basic.wait(10);
                 }
 
@@ -453,7 +455,7 @@ export class VideoPlayer {
         // check if target position is within cache
         if (video.length > 0) {
             if (position >= video[0].position && position <= video.at(-1)!.position) {
-                console.info('setPositionFrame: shifting', 
+                Debug.trace('setPositionFrame: shifting', 
                     position, video[0].position, video.at(-1)!.position);
                 while (position > video[0].position)
                     video.shift();
@@ -470,7 +472,7 @@ export class VideoPlayer {
         // else, do the seeking and rebuild cache
         await this.#opened.media.waitUntilAvailable();
         await this.#opened.media.seekVideo(position);
-        console.info(`setPositionFrame: seeking [${position}]`);
+        Debug.trace(`setPositionFrame: seeking [${position}]`);
         await this.#clearCache();
         this.#requestPreload();
         // const frame = await this.#opened.media.seekVideoPrecise(position);
@@ -487,7 +489,7 @@ export class VideoPlayer {
         if (this.#opened.playEOF) return;
         const pos = this.currentPosition;
         if (pos === null) {
-            console.warn('requestNextFrame: invalid position');
+            await Debug.warn('requestNextFrame: invalid position');
             return;
         }
         this.requestSetPositionFrame(pos + 1);
@@ -497,7 +499,7 @@ export class VideoPlayer {
         if (!this.#opened) return Debug.early('not opened');
         const pos = this.currentPosition;
         if (pos === null) {
-            console.warn('requestPreviousFrame: invalid position');
+            await Debug.warn('requestPreviousFrame: invalid position');
             return;
         }
         this.requestSetPositionFrame(pos - 1);
@@ -566,7 +568,7 @@ export class VideoPlayer {
 
         if (this.#opened.playEOF) {
             // display last frame
-            console.log('playeof has been true');
+            Debug.debug('playeof has been true');
             Debug.assert(this.#opened.lastFrame !== undefined);
             this.onVideoPositionChange();
             this.#drawFrame(this.#opened.lastFrame);
@@ -604,7 +606,7 @@ export class VideoPlayer {
                 return;
             } else {
                 // discard missed frame
-                console.log('render: discarding frame at', video[0].position, video[0].time, position);
+                Debug.debug('render: discarding frame at', video[0].position, video[0].time, position);
                 video.shift();
             }
         }
@@ -628,19 +630,19 @@ export class VideoPlayer {
         if (!this.#opened) return Debug.early('not opened');
         
         if (!state && this.#playing) {
-            // console.log('playing -> false');
+            await Debug.debug('playing -> false');
             this.#playing = false;
             await this.#postAudioMessage({type: 'suspend'});
             this.onPlayStateChange();
         } else if (state && !this.#playing && !this.#opened.playEOF) {
-            // console.log('playing -> true');
+            await Debug.debug('playing -> true');
             this.#playing = true;
             await this.#postAudioMessage({type: 'play'});
             this.onPlayStateChange();
             this.#requestPreload();
             this.requestRender();
         } else {
-            // console.log('requested play ->', state, 'but done nothing');
+            await Debug.debug('requested play ->', state, 'but done nothing');
         }
     }
 }

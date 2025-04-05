@@ -682,7 +682,9 @@ export class Timeline {
     #samplerMedia?: MMedia;
 
     async close() {
-        Debug.assert(this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed);
+        if (this.#samplerMedia == undefined)
+            return Debug.early('already closed');
+        Debug.assert(!this.#samplerMedia.isClosed);
         await this.#samplerMedia?.close();
         this.#samplerMedia = undefined;
         this.#sampler = null;
@@ -705,7 +707,6 @@ export class Timeline {
         this.#cursorPos = 0; // or setCursorPos?
         this.#requestedSampler = true;
         this.#manager.requestRender();
-        console.log('Timeline.load: done');
     }
 
     // view & sampling
@@ -727,7 +728,7 @@ export class Timeline {
                 || this.#sampler.sampleProgress > end + preload) 
                     this.#sampler.tryCancelSampling();
             else if (this.#sampler.sampleEnd < end + preload) {
-                // console.log('extending to', end);
+                Debug.trace('extending to', end);
                 this.#sampler.extendSampling(end + preload);
             }
         }
@@ -758,11 +759,11 @@ export class Timeline {
         if (start < 0) start = 0;
         if (end > this.#sampler.duration) end = this.#sampler.duration;
         if (end <= start) {
-            // console.log(start, '>=', end);
+            Debug.debug(start, '>=', end);
             return;
         }
 
-        // console.log('sampling', start, end);
+        Debug.debug('sampling', start, end);
         this.#sampler.startSampling(start, end);
         this.#manager.requestRender();
     }

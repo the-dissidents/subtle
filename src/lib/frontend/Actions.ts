@@ -17,6 +17,7 @@ import { Dialogs } from "./Dialogs";
 import { Playback } from "./Playback";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
 
 const toSRT = (x: Subtitles) => 
@@ -36,7 +37,7 @@ export const Actions = {
             (focus == UIFocus.Timeline || focus == UIFocus.Table || ev.altKey) && !inModal;
         const altOrTimeline = 
             (focus == UIFocus.Timeline || ev.altKey) && !inModal;
-        // console.log('KEYDOWN', ev.key, ev.code, inModal, UIFocus[focus]);
+        Debug.trace('KEYDOWN', ev.key, ev.code, inModal, UIFocus[focus]);
         
         if (ev.key == 'Enter' && ctrlOrMeta) {
             // insert after

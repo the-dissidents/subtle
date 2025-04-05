@@ -115,7 +115,7 @@ const validateMetadata = ajv.compile(MetadataSchema);
 
 function parseObject<T>(obj: {}, validator: ValidateFunction<T>): T {
     if (!validator(obj)) {
-        console.log(validator.errors);
+        Debug.debug(validator.errors);
         throw new SubtitlesParseError(validator.errors!.map((x) => x.message).join('; '));
     }
     return obj;
@@ -168,7 +168,7 @@ export class SubtitleEntry {
 
         for (const [styleName, text] of o.texts) {
             let style = subs.styles.find((x) => x.name == styleName);
-            if (!style) throw new Error(`invalid style name: ${styleName}`);
+            if (!style) throw new SubtitlesParseError(`invalid style name: ${styleName}`);
 
             if (entry.texts.has(style)) {
                 if (version >= '000400') throw new SubtitlesParseError(
@@ -182,12 +182,12 @@ export class SubtitleEntry {
                     if (!found) {
                         found = createDuplicateStyle(style);
                         duplicated.push(found);
-                        console.log('migrate: new duplicate style:', found.name);
+                        Debug.debug('migrate: new duplicate style:', found.name);
                     }
                 } else {
                     found = createDuplicateStyle(style);
                     MigrationDuplicatedStyles.set(style, [found]);
-                    console.log('migrate: new duplicate style:', found.name);
+                    Debug.debug('migrate: new duplicate style:', found.name);
                 }
                 style = found;
             }

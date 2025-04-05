@@ -100,7 +100,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 
         let replaced = text.replace(expr, repl);
         if (replaced != text) {
-          console.log(j, currentTextIndex, ent, currentEntry);
+          Debug.debug(j, currentTextIndex, ent, currentEntry);
           nDone++;
           if (type == SearchAction.Select) {
             Editing.selection.submitted.add(ent);

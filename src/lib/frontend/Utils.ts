@@ -50,7 +50,6 @@ export const Utils = {
         if (!source) return;
         let [portion, _] = parseSubtitleSource(source);
         if (!portion) {
-            console.log('error reading clipboard: ' + source);
             Interface.status.set($_('msg.failed-to-parse-clipboard-data-as-subtitles'));
             return;
         }

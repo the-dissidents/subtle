@@ -12,6 +12,7 @@ import { ChangeType, Source } from '../frontend/Source';
 import { _ } from 'svelte-i18n';
 import { flip } from 'svelte/animate';
 import { SubtitleTools } from '../core/SubtitleUtil';
+import { Debug } from '../Debug';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
@@ -56,7 +57,7 @@ function markMetadataChange() {
 }
 
 function changeResolution() {
-  console.log('change', metadata.width, metadata.height);
+  Debug.debug('changeResolution', metadata.width, metadata.height);
   Playback.video?.subRenderer?.changeResolution();
   markMetadataChange();
 }

@@ -133,7 +133,6 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
 
     const styleFieldMap = getASSFormatFieldMap(text);
     if (styleFieldMap == null) return subs;
-    console.log(styleFieldMap);
 
     subs.styles = [];
 
@@ -154,7 +153,7 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
                 if (first === null) first = style;
             } else {
                 // warn
-                console.warn('duplicate style definition:', name);
+                Debug.warn('duplicate style definition:', name);
             }
             if (styleFieldMap.has('Fontname'))
                 style.font = items[styleFieldMap.get('Fontname')!];
@@ -210,14 +209,14 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
                 if (!Number.isNaN(n)) style.margin.top = style.margin.bottom = n;
             }
             // console.log('imported style:', name, style);
-        } catch {
-            console.log('error when importing style');
+        } catch (e) {
+            Debug.debug('error when importing style:', e);
         }
     }
     
     if (first == null) {
         // no styles
-        console.warn('no style defined');
+        Debug.warn('no style defined');
     } else {
         subs.defaultStyle = first;
     }
@@ -233,13 +232,13 @@ function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
         || !fieldMap.has('End') 
         || !fieldMap.has('Style')
         || !fieldMap.has('Text')) return subs;
-    console.log(fieldMap);
+    Debug.debug(fieldMap);
 
     const nameToStyle = new Map(subs.styles.map((x) => [x.name, x]));
     function getStyleOrCreate(styleName: string) {
         let style = nameToStyle.get(styleName);
         if (!style) {
-            console.log(`warning: style not found: ${styleName}`);
+            Debug.debug(`warning: style not found: ${styleName}`);
             let newStyle = $state(Subtitles.createStyle(styleName));
             style = newStyle;
             nameToStyle.set(styleName, newStyle);

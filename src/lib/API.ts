@@ -93,7 +93,7 @@ function createChannel(handler: {[key in MediaEventKey]?: MediaEventHandler<key>
 
         switch (msg.event) {
         case 'debug':
-            console.log(msg.data.message);
+            Debug.info(msg.data.message);
             break;
         case 'runtimeError':
             throw new MediaError('runtimeError: ' + msg.data.what);
@@ -181,7 +181,6 @@ export class MMedia {
             });
             invoke('open_media', {path, channel});
         });
-        console.log('opened; calling status');
         const status = await new Promise<{
             audioIndex: number,
             videoIndex: number,
@@ -327,7 +326,7 @@ export class MMedia {
                 setTimeout(() => reject(new MediaError('timed out')), 1000);
                 this.#currentJobs += 1;
                 let channel = createChannel({ 'EOF': () => {
-                    console.log('at eof');
+                    Debug.debug('at eof');
                     resolve(null);
                 } });
                 invoke<ArrayBuffer>('get_next_frame_data', { id: this.id, channel })
@@ -423,10 +422,6 @@ export const MAPI = {
             invoke('media_version', {channel});
         });
     },
-
-    async testResponse() {
-        console.log(await invoke('test_response', {}));
-    }
 }
 
 

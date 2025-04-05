@@ -89,8 +89,8 @@ function layout(cxt: CanvasRenderingContext2D) {
     let height = 0;
     for (const [style, text] of entry.texts) {
       // if (!Source.subs.styles.includes(style)) {
-      //   Source.subs.styles.forEach((x) => console.warn('styles:', x));
-      //   console.warn('missing:', style);
+      //   Source.subs.styles.forEach((x) => Debug.warn('styles:', x));
+      //   Debug.warn('missing:', style);
       // }
       let splitLines = text.split('\n');
       height += splitLines.length;
@@ -279,7 +279,7 @@ Editing.onKeepEntryAtPosition.bind(me, (ent, old) => {
   const posNew = lineMap.get(ent);
   const posOld = lineMap.get(old);
   if (posNew === undefined || posOld === undefined) {
-    console.warn('?!row', ent, old);
+    Debug.warn('?!row', ent, old);
     return;
   }
   const sy = (posNew.line - posOld.line) * lineHeight + manager.scroll[1];
@@ -294,7 +294,7 @@ Editing.onKeepEntryInView.bind(me, (ent) => {
   if (ent instanceof SubtitleEntry) {
     const pos = lineMap.get(ent);
     if (pos === undefined) {
-      console.warn('?!row', ent);
+      Debug.warn('?!row', ent);
       return;
     }
     const sy = Math.max(

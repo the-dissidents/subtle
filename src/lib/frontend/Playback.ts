@@ -41,13 +41,13 @@ function updateProgress(pos: number) {
 async function handlePlayArea() {
     const playArea = Playback.playAreaOverride ?? Playback.playArea;
     // if (playArea.start !== undefined && position < playArea.start) {
-    //     console.log('jumping to in point from before', playArea, position);
+    //     Debug.debug('jumping to in point from before', playArea, position);
     //     // await this.play(false);
     //     await Playback.setPosition(playArea.start);
     //     return;
     // }
     if (playArea.end !== undefined && position > playArea.end) {
-        console.log('jumping to in point from after out point', playArea, position);
+        Debug.debug('jumping to in point from after out point', playArea, position);
         Playback.playAreaOverride = undefined;
         if (!playArea.loop) await Playback.play(false);
         await Playback.forceSetPosition(playArea.start ?? 0);

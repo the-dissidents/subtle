@@ -188,7 +188,7 @@ function clear() {
       } else if (ev.key == 'a') {
         let focused = Editing.getFocusedEntry();
         if (fuzzy.currentEntry !== focused) {
-          console.warn('current entry is not fuzzy.currentEntry, but', focused);
+          Debug.warn('current entry is not fuzzy.currentEntry, but', focused);
           return;
         }
 

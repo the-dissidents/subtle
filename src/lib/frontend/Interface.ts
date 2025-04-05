@@ -22,6 +22,7 @@ import { Basic } from "../Basic";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil";
+import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
 
 export enum UIFocus {
@@ -49,6 +50,7 @@ export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback?:
             return await x();
         } catch (x) {
             Interface.status.set(`${msg}: ${x}`);
+            Debug.info('guardAsync:', msg, x);
             return fallback;
         };
     }
@@ -68,6 +70,7 @@ export function guard<T>(x: () => T, msg: string, fallback?: T) {
             return x();
         } catch (x) {
             Interface.status.set(`${msg}: ${x}`);
+            Debug.info('guard:', msg, x);
             return fallback;
         };
     }
@@ -121,7 +124,7 @@ export const Interface = {
             $_('msg.note-file-is-migrated-path', {values: {path}}));
         const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);
-        else await Playback.close();
+        else if (Playback.isLoaded) await Playback.close();
         Interface.status.set($_('msg.opened-path', {values: {path}}));
     },
 

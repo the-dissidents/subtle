@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log"
-import StackTrace from "stacktrace-js";
+import StackTrace, { type StackFrame } from "stacktrace-js";
+import inspect from "object-inspect";
 
 /** Strangely tauri's log plugin does not export this enum, so it is recreated here */
 export enum LogLevel {
@@ -42,12 +43,28 @@ async function callLog(level: LogLevel, message: string, location?: string) {
     });
 }
 
-function stacktrace() {
-    const frames = StackTrace.getSync({
-        filter: (stackFrame) => 
-               !(stackFrame.getFileName()?.endsWith('src/lib/Debug.ts')) 
-            && !(stackFrame.getFunctionName()?.includes('StackTrace$$'))
-    });
+function formatData(data: any[]) {
+    if (data.length == 0)
+        return '';
+    let result = '';
+    if (typeof data[0] == 'string') {
+        result = data[0];
+        data.shift();
+    }
+    data.forEach((x) => result += ' ' + inspect(x));
+    return result;
+}
+
+const Filter = {
+    filter: (stackFrame: StackFrame) => 
+        !(stackFrame.getFileName()?.endsWith('src/lib/Debug.ts')) 
+        && !(stackFrame.getFunctionName()?.includes('StackTrace$$'))
+}
+
+async function stacktrace(from?: Error) {
+    const frames = from 
+        ? await StackTrace.fromError(from, Filter) 
+        : StackTrace.getSync(Filter);
     return {
         file: frames[0]?.fileName?.split(/\/|\\/)?.at(-1) ?? '?',
         func: frames[0]?.getFunctionName() ?? '?',
@@ -59,11 +76,11 @@ export const Debug: {
     redirectNative: boolean,
     setPersistentFilterLevel(level: LogLevelFilter): Promise<void>,
     init(): Promise<void>,
-    trace(msg: string): Promise<void>,
-    debug(msg: string): Promise<void>,
-    info(msg: string): Promise<void>,
-    warn(msg: string): Promise<void>,
-    error(msg: string): Promise<void>,
+    trace(...data: any[]): Promise<void>,
+    debug(...data: any[]): Promise<void>,
+    info(...data: any[]): Promise<void>,
+    warn(...data: any[]): Promise<void>,
+    error(...data: any[]): Promise<void>,
     assert(cond: boolean): asserts cond,
     early(reason?: string): void,
     never(value: never): never
@@ -71,6 +88,7 @@ export const Debug: {
     filterLevel: LogLevelFilter.Debug,
     redirectNative: true,
     async setPersistentFilterLevel(level: LogLevelFilter) {
+        this.trace('set persistent filter level', LogLevelFilter[level]);
         await invoke('set_log_filter_level', { u: level });
     },
     async init() {
@@ -98,48 +116,73 @@ export const Debug: {
                     break;
             }
         });
+
+        window.addEventListener('error', (ev) => {
+            callLog(LogLevel.Error, 
+                `Uncaught error at ${ev.lineno}:${ev.colno}: ` 
+                + inspect(ev.error), ev.filename);
+            return true;
+        });
+        window.addEventListener('unhandledrejection', async (ev) => {
+            ev.preventDefault();
+            if (ev.reason instanceof Error) {
+                let { file, trace } = await stacktrace(ev.reason);
+                callLog(LogLevel.Error, 
+                    formatData([`Unhandled rejection`, ev.reason]), file);
+                callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+            } else {
+                callLog(LogLevel.Error, 
+                    formatData([`Unhandled rejection`, ev.reason]), '?');
+            }
+        });
     },
-    async trace(msg: string) {
-        const { file } = stacktrace();
-        callLog(LogLevel.Trace, msg, file);
+    async trace(...data: any[]) {
+        const { file } = await stacktrace();
+        callLog(LogLevel.Trace, formatData(data), file);
     },
-    async debug(msg: string) {
-        const { file, trace } = stacktrace();
-        callLog(LogLevel.Debug, msg, file);
-        callLog(LogLevel.Trace, `!!!WEBVIEW_STACKTRACE\n` + trace);
+    async debug(...data: any[]) {
+        const { file, trace } = await stacktrace();
+        callLog(LogLevel.Debug, formatData(data), file);
+        // callLog(LogLevel.Trace, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
-    async info(msg: string) {
-        const { file, trace } = stacktrace();
-        callLog(LogLevel.Info, msg, file);
-        callLog(LogLevel.Trace, `!!!WEBVIEW_STACKTRACE\n` + trace);
+    async info(...data: any[]) {
+        const { file, trace } = await stacktrace();
+        callLog(LogLevel.Info, formatData(data), file);
+        // callLog(LogLevel.Trace, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
-    async warn(msg: string) {
-        const { file, trace } = stacktrace();
-        callLog(LogLevel.Warn, msg, file);
+    async warn(...data: any[]) {
+        const { file, trace } = await stacktrace();
+        callLog(LogLevel.Warn, formatData(data), file);
         callLog(LogLevel.Info, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
-    async error(msg: string) {
-        const { file, trace } = stacktrace();
-        callLog(LogLevel.Error, msg, file);
+    async error(...data: any[]) {
+        const { file, trace } = await stacktrace();
+        callLog(LogLevel.Error, formatData(data), file);
         callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
     assert(cond: boolean): asserts cond {
         if (!!!cond) {
-            const { file, trace } = stacktrace();
-            callLog(LogLevel.Error, 'Assertion failed', file);
-            callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+            (async () => {
+                const { file, trace } = await stacktrace();
+                callLog(LogLevel.Error, 'Assertion failed', file);
+                callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+            })();
             throw new Error('assertion failed');
         }
     },
     early(reason?: string): void {
-        const { file, func, trace } = stacktrace();
-        callLog(LogLevel.Info, `<${func}> returned early` + (reason ? `: ${reason}` : ''), file);
-        callLog(LogLevel.Info, `!!!WEBVIEW_STACKTRACE\n` + trace);
+        (async () => {
+            const { file, func, trace } = await stacktrace();
+            callLog(LogLevel.Info, `<${func}> returned early` + (reason ? `: ${reason}` : ''), file);
+            callLog(LogLevel.Info, `!!!WEBVIEW_STACKTRACE\n` + trace);
+        })();
     },
     never(x: never): never {
-        const { file, trace } = stacktrace();
-        callLog(LogLevel.Error, `Unreachable code reached (never=${x})`, file);
-        callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+        (async () => {
+            const { file, func, trace } = await stacktrace();
+            callLog(LogLevel.Error, `Unreachable code reached (never=${x})`, file);
+            callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+        })();
         throw new Error('unreachable code reached');
     }
 }

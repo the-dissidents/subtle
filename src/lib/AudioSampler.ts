@@ -89,7 +89,7 @@ export class AudioSampler {
             await this.#media.waitUntilAvailable();
             const data = await this.#media.getIntensities(next, this.sampleLength);
             if (data.start < 0 || data.start == data.end) {
-                console.log(`sampling done upon EOF`, data.end, `(${from}-${current / this.#sampleRate}-${to})`);
+                Debug.debug(`sampling done upon EOF`, data.end, `(${from}-${current / this.#sampleRate}-${to})`);
                 this.#isSampling = false;
                 // FIXME: very hacky!
                 this.#length = Math.min(this.#length, current);
@@ -104,13 +104,12 @@ export class AudioSampler {
 
             this.#sampleProgress = data.end;
             if (this.#sampleProgress > b) {
-                // console.log(`sampling done with ${counter} steps, last=${data.start}~${data.end}, pos=${status.position}`);
-                // console.log(data);
+                Debug.debug(`sampling done: ${data.start}~${data.end}`);
                 this.#isSampling = false;
                 return;
             }
             if (this.#cancelling && this.#sampleProgress - a > this.sampleLength) {
-                // console.log('sucessfully cancelled');
+                Debug.debug('sampling cancelled');
                 this.#isSampling = false;
                 return;
             }

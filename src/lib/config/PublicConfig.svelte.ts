@@ -125,7 +125,7 @@ export class PublicConfig {
     addGroup(name: string, group: PublicConfigGroup<PublicConfigGroupDefinition>) {
         Debug.assert(!this.#initialized);
         Debug.assert(this.groups[name] === undefined);
-        console.log(`added group ${name} for ${this.name}`);
+        Debug.trace(`added group ${name} for ${this.name}`);
         this.groups[name] = group;
     }
 
@@ -134,26 +134,25 @@ export class PublicConfig {
         this.#configPath = await join(await path.appConfigDir(), configName);
         try {
             if (!await fs.exists(configName, {baseDir: fs.BaseDirectory.AppConfig})) {
-                console.log('no config file found for', this.name);
+                Debug.debug('no config file found for', this.name);
                 return;
             }
             let obj = JSON.parse(await fs.readTextFile(
                 configName, {baseDir: fs.BaseDirectory.AppConfig}));
-            console.log(obj);
 
             for (const key in this.groups) {
                 const group = this.groups[key];
                 const object: unknown = obj[key];
                 if (object !== undefined) {
                     if (!group.validate(object)) {
-                        console.warn(`invalid config for group ${key}:`, group.validate.errors);
+                        Debug.warn(`invalid config for group ${key}:`, group.validate.errors);
                         continue;
                     }
                     group.data = object;
                 }
             }
         } catch (e) {
-            console.error('error reading config file for', this.name, e);
+            Debug.warn('error reading config file for', this.name, e);
         } finally {
             this.#initialized = true;
             for (const callback of this.#onInitCallbacks)

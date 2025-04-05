@@ -5,11 +5,11 @@ extern crate ffmpeg_next as ffmpeg;
 mod media;
 mod redirect_log;
 
-use redirect_log::init_ffmpeg_logging;
 use std::sync::Mutex;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::State;
+use tauri_plugin_log::TimezoneStrategy;
 
 struct SetupState {
     frontend_task: bool,
@@ -18,15 +18,38 @@ struct SetupState {
 
 fn main() {
     ffmpeg::init().unwrap();
-    init_ffmpeg_logging();
+    redirect_log::init_ffmpeg_logging();
+
+    let time_format = 
+        time::format_description::parse("[year]-[month]-[day]@[hour]:[minute]:[second].[subsecond digits:3]")
+        .unwrap();
 
     let mut ctx = tauri::generate_context!();
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
-                .level(log::LevelFilter::Debug)
+                .format(move |out, message, record| {
+                    out.finish(format_args!(
+                        "{}[{}][{}] {}",
+                        TimezoneStrategy::UseLocal.get_now().format(&time_format).unwrap(),
+                        record.level(),
+                        record.target(),
+                        message
+                    ))
+                })
+                .level(log::LevelFilter::Trace)
+                .filter(|metadata| {
+                    metadata.level() <= *redirect_log::LOG_LEVEL.read().unwrap()
+                })
+                .clear_targets()
                 .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::Webview,
+                    tauri_plugin_log::TargetKind::Stderr))
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::Webview))
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("subtle".to_string()),
+                    },
                 ))
                 .build(),
         )
