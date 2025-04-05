@@ -69,6 +69,8 @@
     "debug": "偵錯",
     "debug-d": "⚠️ 僅用於偵錯，通常不需要修改",
     "each-style-of-selection": "選取範圍內每種樣式的頭尾",
+    "editor-font-family": "編輯框字型",
+    "editor-font-size": "編輯框字型大小",
     "enter-navigation-type": "回車選擇設定",
     "enter-navigation-type-d": "指定在編輯框裡按回車前往下一條字幕時，這條字幕應該會捲動到什麼位置",
     "font-size": "字型大小",

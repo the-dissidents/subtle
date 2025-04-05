@@ -48,6 +48,18 @@ export const InterfaceConfig = new PublicConfigGroup(
             description: () => $_('config.ui-font-family-d'),
             default: 'Arial, Helvetica, sans-serif'
         },
+        editorFontSize: {
+            localizedName: () => $_('config.editor-font-size'),
+            type: 'number',
+            bounds: [5, null],
+            default: 14
+        },
+        editorFontFamily: {
+            localizedName: () => $_('config.editor-font-family'),
+            type: 'string',
+            description: () => $_('config.ui-font-family-d'),
+            default: 'Arial, Helvetica, sans-serif'
+        },
         minScrollerLength: {
             localizedName: () => $_('config.minimum-scroller-length'),
             type: 'number',

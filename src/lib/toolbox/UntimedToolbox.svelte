@@ -6,7 +6,7 @@ import { onDestroy } from "svelte";
 import { Basic } from "../Basic";
 import type { SubtitleEntry } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
-import * as fuzzyAlgorithm from "../Fuzzy";
+import * as fuzzyAlgorithm from "../details/Fuzzy";
 
 import StyleSelect from "../StyleSelect.svelte";
 import Collapsible from "../ui/Collapsible.svelte";

@@ -266,6 +266,8 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   overflow: visible;
   padding: 5px;
   box-sizing: border-box;
+  font-family: var(--editorFontFamily);
+  font-size: var(--editorFontSize);
 }
 </style>
 

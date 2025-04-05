@@ -69,6 +69,8 @@
     "debug": "debug",
     "debug-d": "⚠️ Advanced options for debug purpose only. You shouldn't change them unless you know what you're doing.",
     "each-style-of-selection": "endpoints of each styles in the selection",
+    "editor-font-family": "editor font family",
+    "editor-font-size": "editor font size",
     "enter-navigation-type": "enter navigation preference",
     "enter-navigation-type-d": "The preferred position of the newly selected entry when moving to it by pressing Enter in the input boxes.",
     "font-size": "font size",

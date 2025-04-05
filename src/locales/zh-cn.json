@@ -69,6 +69,8 @@
     "debug": "调试",
     "debug-d": "⚠️ 仅用于调试，通常不需要修改",
     "each-style-of-selection": "选区中每种样式的头尾",
+    "editor-font-family": "编辑框字体",
+    "editor-font-size": "编辑框字号",
     "enter-navigation-type": "回车选择设置",
     "enter-navigation-type-d": "指定在编辑框里按回车前往下一条字幕时，这条字幕应该滚动到什么位置",
     "font-size": "字号",

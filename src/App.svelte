@@ -114,16 +114,18 @@ PrivateConfig.onInitialized(() => {
   leftPane!.style.width = `${PrivateConfig.get('leftPaneW')}px`;
 });
 
-MainConfig.init();
-MainConfig.onInitialized(() => {
+function updateFonts() {
   document.documentElement.style.setProperty('--fontSize', `${InterfaceConfig.data.fontSize}px`);
   document.documentElement.style.setProperty('--fontFamily', InterfaceConfig.data.fontFamily);
-});
+  document.documentElement.style.setProperty(
+    '--editorFontSize', `${InterfaceConfig.data.editorFontSize}px`);
+  document.documentElement.style.setProperty(
+    '--editorFontFamily', InterfaceConfig.data.editorFontFamily);
+}
 
-$effect(() => {
-  document.documentElement.style.setProperty('--fontSize', `${InterfaceConfig.data.fontSize}px`);
-  document.documentElement.style.setProperty('--fontFamily', InterfaceConfig.data.fontFamily);
-});
+MainConfig.init();
+MainConfig.onInitialized(() => updateFonts());
+$effect(() => updateFonts());
 
 $effect(() => {
   locale.set(InterfaceConfig.data.language);
