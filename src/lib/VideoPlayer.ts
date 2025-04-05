@@ -44,6 +44,10 @@ function sum(a: number[]) {
     return a.reduce((p, c) => p + c, 0);
 }
 
+export type SetPositionOptions = {
+    imprecise?: boolean;
+};
+
 export class VideoPlayer {
     #canvas: OffscreenCanvas;
     #ctxbuf: OffscreenCanvasRenderingContext2D;
@@ -309,6 +313,20 @@ export class VideoPlayer {
         return result;
     }
 
+    async #tryStartPlaying() {
+        Debug.assert(this.#opened !== undefined);
+        if (this.#requestedStartPlay && this.#opened.videoCache.length > 0) {
+            Debug.debug('starting playback');
+            this.#requestedStartPlay = false;
+            this.#playing = true;
+            await this.#postAudioMessage({ type: 'play' });
+            this.onPlayStateChange();
+            this.requestRender();
+            return true;
+        }
+        return false;
+    }
+
     async #receiveFrame(frame: VideoFrameData | AudioFrameData | null) {
         if (!this.#opened) return false;
         if (this.#opened.preloadEOF) {
@@ -342,6 +360,7 @@ export class VideoPlayer {
                 await Debug.trace('receiveFrame: first audio at', frame.position, frame.time);
             }
             await this.#postAudioMessage({ type: 'frame', frame });
+            await this.#tryStartPlaying();
         } else {
             if (video.length > 0 && frame.position < video.at(-1)!.position) {
                 await Debug.warn('receiveFrame: abnormal video frame ordering',
@@ -365,6 +384,7 @@ export class VideoPlayer {
                 this.onVideoPositionChange();
                 this.subRenderer?.setTime(frame.time);
             }
+            await this.#tryStartPlaying();
         }
         this.requestRender();
         return true;
@@ -374,12 +394,12 @@ export class VideoPlayer {
     #requestPreload() {
         if (this.#requestedPreload) return;
         this.#requestedPreload = true;
-        Debug.trace('preloading');
+        Debug.debug('preloading');
         const load = async () => {
             if (await this.#populateCache())
                 setTimeout(load, 0);
             else {
-                Debug.trace('preloading ends');
+                Debug.debug('preloading ends');
                 this.#requestedPreload = false;
             }
         }
@@ -387,20 +407,21 @@ export class VideoPlayer {
     }
 
     #requestedSetPositionTarget = -1;
-    requestSetPosition(t: number) {
+    requestSetPosition(t: number, opt?: SetPositionOptions) {
         if (!this.#opened) this.forceSetPosition(t);
         else this.requestSetPositionFrame(
-            Math.ceil(t * this.#opened.framerate)); // ceil to avoid going before a subtitle entry
+            Math.ceil(t * this.#opened.framerate), opt);
+        // ceil to avoid going before a subtitle entry
     }
 
-    requestSetPositionFrame(position: number) {
+    requestSetPositionFrame(position: number, opt?: SetPositionOptions) {
         const first = this.#requestedSetPositionTarget < 0;
         this.#requestedSetPositionTarget = position;
-        this.play(false);
         if (first) {
             (async () => {
                 let pos = this.#requestedSetPositionTarget;
                 Debug.assert(pos >= 0);
+                if (this.#playing) await this.stop();
 
                 // wait until target stops changing
                 while (true) {
@@ -413,17 +434,17 @@ export class VideoPlayer {
                 }
 
                 this.#requestedSetPositionTarget = -1;
-                await this.forceSetPositionFrame(pos);
+                await this.forceSetPositionFrame(pos, opt);
             })();
         }
     }
 
-    async forceSetPosition(t: number) {
+    async forceSetPosition(t: number, opt?: SetPositionOptions) {
         if (t < 0) t = 0;
         if (t > this.duration!) t = this.duration!;
         if (this.#opened) {
             let position = Math.floor(t * this.#opened.framerate);
-            await this.forceSetPositionFrame(position);
+            await this.forceSetPositionFrame(position, opt);
         } else {
             if (t == this.#fallbackTime) return;
             this.#fallbackTime = t;
@@ -433,7 +454,7 @@ export class VideoPlayer {
     }
 
     #setPositionInProgress = false;
-    async forceSetPositionFrame(position: number) {
+    async forceSetPositionFrame(position: number, opt?: SetPositionOptions) {
         if (position < 0) position = 0;
 
         Debug.assert(this.#opened !== undefined);
@@ -445,13 +466,12 @@ export class VideoPlayer {
 
         position = Math.max(0, Math.floor(position));
         this.#fallbackTime = position / this.#opened.framerate;
-        this.#opened.discardBeforeVideoPosition = position;
         this.#opened.preloadEOF = false;
         this.#opened.playEOF = false;
-        this.play(false);
+        this.#opened.discardBeforeVideoPosition = (opt?.imprecise) ? -1 : position;
+        if (this.#playing) await this.stop();
 
         const video = this.#opened.videoCache;
-
         // check if target position is within cache
         if (video.length > 0) {
             if (position >= video[0].position && position <= video.at(-1)!.position) {
@@ -559,7 +579,7 @@ export class VideoPlayer {
 
     #requestedRenderNext = false;
 
-    #renderNext() {
+    async #renderNext() {
         if (!this.#opened) {
             this.#manager.requestRender();
             this.#requestedRenderNext = false;
@@ -568,7 +588,7 @@ export class VideoPlayer {
 
         if (this.#opened.playEOF) {
             // display last frame
-            Debug.debug('playeof has been true');
+            await Debug.debug('playeof has been true');
             Debug.assert(this.#opened.lastFrame !== undefined);
             this.onVideoPositionChange();
             this.#drawFrame(this.#opened.lastFrame);
@@ -606,14 +626,14 @@ export class VideoPlayer {
                 return;
             } else {
                 // discard missed frame
-                Debug.debug('render: discarding frame at', video[0].position, video[0].time, position);
+                await Debug.debug('render: discarding frame at', video[0].position, video[0].time, position);
                 video.shift();
             }
         }
         // videoCache is empty
         if (this.#opened.preloadEOF) {
             this.#opened.playEOF = true;
-            this.play(false);
+            if (this.#playing) await this.stop();
         } else {
             this.#requestPreload();
         }
@@ -626,23 +646,26 @@ export class VideoPlayer {
         requestAnimationFrame(() => this.#renderNext());
     }
 
-    async play(state = true) {
+    async stop() {
         if (!this.#opened) return Debug.early('not opened');
+        if (!this.#playing) return Debug.early('already stopped');
         
-        if (!state && this.#playing) {
-            await Debug.debug('playing -> false');
-            this.#playing = false;
-            await this.#postAudioMessage({type: 'suspend'});
-            this.onPlayStateChange();
-        } else if (state && !this.#playing && !this.#opened.playEOF) {
-            await Debug.debug('playing -> true');
-            this.#playing = true;
-            await this.#postAudioMessage({type: 'play'});
-            this.onPlayStateChange();
+        await Debug.debug('stopping playback');
+        this.#playing = false;
+        await this.#postAudioMessage({ type: 'suspend' });
+        this.onPlayStateChange();
+    }
+
+    #requestedStartPlay = false;
+    async requestStartPlay() {
+        if (!this.#opened) return Debug.early('not opened');
+        if (this.#playing) return Debug.early('already playing');
+
+        if (this.#requestedStartPlay) return;
+        this.#requestedStartPlay = true;
+        if (!await this.#tryStartPlaying()) {
+            await Debug.debug('request start play');
             this.#requestPreload();
-            this.requestRender();
-        } else {
-            await Debug.debug('requested play ->', state, 'but done nothing');
         }
     }
 }

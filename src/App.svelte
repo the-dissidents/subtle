@@ -293,7 +293,7 @@ appWindow.onDragDropEvent(async (ev) => {
               playPos = 0;
               return;
             }
-            Playback.setPosition(playPos * Playback.duration);
+            Playback.setPosition(playPos * Playback.duration, {imprecise: true});
           }}/>
         <TimestampInput bind:timestamp={playPosInput}
           onchange={() => Playback.setPosition(playPosInput)}/>

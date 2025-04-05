@@ -4,7 +4,7 @@ import { tick } from "svelte";
 import { get, writable, type Readable } from "svelte/store";
 import { Debug } from "../Debug";
 import { Timeline } from "../Timeline.svelte";
-import { VideoPlayer } from "../VideoPlayer";
+import { VideoPlayer, type SetPositionOptions } from "../VideoPlayer";
 import { ChangeType, Source } from "./Source";
 
 export type PlayArea = {
@@ -84,7 +84,7 @@ export const Playback = {
             handlePlayArea();
         };
         this.video.onPlayStateChange = () => {
-            Debug.assert(this.video != null);
+            // Debug.assert(this.video != null);
             this.onRefreshPlaybackControl();
         };
         return this.video;
@@ -122,9 +122,9 @@ export const Playback = {
         this.onRefreshPlaybackControl();
     },
 
-    setPosition(pos: number) {
+    setPosition(pos: number, opt?: SetPositionOptions) {
         if (this.video) {
-            this.video.requestSetPosition(pos);
+            this.video.requestSetPosition(pos, opt);
         } else {
             updateProgress(pos);
         }
@@ -137,11 +137,11 @@ export const Playback = {
 
     async play(state = true) {
         Debug.assert(this.video !== null);
-        await this.video.play(state);
+        await (state ? this.video.requestStartPlay() : this.video.stop());
     },
 
     async toggle() {
         Debug.assert(this.video !== null);
-        await this.video.play(!this.video.isPlaying);
+        await this.play(!this.video.isPlaying);
     }
 }
