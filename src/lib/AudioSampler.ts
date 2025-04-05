@@ -1,4 +1,5 @@
 import { MMedia } from "./API";
+import { Basic } from "./Basic";
 import { Debug } from "./Debug";
 import { AggregationTree } from "./details/AggregationTree";
 
@@ -51,6 +52,10 @@ export class AudioSampler {
     }
 
     async close() {
+        if (this.#isSampling) {
+            this.tryCancelSampling();
+            await Basic.waitUntil(() => !this.#isSampling);
+        }
         await this.#media.close();
     }
 

@@ -186,7 +186,7 @@ export class VideoPlayer {
         if (this.#opened == undefined)
             return Debug.early('already closed');
         Debug.assert(!this.#opened.media.isClosed);
-        await Debug.info('开始');
+        await Debug.info('closing video');
         this.#requestedSetPositionTarget = -1;
         this.#requestedPreload = false;
         await Basic.waitUntil(() => !this.isPreloading && !this.#setPositionInProgress);
@@ -196,7 +196,7 @@ export class VideoPlayer {
         await this.forceSetPosition(0);
         this.#opened = undefined;
         this.#manager.requestRender();
-        await Debug.info('结束');
+        await Debug.info('closed video');
     }
     
     async load(rawurl: string) {

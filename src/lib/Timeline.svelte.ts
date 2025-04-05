@@ -682,14 +682,16 @@ export class Timeline {
     #samplerMedia?: MMedia;
 
     async close() {
-        if (this.#samplerMedia == undefined)
+        if (this.#sampler == undefined)
             return Debug.early('already closed');
-        Debug.assert(!this.#samplerMedia.isClosed);
-        await this.#samplerMedia?.close();
+        Debug.assert(this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed);
+        await Debug.info('closing timeline');
+        await this.#sampler.close();
         this.#samplerMedia = undefined;
         this.#sampler = null;
         this.setCursorPosPassive(0);
         this.#manager.requestRender();
+        await Debug.info('closed timeline');
     }
 
     async load(rawurl: string) {
