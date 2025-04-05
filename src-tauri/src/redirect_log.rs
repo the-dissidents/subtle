@@ -4,6 +4,19 @@ use std::ffi::{c_char, c_int, c_void, CStr};
 use lazy_static::lazy_static;
 use std::sync::RwLock;
 
+#[cfg(not(target_os = "windows"))]
+use ffmpeg_sys_next::vsnprintf;
+
+#[cfg(target_os = "windows")]
+unsafe fn vsnprintf(
+    out: *mut c_char,
+    max_count: u64,
+    format: *const c_char,
+    args: ffmpeg_sys_next::va_list,
+) -> c_int {
+    ffmpeg_sys_next::vsnprintf_s(out, max_count as usize, max_count as usize, format, args)
+}
+
 unsafe extern "C" fn rust_log_callback(
     _ptr: *mut c_void,
     level: c_int,
@@ -27,7 +40,7 @@ unsafe extern "C" fn rust_log_callback(
     };
 
     let mut buffer = [0u8; 1024];
-    ffmpeg_sys_next::vsnprintf(
+    vsnprintf(
         buffer.as_mut_ptr() as *mut c_char,
         buffer.len() as u64,
         fmt,
