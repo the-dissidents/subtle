@@ -58,7 +58,8 @@ function formatData(data: any[]) {
 const Filter = {
     filter: (stackFrame: StackFrame) => 
         !(stackFrame.getFileName()?.endsWith('src/lib/Debug.ts')) 
-        && !(stackFrame.getFunctionName()?.includes('StackTrace$$'))
+        && !(stackFrame.getFunctionName()?.includes('StackTrace$$')),
+    offline: true
 }
 
 async function stacktrace(from?: Error) {
@@ -117,10 +118,16 @@ export const Debug: {
             }
         });
 
-        window.addEventListener('error', (ev) => {
-            callLog(LogLevel.Error, 
-                `Uncaught error at ${ev.lineno}:${ev.colno}: ` 
-                + inspect(ev.error), ev.filename);
+        window.addEventListener('error', async (ev) => {
+            if (ev.error instanceof Error) {
+                let { file, trace } = await stacktrace(ev.error);
+                callLog(LogLevel.Error, 
+                    formatData([`Unhandled error`, ev.error]), file);
+                callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+            } else {
+                callLog(LogLevel.Error, 
+                    formatData([`Unhandled error`, ev.error]), '?');
+            }
             return true;
         });
         window.addEventListener('unhandledrejection', async (ev) => {

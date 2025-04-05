@@ -70,8 +70,8 @@ type MediaEvent = {
 };
 
 class MediaError extends Error {
-    constructor(msg: string) {
-        super(msg);
+    constructor(msg: string, public readonly from: string) {
+        super(`${msg} (${from})`);
         this.name = 'MediaError';
     }
 }
@@ -80,7 +80,12 @@ type MediaEventKey = MediaEvent['event'];
 type MediaEventData = {[E in MediaEvent as E['event']]: E['data']};
 type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) => void;
 
-function createChannel(handler: {[key in MediaEventKey]?: MediaEventHandler<key>}) {
+function createChannel(
+    from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
+    reject: (e: any) => void
+) {
+    setTimeout(() => reject(new MediaError('timed out', from)), 1000);
+    
     const channel = new Channel<MediaEvent>;
     channel.onmessage = (msg) => {
         let h = handler[msg.event];
@@ -96,13 +101,14 @@ function createChannel(handler: {[key in MediaEventKey]?: MediaEventHandler<key>
             Debug.info(msg.data.message);
             break;
         case 'runtimeError':
-            throw new MediaError('runtimeError: ' + msg.data.what);
+            return reject(new MediaError('runtimeError: ' + msg.data.what, from));
         case 'invalidId':
-            throw new MediaError('invalid media ID referenced');
+            return reject (new MediaError('invalid media ID referenced', from));
         default:
-            throw new Error('unhandled event: ' + msg.event);
+            return reject (new Error('unhandled event: ' + msg.event));
         }
     }
+    // Debug.trace('created channel for', from);
     return channel;
 }
 
@@ -154,7 +160,9 @@ export class MMedia {
         private id: number,
         private _duration: number,
         private _streams: string[]
-    ) { }
+    ) {
+        Debug.info(`media ${id} opened`);
+    }
 
     #readData(data: ArrayBuffer): AudioFrameData | VideoFrameData {
         const view = new DataView(data);
@@ -175,10 +183,9 @@ export class MMedia {
 
     static async open(path: string) {
         const id = await new Promise<number>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 2000);
-            let channel = createChannel({
+            let channel = createChannel('open', {
                 opened: (data) => resolve(data.id)
-            });
+            }, reject);
             invoke('open_media', {path, channel});
         });
         const status = await new Promise<{
@@ -187,10 +194,9 @@ export class MMedia {
             duration: number,
             streams: string[]
         }>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('open/status', {
                 mediaStatus: (data) => resolve(data)
-            });
+            }, reject);
             invoke('media_status', {id, channel});
         });
         return new MMedia(id, status.duration, status.streams);
@@ -203,21 +209,21 @@ export class MMedia {
     async close() {
         Debug.assert(!this.#destroyed);
         await new Promise<void>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('close', {
                 done: () => {
+                    Debug.info(`media ${this.id} closed`);
                     this.#destroyed = true;
                     // IPC.deleteListeners(this);
                     resolve();
                 }
-            });
+            }, reject);
             invoke('close_media', {id: this.id, channel});
         });
     }
     
     async waitUntilAvailable() {
         return await new Promise<void>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
+            setTimeout(() => reject(new MediaError('timed out', 'waitUntilAvailable')), 1000);
             const wait = () => {
                 if (!this.hasJob) resolve();
                 else setTimeout(wait, 1);
@@ -229,10 +235,9 @@ export class MMedia {
     async openAudio(audioId: number) {
         Debug.assert(!this.#destroyed);
         await new Promise<void>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('openAudio', {
                 done: () => resolve()
-            });
+            }, reject);
             invoke('open_audio', {id: this.id, audioId, channel});
         });
     }
@@ -240,10 +245,9 @@ export class MMedia {
     async openVideo(videoId: number) {
         Debug.assert(!this.#destroyed);
         await new Promise<void>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('openVideo', {
                 done: () => resolve()
-            });
+            }, reject);
             invoke('open_video', {id: this.id, videoId, channel});
         });
         let status = await this.videoStatus();
@@ -256,10 +260,9 @@ export class MMedia {
             audioIndex: number,
             videoIndex: number
         }>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('status', {
                 mediaStatus: (data) => resolve(data)
-            });
+            }, reject);
             invoke('media_status', {id: this.id, channel});
         });
     }
@@ -270,11 +273,10 @@ export class MMedia {
             sampleRate: number,
             length: number
         } | null>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('audioStatus', {
                 audioStatus: (data) => resolve(data),
                 noStream: () => resolve(null)
-            });
+            }, reject);
             invoke('audio_status', {id: this.id, channel});
         });
     }
@@ -287,11 +289,10 @@ export class MMedia {
             width: number, height: number,
             outWidth: number, outHeight: number
         } | null>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('videoStatus', {
                 videoStatus: (data) => resolve(data),
                 noStream: () => resolve(null)
-            });
+            }, reject);
             invoke('video_status', {id: this.id, channel});
         });
         if (status) {
@@ -308,10 +309,9 @@ export class MMedia {
         width = Math.max(1, Math.floor(width));
         height = Math.max(1, Math.floor(height));
         await new Promise<void>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('setVideoSize', {
                 done: () => resolve()
-            });
+            }, reject);
             invoke('video_set_size', {id: this.id, channel, width, height});
         });
         this.#outWidth = width;
@@ -323,12 +323,11 @@ export class MMedia {
         Debug.assert(this.#currentJobs == 0);
         try {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
-                setTimeout(() => reject(new MediaError('timed out')), 1000);
                 this.#currentJobs += 1;
-                let channel = createChannel({ 'EOF': () => {
+                let channel = createChannel('readNextFrame', { 'EOF': () => {
                     Debug.debug('at eof');
                     resolve(null);
-                } });
+                }}, reject);
                 invoke<ArrayBuffer>('get_next_frame_data', { id: this.id, channel })
                     .then((x) => resolve(this.#readData(x)))
                     .catch(() => {});
@@ -345,11 +344,10 @@ export class MMedia {
         Debug.assert(this.#currentJobs == 0);
         try {
             return await new Promise<void>((resolve, reject) => {
-                setTimeout(() => reject(new MediaError('timed out')), 1000);
                 this.#currentJobs += 1;
-                let channel = createChannel({
+                let channel = createChannel('seekAudio', {
                     done: () => resolve()
-                });
+                }, reject);
                 invoke('seek_audio', { id: this.id, channel, position });
             });
         } finally {
@@ -362,11 +360,10 @@ export class MMedia {
         Debug.assert(this.#currentJobs == 0);
         try {
             return await new Promise<void>((resolve, reject) => {
-                setTimeout(() => reject(new MediaError('timed out')), 1000);
                 this.#currentJobs += 1;
-                let channel = createChannel({
+                let channel = createChannel('seekVideo', {
                     done: () => resolve()
-                });
+                }, reject);
                 invoke('seek_video', { id: this.id, channel, position });
             });
         } finally {
@@ -379,11 +376,10 @@ export class MMedia {
         Debug.assert(this.#currentJobs == 0);
         try {
             return await new Promise<AudioFrameData | VideoFrameData | null>((resolve, reject) => {
-                setTimeout(() => reject(new MediaError('timed out')), 1000);
                 this.#currentJobs += 1;
-                let channel = createChannel({
+                let channel = createChannel('seekVideoPrecise', {
                     'EOF': () => resolve(null),
-                });
+                }, reject);
                 invoke<ArrayBuffer>('seek_precise_and_get_frame', 
                         { id: this.id, channel, position })
                     .then((x) => resolve(this.#readData(x)))
@@ -403,10 +399,9 @@ export class MMedia {
             end: number,
             data: number[]
         }>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('getIntensities', {
                 intensityList: (data) => resolve(data),
-            });
+            }, reject);
             invoke('get_intensities', {id: this.id, channel, until, step});
         });
     }
@@ -415,10 +410,9 @@ export class MMedia {
 export const MAPI = {
     async version() {
         return await new Promise<string>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out')), 1000);
-            let channel = createChannel({
+            let channel = createChannel('version', {
                 ffmpegVersion: (data) => resolve(data.value)
-            });
+            }, reject);
             invoke('media_version', {channel});
         });
     },

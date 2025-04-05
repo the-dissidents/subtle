@@ -46,5 +46,17 @@ let media: MMedia | undefined;
   }}>
   detect encoding
 </button>
+<button
+  onclick={() => {
+    throw new Error('test error');
+  }}>
+  create error
+</button>
+<button
+  onclick={async () => {
+    throw new Error('test rejection');
+  }}>
+  create rejection
+</button>
 <br>
 <span>{result}</span>

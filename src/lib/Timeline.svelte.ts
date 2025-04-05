@@ -730,7 +730,6 @@ export class Timeline {
                 || this.#sampler.sampleProgress > end + preload) 
                     this.#sampler.tryCancelSampling();
             else if (this.#sampler.sampleEnd < end + preload) {
-                Debug.trace('extending to', end);
                 this.#sampler.extendSampling(end + preload);
             }
         }
@@ -765,7 +764,6 @@ export class Timeline {
             return;
         }
 
-        Debug.debug('sampling', start, end);
         this.#sampler.startSampling(start, end);
         this.#manager.requestRender();
     }

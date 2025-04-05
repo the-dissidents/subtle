@@ -134,7 +134,7 @@ export const Interface = {
         
         let source = get(Source.currentFile);
         if (source != '')
-            PrivateConfig.rememberVideo(source, path);
+            await PrivateConfig.setVideo(source, path);
     },
 
     async warnIfNotSaved() {
@@ -242,7 +242,7 @@ export const Interface = {
         }
         const text = JSON.stringify(Source.subs.toSerializable(), undefined, 2);
         if (await Source.saveTo(file, text) && Playback.video?.source) {
-            PrivateConfig.rememberVideo(file, Playback.video.source);
+            await PrivateConfig.setVideo(file, Playback.video.source);
             Source.subs.migrated = false;
         }
         Source.startAutoSave();
@@ -251,5 +251,11 @@ export const Interface = {
     async savePublicConfig() {
         await guardAsync(() => MainConfig.save(),
             `error saving public config`);
+    },
+
+    async closeVideo() {
+        let file = get(Source.currentFile);
+        await Playback.close();
+        await PrivateConfig.setVideo(file, undefined);
     }
 }

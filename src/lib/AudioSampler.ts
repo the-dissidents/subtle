@@ -51,7 +51,11 @@ export class AudioSampler {
             info.length, info.sampleRate, media, Math.ceil(info.sampleRate / resolution));
     }
 
+    isClosing = false;
     async close() {
+        if (this.#media.isClosed)
+            return Debug.early('already closed');
+        this.isClosing = true;
         if (this.#isSampling) {
             this.tryCancelSampling();
             await Basic.waitUntil(() => !this.#isSampling);
@@ -61,20 +65,23 @@ export class AudioSampler {
 
     tryCancelSampling() {
         Debug.assert(this.#isSampling);
+        Debug.debug('cancelling sampling');
         this.#cancelling = true;
     }
 
     extendSampling(to: number) {
         Debug.assert(this.#isSampling);
         let pos = Math.floor(to * this.#sampleRate);
-        if (pos > this.#length) to = this.#length;
+        if (pos > this.#length) pos = this.#length;
         Debug.assert(this.#sampleProgress < pos);
         Debug.assert(this.#sampleEnd <= pos);
+        Debug.trace('extending sampling to', pos);
         this.#sampleEnd = pos;
     }
 
     async startSampling(from: number, to: number): Promise<void> {
-        Debug.assert(!this.#isSampling);
+        Debug.assert(!this.#isSampling && !this.#media.isClosed);
+        if (this.isClosing) return;
 
         let a = Math.floor(from * this.#sampleRate);
         let b = Math.floor(to * this.#sampleRate);
@@ -84,9 +91,11 @@ export class AudioSampler {
         this.#isSampling = true;
         this.#cancelling = false;
         this.#sampleProgress = a;
+        Debug.debug('sampling', a, b);
 
         let current = a;
         await this.#media.waitUntilAvailable();
+        Debug.assert(!this.#media.isClosed);
         await this.#media.seekAudio(a);
         let doSampling = async () => {
             let next = this.#sampleProgress + this.sampleLength * 500;

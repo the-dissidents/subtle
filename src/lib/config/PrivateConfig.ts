@@ -75,7 +75,7 @@ export const PrivateConfig = {
         Debug.assert(initialized);
         return configData[key];
     },
-    pushRecent(file: string) {
+    async pushRecent(file: string) {
         Debug.assert(initialized);
         const i = configData.paths.findIndex((x) => x.name == file);
         if (i >= 0)
@@ -84,16 +84,16 @@ export const PrivateConfig = {
             configData.paths.unshift({name: file});
         while (configData.paths.length > configData.maxRecent)
             configData.paths.pop();
-        saveConfig();
+        await saveConfig();
     },
     getVideo(file: string): string | undefined {
         Debug.assert(initialized);
         return configData.paths.find((x) => x.name == file)?.video;
     },
-    rememberVideo(file: string, video: string) {
+    async setVideo(file: string, video: string | undefined) {
         Debug.assert(initialized);
         Debug.assert(configData.paths.length > 0 && configData.paths[0].name == file);
         configData.paths[0].video = video;
-        saveConfig();
-    }
+        await saveConfig();
+    },
 }
