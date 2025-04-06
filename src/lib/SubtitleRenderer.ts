@@ -187,8 +187,9 @@ export class SubtitleRenderer {
         ctx.rect(this.#hMargin, this.#vMargin, 
             this.width - 2 * this.#hMargin, this.height - 2 * this.#vMargin);
         ctx.stroke();
+        const reverseStyles = this.#subs.styles.toReversed();
         for (const ent of this.#currentEntries)
-        for (const style of this.#subs.styles) {
+        for (const style of reverseStyles) {
             const text = ent.entry.texts.get(style);
             if (!text) continue;
 

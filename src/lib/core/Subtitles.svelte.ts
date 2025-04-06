@@ -201,6 +201,7 @@ export class Subtitles {
     metadata: SubtitleMetadata = $state(Subtitles.#createMetadata());
     /** Must be set to one of `styles` */
     defaultStyle: SubtitleStyle = $state(Subtitles.createStyle('default'));
+    /** The order of the styles should be strictly the reverse of the ASS display order */
     styles: SubtitleStyle[] = $state([this.defaultStyle]);
     entries: SubtitleEntry[] = [];
     migrated = false;
@@ -264,6 +265,7 @@ export class Subtitles {
             });
             const def = subs.styles.find((x) => x.name == o.defaultStyle);
             if (def === undefined) throw new SubtitlesParseError('invalid default style name');
+            subs.defaultStyle = def;
         }
 
         subs.entries = o.entries

@@ -73,8 +73,8 @@ export class AudioSampler {
         Debug.assert(this.#isSampling);
         let pos = Math.floor(to * this.#sampleRate);
         if (pos > this.#length) pos = this.#length;
+        if (this.#sampleEnd > pos) return;
         Debug.assert(this.#sampleProgress < pos);
-        Debug.assert(this.#sampleEnd <= pos);
         Debug.trace('extending sampling to', pos);
         this.#sampleEnd = pos;
     }

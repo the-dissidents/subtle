@@ -4,6 +4,14 @@ use std::ffi::{c_char, c_int, c_void, CStr};
 use lazy_static::lazy_static;
 use std::sync::RwLock;
 
+// cf. https://github.com/rust-lang/rust-bindgen/issues/2631
+
+#[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+type VaList = *mut ffmpeg_sys_next::__va_list_tag;
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+type VaList = ffmpeg_sys_next::va_list;
+
 #[cfg(not(target_os = "windows"))]
 use ffmpeg_sys_next::vsnprintf;
 
@@ -12,7 +20,7 @@ unsafe fn vsnprintf(
     out: *mut c_char,
     max_count: u64,
     format: *const c_char,
-    args: ffmpeg_sys_next::va_list,
+    args: VaList,
 ) -> c_int {
     ffmpeg_sys_next::vsnprintf_s(out, max_count as usize, max_count as usize, format, args)
 }
@@ -21,7 +29,7 @@ unsafe extern "C" fn rust_log_callback(
     _ptr: *mut c_void,
     level: c_int,
     fmt: *const c_char,
-    args: ffmpeg_sys_next::va_list,
+    args: VaList,
 ) {
     if fmt.is_null() {
         return;

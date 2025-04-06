@@ -15,12 +15,16 @@ export const ASS = {
     },
     exportFragment(subs: Subtitles) {
         let result = '';
-        for (let entry of subs.entries) {
+        const reverseStyles = subs.styles.toReversed();
+        for (const entry of subs.entries) {
             let t0 = Basic.formatTimestamp(entry.start, 2);
             let t1 = Basic.formatTimestamp(entry.end, 2);
-            for (const [style, text] of entry.texts)
+            for (const style of reverseStyles) {
+                let text = entry.texts.get(style);
+                if (!text) continue;
                 result += `Dialogue: 0,${t0},${t1},${style},,0,0,0,,${
                     text.replaceAll('\n', '\\N')}\n`;
+            }
         }
         return result;
     },
