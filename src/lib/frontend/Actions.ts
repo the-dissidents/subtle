@@ -222,6 +222,7 @@ export const Actions = {
         let menu = await Menu.new({items: [
         {
             text: $_('action.copy'),
+            enabled: selection.length > 0,
             items: [
                 {
                     text: $_('cxtmenu.json-internal'),
@@ -243,7 +244,22 @@ export const Actions = {
             ]
         },
         {
+            text: $_('action.copy-text'),
+            enabled: selection.length > 0,
+            items: [
+                // {
+                //     text: $_('action-all-styles')
+                // },
+                // { item: 'Separator' },
+                ...distinctStyles.map((x) => ({
+                    text: x.name,
+                    action: () => Utils.copyPlaintext(x)
+                }))
+            ]
+        },
+        {
             text: $_('action.cut'),
+            enabled: selection.length > 0,
             accelerator: `CmdOrCtrl+X`,
             action: () => {
                 Utils.copySelection();
@@ -258,6 +274,7 @@ export const Actions = {
         { item: 'Separator' },
         {
             text: $_('action.delete'),
+            enabled: selection.length > 0,
             accelerator: `CmdOrCtrl+Backspace`,
             action: () => Editing.deleteSelection()
         },

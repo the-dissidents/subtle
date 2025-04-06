@@ -35,13 +35,24 @@ export const Utils = {
     },
 
     copySelection(transform = SimpleFormats.export.JSON) {
-        let selection = new Set(
-            [...Editing.selection.currentGroup, ...Editing.selection.submitted]);
-        if (selection.size == 0) return;
-        let sorted = Source.subs.entries.filter((x) => selection.has(x));
+        let selection = Editing.getSelection();
+        if (selection.length == 0) return;
+        // FIXME, this is not correct
         let temp = new Subtitles(Source.subs);
-        temp.entries = sorted;
+        temp.entries = selection;
         clipboard.writeText(transform(temp));
+        Interface.status.set('copied');
+    },
+
+    copyPlaintext(style: SubtitleStyle) {
+        let selection = Editing.getSelection();
+        if (selection.length == 0) return;
+        let results: string[] = [];
+        selection.forEach((x) => {
+            let text = x.texts.get(style);
+            if (text) results.push(text);
+        })
+        clipboard.writeText(results.join(' '));
         Interface.status.set('copied');
     },
 

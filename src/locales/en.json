@@ -4,6 +4,7 @@
     "combine-by-matching-time": "combine by matching time...",
     "connect-all": "connect all",
     "copy": "copy",
+    "copy-text": "copy text",
     "create-channel": "create channel",
     "cut": "cut",
     "delete": "delete",
@@ -35,6 +36,7 @@
     "transform-times": "transform times...",
     "up": "up"
   },
+  "action-all-styles": "all styles",
   "back": "back",
   "cancel": "cancel",
   "combinedialog": {
@@ -117,8 +119,9 @@
   },
   "configdialog": {
     "all-items-are-automatically-saved": "All items are automatically saved.",
-    "show-autosave-path": "Show autosave path",
-    "show-config-file-advanced": "Show config file (advanced)"
+    "show-autosave-path": "Show autosave folder",
+    "show-config-file-advanced": "Show config files (advanced)",
+    "show-log-path": "Show log folder"
   },
   "cxtmenu": {
     "and": "and:",

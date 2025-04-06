@@ -4,6 +4,7 @@
     "combine-by-matching-time": "合并时间相近的条目...",
     "connect-all": "接在一起",
     "copy": "复制",
+    "copy-text": "复制文本",
     "create-channel": "创建频道",
     "cut": "剪切",
     "delete": "删除",
@@ -35,6 +36,7 @@
     "transform-times": "变换时间...",
     "up": "向上"
   },
+  "action-all-styles": "所有样式",
   "back": "返回",
   "cancel": "取消",
   "combinedialog": {
@@ -117,8 +119,9 @@
   },
   "configdialog": {
     "all-items-are-automatically-saved": "所有设置项均自动保存",
-    "show-autosave-path": "显示自动保存文件夹",
-    "show-config-file-advanced": "显示配置文件（高级）"
+    "show-autosave-path": "打开自动保存文件夹",
+    "show-config-file-advanced": "显示配置文件（高级）",
+    "show-log-path": "打开调试日志文件夹"
   },
   "cxtmenu": {
     "and": "和：",

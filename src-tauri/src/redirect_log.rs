@@ -50,7 +50,7 @@ unsafe extern "C" fn rust_log_callback(
     let c_str = CStr::from_ptr(buffer.as_ptr() as *const c_char);
     let message = c_str.to_string_lossy();
 
-    log::log!(target: "ffmpeg", level, "{}", message);
+    log::log!(target: "ffmpeg", level, "{}", message.trim_end());
 }
 
 pub fn init_ffmpeg_logging() {

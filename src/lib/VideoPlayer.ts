@@ -394,12 +394,12 @@ export class VideoPlayer {
     #requestPreload() {
         if (this.#requestedPreload) return;
         this.#requestedPreload = true;
-        Debug.debug('preloading');
+        Debug.trace('preloading');
         const load = async () => {
             if (await this.#populateCache())
                 setTimeout(load, 0);
             else {
-                Debug.debug('preloading ends');
+                Debug.trace('preloading ends');
                 this.#requestedPreload = false;
             }
         }

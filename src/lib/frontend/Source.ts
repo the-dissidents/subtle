@@ -13,6 +13,7 @@ import { Editing } from "./Editing";
 import { EventHost } from "./Frontend";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
 
 let intervalId = 0;
@@ -151,6 +152,8 @@ export const Source = {
             // 格式：YYYYMMDD_HHMMSS
             return `${year}${month}${day}_${hours}${minutes}${seconds}`;
         }
+        if (!get(this.fileChanged)) return; // only autosave when changed
+
         await guardAsync( async ()=> {
             const currentFile = get(this.currentFile);
             const autoSaveName =
@@ -158,6 +161,7 @@ export const Source = {
                 + '_' + getCurrentTimestampForFilename() + '.json';
             const text = JSON.stringify(Source.subs.toSerializable());
             await fs.writeTextFile(autoSaveName, text, { baseDir: fs.BaseDirectory.AppLocalData });
+            Debug.info('autosaved', currentFile);
             Interface.status.set($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
         }, $_('msg.autosave-failed'));
     },

@@ -123,32 +123,42 @@ function updateFonts() {
     '--editorFontFamily', InterfaceConfig.data.editorFontFamily);
 }
 
+$effect(() => 
+  MainConfig.onInitialized(() => {updateFonts()}));
+
+$effect(() => 
+  MainConfig.onInitialized(() => {
+    locale.set(InterfaceConfig.data.language);
+    Debug.debug('language =', InterfaceConfig.data.language);
+  }));
+
+$effect(() => 
+  MainConfig.onInitialized(() => {
+    InterfaceConfig.data.autosaveInterval;
+    Source.startAutoSave();
+    Debug.debug('autosave interval =', InterfaceConfig.data.autosaveInterval);
+  }));
+
+$effect(() => 
+  MainConfig.onInitialized(() => {
+    Debug.redirectNative = DebugConfig.data.redirectLogs;
+    Debug.debug('redirectLogs =', DebugConfig.data.redirectLogs);
+  }));
+
+$effect(() =>
+  MainConfig.onInitialized(() => {
+    Debug.filterLevel = GetLevelFilter[
+      DebugConfig.data.logLevel as keyof typeof GetLevelFilter];
+    Debug.debug('webview filter level =', DebugConfig.data.logLevel);
+  }));
+
+$effect(() => 
+  MainConfig.onInitialized(() => {
+    Debug.setPersistentFilterLevel(GetLevelFilter[
+      DebugConfig.data.persistentLogLevel as keyof typeof GetLevelFilter]);
+  }));
+
 MainConfig.init();
-MainConfig.onInitialized(() => updateFonts());
-$effect(() => updateFonts());
-
-$effect(() => {
-  locale.set(InterfaceConfig.data.language);
-});
-
-$effect(() => {
-  InterfaceConfig.data.autosaveInterval;
-  Source.startAutoSave();
-});
-
-$effect(() => {
-  Debug.redirectNative = DebugConfig.data.redirectLogs;
-});
-
-$effect(() => {
-  Debug.filterLevel = GetLevelFilter[
-    DebugConfig.data.logLevel as keyof typeof GetLevelFilter];
-});
-
-$effect(() => {
-  Debug.setPersistentFilterLevel(GetLevelFilter[
-    DebugConfig.data.persistentLogLevel as keyof typeof GetLevelFilter]);
-});
 
 let settingTheme = false;
 async function updateTheme() {
@@ -157,16 +167,13 @@ async function updateTheme() {
   await invoke("plugin:theme|set_theme", {
     theme: InterfaceConfig.data.theme,
   });
+  Playback.timeline?.requestRender();
   settingTheme = false;
+  Debug.debug('changed theme', InterfaceConfig.data.theme);
 }
 
 $effect(() => {
   updateTheme();
-});
-
-$effect(() => {
-  if (theme.isDark !== undefined)
-    Playback.timeline?.requestRender();
 });
 
 getVersion().then((x) => 

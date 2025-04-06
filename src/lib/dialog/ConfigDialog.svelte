@@ -6,7 +6,7 @@ import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
 
-import { appLocalDataDir } from "@tauri-apps/api/path";
+import { appLocalDataDir, appLogDir } from "@tauri-apps/api/path";
 import { _, locale } from 'svelte-i18n';
 import { Interface } from '../frontend/Interface';
 
@@ -45,12 +45,17 @@ locale.subscribe(() => refresh++);
     <p class='notice flexgrow'>
       {$_('configdialog.all-items-are-automatically-saved')}
     </p>
-    <button onclick={() => {
-      revealItemInDir(MainConfig.configPath);
-    }}>{$_('configdialog.show-config-file-advanced')}</button>
-    <button onclick={async () => {
-      openPath(await appLocalDataDir());
-    }}>{$_('configdialog.show-autosave-path')}</button>
+    <div class='vlayout'>
+      <button onclick={() => {
+        revealItemInDir(MainConfig.configPath);
+      }}>{$_('configdialog.show-config-file-advanced')}</button>
+      <button onclick={async () => {
+        openPath(await appLogDir());
+      }}>{$_('configdialog.show-log-path')}</button>
+      <button onclick={async () => {
+        openPath(await appLocalDataDir());
+      }}>{$_('configdialog.show-autosave-path')}</button>
+    </div>
   </div>
   
   {#key refresh}
@@ -254,5 +259,6 @@ p.description {
 .notice {
   font-size: 90%;
   margin: 0 0 5px 0;
+  align-content: end;
 }
 </style>

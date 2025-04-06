@@ -4,6 +4,7 @@
     "combine-by-matching-time": "合併時間相近的項目...",
     "connect-all": "全部連接",
     "copy": "複製",
+    "copy-text": "複製文字",
     "create-channel": "建立頻道",
     "cut": "剪下",
     "delete": "刪除",
@@ -35,6 +36,7 @@
     "transform-times": "變換時間...",
     "up": "向上"
   },
+  "action-all-styles": "所有樣式",
   "back": "返回",
   "cancel": "取消",
   "combinedialog": {
@@ -118,7 +120,8 @@
   "configdialog": {
     "all-items-are-automatically-saved": "所有設定項目均自動儲存",
     "show-autosave-path": "顯示自動儲存資料夾",
-    "show-config-file-advanced": "顯示設定檔（進階）"
+    "show-config-file-advanced": "顯示設定檔（進階）",
+    "show-log-path": "打開調試日誌資料夾"
   },
   "cxtmenu": {
     "and": "和：",
