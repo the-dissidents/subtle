@@ -80,6 +80,12 @@ type MediaEventKey = MediaEvent['event'];
 type MediaEventData = {[E in MediaEvent as E['event']]: E['data']};
 type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) => void;
 
+// cf. https://github.com/tauri-apps/tauri/issues/13133
+function preventChannelMemoryLeak(c: Channel<any>) {
+    // @ts-expect-error
+    delete window[`_${c.id}`];
+}
+
 function createChannel(
     from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
     reject: (e: any) => void
@@ -103,9 +109,9 @@ function createChannel(
         case 'runtimeError':
             return reject(new MediaError('runtimeError: ' + msg.data.what, from));
         case 'invalidId':
-            return reject (new MediaError('invalid media ID referenced', from));
+            return reject(new MediaError('invalid media ID referenced', from));
         default:
-            return reject (new Error('unhandled event: ' + msg.event));
+            return reject(new Error('unhandled event: ' + msg.event));
         }
     }
     // Debug.trace('created channel for', from);
@@ -134,6 +140,9 @@ export class MMedia {
     #outWidth: number = -1;
     #outHeight: number = -1;
     #currentJobs = 0;
+    #_finalizationReg = new FinalizationRegistry((x) => {
+        Debug.debug('finalizing:', x);
+    });
 
     get streams(): readonly string[] {
         return this._streams;
@@ -172,11 +181,15 @@ export class MMedia {
         if (type == 'audio') {
             const length = view.getUint32(16, true);
             const content = new Float32Array(data, 20, length);
+            // Debug.debug('received:', `audio @${position}(${time})`)
+            // this.#_finalizationReg.register(data, `audio @${position}(${time})`);
             return { type, position, time, content } satisfies AudioFrameData;
         } else {
             const stride = view.getUint32(16, true);
             const length = view.getUint32(20, true);
             const content = new Uint8ClampedArray(data, 24, length);
+            // Debug.debug('received:', `video @${position}(${time})`)
+            // this.#_finalizationReg.register(data, `video @${position}(${time})`);
             return { type, position, time, stride, content } satisfies VideoFrameData;
         }
     }
@@ -321,20 +334,22 @@ export class MMedia {
     async readNextFrame() {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
         try {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
                 this.#currentJobs += 1;
-                let channel = createChannel('readNextFrame', { 'EOF': () => {
+                channel = createChannel('readNextFrame', { 'EOF': () => {
                     Debug.debug('at eof');
                     resolve(null);
                 }}, reject);
                 invoke<ArrayBuffer>('get_next_frame_data', { id: this.id, channel })
-                    .then((x) => resolve(this.#readData(x)))
-                    .catch(() => {});
-                // errors are handled in the channel; the backend returning Err(()) is just a way
-                // to not return any data
+                    .then((x) => {
+                        if (x.byteLength > 0)
+                            resolve(this.#readData(x))
+                    });
             });
         } finally {
+            if (channel) preventChannelMemoryLeak(channel);
             this.#currentJobs -= 1;
         }
     }
@@ -342,15 +357,17 @@ export class MMedia {
     async seekAudio(position: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
         try {
             return await new Promise<void>((resolve, reject) => {
                 this.#currentJobs += 1;
-                let channel = createChannel('seekAudio', {
+                channel = createChannel('seekAudio', {
                     done: () => resolve()
                 }, reject);
                 invoke('seek_audio', { id: this.id, channel, position });
             });
         } finally {
+            if (channel) preventChannelMemoryLeak(channel);
             this.#currentJobs -= 1;
         }
     }
@@ -358,15 +375,17 @@ export class MMedia {
     async seekVideo(position: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
         try {
             return await new Promise<void>((resolve, reject) => {
                 this.#currentJobs += 1;
-                let channel = createChannel('seekVideo', {
+                channel = createChannel('seekVideo', {
                     done: () => resolve()
                 }, reject);
                 invoke('seek_video', { id: this.id, channel, position });
             });
         } finally {
+            if (channel) preventChannelMemoryLeak(channel);
             this.#currentJobs -= 1;
         }
     }
@@ -374,19 +393,22 @@ export class MMedia {
     async seekVideoPrecise(position: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
         try {
             return await new Promise<AudioFrameData | VideoFrameData | null>((resolve, reject) => {
                 this.#currentJobs += 1;
-                let channel = createChannel('seekVideoPrecise', {
+                channel = createChannel('seekVideoPrecise', {
                     'EOF': () => resolve(null),
                 }, reject);
                 invoke<ArrayBuffer>('seek_precise_and_get_frame', 
                         { id: this.id, channel, position })
-                    .then((x) => resolve(this.#readData(x)))
-                    .catch(() => {});
-                // see line 336
+                    .then((x) => {
+                        if (x.byteLength > 0)
+                            resolve(this.#readData(x))
+                    });
             });
         } finally {
+            if (channel) preventChannelMemoryLeak(channel);
             this.#currentJobs -= 1;
         }
     }

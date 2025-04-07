@@ -11,7 +11,12 @@ const $_ = unwrapFunctionStore(_);
 const configPath = 'config.json';
 let configData = {
     maxRecent: 10,
-    paths: [] as {name: string, video?: string}[],
+    paths: [] as {
+        name: string, 
+        video?: string,
+        scroll?: number,
+        focus?: number
+    }[],
 
     windowW: 1000,
     windowH: 800,

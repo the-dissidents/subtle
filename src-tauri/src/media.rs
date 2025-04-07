@@ -355,7 +355,7 @@ pub fn seek_precise_and_get_frame(
         Ok(None) => send(&channel, MediaEvent::EOF),
         Err(e) => send_error!(&channel, e.to_string()),
     };
-    Err(())
+    Ok(Response::new(InvokeResponseBody::Raw(vec![])))
 }
 
 #[tauri::command]
@@ -383,7 +383,7 @@ pub fn get_next_frame_data(
             send_error!(&channel, e.to_string());
         }
     };
-    Err(())
+    Ok(Response::new(InvokeResponseBody::Raw(vec![])))
 }
 
 /**

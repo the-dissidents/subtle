@@ -189,7 +189,7 @@ export const Interface = {
             Editing.setSelection(entries);
         }
         Source.markChanged(ChangeType.General);
-        Interface.status.set('imported');
+        Interface.status.set($_('msg.imported'));
     },
 
     async exportFileMenu() {

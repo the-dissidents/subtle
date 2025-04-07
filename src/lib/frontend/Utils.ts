@@ -41,7 +41,7 @@ export const Utils = {
         let temp = new Subtitles(Source.subs);
         temp.entries = selection;
         clipboard.writeText(transform(temp));
-        Interface.status.set('copied');
+        Interface.status.set($_('msg.copied'));
     },
 
     copyPlaintext(style: SubtitleStyle) {
@@ -53,7 +53,7 @@ export const Utils = {
             if (text) results.push(text);
         })
         clipboard.writeText(results.join(' '));
-        Interface.status.set('copied');
+        Interface.status.set($_('msg.copied'));
     },
 
     async paste() {
