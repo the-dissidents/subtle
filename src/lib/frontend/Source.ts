@@ -1,6 +1,6 @@
 console.info('Source loading');
 
-import { get, writable } from "svelte/store";
+import { get, readonly, writable } from "svelte/store";
 import { Subtitles } from "../core/Subtitles.svelte";
 import { SubtitleTools } from "../core/SubtitleUtil";
 
@@ -15,8 +15,6 @@ import { EventHost } from "./Frontend";
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
-
-let intervalId = 0;
 
 export type Snapshot = {
     archive: string,
@@ -44,31 +42,38 @@ function readSnapshot(s: Snapshot) {
     // this.clearSelection();
     // this.focused.style = null;
     Source.subs = Subtitles.deserialize(JSON.parse(s.archive));
-    Source.fileChanged.set(!s.saved);
+    fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch();
     Source.onSubtitlesChanged.dispatch(s.change);
 }
+
+let intervalId = 0;
+let changedSinceLastAutosave = false;
+let currentFile = writable('');
+let fileChanged = writable(false);
 
 export const Source = {
     subs: SubtitleTools.makeTestSubtitles(),
     undoStack: [] as Snapshot[],
     redoStack: [] as Snapshot[],
 
-    currentFile: writable(''),
-    fileChanged: writable(false),
+    get currentFile() { return readonly(currentFile); },
+    get fileChanged() { return readonly(fileChanged); },
 
     onUndoBufferChanged: new EventHost(),
     onSubtitlesChanged: new EventHost<[type: ChangeType]>(),
     onSubtitleObjectReload: new EventHost(),
 
     markChanged(type: ChangeType) {
-        this.fileChanged.set(true);
+        fileChanged.set(true);
+        changedSinceLastAutosave = true;
+
         Editing.editChanged = false;
         Editing.isEditingVirtualEntry.set(false);
         this.undoStack.push({
             archive: JSON.stringify(this.subs.toSerializable()), 
             change: type,
-            saved: !get(this.fileChanged)});
+            saved: false}); // TODO
         this.redoStack = [];
         this.onUndoBufferChanged.dispatch();
         this.onSubtitlesChanged.dispatch(type);
@@ -109,8 +114,10 @@ export const Source = {
         Editing.clearSelection();
         this.clearUndoRedo();
         Editing.focused.style = newSubs.defaultStyle;
-        this.currentFile.set(isImport ? '' : path);
-        this.fileChanged.set(newSubs.migrated);
+        currentFile.set(isImport ? '' : path);
+        fileChanged.set(newSubs.migrated);
+        changedSinceLastAutosave = false;
+
         this.onSubtitleObjectReload.dispatch();
         this.onSubtitlesChanged.dispatch(ChangeType.General);
         this.onSubtitlesChanged.dispatch(ChangeType.StyleDefinitions);
@@ -128,10 +135,11 @@ export const Source = {
         return guardAsync(async () => {
             await fs.writeTextFile(file, text);
             Interface.status.set($_('msg.saved-to-file', {values: {file}}));
-            this.fileChanged.set(false);
+            fileChanged.set(false);
+            changedSinceLastAutosave = false;
             if (file != get(this.currentFile)) {
                 PrivateConfig.pushRecent(file);
-                this.currentFile.set(file);
+                currentFile.set(file);
             }
             return true;
         }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
@@ -152,7 +160,10 @@ export const Source = {
             // 格式：YYYYMMDD_HHMMSS
             return `${year}${month}${day}_${hours}${minutes}${seconds}`;
         }
-        if (!get(this.fileChanged)) return; // only autosave when changed
+        if (!changedSinceLastAutosave) {
+            Debug.info('no change since last autosave');
+            return;
+        }; // only autosave when changed
 
         await guardAsync( async ()=> {
             const currentFile = get(this.currentFile);
@@ -161,7 +172,8 @@ export const Source = {
                 + '_' + getCurrentTimestampForFilename() + '.json';
             const text = JSON.stringify(Source.subs.toSerializable());
             await fs.writeTextFile(autoSaveName, text, { baseDir: fs.BaseDirectory.AppLocalData });
-            Debug.info('autosaved', currentFile);
+            changedSinceLastAutosave = false;
+            Debug.info('autosaved', currentFile ?? '<untitled>');
             Interface.status.set($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
         }, $_('msg.autosave-failed'));
     },

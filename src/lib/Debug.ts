@@ -72,6 +72,8 @@ async function stacktrace(from?: Error) {
         trace: frames.map((x) => '--> ' + x.toString()).join('\n')};
 }
 
+const HasStacktrace = new WeakSet<Error>();
+
 export const Debug: {
     filterLevel: LogLevelFilter,
     redirectNative: boolean,
@@ -123,7 +125,8 @@ export const Debug: {
                 let { file, trace } = await stacktrace(ev.error);
                 callLog(LogLevel.Error, 
                     formatData([`Unhandled error`, ev.error]), file);
-                callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+                if (!HasStacktrace.has(ev.error))
+                    callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
             } else {
                 callLog(LogLevel.Error, 
                     formatData([`Unhandled error`, ev.error]), '?');
@@ -136,7 +139,8 @@ export const Debug: {
                 let { file, trace } = await stacktrace(ev.reason);
                 callLog(LogLevel.Error, 
                     formatData([`Unhandled rejection`, ev.reason]), file);
-                callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+                if (!HasStacktrace.has(ev.reason))
+                    callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
             } else {
                 callLog(LogLevel.Error, 
                     formatData([`Unhandled rejection`, ev.reason]), '?');
@@ -174,7 +178,9 @@ export const Debug: {
                 callLog(LogLevel.Error, 'Assertion failed', file);
                 callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
             })();
-            throw new Error('assertion failed');
+            const error = new Error('assertion failed');
+            HasStacktrace.add(error);
+            throw error;
         }
     },
     early(reason?: string): void {
@@ -190,6 +196,8 @@ export const Debug: {
             callLog(LogLevel.Error, `Unreachable code reached (never=${x})`, file);
             callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
         })();
-        throw new Error('unreachable code reached');
+        const error = new Error('unreachable code reached');
+        HasStacktrace.add(error);
+        throw error;
     }
 }
