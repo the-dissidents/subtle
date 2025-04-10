@@ -42,7 +42,8 @@ import { PublicConfigGroup } from "./config/PublicConfig.svelte";
 import { Actions } from "./frontend/Actions";
 import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
 import { EventHost } from "./frontend/Frontend";
-import { Interface, UIFocus } from "./frontend/Interface";
+import { Interface } from "./frontend/Interface";
+import { UIFocus } from "./frontend/Frontend";
 import { Playback } from "./frontend/Playback";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 

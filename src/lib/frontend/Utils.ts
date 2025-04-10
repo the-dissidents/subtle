@@ -12,9 +12,9 @@ import { Interface } from "./Interface";
 import { Playback } from "./Playback";
 import { ChangeCause, ChangeType, Source } from "./Source";
 
-import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { get } from "svelte/store";
 import { Debug } from "../Debug";
+import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 export const Utils = {
@@ -169,8 +169,9 @@ export const Utils = {
         Source.markChanged(ChangeType.Order);
     },
 
-    moveSelectionContinuous(selection: SubtitleEntry[], direction: number) {
+    moveSelectionContinuous(direction: number) {
         if (this.isSelectionDisjunct()) return Debug.early('disjunct selection');
+        const selection = Editing.getSelection();
         if (selection.length == 0 || direction == 0) return Debug.early();
 
         let index = Source.subs.entries.indexOf(selection[0]);
@@ -185,7 +186,8 @@ export const Utils = {
         }, 0);
     },
 
-    moveSelectionTo(selection: SubtitleEntry[], to: 'beginning' | 'end') {
+    moveSelectionTo(to: 'beginning' | 'end') {
+        const selection = Editing.getSelection();
         if (selection.length == 0) return Debug.early();
         let selectionSet = new Set(selection);
         let newEntries = Source.subs.entries.filter((x) => !selectionSet.has(x));

@@ -14,7 +14,8 @@ import Collapsible from "../ui/Collapsible.svelte";
 import { Dialogs } from "../frontend/Dialogs";
 import { Editing } from "../frontend/Editing";
 import { EventHost } from "../frontend/Frontend";
-import { Interface, UIFocus } from "../frontend/Interface";
+import { Interface } from "../frontend/Interface";
+import { UIFocus } from "../frontend/Frontend";
 import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 
 import { _ } from 'svelte-i18n';

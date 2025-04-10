@@ -48,11 +48,14 @@ import { derived, get } from 'svelte/store';
 
 import { Actions } from './lib/frontend/Actions';
 import { Dialogs } from './lib/frontend/Dialogs';
-import { Interface, UIFocus } from './lib/frontend/Interface';
+import { Interface } from './lib/frontend/Interface';
+import { UIFocus } from "./lib/frontend/Frontend";
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
 
 import { Debug, GetLevelFilter, LogLevelFilter } from './lib/Debug';
+    import { Commands } from './lib/frontend/Commands';
+    import { KeybindingManager } from './lib/frontend/Keybinding';
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow()
@@ -176,6 +179,9 @@ $effect(() => {
   updateTheme();
 });
 
+KeybindingManager.commands = Object.values(Commands);
+KeybindingManager.init();
+
 getVersion().then((x) => 
   appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
 
@@ -211,8 +217,6 @@ appWindow.onDragDropEvent(async (ev) => {
 });
 </script>
 
-<svelte:document 
-  onkeydown={(ev) => Actions.processGlobalKeydown(ev)}/>
 <svelte:window
   onload={() => {
     let time = performance.now();
@@ -240,27 +244,27 @@ appWindow.onDragDropEvent(async (ev) => {
   <!-- toolbar -->
   <div>
     <ul class='menu'>
-      <li><button onclick={() => Interface.openFileMenu()}>{$_('menu.open')}</button></li>
-      <li><button onclick={() => Interface.askSaveFile(true)}>{$_('menu.save-as')}</button></li>
-      <li><button onclick={() => Interface.askImportFile()}>{$_('menu.import')}</button></li>
-      <li><button onclick={() => Interface.exportFileMenu()}>{$_('menu.export')}</button></li>
+      <li><button onclick={() => Commands.openMenu.menu()}>{$_('menu.open')}</button></li>
+      <li><button onclick={() => Commands.saveAs.menu()}>{$_('menu.save-as')}</button></li>
+      <li><button onclick={() => Commands.import.menu()}>{$_('menu.import')}</button></li>
+      <li><button onclick={() => Commands.exportMenu.menu()}>{$_('menu.export')}</button></li>
       <li class='separator'></li>
       {#key undoRedoUpdateCounter}
       <li><button
-        onclick={() => Source.undo()} 
+        onclick={() => Commands.undo.call()} 
         disabled={Source.undoStack.length <= 1}>{$_('menu.undo')}</button></li>
       <li><button
-        onclick={() => Source.redo()}
+        onclick={() => Commands.redo.call()}
         disabled={Source.redoStack.length == 0}>{$_('menu.redo')}</button></li>
       {/key}
       <li class='separator'></li>
-      <li><button onclick={() => Interface.askOpenVideo()}>
+      <li><button onclick={() => Commands.openVideo.call()}>
         <svg class="feather">
           <use href="/feather-sprite.svg#film" />
         </svg>
         &nbsp;{$_('menu.open-video')}
       </button></li>
-      <li><button disabled={!$isMediaLoaded} onclick={() => Playback.close()}>
+      <li><button disabled={!$isMediaLoaded} onclick={() => Commands.closeVideo.call()}>
         {$_('menu.close-video')}
       </button></li>
       <li class='separator'></li>

@@ -5,7 +5,8 @@ import TimestampInput from './TimestampInput.svelte';
 
 import { SubtitleEntry, type LabelTypes, type SubtitleStyle } from './core/Subtitles.svelte';
 import { Editing } from './frontend/Editing';
-import { Interface, UIFocus } from './frontend/Interface';
+import { Interface } from './frontend/Interface';
+import { UIFocus } from "./frontend/Frontend";
 import { ChangeType, Source } from './frontend/Source';
 
 import { Menu } from '@tauri-apps/api/menu';
@@ -193,12 +194,6 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
           <textarea class='contentarea' tabindex=0
             use:setupTextArea={style}
             value={focused.texts.get(style)!}
-            onkeydown={(ev) => {
-              if (ev.key == "Escape") {
-                ev.currentTarget.blur();
-                $uiFocus = UIFocus.Table;
-              }
-            }}
             onfocus={(ev) => {
               $uiFocus = UIFocus.EditingField;
               Editing.focused.style = style;

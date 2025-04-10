@@ -124,7 +124,7 @@ export const Debug: {
             if (ev.error instanceof Error) {
                 let { file, trace } = await stacktrace(ev.error);
                 callLog(LogLevel.Error, 
-                    formatData([`Unhandled error`, ev.error]), file);
+                    formatData([`Unhandled error`, ev.error, ev.message]), file);
                 if (!HasStacktrace.has(ev.error))
                     callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
             } else {
@@ -138,7 +138,7 @@ export const Debug: {
             if (ev.reason instanceof Error) {
                 let { file, trace } = await stacktrace(ev.reason);
                 callLog(LogLevel.Error, 
-                    formatData([`Unhandled rejection`, ev.reason]), file);
+                    formatData([`Unhandled rejection`, ev.reason, ev.reason.message]), file);
                 if (!HasStacktrace.has(ev.reason))
                     callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
             } else {

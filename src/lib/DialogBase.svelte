@@ -71,8 +71,9 @@ Debug.assert(handler !== null);
 handler.showModal = async () => {
   return new Promise((r) => {
     resolve = (btn) => {
+      Debug.debug('dialog returning', btn);
       r(btn);
-      dialog?.close();
+      if (dialog?.open) dialog?.close();
       resolve = undefined;
     };
     Debug.assert(dialog !== undefined);
@@ -89,9 +90,11 @@ handler.showModal = async () => {
   
 <dialog
   bind:this={dialog}
-  class='modal'
   style="top: {posy}px; left: {posx}px; max-width: {maxWidth};"
-  onclose={() => Dialogs.modalOpenCounter--}
+  onclose={() => {
+    resolve?.('');
+    Dialogs.modalOpenCounter--;
+  }}
 >
 <div class='vlayout'>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -125,7 +128,7 @@ handler.showModal = async () => {
     dialog {
       box-shadow: 0 0 10px gray;
     }
-    dialog.modal::backdrop {
+    dialog::backdrop {
       background: rgba(0, 0, 0, 0.3);
     }
     .shadow {
@@ -142,7 +145,7 @@ handler.showModal = async () => {
       background-color: var(--uchu-yin-9);
       color: var(--uchu-yang);
     }
-    dialog.modal::backdrop {
+    dialog::backdrop {
       background: rgba(0, 0, 0, 0.3);
     }
     .shadow {
@@ -166,7 +169,7 @@ handler.showModal = async () => {
   dialog[open] {
     animation: zoom 0.2s ease-out;
   }
-  dialog.modal[open]::backdrop {
+  dialog[open]::backdrop {
     animation: fade 0.2s ease-out;
   }
   @keyframes zoom {

@@ -81,9 +81,9 @@
     background-color: white;
     color: var(--uchu-yin);
     box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
-    &:focus {
+    /* &:focus {
       outline: none;
-    }
+    } */
     &:not(:disabled):hover {
       filter: brightness(97%);
     }

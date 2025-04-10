@@ -94,3 +94,9 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
         };
     }
 }
+export enum UIFocus {
+    Other,
+    Table,
+    EditingField,
+    Timeline
+}

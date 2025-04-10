@@ -14,7 +14,7 @@ import { type Subtitles } from "../core/Subtitles.svelte";
 import { Dialogs } from "./Dialogs";
 import { ChangeType, Source } from "./Source";
 import { Editing } from "./Editing";
-import { parseSubtitleSource } from "./Frontend";
+import { parseSubtitleSource, UIFocus } from "./Frontend";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { Playback } from "./Playback";
 import { DebugConfig, MainConfig } from "../config/Groups";
@@ -24,13 +24,6 @@ import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil";
 import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
-
-export enum UIFocus {
-    Other,
-    Table,
-    EditingField,
-    Timeline
-}
 
 const IMPORT_FILTERS = [
     { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },
@@ -145,26 +138,26 @@ export const Interface = {
         const paths = PrivateConfig.get('paths');
         let openMenu = await Menu.new({ items: [
             {
-              text: $_('cxtmenu.other-file'),
-              async action(_) {
-                if (await Interface.warnIfNotSaved())
-                Interface.askOpenFile();
-              },
+                text: $_('cxtmenu.other-file'),
+                async action(_) {
+                        if (await Interface.warnIfNotSaved())
+                        Interface.askOpenFile();
+                },
             },
             { item: 'Separator' },
             ...(paths.length == 0 ? [
-                {
-                  text: $_('cxtmenu.no-recent-files'),
-                  enabled: false
-                }
-              ] : paths.map((x) => ({
-                text: '[...]/' + x.name.split(Basic.pathSeparator)
-                  .slice(-2).join(Basic.pathSeparator),
-                action: async () => {
-                  if (await Interface.warnIfNotSaved())
-                  Interface.openFile(x.name);
-                }
-              }))
+                    {
+                        text: $_('cxtmenu.no-recent-files'),
+                        enabled: false
+                    }
+                ] : paths.map((x) => ({
+                    text: '[...]/' + x.name.split(Basic.pathSeparator)
+                        .slice(-2).join(Basic.pathSeparator),
+                    action: async () => {
+                        if (await Interface.warnIfNotSaved())
+                        Interface.openFile(x.name);
+                    }
+                }))
             ),
         ]});
         openMenu.popup();

@@ -2,6 +2,8 @@ console.info('Dialogs loading');
 
 import type { AnalyseResult, EncodingName } from "chardet"
 import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil";
+import { mount, unmount } from "svelte";
+import OverlayMenu from "../ui/OverlayMenu.svelte";
 
 export class DialogHandler<TInput = void, TOutput = string> {
     showModal?: (i: TInput) => Promise<TOutput>;
@@ -19,4 +21,19 @@ export const Dialogs = {
     encoding: new DialogHandler<
         {source: Uint8Array, result: AnalyseResult}, 
         {decoded: string, encoding: EncodingName} | null>(),
+
+    overlayMenu(
+        items: {text: string, disabled?: boolean}[], 
+        title?: string, text?: string
+    ): Promise<number> {
+        return new Promise<number>((resolve) => {
+            const menu = mount(OverlayMenu, {
+                target: document.getElementById('app')!,
+                props: { items, text, title, async onSubmit(x) {
+                    await unmount(menu);
+                    resolve(x);
+                }, }
+            });
+        });
+    },
 }

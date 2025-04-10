@@ -4,7 +4,10 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
 
 import { MAPI, MMedia, type AudioFrameData, type VideoFrameData } from "../API";
-    import { Debug } from '../Debug';
+import { Debug } from '../Debug';
+import { Menu } from '@tauri-apps/api/menu';
+import { UICommand } from '../frontend/CommandBase';
+import { Dialogs } from '../frontend/Dialogs';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -12,6 +15,22 @@ MAPI.version().then((x) => {
 });
 
 let media: MMedia | undefined;
+
+const command = new UICommand([], {
+  name: 'name', 
+  menuName: 'primary',
+  items: ['one', 'two', 'three', 'four'].map((x) => ({
+    name: x,
+    menuName: 'secondary',
+    items: ['five', 'six', 'seven', 'eight'].map((y) => ({
+      name: y,
+      call() {
+        dialog.message(`${x}-${y}`);
+      }
+    }))
+  }))
+});
+
 </script>
 
 <button
@@ -28,7 +47,6 @@ let media: MMedia | undefined;
   }}>
   open media
 </button>
-
 
 <button
   onclick={async () => {
@@ -66,17 +84,43 @@ let media: MMedia | undefined;
   }}>
   detect encoding
 </button>
+
 <button
   onclick={() => {
     throw new Error('test error');
   }}>
   create error
 </button>
+
 <button
   onclick={async () => {
     throw new Error('test rejection');
   }}>
   create rejection
 </button>
+
+<button
+  onclick={async () => {
+    let n = await Dialogs.overlayMenu(['first', 'second', 'third'], 'overlay menu');
+    dialog.message(`${n}`);
+  }}>
+  overlay menu
+</button>
+
+<button
+  onclick={async () => {
+    let m = Menu.new({
+      items: [command.toMenuItem()]
+    });
+    (await m).popup();
+  }}>
+  menu command
+</button>
+
+<button
+  onclick={() => command.call()}>
+  direct command
+</button>
+
 <br>
 <span>{result}</span>
