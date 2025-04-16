@@ -21,6 +21,8 @@ import ExportDialog from './lib/dialog/ExportDialog.svelte';
 import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
 import SplitByLineDialog from './lib/dialog/SplitByLineDialog.svelte';
 import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
+import KeybindingDialog from './lib/dialog/KeybindingDialog.svelte';
+import KeybindingInputDialog from './lib/dialog/KeybindingInputDialog.svelte';
 
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/SubtitleTable.svelte';
@@ -36,7 +38,6 @@ import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 
 import { Basic } from './lib/Basic';
-import { theme } from './lib/Theming.svelte';
 
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
@@ -46,7 +47,6 @@ import { arch, platform, version } from '@tauri-apps/plugin-os';
 import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
 
-import { Actions } from './lib/frontend/Actions';
 import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface } from './lib/frontend/Interface';
 import { UIFocus } from "./lib/frontend/Frontend";
@@ -54,8 +54,9 @@ import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
 
 import { Debug, GetLevelFilter, LogLevelFilter } from './lib/Debug';
-    import { Commands } from './lib/frontend/Commands';
-    import { KeybindingManager } from './lib/frontend/Keybinding';
+import { Commands } from './lib/frontend/Commands';
+import { KeybindingManager } from './lib/frontend/Keybinding';
+
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow()
@@ -239,6 +240,8 @@ appWindow.onDragDropEvent(async (ev) => {
 <EncodingDialog       handler={Dialogs.encoding}/>
 <ExportDialog         handler={Dialogs.export}/>
 <ConfigDialog         handler={Dialogs.configuration}/>
+<KeybindingDialog     handler={Dialogs.keybinding}/>
+<KeybindingInputDialog handler={Dialogs.keybindingInput}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->

@@ -8,6 +8,7 @@ import { Debug } from '../Debug';
 import { Menu } from '@tauri-apps/api/menu';
 import { UICommand } from '../frontend/CommandBase';
 import { Dialogs } from '../frontend/Dialogs';
+import { Commands } from '../frontend/Commands';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -101,14 +102,6 @@ const command = new UICommand([], {
 
 <button
   onclick={async () => {
-    let n = await Dialogs.overlayMenu(['first', 'second', 'third'], 'overlay menu');
-    dialog.message(`${n}`);
-  }}>
-  overlay menu
-</button>
-
-<button
-  onclick={async () => {
     let m = Menu.new({
       items: [command.toMenuItem()]
     });
@@ -120,6 +113,16 @@ const command = new UICommand([], {
 <button
   onclick={() => command.call()}>
   direct command
+</button>
+
+<button
+  onclick={() => Dialogs.keybinding!.showModal!()}>
+  keybinding
+</button>
+
+<button
+  onclick={() => Dialogs.keybindingInput!.showModal!([Commands.undo, null])}>
+  keybinding input
 </button>
 
 <br>

@@ -68,6 +68,7 @@
       background-color: var(--uchu-pink-7);
     }
     &:not(:disabled):hover {
+      background-color: white;
       filter: brightness(97%);
     }
     &:disabled {
@@ -81,10 +82,10 @@
     background-color: white;
     color: var(--uchu-yin);
     box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
-    /* &:focus {
-      outline: none;
-    } */
     &:not(:disabled):hover {
+      &.noborder {
+        background-color: white;
+      }
       filter: brightness(97%);
     }
     &:has(input[type='checkbox'].button:checked) {
@@ -159,10 +160,10 @@
     background-color: var(--uchu-yin-7);
     color: var(--uchu-yang);
     box-shadow: 0 1px 3px rgba(128, 128, 128, 0.378);
-    &:focus {
-      outline: none;
-    }
     &:not(:disabled):hover {
+      &.noborder {
+        background-color: var(--uchu-yin-7);
+      }
       filter: brightness(110%);
     }
     &:has(input[type='checkbox'].button:checked) {
@@ -242,6 +243,10 @@ label:has(input[type='checkbox'].button) {
   font-family: var(--fontFamily);
   font-size: 0.85rem;
   line-height: normal;
+
+  &.noborder {
+    background-color: transparent;
+  }
 }
 
 button.left {

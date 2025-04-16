@@ -14,11 +14,16 @@
     "cut": "剪切",
     "delete": "删除",
     "down": "向下",
+    "edit-next-entry": "开始编辑下一个条目",
+    "edit-this-entry": "开始编辑当前条目",
     "exchange-channel": "交换频道",
     "fix-erroneous-overlapping": "修复错误的重叠",
+    "focus-on-table": "聚焦到字幕表格",
     "insert-after": "在之后插入",
     "insert-before": "在之前插入",
     "invert-selection": "反选",
+    "jump-backward": "往前跳",
+    "jump-forward": "往后跳",
     "keep-first-only": "仅保留第一个",
     "label": "标签",
     "merge-entries": "连在一起",
@@ -28,11 +33,19 @@
     "move-to-beginning": "移动到最前",
     "move-to-end": "移动到最后",
     "move-up": "向上移动",
+    "next-entry-sequence": "下一个条目（连选）",
+    "next-entry-single": "下一个条目（单选）",
+    "next-frame": "下一帧",
     "paste": "粘贴",
+    "play-entry": "播放这个条目",
+    "previous-entry-sequence": "上一个条目（连选）",
+    "previous-entry-single": "上一个条目（单选）",
+    "previous-frame": "上一帧",
     "remove-channel": "删除频道",
     "remove-empty": "删除空频道",
     "replace-channel": "替换频道",
     "replace-n-th-channel": "替换第N个频道",
+    "save": "保存",
     "select-all": "全选",
     "select-all-by-channel": "全选具有该频道的条目",
     "sort-by-first-style": "按第一个样式排序",
@@ -42,6 +55,9 @@
     "split-simultaneous": "拆散",
     "to-the-beginning": "至最前",
     "to-the-end": "至最后",
+    "toggle-in-point": "设置/取消入点",
+    "toggle-out-point": "设置/取消出点",
+    "toggle-play": "播放/暂停",
     "transform-times": "变换时间...",
     "up": "向上"
   },
@@ -132,6 +148,12 @@
     "show-config-file-advanced": "显示配置文件（高级）",
     "show-log-path": "打开调试日志文件夹"
   },
+  "context": {
+    "EditingField": "编辑框",
+    "Other": "其它",
+    "Table": "表格",
+    "Timeline": "时间线"
+  },
   "cxtmenu": {
     "and": "和：",
     "ass-fragment": "ASS片段",
@@ -203,6 +225,20 @@
     "use-for-all": "全都使用这个样式：",
     "use-local-styles-when-names-match": "名称匹配时使用本地样式"
   },
+  "keybindingdialog": {
+    "filter": "搜索"
+  },
+  "keyinput": {
+    "any": "所有",
+    "clear": "清除",
+    "conflicts": "此快捷键与以下命令冲突：\n{list}",
+    "context": {
+    },
+    "contexts": "上下文",
+    "input-keybinding-for-what": "输入 {what} 的快捷键",
+    "press-a-key": "请按键",
+    "use-chord": "使用组合键"
+  },
   "label": {
     "blue": "蓝色",
     "green": "绿色",
@@ -217,6 +253,7 @@
     "configuration": "配置",
     "export": "导出",
     "import": "导入",
+    "keybinding": "编辑快捷键",
     "open": "打开",
     "open-video": "打开视频",
     "redo": "重做",

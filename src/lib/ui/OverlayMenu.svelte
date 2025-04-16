@@ -37,7 +37,7 @@ $effect(() => {
   {/if}
   <div class='vlayout'>
     {#each items as item, i}
-      <button
+      <button class="noborder"
         type="submit"
         tabindex="0"
         disabled={item.disabled ?? false}

@@ -90,6 +90,7 @@ handler.showModal = async () => {
   
 <dialog
   bind:this={dialog}
+  tabindex="-1"
   style="top: {posy}px; left: {posx}px; max-width: {maxWidth};"
   onclose={() => {
     resolve?.('');

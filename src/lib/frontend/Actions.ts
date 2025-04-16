@@ -1,10 +1,6 @@
 console.info('Actions loading');
 
 import { Menu } from "@tauri-apps/api/menu";
-
-import { Subtitles } from "../core/Subtitles.svelte";
-import { LinearFormatCombineStrategy, SimpleFormats } from "../core/SimpleFormats";
-
 import { Editing } from "./Editing";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';

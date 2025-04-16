@@ -4,6 +4,8 @@ import type { AnalyseResult, EncodingName } from "chardet"
 import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil";
 import { mount, unmount } from "svelte";
 import OverlayMenu from "../ui/OverlayMenu.svelte";
+import type { UICommand } from "./CommandBase";
+import type { CommandBinding } from "./Keybinding";
 
 export class DialogHandler<TInput = void, TOutput = string> {
     showModal?: (i: TInput) => Promise<TOutput>;
@@ -16,6 +18,8 @@ export const Dialogs = {
     timeTransform: new DialogHandler<void, TimeShiftOptions | null>(),
     combine: new DialogHandler<void, void>(),
     configuration: new DialogHandler<void, void>(),
+    keybinding: new DialogHandler<void, void>(),
+    keybindingInput: new DialogHandler<[UICommand, CommandBinding | null], CommandBinding | null>(),
     splitByLine: new DialogHandler<void, void>(),
     export: new DialogHandler<void, {content: string, ext: string} | null>(),
     encoding: new DialogHandler<

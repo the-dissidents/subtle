@@ -1,6 +1,6 @@
 import { Interface } from "./Interface";
 import { UIFocus } from "./Frontend";
-import { binding, KeybindingManager } from "./Keybinding";
+import { binding } from "./Keybinding";
 import { UICommand } from "./CommandBase";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
@@ -8,7 +8,7 @@ import { get } from "svelte/store";
 import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import { SubtitleUtil, MergePosition, MergeStyleBehavior } from "../core/SubtitleUtil";
-import { Editing, getSelectMode, KeepInViewMode, SelectMode } from "./Editing";
+import { Editing, KeepInViewMode, SelectMode } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
 import { Source, ChangeType, ChangeCause } from "./Source";
 import { Labels, SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
@@ -20,7 +20,7 @@ import { Dialogs } from "./Dialogs";
 import { InputConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 import { PrivateConfig } from "../config/PrivateConfig";
-const $_ = unwrapFunctionStore(_);
+export const $_ = unwrapFunctionStore(_);
 
 const toSRT = (x: Subtitles) => 
     SimpleFormats.export.SRT(x, x.entries, LinearFormatCombineStrategy.Recombine);
@@ -120,6 +120,7 @@ export const Commands = {
             return [
                 {
                     name: () => $_('cxtmenu.other-file'),
+                    isDialog: true,
                     async call() {
                         if (await Interface.warnIfNotSaved())
                             Interface.askOpenFile();
@@ -147,6 +148,7 @@ export const Commands = {
         [ binding(['CmdOrCtrl+Shift+O']), ],
     {
         name: () => $_('menu.open-video'),
+        isDialog: true,
         call: () => Interface.askOpenVideo()
     }),
     closeVideo: new UICommand(
@@ -160,12 +162,14 @@ export const Commands = {
         [ binding(['CmdOrCtrl+I']), ],
     {
         name: () => $_('menu.import'),
+        isDialog: true,
         call: () => Interface.askImportFile()
     }),
     exportMenu: new UICommand(
-        [ binding(['CmdOrCtrl+I']), ],
+        [ ],
     {
         name: () => $_('menu.export'),
+        // TODO make a menu
         call: () => Interface.exportFileMenu()
     }),
     save: new UICommand(
@@ -175,9 +179,10 @@ export const Commands = {
         call: () => Interface.askSaveFile()
     }),
     saveAs: new UICommand(
-        [ binding(['CmdOrCtrl+S']), ],
+        [ binding(['CmdOrCtrl+Shift+S']), ],
     {
         name: () => $_('menu.save-as'),
+        isDialog: true,
         call: () => Interface.askSaveFile(true)
     }),
     previousEntrySingle: new UICommand(
@@ -264,8 +269,8 @@ export const Commands = {
         }
     }),
     togglePlay: new UICommand(
-        [ binding([' '], [UIFocus.Table, UIFocus.Timeline]),
-          binding(['Alt+ ']), ],
+        [ binding(['Space'], [UIFocus.Table, UIFocus.Timeline]),
+          binding(['Alt+Space']), ],
     {
         name: () => $_('action.toggle-play'),
         call: () => Playback.toggle()
@@ -574,14 +579,14 @@ export const Commands = {
         },
     }),
     moveUp: new UICommand(
-        [ binding(['CmdOrCtrl+Up'], [UIFocus.EditingField, UIFocus.Table]) ],
+        [ binding(['CmdOrCtrl+ArrowUp'], [UIFocus.EditingField, UIFocus.Table]) ],
     {
         name: () => $_('action.move-up'),
         isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
         call: () => Utils.moveSelectionContinuous(-1),
     }),
     moveDown: new UICommand(
-        [ binding(['CmdOrCtrl+Down'], [UIFocus.EditingField, UIFocus.Table]) ],
+        [ binding(['CmdOrCtrl+ArrowDown'], [UIFocus.EditingField, UIFocus.Table]) ],
     {
         name: () => $_('action.move-down'),
         isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
@@ -720,6 +725,7 @@ export const Commands = {
         [],
     {
         name: () => $_('action.transform-times'),
+        isDialog: true,
         async call() {
             let options = await Dialogs.timeTransform.showModal!();
             if (options && SubtitleUtil.shiftTimes(Source.subs, options))
@@ -765,23 +771,9 @@ export const Commands = {
     {
         name: () => $_('action.remove-channel'),
         isApplicable: () => hasSelection(),
-        items: () => forEachStyle((x) => {
-            const selection = Editing.getSelection();
-            let done = 0;
-            for (const ent of selection) {
-                if (ent.texts.has(x)) {
-                    ent.texts.delete(x);
-                    done++;
-                }
-                if (ent.texts.size == 0) {
-                    // remove if empty
-                    Source.subs.entries.splice(
-                        Source.subs.entries.indexOf(ent), 1);
-                }
-            }
-            Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
-            if (done) Source.markChanged(ChangeType.Times);
-        }, selectionDistinctStyles())
+        items: () => forEachStyle(
+            (x) => Utils.removeStyle(Editing.getSelection(), x), 
+            selectionDistinctStyles())
     }),
     removeBlankChannels: new UICommand(
         [],
@@ -847,6 +839,7 @@ export const Commands = {
         [],
     {
         name: () => $_('action.combine-by-matching-time'),
+        isDialog: true,
         isApplicable: () => hasSelection(),
         call: () => Dialogs.combine.showModal!()
     }),
@@ -854,6 +847,7 @@ export const Commands = {
         [],
     {
         name: () => $_('action.split-by-line'),
+        isDialog: true,
         isApplicable: () => hasSelection(),
         call: () => Dialogs.splitByLine.showModal!()
     }),

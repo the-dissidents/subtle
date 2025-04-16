@@ -8,6 +8,7 @@ export type CommandOptions = {
     name: string | (() => string),
     displayAccel?: string,
     isApplicable?: () => boolean,
+    isDialog?: boolean,
     call: () => (void | Promise<void>)
 } | {
     name: string | (() => string),
@@ -15,7 +16,6 @@ export type CommandOptions = {
     isApplicable?: () => boolean,
     items: CommandOptions[] | (() => CommandOptions[])
 };
-// TODO: add a type 'dialog'
 
 /** T should not be a function type */
 function unwrap<T>(fv: T | (() => T)): T {
@@ -60,14 +60,26 @@ function commandOptionToMenu(item: CommandOptions): MenuItemOptions | SubmenuOpt
     }
 }
 
+export type UICommandType = 'simple' | 'menu' | 'dialog';
+
 export class UICommand {
+    public readonly defaultBindings: readonly CommandBinding[];
+
     constructor(
         public bindings: CommandBinding[], 
         private options: CommandOptions
-    ) {}
+    ) {
+        this.defaultBindings = structuredClone(bindings);
+    }
 
-    get type() {
-        return 'call' in this.options ? 'menu' : 'simple';
+    get type(): UICommandType {
+        return 'call' in this.options 
+            ? (this.options.isDialog ? 'dialog' : 'simple')
+            : 'menu' ;
+    }
+
+    get name() {
+        return unwrap(this.options.name);
     }
 
     toMenuItem(): SubmenuOptions {
