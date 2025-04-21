@@ -419,7 +419,7 @@ export const Commands = {
         }, selectionDistinctStyles())
     }),
     cut: new UICommand(
-        [ binding(['CmdOrCtrl+X'], [UIFocus.Table]) ],
+        [ binding(['CmdOrCtrl+X'], ['Table']) ],
     {
         name: () => $_('action.cut'),
         isApplicable: hasSelection,
@@ -429,7 +429,7 @@ export const Commands = {
         }
     }),
     paste: new UICommand(
-        [ binding(['CmdOrCtrl+V'], [UIFocus.Table]) ], 
+        [ binding(['CmdOrCtrl+V'], ['Table']) ],
     {
         name: () => $_('action.paste'),
         async call() {

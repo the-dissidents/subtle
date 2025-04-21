@@ -206,8 +206,8 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
               Editing.submitFocusedEntry();
             }}
             oninput={(x) => {
-              $uiFocus = UIFocus.EditingField;
-              contentSelfAdjust(x.currentTarget); 
+              $uiFocus = 'EditingField';
+              contentSelfAdjust(x.currentTarget);
               Editing.editChanged = true;
             }}></textarea>
         </td>
