@@ -123,7 +123,6 @@ locale.subscribe(() => refresh = !refresh);
           <!-- TODO: category -->
           <td class="rowhead" rowspan={lines+1}>
             <button aria-label="reset" onclick={() => {
-              // TODO
               cmd.bindings = structuredClone(cmd.defaultBindings) as CommandBinding[];
               refresh = !refresh;
               KeybindingManager.update();

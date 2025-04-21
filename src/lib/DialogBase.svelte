@@ -87,7 +87,7 @@ handler.showModal = async () => {
   });
 }
 </script>
-  
+
 <dialog
   bind:this={dialog}
   tabindex="-1"

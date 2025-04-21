@@ -7,6 +7,7 @@ import type { UICommand } from "./CommandBase";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Dialogs } from "./Dialogs";
+import type { JSONSchemaType } from "ajv";
 const $_ = unwrapFunctionStore(_);
 
 export type KeyBinding = {
@@ -242,8 +243,20 @@ export type AcceptKeyResult = {
     type: 'incomplete' | 'disabled'
 };
 
+// type KeybindingSerialization = Record<string, {
+//     sequence: {
+//         key: KeyCode,
+//         modifiers: ModifierKey[]
+//     }[],
+//     contexts: 
+// }>;
+
+// const KeybindingSchema: JSONSchemaType = {
+
+// }
+
 export const KeybindingManager = {
-    commands: [] as UICommand[],
+    commands: new Map<string, UICommand>(),
 
     async init() {
         this.update();
@@ -359,7 +372,7 @@ export const KeybindingManager = {
         }
     
         bindingTree = new KeyTree();
-        for (const cmd of KeybindingManager.commands)
+        for (const [_, cmd] of KeybindingManager.commands)
             for (const binding of cmd.bindings)
                 registerBinding(binding, cmd);
     },

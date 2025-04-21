@@ -180,7 +180,7 @@ $effect(() => {
   updateTheme();
 });
 
-KeybindingManager.commands = Object.values(Commands);
+KeybindingManager.commands = new Map(Object.entries(Commands));
 KeybindingManager.init();
 
 getVersion().then((x) => 
