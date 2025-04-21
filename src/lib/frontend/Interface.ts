@@ -14,7 +14,7 @@ import { type Subtitles } from "../core/Subtitles.svelte";
 import { Dialogs } from "./Dialogs";
 import { ChangeType, Source } from "./Source";
 import { Editing } from "./Editing";
-import { parseSubtitleSource, UIFocus } from "./Frontend";
+import { parseSubtitleSource, type UIFocus } from "./Frontend";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { Playback } from "./Playback";
 import { DebugConfig, MainConfig } from "../config/Groups";
@@ -23,7 +23,6 @@ import { Basic } from "../Basic";
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil";
 import { Debug } from "../Debug";
-import type { UIFocus } from "./Frontend";
 const $_ = unwrapFunctionStore(_);
 
 const IMPORT_FILTERS = [

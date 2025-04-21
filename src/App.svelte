@@ -49,11 +49,11 @@ import { derived, get } from 'svelte/store';
 
 import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface } from './lib/frontend/Interface';
-import { UIFocus } from "./lib/frontend/Frontend";
+import type { UIFocus } from "./lib/frontend/Frontend";
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
 
-import { Debug, GetLevelFilter, LogLevelFilter } from './lib/Debug';
+import { Debug, GetLevelFilter } from './lib/Debug';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 
@@ -228,8 +228,8 @@ appWindow.onDragDropEvent(async (ev) => {
   }}
   onfocusin={(ev) => {
     // TODO: this works but looks like nonsense
-    if ($uiFocus != UIFocus.EditingField)
-      $uiFocus = UIFocus.Other;
+    if ($uiFocus != 'EditingField')
+      $uiFocus = 'Other';
   }}/>
 
 <!-- dialogs -->
@@ -360,8 +360,8 @@ appWindow.onDragDropEvent(async (ev) => {
   <div>
     <canvas class="timeline fill" bind:this={timelineCanvas}
       use:setupTimelineView
-      onclick={() => $uiFocus = UIFocus.Timeline}
-      class:timelinefocused={$uiFocus === UIFocus.Timeline}
+      onclick={() => $uiFocus = 'Timeline'}
+      class:timelinefocused={$uiFocus === 'Timeline'}
       style="height: 150px;"></canvas>
   </div>
 

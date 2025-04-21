@@ -2,9 +2,9 @@
 import { Debug } from '../Debug';
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
-import { _, locale } from 'svelte-i18n';
+import { _ } from 'svelte-i18n';
 import { bindingToString, KeybindingManager, type CommandBinding, type KeyBinding } from '../frontend/Keybinding';
-import { UIFocus } from '../frontend/Frontend';
+import type { UIFocus } from '../frontend/Frontend';
 import type { UICommand } from '../frontend/CommandBase';
 
 interface Props {
@@ -66,7 +66,7 @@ function check() {
         ([cmd, list]) => `${cmd.name} – ${
           list.length == 0 
             ? $_('keyinput.any')
-            : list.map((x) => $_(`context.${UIFocus[x]}`)).join(' | ')
+            : list.map((x) => $_(`context.${x}`)).join(' | ')
         }`).join('\n')}});
   }
 }
@@ -118,9 +118,9 @@ function check() {
         <label>
           <input type="checkbox"
             disabled={anyContext}
-            checked={anyContext || contexts.has(UIFocus[x])}
+            checked={anyContext || contexts.has(x)}
             onclick={() => {
-              contexts.add(UIFocus[x]);
+              contexts.add(x);
               check();
             }} />
           {$_(`context.${x}`)}
