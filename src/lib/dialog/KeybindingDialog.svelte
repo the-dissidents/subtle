@@ -5,7 +5,7 @@ import { Commands } from '../frontend/Commands';
 import { Dialogs, type DialogHandler } from '../frontend/Dialogs';
 import { _, locale } from 'svelte-i18n';
 import { bindingToString, KeybindingManager, type CommandBinding, type KeyBinding } from '../frontend/Keybinding';
-import { UIFocus } from '../frontend/Frontend';
+import type { UIFocus } from '../frontend/Frontend';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -76,7 +76,7 @@ locale.subscribe(() => refresh = !refresh);
             {:else}
             <div class="ctxs hlayout">
               {#each [...binding.contexts].sort() as ctx, i}
-              <span>{$_(`context.${UIFocus[ctx]}`)}</span>
+              <span>{$_(`context.${ctx}`)}</span>
               {#if i < binding.contexts.size - 1}
               <span class="separator">|</span>
               {/if}

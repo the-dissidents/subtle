@@ -2,7 +2,7 @@ import { Basic } from "../Basic";
 import { Debug } from "../Debug";
 import { HashMap } from "../details/HashMap";
 import { Interface } from "./Interface";
-import { UIFocus } from "./Frontend";
+import type { UIFocus } from "./Frontend";
 import type { UICommand } from "./CommandBase";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';

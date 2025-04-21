@@ -43,7 +43,7 @@ import { Actions } from "./frontend/Actions";
 import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
 import { EventHost } from "./frontend/Frontend";
 import { Interface } from "./frontend/Interface";
-import { UIFocus } from "./frontend/Frontend";
+import type { UIFocus } from "./frontend/Frontend";
 import { Playback } from "./frontend/Playback";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
@@ -353,7 +353,7 @@ function getNpS(ent: SubtitleEntry, text: string) {
 }
 
 function onFocus() {
-  Interface.uiFocus.set(UIFocus.Table);
+  Interface.uiFocus.set('Table');
 }
 
 let currentLine = -1;
@@ -430,7 +430,7 @@ function onDrag(offsetX: number, offsetY: number) {
 </script>
 
 <canvas bind:this={canvas}
-  class:subsfocused={$uiFocus === UIFocus.Table}
+  class:subsfocused={$uiFocus === 'Table'}
   ondblclick={() => {
     onFocus();
     let focused = Editing.getFocusedEntry();

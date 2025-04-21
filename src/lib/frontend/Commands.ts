@@ -1,5 +1,5 @@
 import { Interface } from "./Interface";
-import { UIFocus } from "./Frontend";
+import type { UIFocus } from "./Frontend";
 import { binding } from "./Keybinding";
 import { UICommand } from "./CommandBase";
 
@@ -96,7 +96,7 @@ function doubleForEachStyle(
 
 export const Commands = {
     undo: new UICommand(
-        [ binding(['CmdOrCtrl+Z'], [UIFocus.Table, UIFocus.Timeline]),
+        [ binding(['CmdOrCtrl+Z'], ['Table', 'Timeline']),
           binding(['CmdOrCtrl+Alt+Z']) ],
     {
         name: () => $_('menu.undo'),
@@ -104,7 +104,7 @@ export const Commands = {
         call: () => { Source.undo() }
     }),
     redo: new UICommand(
-        [ binding(['CmdOrCtrl+Shift+Z'], [UIFocus.Table, UIFocus.Timeline]),
+        [ binding(['CmdOrCtrl+Shift+Z'], ['Table', 'Timeline']),
           binding(['CmdOrCtrl+Alt+Shift+Z']) ],
     {
         name: () => $_('menu.redo'),
@@ -186,7 +186,7 @@ export const Commands = {
         call: () => Interface.askSaveFile(true)
     }),
     previousEntrySingle: new UICommand(
-        [ binding(['ArrowUp'], [UIFocus.Table]),
+        [ binding(['ArrowUp'], ['Table']),
           binding(['Alt+ArrowUp']), ],
     {
         name: () => $_('action.previous-entry-single'),
@@ -196,7 +196,7 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     previousEntrySequence: new UICommand(
-        [ binding(['Shift+ArrowUp'], [UIFocus.Table]),
+        [ binding(['Shift+ArrowUp'], ['Table']),
           binding(['Alt+Shift+ArrowUp']), ],
     {
         name: () => $_('action.previous-entry-sequence'),
@@ -206,7 +206,7 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     nextEntrySingle: new UICommand(
-        [ binding(['ArrowDown'], [UIFocus.Table]),
+        [ binding(['ArrowDown'], ['Table']),
           binding(['Alt+ArrowDown']), ],
     {
         name: () => $_('action.next-entry-single'),
@@ -216,7 +216,7 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     nextEntrySequence: new UICommand(
-        [ binding(['Shift+ArrowDown'], [UIFocus.Table]),
+        [ binding(['Shift+ArrowDown'], ['Table']),
           binding(['Alt+Shift+ArrowDown']), ],
     {
         name: () => $_('action.next-entry-sequence'),
@@ -226,7 +226,7 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     editThisEntry:new UICommand(
-        [ binding(['Enter'], [UIFocus.Table]), ],
+        [ binding(['Enter'], ['Table']), ],
     {
         name: () => $_('action.edit-this-entry'),
         isApplicable: hasFocus,
@@ -239,7 +239,7 @@ export const Commands = {
         }
     }),
     editNextEntry: new UICommand(
-        [ binding(['Enter'], [UIFocus.EditingField]), ],
+        [ binding(['Enter'], ['EditingField']), ],
     {
         name: () => $_('action.edit-next-entry'),
         isApplicable: hasFocus,
@@ -258,25 +258,25 @@ export const Commands = {
         }
     }),
     focusOnTable: new UICommand(
-        [ binding(['Escape'], [UIFocus.EditingField]), ],
+        [ binding(['Escape'], ['EditingField']), ],
     {
         name: () => $_('action.focus-on-table'),
         call() {
             if (Editing.focused.control) {
                 Editing.focused.control.blur();
-                Interface.uiFocus.set(UIFocus.Table);
+                Interface.uiFocus.set('Table');
             }
         }
     }),
     togglePlay: new UICommand(
-        [ binding(['Space'], [UIFocus.Table, UIFocus.Timeline]),
+        [ binding(['Space'], ['Table', 'Timeline']),
           binding(['Alt+Space']), ],
     {
         name: () => $_('action.toggle-play'),
         call: () => Playback.toggle()
     }),
     toggleInPoint: new UICommand(
-        [ binding(['I'], [UIFocus.Table, UIFocus.Timeline]),
+        [ binding(['I'], ['Table', 'Timeline']),
           binding(['Alt+I']), ],
     {
         name: () => $_('action.toggle-in-point'),
@@ -291,7 +291,7 @@ export const Commands = {
         }
     }),
     toggleOutPoint: new UICommand(
-        [ binding(['O'], [UIFocus.Table, UIFocus.Timeline]),
+        [ binding(['O'], ['Table', 'Timeline']),
           binding(['Alt+O']), ],
     {
         name: () => $_('action.toggle-out-point'),
@@ -306,7 +306,7 @@ export const Commands = {
         }
     }),
     playEntry: new UICommand(
-        [ binding(['P'], [UIFocus.Table, UIFocus.Timeline]),
+        [ binding(['P'], ['Table', 'Timeline']),
           binding(['Alt+P']), ],
     {
         name: () => $_('action.play-entry'),
@@ -325,35 +325,35 @@ export const Commands = {
         }
     }),
     previousFrame: new UICommand(
-        [ binding(['CmdOrCtrl+ArrowLeft'], [UIFocus.Timeline]),
+        [ binding(['CmdOrCtrl+ArrowLeft'], ['Timeline']),
           binding(['Alt+CmdOrCtrl+ArrowLeft']), ],
     {
         name: () => $_('action.previous-frame'),
         call: () => Playback.video?.requestPreviousFrame()
     }),
     nextFrame: new UICommand(
-        [ binding(['CmdOrCtrl+ArrowRight'], [UIFocus.Timeline]),
+        [ binding(['CmdOrCtrl+ArrowRight'], ['Timeline']),
           binding(['Alt+CmdOrCtrl+ArrowRight']), ],
     {
         name: () => $_('action.next-frame'),
         call: () => Playback.video?.requestNextFrame()
     }),
     jumpBackward: new UICommand(
-        [ binding(['ArrowLeft'], [UIFocus.Timeline]),
+        [ binding(['ArrowLeft'], ['Timeline']),
           binding(['Alt+ArrowLeft']), ],
     {
         name: () => $_('action.jump-backward'),
         call: () => Playback.setPosition(Playback.position - InputConfig.data.skipDuration)
     }),
     jumpForward: new UICommand(
-        [ binding(['ArrowRight'], [UIFocus.Timeline]),
+        [ binding(['ArrowRight'], ['Timeline']),
           binding(['Alt+ArrowRight']), ],
     {
         name: () => $_('action.jump-forward'),
         call: () => Playback.setPosition(Playback.position + InputConfig.data.skipDuration)
     }),
     copyJSON: new UICommand(
-        [ binding(['CmdOrCtrl+C'], [UIFocus.Table, UIFocus.Timeline]) ],
+        [ binding(['CmdOrCtrl+C'], ['Table', 'Timeline']) ],
     {
         name: () => $_('action.copy-json'),
         isApplicable: hasSelection,
@@ -463,8 +463,8 @@ export const Commands = {
         },
     }),
     deleteSelection: new UICommand(
-        [ binding(['Delete'], [UIFocus.Table, UIFocus.Timeline]),
-          binding(['CmdOrCtrl+Backspace'], [UIFocus.Table, UIFocus.Timeline]),
+        [ binding(['Delete'], ['Table', 'Timeline']),
+          binding(['CmdOrCtrl+Backspace'], ['Table', 'Timeline']),
           binding(['Alt+Delete']),
           binding(['CmdOrCtrl+Alt+Backspace']), ],
     {
@@ -473,7 +473,7 @@ export const Commands = {
         call: () => Editing.deleteSelection(),
     }),
     selectAll: new UICommand(
-        [ binding(['CmdOrCtrl+A'], [UIFocus.Table]) ],
+        [ binding(['CmdOrCtrl+A'], ['Table']) ],
     {
         name: () => $_('action.select-all'),
         call() {
@@ -549,7 +549,7 @@ export const Commands = {
         },
     }),
     insertAfterFocus: new UICommand(
-        [ binding(['CmdOrCtrl+Enter'], [UIFocus.Table, UIFocus.EditingField]), ],
+        [ binding(['CmdOrCtrl+Enter'], ['Table', 'EditingField']), ],
     {
         name: () => $_('action.insert-after'),
         call() {
@@ -579,14 +579,14 @@ export const Commands = {
         },
     }),
     moveUp: new UICommand(
-        [ binding(['CmdOrCtrl+ArrowUp'], [UIFocus.EditingField, UIFocus.Table]) ],
+        [ binding(['CmdOrCtrl+ArrowUp'], ['EditingField', 'Table']) ],
     {
         name: () => $_('action.move-up'),
         isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
         call: () => Utils.moveSelectionContinuous(-1),
     }),
     moveDown: new UICommand(
-        [ binding(['CmdOrCtrl+ArrowDown'], [UIFocus.EditingField, UIFocus.Table]) ],
+        [ binding(['CmdOrCtrl+ArrowDown'], ['EditingField', 'Table']) ],
     {
         name: () => $_('action.move-down'),
         isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),

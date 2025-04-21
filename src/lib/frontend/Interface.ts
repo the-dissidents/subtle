@@ -23,6 +23,7 @@ import { Basic } from "../Basic";
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil";
 import { Debug } from "../Debug";
+import type { UIFocus } from "./Frontend";
 const $_ = unwrapFunctionStore(_);
 
 const IMPORT_FILTERS = [
@@ -70,10 +71,10 @@ export function guard<T>(x: () => T, msg: string, fallback?: T) {
 }
 
 export const Interface = {
-    uiFocus: writable(UIFocus.Other),
+    uiFocus: writable<UIFocus>('Other'),
     status: writable('ok'),
 
-    getUIFocus() {
+    getUIFocus(): UIFocus {
         return get(this.uiFocus);
     },
 

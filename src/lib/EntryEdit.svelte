@@ -6,7 +6,7 @@ import TimestampInput from './TimestampInput.svelte';
 import { SubtitleEntry, type LabelTypes, type SubtitleStyle } from './core/Subtitles.svelte';
 import { Editing } from './frontend/Editing';
 import { Interface } from './frontend/Interface';
-import { UIFocus } from "./frontend/Frontend";
+import type { UIFocus } from "./frontend/Frontend";
 import { ChangeType, Source } from './frontend/Source';
 
 import { Menu } from '@tauri-apps/api/menu';
@@ -39,7 +39,7 @@ Editing.onSelectionChanged.bind(me, () => {
     editingT1 = focused.end;
     editingDt = editingT1 - editingT0;
     editingLabel = focused.label;
-    let isEditingNow = Interface.getUIFocus() == UIFocus.EditingField;
+    let isEditingNow = Interface.getUIFocus() == 'EditingField';
     tick().then(() => {
       let col = document.getElementsByClassName('contentarea');
       for (const target of col) {

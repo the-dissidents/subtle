@@ -15,7 +15,7 @@ import { Dialogs } from "../frontend/Dialogs";
 import { Editing } from "../frontend/Editing";
 import { EventHost } from "../frontend/Frontend";
 import { Interface } from "../frontend/Interface";
-import { UIFocus } from "../frontend/Frontend";
+import type { UIFocus } from "../frontend/Frontend";
 import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 
 import { _ } from 'svelte-i18n';
@@ -176,7 +176,7 @@ function clear() {
     if (fuzzy.enabled) {
       if (ev.getModifierState(Basic.ctrlKey()) || ev.altKey) return;
       if (Dialogs.modalOpenCounter > 0) return;
-      if (document.activeElement !== textarea && Interface.getUIFocus() !== UIFocus.Table) return;
+      if (document.activeElement !== textarea && Interface.getUIFocus() !== 'Table') return;
 
       if (ev.key == 'z') {
         textarea.selectionStart = offset(textarea.selectionStart, false);
