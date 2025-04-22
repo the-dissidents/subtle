@@ -5,6 +5,7 @@ import { join } from "@tauri-apps/api/path";
 import * as fs from "@tauri-apps/plugin-fs";
 import Ajv, { type JSONSchemaType, type ValidateFunction } from "ajv";
 import { Debug } from "../Debug";
+import { Basic } from "../Basic";
 
 const ajv = new Ajv({
     removeAdditional: true,
@@ -163,15 +164,13 @@ export class PublicConfig {
     }
 
     async save() {
-        const configName = `${this.name}.json`;
-        const configDir = await path.appConfigDir();
-        if (!await fs.exists(configDir))
-            await fs.mkdir(configDir, {recursive: true});
+        await Basic.ensureConfigDirectoryExists();
     
         let data: Record<string, GroupType<any>> = {};
         for (const key in this.groups)
             data[key] = this.groups[key].data;
 
+        const configName = `${this.name}.json`;
         await fs.writeTextFile(configName, 
             JSON.stringify(data, null, 2), {baseDir: fs.BaseDirectory.AppConfig});
     }

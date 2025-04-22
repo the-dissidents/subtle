@@ -95,4 +95,5 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
     }
 }
 
-export type UIFocus = 'Other' | 'Table' | 'EditingField' | 'Timeline';
+export type UIFocus = (typeof UIFocusList)[number];
+export const UIFocusList = ['Other', 'Table', 'EditingField', 'Timeline'] as const;

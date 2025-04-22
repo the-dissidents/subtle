@@ -116,11 +116,6 @@ const command = new UICommand([], {
 </button>
 
 <button
-  onclick={() => Dialogs.keybinding!.showModal!()}>
-  keybinding
-</button>
-
-<button
   onclick={() => Dialogs.keybindingInput!.showModal!([Commands.undo, null])}>
   keybinding input
 </button>

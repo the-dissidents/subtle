@@ -185,6 +185,20 @@ export const Commands = {
         isDialog: true,
         call: () => Interface.askSaveFile(true)
     }),
+    openConfiguration: new UICommand(
+        [ ],
+    {
+        name: () => $_('menu.configuration'),
+        isDialog: true,
+        call: () => Dialogs.configuration.showModal!()
+    }),
+    openKeybinding: new UICommand(
+        [ ],
+    {
+        name: () => $_('menu.keybinding'),
+        isDialog: true,
+        call: () => Dialogs.keybinding.showModal!()
+    }),
     previousEntrySingle: new UICommand(
         [ binding(['ArrowUp'], ['Table']),
           binding(['Alt+ArrowUp']), ],

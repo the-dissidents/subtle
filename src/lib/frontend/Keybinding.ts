@@ -1,13 +1,15 @@
 import { Basic } from "../Basic";
 import { Debug } from "../Debug";
 import { HashMap } from "../details/HashMap";
-import { Interface } from "./Interface";
-import type { UIFocus } from "./Frontend";
+import { guardAsync, Interface } from "./Interface";
+import { UIFocusList, type UIFocus } from "./Frontend";
 import type { UICommand } from "./CommandBase";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Dialogs } from "./Dialogs";
-import type { JSONSchemaType } from "ajv";
+import type { JSONSchemaType, JTDSchemaType } from "ajv/dist/core";
+import Ajv from "ajv";
+import * as fs from "@tauri-apps/plugin-fs";
 const $_ = unwrapFunctionStore(_);
 
 export type KeyBinding = {
@@ -201,6 +203,7 @@ const codeMap = {
 
 export type KeyCode = (typeof codeMap)[keyof typeof codeMap];
 const keyCodeSet = new Set(Object.values(codeMap));
+const keyCodeArray = [...keyCodeSet];
 
 function isKeyCode(code: string): code is KeyCode {
     return keyCodeSet.has(code as any);
@@ -243,22 +246,66 @@ export type AcceptKeyResult = {
     type: 'incomplete' | 'disabled'
 };
 
-// type KeybindingSerialization = Record<string, {
-//     sequence: {
-//         key: KeyCode,
-//         modifiers: ModifierKey[]
-//     }[],
-//     contexts: 
-// }>;
+type KeybindingSerialization = Record<string, {
+    sequence: {
+        key: KeyCode,
+        modifiers: ModifierKey[]
+    }[],
+    contexts?: UIFocus[]
+}[]>;
 
-// const KeybindingSchema: JSONSchemaType = {
+const KeybindingSchema: JSONSchemaType<KeybindingSerialization> = {
+    type: "object",
+    additionalProperties: {
+        type: "array",
+        items: {
+            type: "object",
+            properties: {
+                sequence: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            key: {
+                                type: "string",
+                                enum: keyCodeArray
+                            },
+                            modifiers: {
+                                type: "array",
+                                items: {
+                                    type: "string",
+                                    enum: ModifierKeys
+                                },
+                            }
+                        },
+                        required: ["key", "modifiers"]
+                    }
+                },
+                contexts: {
+                    type: "array",
+                    items: {
+                        type: "string",
+                        enum: UIFocusList
+                    },
+                    uniqueItems: true,
+                    nullable: true
+                }
+            },
+            required: ["sequence"]
+        }
+    },
+    required: []
+};
 
-// }
+const ajv = new Ajv();
+const validate = ajv.compile(KeybindingSchema);
+const ConfigFile = 'keybinding.json';
 
 export const KeybindingManager = {
     commands: new Map<string, UICommand>(),
 
     async init() {
+        await this.read();
         this.update();
         document.addEventListener('keydown', (ev) => {
             const result = this.processKeydown(ev);
@@ -290,8 +337,48 @@ export const KeybindingManager = {
         });
     },
 
-    async save() {
+    async read() {
+        if (!await fs.exists(ConfigFile, {baseDir: fs.BaseDirectory.AppConfig})) {
+            await Debug.info('no keybinding config found');
+            return;
+        }
+        let obj = JSON.parse(await fs.readTextFile(
+            ConfigFile, {baseDir: fs.BaseDirectory.AppConfig}));
+        if (!validate(obj)) {
+            await Debug.info('invalid keybinding config:', validate.errors);
+            return;
+        }
+        for (const name in obj) {
+            this.commands.get(name)!.bindings = obj[name].map((x) => ({
+                sequence: x.sequence.map((y) => ({
+                    key: y.key,
+                    modifiers: new Set(y.modifiers)
+                })),
+                contexts: x.contexts ? new Set(x.contexts) : undefined
+            }));
+        }
+        await Debug.debug('reading keybinding config');
+    },
 
+    async save() {
+        await Basic.ensureConfigDirectoryExists();
+
+        let serializable: KeybindingSerialization = {};
+        for (const [name, cmd] of this.commands) {
+            serializable[name] = cmd.bindings.map((x) => ({
+                sequence: x.sequence.map((y) => ({
+                    key: y.key,
+                    modifiers: [...y.modifiers]
+                })),
+                contexts: x.contexts ? [...x.contexts] : undefined
+            }));
+        }
+
+        await guardAsync(async () => {
+            await fs.writeTextFile(ConfigFile, 
+                JSON.stringify(serializable, null, 2), {baseDir: fs.BaseDirectory.AppConfig}); 
+            await Debug.info('saved keybinding')
+        }, $_('msg.error-saving-keybinding'));
     },
 
     parseKey(ev: KeyboardEvent): KeyBinding | null {

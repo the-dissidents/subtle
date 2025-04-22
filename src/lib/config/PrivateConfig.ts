@@ -6,6 +6,7 @@ import { guardAsync } from "../frontend/Interface";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";
+import { Basic } from "../Basic";
 const $_ = unwrapFunctionStore(_);
 
 const configPath = 'config.json';
@@ -36,10 +37,7 @@ type ConfigType = typeof configData;
 type ConfigKey = keyof ConfigType;
 
 async function saveConfig() {
-    const configDir = await path.appConfigDir();
-    if (!await fs.exists(configDir))
-        await fs.mkdir(configDir, {recursive: true});
-
+    await Basic.ensureConfigDirectoryExists();
     await guardAsync(async () => {
         await fs.writeTextFile(configPath, 
             JSON.stringify(configData, null, 2), {baseDir: fs.BaseDirectory.AppConfig}); 
@@ -48,10 +46,10 @@ async function saveConfig() {
 
 export const PrivateConfig = {
     async init() {
-        Debug.debug('reading private config:', await path.appConfigDir(), configPath);
+        await Debug.debug('reading private config:', await path.appConfigDir(), configPath);
         try {
             if (!await fs.exists(configPath, {baseDir: fs.BaseDirectory.AppConfig})) {
-                Debug.info('no config file found');
+                await Debug.info('no private config found');
                 return;
             }
             let obj = JSON.parse(await fs.readTextFile(
@@ -59,7 +57,7 @@ export const PrivateConfig = {
             configData = Object.assign(configData, obj);
             Debug.trace(configData);
         } catch (e) {
-            Debug.warn('error reading config file:', e);
+            await Debug.warn('error reading private config:', e);
         } finally {
             initialized = true;
             for (const callback of onInitCallbacks)

@@ -5,7 +5,6 @@ import { Commands } from '../frontend/Commands';
 import { Dialogs, type DialogHandler } from '../frontend/Dialogs';
 import { _, locale } from 'svelte-i18n';
 import { bindingToString, KeybindingManager, type CommandBinding, type KeyBinding } from '../frontend/Keybinding';
-import type { UIFocus } from '../frontend/Frontend';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -18,6 +17,7 @@ let {
 handler.showModal = async () => {
   Debug.assert(inner !== undefined);
   await inner.showModal!();
+  await KeybindingManager.save();
 };
 
 let inner: DialogHandler<void> = {};

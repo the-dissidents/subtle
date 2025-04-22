@@ -261,6 +261,7 @@
     "copied-exported-data": "copied exported data",
     "does-not-exist": "does not exist: {path}",
     "error-opening-video-path": "error opening video: {path}",
+    "error-saving-keybinding": "Error saving keybinding data",
     "error-saving-private-config": "error saving private config",
     "error-when-writing-to-file": "error when writing to {file}",
     "exported-to-file": "exported to {file}",
