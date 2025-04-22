@@ -94,7 +94,7 @@ function doubleForEachStyle(
     }));
 }
 
-export const Commands = {
+export const Commands: Record<string, UICommand> = {
     undo: new UICommand(
         [ binding(['CmdOrCtrl+Z'], ['Table', 'Timeline']),
           binding(['CmdOrCtrl+Alt+Z']) ],
@@ -165,12 +165,38 @@ export const Commands = {
         isDialog: true,
         call: () => Interface.askImportFile()
     }),
+    exportASS: new UICommand(
+        [ ],
+    {
+        name: () => $_('menu.export-ass'),
+        isDialog: true,
+        call: () => Interface.askExportFile('ass', (x) => ASS.export(x))
+    }),
+    exportSRTPlaintext: new UICommand(
+        [ ],
+    {
+        name: () => $_('menu.export-srt-plaintext'),
+        isDialog: true,
+        call: async () => {
+            const result = await Dialogs.export.showModal!();
+            if (!result) return;
+            Interface.askExportFile(result.ext, () => result.content);
+        }
+    }),
     exportMenu: new UICommand(
         [ ],
     {
         name: () => $_('menu.export'),
-        // TODO make a menu
-        call: () => Interface.exportFileMenu()
+        items: [
+            {
+                name: () => 'ASS',
+                call: () => Commands.exportASS.call()
+            },
+            {
+                name: () => $_('cxtmenu.srt-plaintext'),
+                call: () => Commands.exportSRTPlaintext.call()
+            }
+        ]
     }),
     save: new UICommand(
         [ binding(['CmdOrCtrl+S']), ],

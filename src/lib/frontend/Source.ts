@@ -53,7 +53,7 @@ let currentFile = writable('');
 let fileChanged = writable(false);
 
 export const Source = {
-    subs: SubtitleTools.makeTestSubtitles(),
+    subs: new Subtitles(),
     undoStack: [] as Snapshot[],
     redoStack: [] as Snapshot[],
 
@@ -63,6 +63,11 @@ export const Source = {
     onUndoBufferChanged: new EventHost(),
     onSubtitlesChanged: new EventHost<[type: ChangeType]>(),
     onSubtitleObjectReload: new EventHost(),
+
+    init() {
+        this.markChanged(ChangeType.General);
+        fileChanged.set(false);
+    },
 
     markChanged(type: ChangeType) {
         fileChanged.set(true);

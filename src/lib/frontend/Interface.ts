@@ -187,28 +187,11 @@ export const Interface = {
         Interface.status.set($_('msg.imported'));
     },
 
-    async exportFileMenu() {
-        let ask = async (ext: string, func: (s: Subtitles) => string) => {
-            const selected = await dialog.save({
-                filters: [{name: $_('filter.subtitle-file'), extensions: [ext]}]});
-            if (typeof selected != 'string') return;
-            await Source.exportTo(selected, func(Source.subs));
-        }
-        let menu = await Menu.new({items: [
-            {
-                text: 'ASS',
-                action: () => ask('ass', (x) => ASS.export(x))
-            },
-            {
-                text: $_('cxtmenu.srt-plaintext'),
-                action: async () => {
-                    const result = await Dialogs.export.showModal!();
-                    if (!result) return;
-                    ask(result.ext, () => result.content);
-                }
-            }
-        ]});
-        menu.popup();
+    async askExportFile(ext: string, func: (s: Subtitles) => string) {
+        const selected = await dialog.save({
+            filters: [{name: $_('filter.subtitle-file'), extensions: [ext]}]});
+        if (typeof selected != 'string') return;
+        await Source.exportTo(selected, func(Source.subs));
     },
   
     async askOpenFile() {

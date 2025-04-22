@@ -221,7 +221,7 @@ appWindow.onDragDropEvent(async (ev) => {
   onload={() => {
     let time = performance.now();
     Debug.info(`load time: ${time}`);
-    Source.markChanged(ChangeType.General);
+    Source.init();
   }}
   onbeforeunload={(ev) => {
     if (get(Source.fileChanged)) ev.preventDefault();

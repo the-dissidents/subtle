@@ -215,9 +215,9 @@ function render(cxt: CanvasRenderingContext2D) {
   if (i == lines.length) {
     // virtual entry
     const lastLine = lines.at(-1);
-    const y = lastLine 
-        ? (lastLine.line + lastLine.height + 1) * lineHeight 
-        : 0;
+    const y = (lastLine 
+        ? (lastLine.line + lastLine.height) * lineHeight 
+        : 0) + headerHeight;
     if (focused == 'virtual') {
       cxt.fillStyle = focusBackground;
       cxt.fillRect(0, y, width + sx, lineHeight);

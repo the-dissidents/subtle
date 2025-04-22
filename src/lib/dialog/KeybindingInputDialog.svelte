@@ -102,10 +102,11 @@ function check() {
     }}>
       {$_('keyinput.clear')}
     </button>
-    <label>
+    <!-- TODO: support chords -->
+    <!-- <label>
       <input type="checkbox" />
       {$_('keyinput.use-chord')}
-    </label>
+    </label> -->
     <h5>{$_('keyinput.contexts')}</h5>
     <div>
       <label>

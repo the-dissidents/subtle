@@ -244,6 +244,8 @@
     "close-video": "close",
     "configuration": "configuration",
     "export": "export",
+    "export-ass": "Export ASS",
+    "export-srt-plaintext": "Export SRT / plaintext ...",
     "import": "import",
     "keybinding": "keybinding",
     "open": "open",

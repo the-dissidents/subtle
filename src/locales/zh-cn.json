@@ -252,6 +252,8 @@
     "close-video": "关闭",
     "configuration": "配置",
     "export": "导出",
+    "export-ass": "导出ASS",
+    "export-srt-plaintext": "导出SRT/纯文本...",
     "import": "导入",
     "keybinding": "编辑快捷键",
     "open": "打开",
