@@ -9,6 +9,7 @@ import { Menu } from '@tauri-apps/api/menu';
 import { UICommand } from '../frontend/CommandBase';
 import { Dialogs } from '../frontend/Dialogs';
 import { Commands } from '../frontend/Commands';
+    import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -16,6 +17,7 @@ MAPI.version().then((x) => {
 });
 
 let media: MMedia | undefined;
+let tooltipPos: TooltipPosition = $state('bottom');
 
 const command = new UICommand([], {
   name: 'name', 
@@ -119,6 +121,17 @@ const command = new UICommand([], {
   onclick={() => Dialogs.keybindingInput!.showModal!([Commands.undo, null])}>
   keybinding input
 </button>
+
+<Tooltip position={tooltipPos} text="content of tooltip">
+  <button>tooltip</button>
+</Tooltip>
+
+<select bind:value={tooltipPos}>
+  <option value="top">top</option>
+  <option value="left">left</option>
+  <option value="right">right</option>
+  <option value="bottom">bottom</option>
+</select>
 
 <br>
 <span>{result}</span>

@@ -54,6 +54,7 @@ import { Source } from './lib/frontend/Source';
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
+    import Tooltip from './lib/ui/Tooltip.svelte';
 
 Debug.init();
 
@@ -270,18 +271,26 @@ appWindow.onDragDropEvent(async (ev) => {
       </button></li>
       <li class='separator'></li>
       <li class="label">{$filenameDisplay}</li>
-      <li><button title={$_('menu.keybinding')} aria-label={$_('menu.keybinding')}
+      <li>
+        <Tooltip text={$_('menu.keybinding')} position="bottom">
+          <button aria-label={$_('menu.keybinding')}
                   onclick={() => Commands.openKeybinding.call()}>
-        <svg class="feather">
-          <use href="/feather-sprite.svg#command" />
-        </svg>
-      </button></li>
-      <li><button title={$_('menu.configuration')} aria-label={$_('menu.configuration')}
+            <svg class="feather">
+              <use href="/feather-sprite.svg#command" />
+            </svg>
+          </button>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip text={$_('menu.configuration')} position="bottom">
+          <button aria-label={$_('menu.configuration')}
                   onclick={() => Commands.openConfiguration.call()}>
-        <svg class="feather">
-          <use href="/feather-sprite.svg#settings" />
-        </svg>
-      </button></li>
+            <svg class="feather">
+              <use href="/feather-sprite.svg#settings" />
+            </svg>
+          </button>
+        </Tooltip>
+      </li>
     </ul>
   </div>
 
