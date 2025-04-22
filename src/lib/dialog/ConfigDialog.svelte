@@ -33,7 +33,7 @@ let refresh = $state(0);
 locale.subscribe(() => refresh++);
 </script>
 
-<DialogBase handler={inner} maxWidth="36em" buttons={[{
+<DialogBase handler={inner} maxWidth="40em" buttons={[{
   name: 'ok',
   localizedName: () => $_('ok')
 }]}>

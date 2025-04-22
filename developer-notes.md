@@ -52,6 +52,26 @@ console.log(reactive_array.indexOf(obj)); // 2
 
 It should really be better documented. I have a feeling that the Svelte documentations tend to focus on making everything look simple and easy to use, while unintuitive cases like this (which is likely where people will pull their hairs out in confusion) go without mention.
 
+## Terribly Unintuitive Aspects of `$effect`
+
+**"An effect only depends on the values that it read the last time it ran."**
+
+Which means this -- the first version of the `hook` method in `PublicConfig` that I wrote -- won't work, because if when the effect runs for the first time `this.#initialized` isn't true, it won't run again anymore:
+
+```typescript
+hook<T>(track: () => T, action: (value: T) => void) {
+    this.onInitialized(() => action(track()));
+
+    $effect(() => {
+        if (!this.#initialized) return;
+        const value = track();
+        untrack(() => action(value));
+    });
+}
+```
+
+As of writing (2025.4.23), there is a [pull request](https://github.com/sveltejs/svelte/pull/15069) to add a `$state.onchange` rune which removes this issue, and it looks like it will replace virtually all use cases of `$effect` in this project. I think it will be merged relatively soon.
+
 ## Template for Dialogs
 
 ```ts

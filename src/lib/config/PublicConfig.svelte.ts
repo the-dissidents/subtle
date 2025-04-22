@@ -6,6 +6,7 @@ import * as fs from "@tauri-apps/plugin-fs";
 import Ajv, { type JSONSchemaType, type ValidateFunction } from "ajv";
 import { Debug } from "../Debug";
 import { Basic } from "../Basic";
+import { tick, untrack } from "svelte";
 
 const ajv = new Ajv({
     removeAdditional: true,
@@ -159,7 +160,7 @@ export class PublicConfig {
         } finally {
             this.#initialized = true;
             for (const callback of this.#onInitCallbacks)
-                callback();
+                tick().then(() => callback());
         }
     }
 
@@ -176,7 +177,18 @@ export class PublicConfig {
     }
 
     onInitialized(callback: () => void) {
-        if (!this.#initialized) this.#onInitCallbacks.push(callback);
-        else callback();
+        if (!this.#initialized) {
+            this.#onInitCallbacks.push(callback);
+        } else callback();
+    }
+
+    hook<T>(track: () => T, action: (value: T) => void) {
+        this.onInitialized(() => action(track()));
+
+        $effect(() => {
+            const value = track();
+            if (!this.#initialized) return;
+            untrack(() => action(value));
+        });
     }
 }

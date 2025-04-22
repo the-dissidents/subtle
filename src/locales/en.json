@@ -114,7 +114,7 @@
     "mouse-scroll-sensitivity-d": "Multiplier for scrolling speed using mouse wheel. Adjust to make scrolling speed desirable and consistent with trackpad.",
     "mouse-zoom-sensitivity": "mouse zoom sensitivity",
     "mouse-zoom-sensitivity-d": "Multiplier for zooming speed using mouse wheel while holding Control. Adjust to make zooming speed desirable and consistent with trackpad.",
-    "multiselect-drag-reference": "snap reference when dragging multiple",
+    "multiselect-drag-reference": "snap reference when multi-dragging",
     "navigation-keep-in-view": "keep entry in sight only",
     "navigation-keep-position": "keep entry at the same screen position",
     "preload-amount": "preload amount",

@@ -55,6 +55,7 @@ import { Debug, GetLevelFilter } from './lib/Debug';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 import Tooltip from './lib/ui/Tooltip.svelte';
+    import { size } from '@tauri-apps/plugin-fs';
 
 Debug.init();
 
@@ -117,49 +118,40 @@ PrivateConfig.onInitialized(() => {
   leftPane!.style.width = `${PrivateConfig.get('leftPaneW')}px`;
 });
 
-function updateFonts() {
-  document.documentElement.style.setProperty('--fontSize', `${InterfaceConfig.data.fontSize}px`);
-  document.documentElement.style.setProperty('--fontFamily', InterfaceConfig.data.fontFamily);
-  document.documentElement.style.setProperty(
-    '--editorFontSize', `${InterfaceConfig.data.editorFontSize}px`);
-  document.documentElement.style.setProperty(
-    '--editorFontFamily', InterfaceConfig.data.editorFontFamily);
-}
+MainConfig.hook(() => InterfaceConfig.data.fontSize, 
+  (v) => document.documentElement.style.setProperty('--fontSize', `${v}px`));
 
-$effect(() => 
-  MainConfig.onInitialized(() => {updateFonts()}));
+MainConfig.hook(() => InterfaceConfig.data.fontFamily, 
+  (v) => document.documentElement.style.setProperty('--fontFamily', v));
 
-$effect(() => 
-  MainConfig.onInitialized(() => {
-    locale.set(InterfaceConfig.data.language);
-    Debug.debug('language =', InterfaceConfig.data.language);
-  }));
+MainConfig.hook(() => InterfaceConfig.data.editorFontSize, 
+  (v) => document.documentElement.style.setProperty('--editorFontSize', `${v}px`));
 
-$effect(() => 
-  MainConfig.onInitialized(() => {
-    InterfaceConfig.data.autosaveInterval;
-    Source.startAutoSave();
-    Debug.debug('autosave interval =', InterfaceConfig.data.autosaveInterval);
-  }));
+MainConfig.hook(() => InterfaceConfig.data.editorFontFamily, 
+  (v) => document.documentElement.style.setProperty('--editorFontFamily', v));
 
-$effect(() => 
-  MainConfig.onInitialized(() => {
-    Debug.redirectNative = DebugConfig.data.redirectLogs;
-    Debug.debug('redirectLogs =', DebugConfig.data.redirectLogs);
-  }));
+MainConfig.hook(() => InterfaceConfig.data.language, (lang) => {
+  locale.set(lang);
+  console.log('language =', lang);
+});
 
-$effect(() =>
-  MainConfig.onInitialized(() => {
-    Debug.filterLevel = GetLevelFilter[
-      DebugConfig.data.logLevel as keyof typeof GetLevelFilter];
-    Debug.debug('webview filter level =', DebugConfig.data.logLevel);
-  }));
+MainConfig.hook(() => InterfaceConfig.data.autosaveInterval, (v) => {
+  Source.startAutoSave();
+  Debug.debug('autosave interval =', v);
+});
 
-$effect(() => 
-  MainConfig.onInitialized(() => {
-    Debug.setPersistentFilterLevel(GetLevelFilter[
-      DebugConfig.data.persistentLogLevel as keyof typeof GetLevelFilter]);
-  }));
+MainConfig.hook(() => DebugConfig.data.redirectLogs, (v) => {
+  Debug.redirectNative = v;
+  Debug.debug('redirectLogs =', v);
+});
+
+MainConfig.hook(() => DebugConfig.data.logLevel, (v) => {
+  Debug.filterLevel = GetLevelFilter[v as keyof typeof GetLevelFilter];
+  Debug.debug('webview filter level =', v);
+});
+
+MainConfig.hook(() => DebugConfig.data.persistentLogLevel, (v) => 
+  Debug.setPersistentFilterLevel(GetLevelFilter[v as keyof typeof GetLevelFilter]));
 
 MainConfig.init();
 

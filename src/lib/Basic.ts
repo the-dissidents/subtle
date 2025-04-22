@@ -3,17 +3,17 @@ console.info('Basic loading');
 import { path } from "@tauri-apps/api";
 import * as os from "@tauri-apps/plugin-os";
 
-import { addMessages, locale } from 'svelte-i18n';
+import * as i18n from 'svelte-i18n';
 
 import en from '../locales/en.json';
 import zh_cn from '../locales/zh-cn.json';
 import zh_tw from '../locales/zh-tw.json';
 import * as fs from "@tauri-apps/plugin-fs";
 
-addMessages('en', en);
-addMessages('zh-cn', zh_cn);
-addMessages('zh-tw', zh_tw);
-locale.set('en');
+i18n.addMessages('en', en);
+i18n.addMessages('zh-cn', zh_cn);
+i18n.addMessages('zh-tw', zh_tw);
+i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
 
 export const Basic = {
     OSType: os.type(),
