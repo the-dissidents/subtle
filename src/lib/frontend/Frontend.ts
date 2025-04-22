@@ -47,14 +47,14 @@ export class EventHost<T extends unknown[] = []> {
     }
 }
 
-export function parseSubtitleSource(source: string): [Subtitles | null, boolean] {
+export function parseSubtitleSource(source: string): Subtitles | null {
     let newSub = SimpleFormats.parse.JSON(source);
-    if (newSub) return [newSub, true];
+    if (newSub) return newSub;
     source = Basic.normalizeNewlines(source);
     newSub = SimpleFormats.parse.SRT_VTT(source);
-    if (newSub) return [newSub, false];
+    if (newSub) return newSub;
     newSub = ASS.parse(source);
-    return [newSub, false];
+    return newSub;
 }
 
 function isTrackpad(e: WheelEvent) {

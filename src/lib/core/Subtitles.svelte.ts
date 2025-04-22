@@ -197,6 +197,8 @@ export class SubtitleEntry {
     }
 }
 
+type MigrationInfo = 'none' | 'ASS' | 'text' | 'olderVersion';
+
 export class Subtitles {
     metadata: SubtitleMetadata = $state(Subtitles.#createMetadata());
     /** Must be set to one of `styles` */
@@ -204,7 +206,7 @@ export class Subtitles {
     /** The order of the styles should be strictly the reverse of the ASS display order */
     styles: SubtitleStyle[] = $state([this.defaultStyle]);
     entries: SubtitleEntry[] = [];
-    migrated = false;
+    migrated: MigrationInfo = 'none';
 
     static createStyle(name: string) {
         let data = {name, styles: {}, margin: {}};
@@ -220,7 +222,7 @@ export class Subtitles {
         if (base) {
             let def: SubtitleStyle | undefined;
             this.styles = base.styles.map((x) => {
-                let clone = structuredClone(x);
+                let clone = $state($state.snapshot(x));
                 if (x == base.defaultStyle) def = clone;
                 return clone;
             });
@@ -237,6 +239,47 @@ export class Subtitles {
             styles: this.styles,
             entries: this.entries.map((x) => x.toSerializable()),
         }
+    }
+
+    debugTestIntegrity() {
+        const isProxy = (suspect: any) => {
+            const randField = crypto.randomUUID();
+            const obj = {};
+            suspect[randField] = obj;
+            
+            const result = suspect[randField] !== obj;
+            delete suspect[randField];
+    
+            return result;
+        }
+
+        let ok = true;
+        for (let style of this.styles) {
+            if (!isProxy(style)) {
+                Debug.warn(`debugTestIntegrity: style is not a proxy: ${style.name}`);
+                console.log(style);
+                ok = false;
+            }
+        }
+        if (!this.styles.includes(this.defaultStyle)) {
+            Debug.warn(`debugTestIntegrity: defaultStyle not found in styles`);
+            console.log(this.defaultStyle);
+            ok = false;
+        }
+        const map = new Map<SubtitleStyle, number>();
+        for (const ent of this.entries) {
+            for (const [style, _] of ent.texts) {
+                if (!this.styles.includes(style)) {
+                    map.set(style, (map.get(style) ?? 0) + 1);
+                    ok = false;
+                }
+            }
+        }
+        for (const [style, n] of map) {
+            Debug.warn(`debugTestIntegrity: entry style not found in styles: ${style.name}${n > 1 ? ` [${n} times]` : ''}`);
+            console.log(style);
+        }
+        return ok;
     }
 
     static deserialize(o: ReturnType<Subtitles['toSerializable']>) {
@@ -257,7 +300,7 @@ export class Subtitles {
                 let style = $state(parseObject(x, validateStyle));
                 return style;
             })];
-            subs.migrated = true;
+            subs.migrated = 'olderVersion';
         } else {
             subs.styles = o.styles.map((x) => {
                 let style = $state(parseObject(x, validateStyle));

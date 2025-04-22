@@ -1,7 +1,7 @@
 console.info('Dialogs loading');
 
 import type { AnalyseResult, EncodingName } from "chardet"
-import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil";
+import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil.svelte";
 import { mount, unmount } from "svelte";
 import OverlayMenu from "../ui/OverlayMenu.svelte";
 import type { UICommand } from "./CommandBase";
@@ -14,7 +14,7 @@ export class DialogHandler<TInput = void, TOutput = string> {
 export const Dialogs = {
     modalOpenCounter: 0,
 
-    importOptions: new DialogHandler<void, MergeOptions | null>(),
+    importOptions: new DialogHandler<boolean, MergeOptions | null>(),
     timeTransform: new DialogHandler<void, TimeShiftOptions | null>(),
     combine: new DialogHandler<void, void>(),
     configuration: new DialogHandler<void, void>(),

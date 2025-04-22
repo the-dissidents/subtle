@@ -7,7 +7,7 @@ import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { get } from "svelte/store";
 import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
-import { SubtitleUtil, MergePosition, MergeStyleBehavior } from "../core/SubtitleUtil";
+import { SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Editing, KeepInViewMode, SelectMode } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
 import { Source, ChangeType, ChangeCause } from "./Source";
@@ -449,7 +449,7 @@ export const Commands = {
         async call() {
             const source = await clipboard.readText();
             if (!source) return;
-            let [portion, _] = parseSubtitleSource(source);
+            let portion = parseSubtitleSource(source);
             if (!portion) {
                 Interface.status.set($_('msg.failed-to-parse-clipboard-data-as-subtitles'));
                 return;
@@ -463,9 +463,10 @@ export const Commands = {
             } else position = Source.subs.entries.length;
 
             let entries = SubtitleUtil.merge(Source.subs, portion, {
-                position: MergePosition.Custom,
+                position: 'Custom',
                 customPosition: position,
-                style: MergeStyleBehavior.KeepDifferent
+                style: portion.migrated == 'text' ? 'UseOverrideForAll' : 'KeepDifferent',
+                overrideStyle: Source.subs.defaultStyle
             });
             if (entries.length > 0) {
                 Editing.setSelection(entries);

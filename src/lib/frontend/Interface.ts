@@ -21,7 +21,7 @@ import { DebugConfig, MainConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
-import { SubtitleUtil } from "../core/SubtitleUtil";
+import { SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Debug } from "../Debug";
 const $_ = unwrapFunctionStore(_);
 
@@ -107,14 +107,15 @@ export const Interface = {
     async openFile(path: string) {
         const text = await this.readTextFile(path);
         if (!text) return;
-        let [newSubs, isJSON] = parseSubtitleSource(text);
+        let newSubs = parseSubtitleSource(text);
         if (!newSubs) {
             this.status.set($_('msg.failed-to-parse-as-subtitles-path', {values: {path}}));
             return;
         }
-        await Source.openDocument(newSubs, path, !isJSON);
-        if (newSubs.migrated) await dialog.message(
-            $_('msg.note-file-is-migrated-path', {values: {path}}));
+        await Source.openDocument(newSubs, path);
+        if (newSubs.migrated == 'olderVersion') 
+            await dialog.message(
+                $_('msg.note-file-is-migrated-path', {values: {path}}));
         const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);
         else if (Playback.isLoaded) await Playback.close();
@@ -168,13 +169,13 @@ export const Interface = {
         if (typeof selected != 'string') return;
         const text = await this.readTextFile(selected);
         if (!text) return;
-        let [newSubs, _] = parseSubtitleSource(text);
+        let newSubs = parseSubtitleSource(text);
         if (!newSubs) {
             this.status.set($_('msg.failed-to-parse-as-subtitles-path', 
                 {values: {path: selected}}));
             return;
         }
-        const options = await Dialogs.importOptions.showModal!();
+        const options = await Dialogs.importOptions.showModal!(newSubs.migrated != 'text');
         if (!options) return;
 
         let entries = SubtitleUtil.merge(Source.subs, newSubs, options);
@@ -182,6 +183,7 @@ export const Interface = {
             Editing.setSelection(entries);
         }
         Source.markChanged(ChangeType.General);
+        Source.markChanged(ChangeType.StyleDefinitions);
         Interface.status.set($_('msg.imported'));
     },
 
@@ -236,7 +238,7 @@ export const Interface = {
         const text = JSON.stringify(Source.subs.toSerializable(), undefined, 2);
         if (await Source.saveTo(file, text) && Playback.video?.source) {
             await PrivateConfig.setVideo(file, Playback.video.source);
-            Source.subs.migrated = false;
+            Source.subs.migrated = 'none';
         }
         Source.startAutoSave();
     },

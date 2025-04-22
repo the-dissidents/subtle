@@ -49,16 +49,16 @@ import { derived, get } from 'svelte/store';
 import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
-import { Source } from './lib/frontend/Source';
+import { ChangeType, Source } from './lib/frontend/Source';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
-    import Tooltip from './lib/ui/Tooltip.svelte';
+import Tooltip from './lib/ui/Tooltip.svelte';
 
 Debug.init();
 
-const appWindow = getCurrentWebviewWindow()
+const appWindow = getCurrentWebviewWindow();
 
 let leftPane: HTMLElement | undefined = $state();
 let editTable: HTMLElement | undefined = $state();
@@ -221,6 +221,7 @@ appWindow.onDragDropEvent(async (ev) => {
   onload={() => {
     let time = performance.now();
     Debug.info(`load time: ${time}`);
+    Source.markChanged(ChangeType.General);
   }}
   onbeforeunload={(ev) => {
     if (get(Source.fileChanged)) ev.preventDefault();

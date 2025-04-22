@@ -195,14 +195,14 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
             use:setupTextArea={style}
             value={focused.texts.get(style)!}
             onfocus={(ev) => {
-              $uiFocus = UIFocus.EditingField;
+              $uiFocus = 'EditingField';
               Editing.focused.style = style;
               Editing.focused.control = ev.currentTarget;
             }}
             onblur={(x) => {
               // TODO: this works but looks like nonsense
-              if ($uiFocus === UIFocus.EditingField)
-                $uiFocus = UIFocus.Other;
+              if ($uiFocus === 'EditingField')
+                $uiFocus = 'Other';
               Editing.submitFocusedEntry();
             }}
             oninput={(x) => {

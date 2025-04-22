@@ -11,7 +11,7 @@ import { ChangeType, Source } from '../frontend/Source';
 
 import { _ } from 'svelte-i18n';
 import { flip } from 'svelte/animate';
-import { SubtitleTools } from '../core/SubtitleUtil';
+import { SubtitleTools } from '../core/SubtitleUtil.svelte';
 import { Debug } from '../Debug';
 
 let metadata = $state(Source.subs.metadata);

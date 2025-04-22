@@ -10,6 +10,7 @@ import { UICommand } from '../frontend/CommandBase';
 import { Dialogs } from '../frontend/Dialogs';
 import { Commands } from '../frontend/Commands';
     import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
+    import { Source } from '../frontend/Source';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -132,6 +133,11 @@ const command = new UICommand([], {
   <option value="right">right</option>
   <option value="bottom">bottom</option>
 </select>
+
+<button
+  onclick={() => Debug.info('integrity test:', Source.subs.debugTestIntegrity())}>
+  integrity test
+</button>
 
 <br>
 <span>{result}</span>

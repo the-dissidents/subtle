@@ -106,6 +106,7 @@ export const SimpleFormats = {
                 entry.texts.set(subs.defaultStyle, match[3].trimEnd());
                 subs.entries.push(entry)
             }
+            subs.migrated = 'text';
             return subs;
         }
     } as const,

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { Basic } from '../Basic';
 import { SubtitleEntry } from '../core/Subtitles.svelte';
-import { type TimeShiftOptions } from "../core/SubtitleUtil";
+import { type TimeShiftOptions } from "../core/SubtitleUtil.svelte";
 import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';

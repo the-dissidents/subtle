@@ -11,6 +11,7 @@ export const ASS = {
         if (!parseASSScriptInfo(sections, subs)) return null;
         parseASSStyles(sections, subs);
         parseASSEvents(sections, subs);
+        subs.migrated = 'ASS';
         return subs;
     },
     exportFragment(subs: Subtitles) {

@@ -2,7 +2,7 @@ console.info('Source loading');
 
 import { get, readonly, writable } from "svelte/store";
 import { Subtitles } from "../core/Subtitles.svelte";
-import { SubtitleTools } from "../core/SubtitleUtil";
+import { SubtitleTools } from "../core/SubtitleUtil.svelte";
 
 import * as fs from "@tauri-apps/plugin-fs";
 import { basename } from '@tauri-apps/api/path';
@@ -107,15 +107,17 @@ export const Source = {
         return true;
     },
 
-    async openDocument(newSubs: Subtitles, path: string, isImport: boolean) {
+    async openDocument(newSubs: Subtitles, path: string) {
         PrivateConfig.pushRecent(path);
         this.subs = newSubs;
         Editing.clearFocus(false);
         Editing.clearSelection();
         this.clearUndoRedo();
         Editing.focused.style = newSubs.defaultStyle;
-        currentFile.set(isImport ? '' : path);
-        fileChanged.set(newSubs.migrated);
+        currentFile.set(
+            (newSubs.migrated !== 'none' 
+                && newSubs.migrated !== 'olderVersion') ? '' : path);
+        fileChanged.set(newSubs.migrated == 'olderVersion');
         changedSinceLastAutosave = false;
 
         this.onSubtitleObjectReload.dispatch();
