@@ -24,7 +24,7 @@ fn main() {
         time::format_description::parse("[year]-[month]-[day]@[hour]:[minute]:[second].[subsecond digits:3]")
         .unwrap();
 
-    let mut ctx = tauri::generate_context!();
+    let ctx = tauri::generate_context!();
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -58,7 +58,6 @@ fn main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_theme::init(ctx.config_mut()))
         .manage(Mutex::new(SetupState {
             frontend_task: false,
             backend_task: true,

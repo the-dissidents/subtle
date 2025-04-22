@@ -40,7 +40,6 @@ import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 import { Basic } from './lib/Basic';
 
 import { getVersion } from '@tauri-apps/api/app';
-import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
@@ -49,7 +48,6 @@ import { derived, get } from 'svelte/store';
 
 import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface } from './lib/frontend/Interface';
-import type { UIFocus } from "./lib/frontend/Frontend";
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
 
@@ -168,9 +166,9 @@ let settingTheme = false;
 async function updateTheme() {
   if (settingTheme) return;
   settingTheme = true;
-  await invoke("plugin:theme|set_theme", {
-    theme: InterfaceConfig.data.theme,
-  });
+  await appWindow.setTheme(InterfaceConfig.data.theme == 'light' ? 'light'
+               : InterfaceConfig.data.theme == 'dark' ? 'dark'
+               : undefined);
   Playback.timeline?.requestRender();
   settingTheme = false;
   Debug.debug('changed theme', InterfaceConfig.data.theme);
