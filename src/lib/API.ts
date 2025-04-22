@@ -80,12 +80,6 @@ type MediaEventKey = MediaEvent['event'];
 type MediaEventData = {[E in MediaEvent as E['event']]: E['data']};
 type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) => void;
 
-// cf. https://github.com/tauri-apps/tauri/issues/13133
-function preventChannelMemoryLeak(c: Channel<any>) {
-    // @ts-expect-error
-    delete window[`_${c.id}`];
-}
-
 function createChannel(
     from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
     reject: (e: any) => void
@@ -349,7 +343,6 @@ export class MMedia {
                     });
             });
         } finally {
-            if (channel) preventChannelMemoryLeak(channel);
             this.#currentJobs -= 1;
         }
     }
@@ -367,7 +360,6 @@ export class MMedia {
                 invoke('seek_audio', { id: this.id, channel, position });
             });
         } finally {
-            if (channel) preventChannelMemoryLeak(channel);
             this.#currentJobs -= 1;
         }
     }
@@ -385,7 +377,6 @@ export class MMedia {
                 invoke('seek_video', { id: this.id, channel, position });
             });
         } finally {
-            if (channel) preventChannelMemoryLeak(channel);
             this.#currentJobs -= 1;
         }
     }
@@ -408,7 +399,6 @@ export class MMedia {
                     });
             });
         } finally {
-            if (channel) preventChannelMemoryLeak(channel);
             this.#currentJobs -= 1;
         }
     }
