@@ -322,6 +322,7 @@ export const KeybindingManager = {
                     break;
                 case "ok":
                     ev.preventDefault();
+                    Debug.debug('keyboard command', result.command.name);
                     result.command.call();
                     break;
                 case "waitNext":
