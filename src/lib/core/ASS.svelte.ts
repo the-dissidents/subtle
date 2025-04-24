@@ -1,23 +1,26 @@
 import { Basic } from "../Basic";
 import { CSSColors, parseCSSColor } from "../colorparser";
 import { Debug } from "../Debug";
-import { AlignMode, SubtitleEntry, Subtitles, type SubtitleStyle } from "./Subtitles.svelte";
+import { AlignMode, SubtitleEntry, Subtitles, SubtitlesParseError, type SubtitleFormat, type SubtitleStyle } from "./Subtitles.svelte";
 
-export const ASS = {
+export const ASSSubtitles: SubtitleFormat = {
     parse(source: string) {
         const sections = getASSSections(source);
-        if (sections.size == 0) return null;
+        if (sections.size == 0)
+            throw new SubtitlesParseError('invalid ASS');
         let subs = new Subtitles();
-        if (!parseASSScriptInfo(sections, subs)) return null;
+        if (!parseASSScriptInfo(sections, subs))
+            throw new SubtitlesParseError('invalid ASS');
         parseASSStyles(sections, subs);
         parseASSEvents(sections, subs);
         subs.migrated = 'ASS';
         return subs;
     },
-    exportFragment(subs: Subtitles) {
+    write(subs: Subtitles, options) {
         let result = '';
         const reverseStyles = subs.styles.toReversed();
-        for (const entry of subs.entries) {
+        const entries = options?.useEntries ?? subs.entries;
+        for (const entry of entries) {
             let t0 = Basic.formatTimestamp(entry.start, 2);
             let t1 = Basic.formatTimestamp(entry.end, 2);
             for (const style of reverseStyles) {
@@ -27,12 +30,10 @@ export const ASS = {
                     text.replaceAll('\n', '\\N')}\n`;
             }
         }
-        return result;
+        if (options?.headerless) return result;
+        else return writeASSHeader(subs) + result;
     },
-    export(subs: Subtitles) {
-        return writeASSHeader(subs) + this.exportFragment(subs);
-    },
-}
+} 
 
 // &HAABBGGRR
 export function toASSColor(str: string) {
@@ -141,7 +142,7 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
 
     subs.styles = [];
 
-    const stylesRegex   = /Style:\s*(.*)\n/g;
+    const stylesRegex = /Style:\s*(.*)\n/g;
     let nameToStyle: Map<string, SubtitleStyle> = new Map();
     let first: SubtitleStyle | null = null;
     const styleMatches = text.matchAll(stylesRegex);
@@ -173,10 +174,6 @@ function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
                 style.styles.strikethrough = 
                     items[styleFieldMap.get('StrikeOut')!] == '-1';
             
-            if (styleFieldMap.has('Fontsize')) {
-                const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
-                if (!Number.isNaN(n)) style.size = n;
-            }
             if (styleFieldMap.has('Fontsize')) {
                 const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
                 if (!Number.isNaN(n)) style.size = n;

@@ -1,5 +1,4 @@
 import { Interface } from "./Interface";
-import type { UIFocus } from "./Frontend";
 import { binding } from "./Keybinding";
 import { UICommand } from "./CommandBase";
 
@@ -7,33 +6,36 @@ import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { get } from "svelte/store";
 import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
-import { SubtitleUtil } from "../core/SubtitleUtil.svelte";
+import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Editing, KeepInViewMode, SelectMode } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
 import { Source, ChangeType, ChangeCause } from "./Source";
 import { Labels, SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
-import { LinearFormatCombineStrategy, SimpleFormats } from "../core/SimpleFormats";
-import { ASS } from "../core/ASS.svelte";
 import { Playback } from "./Playback";
 import { Utils } from "./Utils";
 import { Dialogs } from "./Dialogs";
 import { InputConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 import { PrivateConfig } from "../config/PrivateConfig";
+import { Format } from "../core/Formats";
 export const $_ = unwrapFunctionStore(_);
 
-const toSRT = (x: Subtitles) => 
-    SimpleFormats.export.SRT(x, x.entries, LinearFormatCombineStrategy.Recombine);
-const toPlaintext = (x: Subtitles) => 
-    SimpleFormats.export.plaintext(x, x.entries, LinearFormatCombineStrategy.KeepOrder);
+const toJSON = (useEntries: SubtitleEntry[]) => 
+    Format.JSON.write(Source.subs, { useEntries });
+const toASS = (useEntries: SubtitleEntry[]) => 
+    Format.ASS.write(Source.subs, { useEntries });
 
-async function copySelection(transform: (subs: Subtitles) => string) {
+const toSRT = (useEntries: SubtitleEntry[]) => 
+    Format.SRT.write(Source.subs, 
+        { useEntries, combine: LinearFormatCombineStrategy.Recombine });
+const toPlaintext = (useEntries: SubtitleEntry[]) => 
+    Format.plaintext.write(Source.subs, 
+        { useEntries, combine: LinearFormatCombineStrategy.KeepOrder });
+
+async function copySelection(transform: (use: SubtitleEntry[]) => string) {
     let selection = Editing.getSelection();
     if (selection.length == 0) return;
-    // FIXME, this is not correct
-    let temp = new Subtitles(Source.subs);
-    temp.entries = selection;
-    await clipboard.writeText(transform(temp));
+    await clipboard.writeText(transform(selection));
     Interface.status.set($_('msg.copied'));
 };
 
@@ -170,7 +172,7 @@ export const Commands: Record<string, UICommand> = {
     {
         name: () => $_('menu.export-ass'),
         isDialog: true,
-        call: () => Interface.askExportFile('ass', (x) => ASS.export(x))
+        call: () => Interface.askExportFile('ass', (x) => Format.ASS.write(x))
     }),
     exportSRTPlaintext: new UICommand(
         [ ],
@@ -397,7 +399,7 @@ export const Commands: Record<string, UICommand> = {
     {
         name: () => $_('action.copy-json'),
         isApplicable: hasSelection,
-        call: () => copySelection(SimpleFormats.export.JSON)
+        call: () => copySelection(toJSON)
     }),
     copySRT: new UICommand(
         [ ],
@@ -411,7 +413,7 @@ export const Commands: Record<string, UICommand> = {
     {
         name: () => $_('action.copy-ass'),
         isApplicable: hasSelection,
-        call: () => copySelection(ASS.export)
+        call: () => copySelection(toASS)
     }),
     copyPlaintext: new UICommand(
         [ ],
@@ -428,13 +430,13 @@ export const Commands: Record<string, UICommand> = {
         items: [
             {
                 name: () => $_('cxtmenu.json-internal'),
-                call: () => copySelection(SimpleFormats.export.JSON)
+                call: () => copySelection(toJSON)
             }, {
                 name: () => $_('cxtmenu.srt'),
                 call: () => copySelection(toSRT)
             }, {
                 name: () => $_('cxtmenu.ass-fragment'),
-                call: () => copySelection(ASS.export)
+                call: () => copySelection(toASS)
             }, {
                 name: () => $_('cxtmenu.plain-text'),
                 call: () => copySelection(toPlaintext)
@@ -464,7 +466,7 @@ export const Commands: Record<string, UICommand> = {
         name: () => $_('action.cut'),
         isApplicable: hasSelection,
         async call() {
-            await copySelection(SimpleFormats.export.JSON);
+            await copySelection(toJSON);
             Editing.deleteSelection();
         }
     }),

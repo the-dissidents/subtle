@@ -49,14 +49,13 @@ import { derived, get } from 'svelte/store';
 import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
-import { ChangeType, Source } from './lib/frontend/Source';
+import { Source } from './lib/frontend/Source';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 import Tooltip from './lib/ui/Tooltip.svelte';
-    import { size } from '@tauri-apps/plugin-fs';
-
+    
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow();

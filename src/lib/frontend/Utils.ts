@@ -3,7 +3,6 @@ console.info('Utils loading');
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import * as dialog from "@tauri-apps/plugin-dialog";
 
-import { SimpleFormats } from "../core/SimpleFormats";
 import { SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Editing, SelectMode } from "./Editing";
 import { Interface } from "./Interface";
@@ -28,16 +27,6 @@ export const Utils = {
             } else if (state == 1) state = 2;
         }
         return false;
-    },
-
-    copySelection(transform = SimpleFormats.export.JSON) {
-        let selection = Editing.getSelection();
-        if (selection.length == 0) return;
-        // FIXME, this is not correct
-        let temp = new Subtitles(Source.subs);
-        temp.entries = selection;
-        clipboard.writeText(transform(temp));
-        Interface.status.set($_('msg.copied'));
     },
 
     moveSelectionContinuous(direction: number) {

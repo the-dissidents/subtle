@@ -2,8 +2,7 @@ console.info('Frontend loading');
 
 import { Basic } from "../Basic";
 import { DebugConfig, InputConfig } from "../config/Groups";
-import { ASS } from "../core/ASS.svelte";
-import { SimpleFormats } from "../core/SimpleFormats";
+import { Format } from "../core/Formats";
 import { Subtitles } from "../core/Subtitles.svelte";
 
 export type TranslatedWheelEvent = {
@@ -48,13 +47,24 @@ export class EventHost<T extends unknown[] = []> {
 }
 
 export function parseSubtitleSource(source: string): Subtitles | null {
-    let newSub = SimpleFormats.parse.JSON(source);
-    if (newSub) return newSub;
+    try {
+        let newSub = Format.JSON.parse(source);
+        return newSub;
+    } catch {}
+
     source = Basic.normalizeNewlines(source);
-    newSub = SimpleFormats.parse.SRT_VTT(source);
-    if (newSub) return newSub;
-    newSub = ASS.parse(source);
-    return newSub;
+
+    try {
+        let newSub = Format.SRT.parse(source);
+        return newSub;
+    } catch {}
+
+    try {
+        let newSub = Format.ASS.parse(source);
+        return newSub;
+    } catch {}
+
+    return null;
 }
 
 function isTrackpad(e: WheelEvent) {

@@ -26,7 +26,87 @@ export type TimeShiftOptions = {
     modifySince?: boolean;
     offset?: number;
     scale?: number;
-};export const SubtitleTools = {
+};
+
+export enum LinearFormatCombineStrategy {
+    /**
+     * Keeps the original ordering of subtitle entries, but channels in the same entry are combined.
+     */
+    KeepOrder,
+    /**
+     * Sorts subtitle entries by starting time, combined channels in the same entry, but retains overlapping durations.
+     */
+    Sorted,
+    /**
+     * Sorts subtitle entries by starting time and recombines them to ensure no overlapping occurs.
+     */
+    Recombine
+}
+
+export type LinearEntry = {
+    start: number, end: number, text: string
+};
+
+const ToLinearFormat = {
+    [LinearFormatCombineStrategy.KeepOrder]: 
+        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => entries
+            .map((x) => ({ 
+                start: x.start, end: x.end, 
+                text: subs.styles
+                    .map((s) => x.texts.get(s))
+                    .filter((x) => x).join('\n') 
+            })),
+    [LinearFormatCombineStrategy.Sorted]:
+        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => entries
+            .toSorted((x, y) => x.start - y.start)
+            .map((x) => ({ 
+                start: x.start, end: x.end, 
+                text: subs.styles
+                    .map((s) => x.texts.get(s))
+                    .filter((x) => x).join('\n') 
+            })),
+    [LinearFormatCombineStrategy.Recombine]:
+        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => {
+            let events: { type: 'start' | 'end', pos: number, i: number }[] = [];
+            entries.forEach(({start, end}, i) => {
+                events.push({ type: 'start', pos: start, i });
+                events.push({ type: 'end', pos: end, i });
+            });
+            events.sort((a, b) => a.pos - b.pos);
+            if (events.length == 0) return [];
+
+            let activeTexts: {i: number, text: string}[] = [];
+            let result: LinearEntry[] = [];
+            let i = 0;
+            outer: while (true) {
+                const pos = events[i].pos;
+                while (events[i].pos == pos) {
+                    const event = events[i];
+                    if (event.type == 'start') {
+                        const entry = entries[event.i];
+                        let text = subs.styles
+                            .map((s) => entry.texts.get(s))
+                            .filter((x) => x).join('\n');
+                        activeTexts.push({text, i: event.i});
+                    } else {
+                        let index = activeTexts.findIndex((x) => x.i == event.i);
+                        Debug.assert(index >= 0);
+                        activeTexts.splice(index, 1);
+                    }
+                    i++;
+                    if (i == events.length) break outer;
+                }
+                const pos2 = events[i].pos;
+                if (activeTexts.length > 0) result.push({
+                    start: pos, end: pos2, 
+                    text: activeTexts.map((x) => x.text).join('\n')
+                });
+            }
+            return result;
+        }
+}
+
+export const SubtitleTools = {
     alignTimes: (subs: Subtitles, epsilon: number) => {
         for (let i = 0; i < subs.entries.length - 1; i++) {
             let s0 = subs.entries[i].start;
@@ -61,9 +141,14 @@ export type TimeShiftOptions = {
     }
 };
 
-
-
 export const SubtitleUtil = {
+    combineToLinear(
+        subs: Subtitles, entries: SubtitleEntry[],
+        strategy: LinearFormatCombineStrategy
+    ): LinearEntry[] {
+        return ToLinearFormat[strategy](subs, entries);
+    },
+
     /** Note: this method will use and modify the entries in `other` */ 
     merge(original: Subtitles, other: Subtitles, options: MergeOptions): SubtitleEntry[] {
         if (options.overrideMetadata) {

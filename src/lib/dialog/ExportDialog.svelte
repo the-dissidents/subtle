@@ -1,12 +1,13 @@
 <script lang="ts">
 import { SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
-import { LinearFormatCombineStrategy, SimpleFormats } from '../core/SimpleFormats';
 import { Source } from '../frontend/Source';
 import { Interface } from '../frontend/Interface';
 import type { DialogHandler } from '../frontend/Dialogs';
 import DialogBase from '../DialogBase.svelte';
 
 import { _ } from 'svelte-i18n';
+    import { LinearFormatCombineStrategy } from '../core/SubtitleUtil.svelte';
+    import { Format } from '../core/Formats';
 
 interface Props {
   handler: DialogHandler<void, {content: string, ext: string} | null>;
@@ -38,10 +39,11 @@ let format: 'srt' | 'tab' | 'txt' = $state('srt');
 let preview = $state('');
 
 const formatters = {
-  'srt': SimpleFormats.export.SRT,
-  'txt': SimpleFormats.export.plaintext,
-  'tab': SimpleFormats.export.tabDelimited
+  'srt': Format.SRT.write,
+  'txt': Format.plaintext.write,
+  'tab': Format.tabDelimited.write
 };
+
 const extensions = {
   'srt': 'srt',
   'txt': 'txt',
@@ -60,7 +62,7 @@ function makePreview() {
         entry.texts.set(style, e.texts.get(style)!);
       entries.push(entry);
   }
-  preview = formatters[format](Source.subs, entries, combine);
+  preview = formatters[format](Source.subs, { useEntries: entries, combine });
 }
 
 async function copy() {

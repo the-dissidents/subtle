@@ -2,7 +2,7 @@ console.info('Source loading');
 
 import { get, readonly, writable } from "svelte/store";
 import { Subtitles } from "../core/Subtitles.svelte";
-import { SubtitleTools } from "../core/SubtitleUtil.svelte";
+import { Format } from "../core/Formats";
 
 import * as fs from "@tauri-apps/plugin-fs";
 import { basename } from '@tauri-apps/api/path';
@@ -14,6 +14,7 @@ import { EventHost } from "./Frontend";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";
+
 const $_ = unwrapFunctionStore(_);
 
 export type Snapshot = {
@@ -41,7 +42,7 @@ export enum ChangeType {
 function readSnapshot(s: Snapshot) {
     // this.clearSelection();
     // this.focused.style = null;
-    Source.subs = Subtitles.deserialize(JSON.parse(s.archive));
+    Source.subs = Format.JSON.parse(s.archive)!;
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch();
     Source.onSubtitlesChanged.dispatch(s.change);
@@ -76,7 +77,7 @@ export const Source = {
         Editing.editChanged = false;
         Editing.isEditingVirtualEntry.set(false);
         this.undoStack.push({
-            archive: JSON.stringify(this.subs.toSerializable()), 
+            archive: Format.JSON.write(this.subs), 
             change: type,
             saved: false}); // TODO
         this.redoStack = [];
@@ -177,7 +178,7 @@ export const Source = {
             const autoSaveName =
                 (currentFile == '' ? 'untitled' : await basename(currentFile, '.json'))
                 + '_' + getCurrentTimestampForFilename() + '.json';
-            const text = JSON.stringify(Source.subs.toSerializable());
+            const text = Format.JSON.write(this.subs);
             await fs.writeTextFile(autoSaveName, text, { baseDir: fs.BaseDirectory.AppLocalData });
             changedSinceLastAutosave = false;
             Debug.info('autosaved', currentFile ?? '<untitled>');

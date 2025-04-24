@@ -1,20 +1,8 @@
-import { Ajv, type JSONSchemaType, type ValidateFunction } from "ajv";
 import { SvelteMap } from "svelte/reactivity";
 import { Debug } from "../Debug";
+import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
 
-const SubtitleFormatVersion = '000400';
-
-const ajv = new Ajv({
-    removeAdditional: true,
-    useDefaults: true
-});
-
-export class SubtitlesParseError extends Error {
-    constructor(msg: string) {
-        super(msg);
-        this.name = 'SubtitlesParseError';
-    }
-}
+export const SubtitleFormatVersion = '000400';
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelTypes = typeof Labels[number];
@@ -39,44 +27,9 @@ export interface SubtitleStyle {
         underline: boolean,
         strikethrough: boolean
     };
-    margin: {top: number, bottom: number, left: number, right: number};
+    margin: { top: number, bottom: number, left: number, right: number };
     alignment: AlignMode;
 }
-
-const StyleSchema: JSONSchemaType<SubtitleStyle> = {
-    type: 'object',
-    properties: {
-        name: { type: 'string' },
-        font: { type: 'string', default: '' },
-        size: { type: 'number', exclusiveMinimum: 0, default: 72 },
-        color: { type: 'string', default: 'white' },
-        outlineColor: { type: 'string', default: 'black' },
-        outline: { type: 'number', minimum: 0, default: 1 },
-        shadow: { type: 'number', minimum: 0, default: 0 },
-        styles: {
-            type: 'object',
-            properties: {
-                bold: { type: 'boolean', default: false },
-                italic: { type: 'boolean', default: false },
-                underline: { type: 'boolean', default: false },
-                strikethrough: { type: 'boolean', default: false },
-            },
-            required: []
-        },
-        margin: {
-            type: 'object', 
-            properties: {
-                top: { type: 'number', default: 10 },
-                bottom: { type: 'number', default: 10 },
-                left: { type: 'number', default: 10 },
-                right: { type: 'number', default: 10 },
-            },
-            required: []
-        },
-        alignment: { type: 'integer', minimum: 1, maximum: 9, default: 2 }
-    },
-    required: ['name', 'styles', 'margin']
-};
 
 export interface SubtitleMetadata {
     title: string,
@@ -90,38 +43,7 @@ export interface SubtitleMetadata {
     }
 }
 
-const MetadataSchema: JSONSchemaType<SubtitleMetadata> = {
-    type: 'object',
-    properties: {
-        title: { type: 'string', default: '' },
-        language: { type: 'string', default: '' },
-        width: { type: 'number', exclusiveMinimum: 0, default: 1920 },
-        height: { type: 'number', exclusiveMinimum: 0, default: 1080 },
-        mediaWidth: { type: 'number', nullable: true, exclusiveMinimum: 0, default: null },
-        mediaHeight: { type: 'number', nullable: true, exclusiveMinimum: 0, default: null },
-        special: {
-            type: 'object',
-            properties: {
-                untimedText: { type: 'string', default: '' }
-            },
-            required: []
-        }
-    },
-    required: ['special']
-}
-
-const validateStyle = ajv.compile(StyleSchema);
-const validateMetadata = ajv.compile(MetadataSchema);
-
-function parseObject<T>(obj: {}, validator: ValidateFunction<T>): T {
-    if (!validator(obj)) {
-        Debug.debug(validator.errors);
-        throw new SubtitlesParseError(validator.errors!.map((x) => x.message).join('; '));
-    }
-    return obj;
-}
-
-const MigrationDuplicatedStyles = new WeakMap<SubtitleStyle, SubtitleStyle[]>();
+export const MigrationDuplicatedStyles = new WeakMap<SubtitleStyle, SubtitleStyle[]>();
 
 export class SubtitleEntry {
     label: LabelTypes = $state('none');
@@ -136,65 +58,6 @@ export class SubtitleEntry {
         this.start = start;
         this.end = end;
     }
-
-    toSerializable() {
-        return {
-            start: this.start,
-            end: this.end,
-            label: this.label,
-            texts: [...[...this.texts.entries()]
-                .map(([style, text]) => [style.name, text] as const)]
-        }
-    }
-
-    static deserialize(
-        o: ReturnType<SubtitleEntry['toSerializable']>, 
-        subs: Subtitles, version: string
-    ): SubtitleEntry {
-        function createDuplicateStyle(from: SubtitleStyle) {
-            for (let i = 1; ; i++) {
-                const name = from.name + ` (${i})`;
-                if (!subs.styles.find((x) => x.name == name)) {
-                    let duplicate = structuredClone(from);
-                    duplicate.name = name;
-                    subs.styles.push(duplicate);
-                    return duplicate;
-                }
-            }
-        }
-
-        let entry = new SubtitleEntry(o.start, o.end);
-        if (o.label) entry.label = o.label;
-
-        for (const [styleName, text] of o.texts) {
-            let style = subs.styles.find((x) => x.name == styleName);
-            if (!style) throw new SubtitlesParseError(`invalid style name: ${styleName}`);
-
-            if (entry.texts.has(style)) {
-                if (version >= '000400') throw new SubtitlesParseError(
-                    `style appeared multiple time in one entry: ${styleName}`);
-
-                // migrate pre-0.4 styles
-                let duplicated = MigrationDuplicatedStyles.get(style);
-                let found: SubtitleStyle | undefined;
-                if (duplicated) {
-                    found = duplicated.find((x) => !entry.texts.has(x));
-                    if (!found) {
-                        found = createDuplicateStyle(style);
-                        duplicated.push(found);
-                        Debug.debug('migrate: new duplicate style:', found.name);
-                    }
-                } else {
-                    found = createDuplicateStyle(style);
-                    MigrationDuplicatedStyles.set(style, [found]);
-                    Debug.debug('migrate: new duplicate style:', found.name);
-                }
-                style = found;
-            }
-            entry.texts.set(style, text);
-        }
-        return entry;
-    }
 }
 
 type MigrationInfo = 'none' | 'ASS' | 'text' | 'olderVersion';
@@ -208,13 +71,37 @@ export class Subtitles {
     entries: SubtitleEntry[] = [];
     migrated: MigrationInfo = 'none';
 
-    static createStyle(name: string) {
-        let data = {name, styles: {}, margin: {}};
-        return parseObject(data, validateStyle);
-    }
+    static createStyle(name: string): SubtitleStyle {
+        return {
+            name,
+            font: '', size: 72,
+            color: 'white',
+            outlineColor: 'black',
+            outline: 1,
+            shadow: 0,
+            styles: {
+                bold: false,
+                italic: false,
+                underline: false,
+                strikethrough: false
+            },
+            margin: { top: 10, bottom: 10, left: 10, right: 10 },
+            alignment: 2
+        }
+    };
 
-    static #createMetadata() {
-        return parseObject({special: {}}, validateMetadata);
+    static #createMetadata(): SubtitleMetadata {
+        return {
+            title: '',
+            language: '',
+            width: 1920,
+            height: 1080,
+            mediaWidth: null,
+            mediaHeight: null,
+            special: {
+                untimedText: ''
+            }
+        }
     }
 
     /** Note: only copies styles from base */
@@ -228,16 +115,6 @@ export class Subtitles {
             });
             Debug.assert(def !== undefined);
             this.defaultStyle = def;
-        }
-    }
-
-    toSerializable() {
-        return {
-            version: SubtitleFormatVersion,
-            metadata: this.metadata,
-            defaultStyle: this.defaultStyle.name,
-            styles: this.styles,
-            entries: this.entries.map((x) => x.toSerializable()),
         }
     }
 
@@ -281,39 +158,21 @@ export class Subtitles {
         }
         return ok;
     }
+}
 
-    static deserialize(o: ReturnType<Subtitles['toSerializable']>) {
-        const version = o.version ?? '0';
-        let subs = new Subtitles();
-        if (o.metadata) {
-            subs.metadata = parseObject(o.metadata, validateMetadata);
-        }
-
-        if (o.defaultStyle === undefined || o.styles === undefined || !Array.isArray(o.entries))
-            throw new SubtitlesParseError('missing properties');
-
-        if (version < '000400') {
-            // pre 0.4: the default style is defined outside the styles array
-            let defaultStyle = $state(parseObject(o.defaultStyle, validateStyle))
-            subs.defaultStyle = defaultStyle;
-            subs.styles = [defaultStyle, ...o.styles.map((x) => {
-                let style = $state(parseObject(x, validateStyle));
-                return style;
-            })];
-            subs.migrated = 'olderVersion';
-        } else {
-            subs.styles = o.styles.map((x) => {
-                let style = $state(parseObject(x, validateStyle));
-                return style;
-            });
-            const def = subs.styles.find((x) => x.name == o.defaultStyle);
-            if (def === undefined) throw new SubtitlesParseError('invalid default style name');
-            subs.defaultStyle = def;
-        }
-
-        subs.entries = o.entries
-            .map((x) => SubtitleEntry.deserialize(x, subs, version))
-            .filter((x) => x.texts.size > 0);
-        return subs;
+export class SubtitlesParseError extends Error {
+    constructor(msg: string) {
+        super(msg);
+        this.name = 'SubtitlesParseError';
     }
+}
+
+export interface SubtitleFormat {
+    parse(source: string): Subtitles;
+    write(subs: Subtitles, options?: {
+        headerless?: boolean,
+        useEntries?: SubtitleEntry[],
+        combine?: LinearFormatCombineStrategy
+    }): string;
+    // TODO: detect?
 }

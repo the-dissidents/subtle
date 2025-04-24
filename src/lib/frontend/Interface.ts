@@ -8,8 +8,8 @@ import { Menu } from "@tauri-apps/api/menu";
 import chardet from 'chardet';
 import * as iconv from 'iconv-lite';
 
-import { ASS } from "../core/ASS.svelte";
 import { type Subtitles } from "../core/Subtitles.svelte";
+import { Format } from "../core/Formats";
 
 import { Dialogs } from "./Dialogs";
 import { ChangeType, Source } from "./Source";
@@ -23,6 +23,7 @@ import { Basic } from "../Basic";
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Debug } from "../Debug";
+
 const $_ = unwrapFunctionStore(_);
 
 const IMPORT_FILTERS = [
@@ -218,7 +219,7 @@ export const Interface = {
             if (typeof selected != 'string') return;
             file = selected;
         }
-        const text = JSON.stringify(Source.subs.toSerializable(), undefined, 2);
+        const text = Format.JSON.write(Source.subs);
         if (await Source.saveTo(file, text) && Playback.video?.source) {
             await PrivateConfig.setVideo(file, Playback.video.source);
             Source.subs.migrated = 'none';
