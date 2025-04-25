@@ -16,5 +16,24 @@
         "src-tauri/**"
     ],
     "i18n-ally.sourceLanguage": "zh-cn",
+    "rust-analyzer.check.overrideCommand": [
+        "${workspaceFolder}/src-tauri/msvc-cargo-wrapper.bat",
+        "check",
+        // "--quiet",
+        "--workspace",
+        "--message-format=json",
+        "--all-targets",
+        // "--keep-going"
+    ],
+    "rust-analyzer.cargo.buildScripts.overrideCommand": [
+        "${workspaceFolder}/src-tauri/msvc-cargo-wrapper.bat",
+        "check",
+        "--quiet",
+        "--workspace",
+        "--message-format=json",
+        "--all-targets",
+        "--keep-going"
+    ],
+    // "rust-analyzer.server.extraEnv": { "CARGO_TARGET_DIR": "target/rust-analyzer" }
     // "typescript.tsserver.experimental.enableProjectDiagnostics": true
 }

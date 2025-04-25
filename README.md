@@ -95,19 +95,47 @@
 
 ### Windows
 
-相当困难。编译过程中需要在本地构建ffmpeg以便静态链接，这件事必须在支持shell脚本的环境下进行，比如MSYS2。
+#### 使用GNU工具链
 
-1. 确保能连接外网。而且要确保在PowerShell里和MSYS2的终端里都可以。
+在Cargo.toml里启用**我们改过的**ffmpeg-sys-next（也许别的也能用，但不保证）：
+```
+[patch.crates-io]
+ffmpeg-sys-next = { git = "https://github.com/the-dissidents/rust-ffmpeg-sys.git", branch = "master" }
+```
+
+注意编译过程中需要在本地构建ffmpeg以便静态链接，这件事必须在支持shell脚本的环境下进行，比如MSYS2。
+
+1. 确保能连接外网。
 2. 安装**MSYS2**。使用其中的pacman安装以下工具：clang, gcc toolchain, yasm, diffutils，记得选择统一的平台：`mingw64/mingw-w64-x86_64-*`
 3. 把clang的地址导出为环境变量LIBCLANG_PATH，否则一些工具可能找不着它
-4. 在**MSYS2**下使用rustup安装cargo。一定要把host triple改成`x86_64-pc-windows-gnu`
-5. 把MSYS2的可执行文件路径（例如`C:/msys2/usr/bin`）加到 Windows的PATH里面
-6. 用官方MSI安装Node.js。最好**不要使用**winget和fnm，否则可能吃苦头！**不要在MSYS2里面**安装Node.js，否则无法正常运行vite！
+4. 在**MSYS2**下使用rustup安装cargo。把host triple改成`x86_64-pc-windows-gnu`
+5. 把MSYS2的可执行文件路径（例如`C:/msys2/usr/bin`）加到Windows的PATH里面
+6. 用官方MSI安装Node.js。**不要在MSYS2里面**安装Node.js，否则无法正常运行vite！
 7. 如果没安装的话，用VS Code安装git
 8. `git clone`
 9. `npm install`
 10. `cargo install tauri-cli --version "^2.0.0" --locked`（只需要第一次，后续构建不需要）
 11. `cargo tauri build`
+
+#### 使用MSVC工具链
+
+在Cargo.toml里启用**我们改过的**ffmpeg-sys-next，但基于官方新版：
+```
+[patch.crates-io]
+ffmpeg-sys-next = { git = "https://github.com/the-dissidents/rust-ffmpeg-sys.git", branch = "official" }
+```
+
+- 确保能连接外网。
+- 直接在Windows环境下用rustup安装cargo，使用默认的host triple；同时安装Visual Studio
+- 安装Windows版NASM，记得加进PATH
+- 下载Windows版clang/LLVM（例如`clang+llvm-20.1.3-x86_64-pc-windows-msvc.tar.xz`），设置好LIBCLANG_PATH
+- 还是要安装**MSYS2**。`pacman -Syu`，`pacman -S make`
+- 把MSYS2的可执行文件路径（例如`C:/msys2/usr/bin`）加到Windows的PATH里面
+- 仍然是用官方MSI安装Node.js
+- 使用Visual Studio环境（例如`x64 Native Tools Command Prompt for VS 2022`）进行构建。
+- 注意，这种情况下编译ffmpeg可能花费非常长的时间
+- 还要注意，这种情况下rust-analyzer有可能因为没有Visual Studio环境而失败。为了让它正常工作，需要在它的配置里面加入关于msvc-cargo-wrapper.bat（这是我随便写的一个东西，你可能需要按照自己情况改一下）的几段。
+
 
 ## 联系
 

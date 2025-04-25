@@ -27,6 +27,7 @@ tauri-plugin-log = "2"
 lazy_static = "1.5.0"
 time = "0.3.41"
 deranged = "=0.3.11"
+vsprintf = "2.0.0"
 
 [target.'cfg(not(windows))'.dependencies]
 pprof = { version = "0.14.0", features = ["flamegraph"] }
@@ -36,4 +37,4 @@ pprof = { version = "0.14.0", features = ["flamegraph"] }
 custom-protocol = ["tauri/custom-protocol"]
 
 [patch.crates-io]
-ffmpeg-sys-next = { git = "https://github.com/the-dissidents/rust-ffmpeg-sys.git", branch = "master" }
+ffmpeg-sys-next = { git = "https://github.com/the-dissidents/rust-ffmpeg-sys.git", branch = "official" }

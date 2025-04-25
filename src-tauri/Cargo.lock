@@ -1260,7 +1260,7 @@ dependencies = [
 [[package]]
 name = "ffmpeg-sys-next"
 version = "7.1.0"
-source = "git+https://github.com/the-dissidents/rust-ffmpeg-sys.git?branch=master#12c43899873b5344502797741e9e3e831b09dafa"
+source = "git+https://github.com/the-dissidents/rust-ffmpeg-sys.git?branch=official#474e3ff1c42648309f26504697b8aaa7dcd3f0be"
 dependencies = [
  "bindgen",
  "cc",
@@ -4185,6 +4185,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-os",
  "time",
+ "vsprintf",
 ]
 
 [[package]]
@@ -5175,6 +5176,16 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vsprintf"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aec2f81b75ca063294776b4f7e8da71d1d5ae81c2b1b149c8d89969230265d63"
+dependencies = [
+ "cc",
+ "libc",
+]
 
 [[package]]
 name = "vswhom"

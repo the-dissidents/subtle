@@ -1,29 +1,23 @@
 use ffmpeg_sys_next;
 use log::Level;
-use std::ffi::{c_char, c_int, c_void, CStr};
+use std::ffi::{c_char, c_int, c_void};
 use lazy_static::lazy_static;
 use std::sync::RwLock;
 
 // cf. https://github.com/rust-lang/rust-bindgen/issues/2631
 
-#[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-type VaList = *mut ffmpeg_sys_next::__va_list_tag;
-
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[cfg(any(
+    // Use ffmpeg_sys_next::va_list on macOS/aarch64 and Windows/MSVC.
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "windows", target_env = "msvc")
+))]
 type VaList = ffmpeg_sys_next::va_list;
 
-#[cfg(not(target_os = "windows"))]
-use ffmpeg_sys_next::vsnprintf;
-
-#[cfg(target_os = "windows")]
-unsafe fn vsnprintf(
-    out: *mut c_char,
-    max_count: u64,
-    format: *const c_char,
-    args: VaList,
-) -> c_int {
-    ffmpeg_sys_next::vsnprintf_s(out, max_count as usize, max_count as usize, format, args)
-}
+#[cfg(not(any(
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "windows", target_env = "msvc")
+)))]
+type VaList = *mut ffmpeg_sys_next::__va_list_tag;
 
 unsafe extern "C" fn rust_log_callback(
     _ptr: *mut c_void,
@@ -47,18 +41,8 @@ unsafe extern "C" fn rust_log_callback(
         }
     };
 
-    let mut buffer = [0u8; 1024];
-    vsnprintf(
-        buffer.as_mut_ptr() as *mut c_char,
-        buffer.len() as u64,
-        fmt,
-        args,
-    );
-
-    let c_str = CStr::from_ptr(buffer.as_ptr() as *const c_char);
-    let message = c_str.to_string_lossy();
-
-    log::log!(target: "ffmpeg", level, "{}", message.trim_end());
+    let str = vsprintf::vsprintf(fmt, args).unwrap();
+    log::log!(target: "ffmpeg", level, "{}", str.trim_end());
 }
 
 pub fn init_ffmpeg_logging() {
