@@ -211,7 +211,7 @@ export const Interface = {
   
     async askSaveFile(saveAs = false) {
         let file = get(Source.currentFile);
-        if (file == '' || saveAs || Source.subs.migrated) {
+        if (file == '' || saveAs || Source.subs.migrated != 'none') {
             const selected = await dialog.save({
                 filters: [{name: $_('filter.subtle-archive'), extensions: ['json']}],
                 defaultPath: file ?? undefined

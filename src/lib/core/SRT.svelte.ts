@@ -83,9 +83,11 @@ export const SRTSubtitles: SubtitleFormat = {
         const linear = SubtitleUtil.combineToLinear(subs, 
             options?.useEntries ?? subs.entries, 
             options?.combine ?? LinearFormatCombineStrategy.KeepOrder);
-        let result = linear.map((ent, i) => `${i+1}\n${
-            Basic.formatTimestamp(ent.start, 3, ',')} --> ${
-            Basic.formatTimestamp(ent.start, 3, ',')}\n${ent.text}`);
+        let result = linear
+            .filter((x) => x.text.trim().length > 0)
+            .map((ent, i) => `${i+1}\n${
+                Basic.formatTimestamp(ent.start, 3, ',')} --> ${
+                Basic.formatTimestamp(ent.end, 3, ',')}\n${ent.text.trim()}`);
         return result.join('\n\n');
     },
 };

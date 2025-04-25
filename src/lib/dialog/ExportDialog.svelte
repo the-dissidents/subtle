@@ -60,6 +60,7 @@ function makePreview() {
     for (const style of usedStyles)
       if (e.texts.has(style))
         entry.texts.set(style, e.texts.get(style)!);
+    if (entry.texts.size > 0)
       entries.push(entry);
   }
   preview = formatters[format](Source.subs, { useEntries: entries, combine });
