@@ -19,11 +19,9 @@
     "rust-analyzer.check.overrideCommand": [
         "${workspaceFolder}/src-tauri/msvc-cargo-wrapper.bat",
         "check",
-        // "--quiet",
         "--workspace",
         "--message-format=json",
-        "--all-targets",
-        // "--keep-going"
+        "--all-targets"
     ],
     "rust-analyzer.cargo.buildScripts.overrideCommand": [
         "${workspaceFolder}/src-tauri/msvc-cargo-wrapper.bat",
@@ -33,7 +31,5 @@
         "--message-format=json",
         "--all-targets",
         "--keep-going"
-    ],
-    // "rust-analyzer.server.extraEnv": { "CARGO_TARGET_DIR": "target/rust-analyzer" }
-    // "typescript.tsserver.experimental.enableProjectDiagnostics": true
+    ]
 }

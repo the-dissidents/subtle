@@ -1,3 +1,33 @@
+## 开发者注意事项
+
+### 项目组织
+
+- HTML/Svelte组件统一设置tab宽度为2，其它文件统一tab宽度为4，但都使用空格，不要使用tab字符。
+- 换行符统一使用LF（`\n`），避免使用CR-LF（`\r\n`）。
+- 不要提交IDE配置文件，因为它们不一定能跨平台。但是可以给一些示例，比如我们有`.vscode/settings.mac.json`和`.vscode/settings.windows-msvc.json`，可以视情况改编给自己使用。
+
+### 代码风格（TypeScript）
+
+- 标识符起名要使用尽可能正确的英语。
+- 注释可选择使用尽可能正确的英语或者中文。注释有两种不同的用途：1. 让过于庞大的函数变得清晰；2. 解释比较难懂的算法或反直觉的逻辑。
+- 每一个语句后面都要加分号（除了控制流语句如`if (...) {}`之外）。
+  - 我们建议在`type ... = {...};`里面加分号
+  - 但是`interface ... {...}`和`class ... {...}`里面不需要
+- 如果你想要写一个TypeScript枚举，首先想想能不能用literal union解决。后者基本上能覆盖前者的所有使用场合，在性能上几乎没有差异，并且在调试和序列化上有优势。
+- 使用switch讨论枚举或union取值情况的时候一定加上`default`块，并在其中使用`Debug.never`。
+- 多使用`Debug.assert`和`Debug.early`。
+  - 我们称下列情况为early return：一个函数被调用的时机不恰当，或者在不该调用的时候被调用了，导致什么也不需要做。一般来说，它不导致程序直接出现错误行为，但很可能意味着某些地方有潜在的逻辑问题。
+  - 建议在early return的时候写`return Debug.early('reason');`。
+
+### 代码风格（Rust）
+
+- TODO
+- 我不懂Rust，我只会瞎写。谁来教我
+
+---
+
+以下是一些笔记和参考资料
+
 ## Terribly Unintuitive Aspects of Svelte 5's Proxy-Based Reactivity
 
 The `state_proxy_equality_mismatch` message reads: "Reactive `$state(...)` proxies and the values they proxy have different identities ..." But what does that mean? It means you just **can't** compare the reference equality between them. And note that objects and arrays are deeply reactive; consider:

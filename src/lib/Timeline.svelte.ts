@@ -201,7 +201,7 @@ export class Timeline {
     #preprocessStyles() {
         const subs = Source.subs;
         this.#entryHeight = (this.#height - HEADER_HEIGHT - TRACK_AREA_MARGIN * 2) 
-            / (subs.styles.length+1);
+            / subs.styles.length;
         this.#stylesMap = new Map(subs.styles.map((x, i) => [x, i]));
     }
 

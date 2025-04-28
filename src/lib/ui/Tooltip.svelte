@@ -52,8 +52,7 @@ function findBoundingRect(element: HTMLElement): DOMRect {
   return new DOMRect(minX, minY, width, height);
 }
 
-function computePosition(rect: DOMRect, pos: TooltipPosition
-): [number, number] {
+function computePosition(rect: DOMRect, pos: TooltipPosition): [number, number] {
   const offset = 5;
   switch (pos) {
     case 'top':
