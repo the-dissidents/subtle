@@ -1,5 +1,5 @@
 <script lang="ts">
-import { newMetricFilter, TextMetric, TextMetricFilterMethods, TextMetricFilterNullMethods, TextMetrics, type MetricFilter, type MetricFilterCombination, type MetricFilterMethod } from "./core/Filter";
+import { newMetricFilter, TextMetric, TextMetricFilterMethods, TextMetricFilterNullMethods, TextMetrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod } from "./core/Filter";
 import { _, locale } from 'svelte-i18n';
 import { Debug } from "./Debug";
 import type { Action } from "svelte/action";
@@ -7,11 +7,11 @@ import { tick } from "svelte";
 import { Menu } from "@tauri-apps/api/menu";
 
 interface Props {
-  filter: MetricFilterCombination | null
-  // onsubmit?: () => void;
+  filter: MetricFilter | null
+  onchange?: () => void;
 }
 
-let { filter = $bindable() }: Props = $props();
+let { filter = $bindable(), onchange }: Props = $props();
 let updateCounter = $state(0);
 
 locale.subscribe(() => updateCounter++);
@@ -47,7 +47,7 @@ const autoWidth: Action<HTMLSelectElement> = (elem) => {
   });
 }
 
-function createDefaultFilter(): MetricFilter {
+function createDefaultFilter(): SimpleMetricFilter {
   return newMetricFilter({
     metric: 'chars',
     method: 'numberNull',
@@ -57,7 +57,7 @@ function createDefaultFilter(): MetricFilter {
 }
 </script>
 
-{#snippet makeParameter(f: MetricFilter, i: number)}
+{#snippet makeParameter(f: SimpleMetricFilter, i: number)}
   {@const method = TextMetricFilterMethods[f.method]}
   {Debug.assert((<any[]>f.parameters).length == TextMetricFilterMethods[f.method].parameters)}
   <input type='text' size='2' value={f.parameters[i]}
@@ -65,12 +65,14 @@ function createDefaultFilter(): MetricFilter {
       const params = <string[] | number[]>f.parameters;
       if (method.parameterType == 'number') {
         const num = Number.parseFloat(ev.currentTarget.value);
-        if (!isNaN(num))
+        if (!isNaN(num)) {
           params[i] = num;
-        else
+          onchange?.();
+        } else
           ev.currentTarget.value = params[i].toString();
       } else if (method.parameterType == 'string') {
         params[i] = ev.currentTarget.value;
+        onchange?.();
       } else {
         Debug.never(method.parameterType);
       }
@@ -78,9 +80,9 @@ function createDefaultFilter(): MetricFilter {
 {/snippet}
 
 {#snippet makeFilter(
-  f: MetricFilterCombination,
+  f: MetricFilter,
   parentType: 'and' | 'or' | null,
-  replace: (...to: MetricFilterCombination[]) => void,
+  replace: (...to: MetricFilter[]) => void,
   remove?: () => void
 )}
   {#if 'type' in f}
@@ -96,12 +98,14 @@ function createDefaultFilter(): MetricFilter {
             {@render makeFilter(subfilter, f.type, (...to) => {
               Debug.assert('type' in f);
               f.filters.splice(i, 1, ...to);
+              onchange?.();
             }, () => {
               Debug.assert('type' in f);
               f.filters.splice(i, 1);
               Debug.assert(f.filters.length >= 1);
               if (f.filters.length == 1)
                 replace(f.filters[0]);
+              onchange?.();
             })}
           </li>
         {/each}
@@ -112,7 +116,10 @@ function createDefaultFilter(): MetricFilter {
       {#if f.negated}
         <label>
           <input type='checkbox' class="button"
-            checked={true} onchange={() => f.negated = false}/>
+            checked={true} onchange={() => {
+              f.negated = false;
+              onchange?.();
+            }}/>
           {$_('filteredit.not')}
         </label>
       {/if}
@@ -124,9 +131,10 @@ function createDefaultFilter(): MetricFilter {
           Debug.assert(name in TextMetrics);
           const newMetric = TextMetrics[name as keyof typeof TextMetrics];
 
-          if (newMetric.type == method.fromType)
+          if (newMetric.type == method.fromType) {
             f.metric = name;
-          else replace({
+            onchange?.();
+          } else replace({
             metric: name,
             method: TextMetricFilterNullMethods[method.fromType],
             negated: false,
@@ -154,6 +162,7 @@ function createDefaultFilter(): MetricFilter {
             params[i] = newMethod.parameterType == 'number' ? 0
                   : newMethod.parameterType == 'string' ? ''
                   : Debug.never();
+          onchange?.();
         }}
       >
         {#each methods as [name, method]}
@@ -173,7 +182,10 @@ function createDefaultFilter(): MetricFilter {
           {
             text: $_('filteredit.negate'),
             checked: f.negated,
-            action: () => f.negated = !f.negated
+            action: () => {
+              f.negated = !f.negated;
+              onchange?.();
+            }
           },
           { item: 'Separator' },
           {
@@ -213,7 +225,10 @@ function createDefaultFilter(): MetricFilter {
 
 {#key updateCounter}
   {#if filter === null}
-    <button class="hlayout" onclick={() => filter = createDefaultFilter()}> 
+    <button class="hlayout" onclick={() => {
+      filter = createDefaultFilter();
+      onchange?.();
+    }}> 
       <svg class="feather">
         <use href={`/feather-sprite.svg#plus`} />
       </svg>
@@ -221,8 +236,8 @@ function createDefaultFilter(): MetricFilter {
     </button>
   {:else}
     {@render makeFilter(filter, null, 
-      (to) => filter = to, 
-      () => filter = null
+      (to) => { filter = to; onchange?.(); }, 
+      () => { filter = null; onchange?.(); }
     )}
   {/if}
 {/key}

@@ -177,7 +177,9 @@
   "filter": {
     "all-supported-formats": "所有支援格式",
     "greater-than": ">",
+    "greater-than-or-equal": "≥",
     "less-than": "<",
+    "less-than-or-equal": "≤",
     "number-equals": "=",
     "srt-subtitles": "SRT 字幕",
     "ssa-subtitles": "SSA 字幕",

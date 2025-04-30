@@ -2,8 +2,10 @@ import type { JSONSchemaType } from "ajv";
 import { Debug } from "../Debug";
 import type { SubtitleEntry, SubtitleStyle } from "./Subtitles.svelte"
 
-import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { ajv, DeserializationError, parseObject } from "../Serialization";
+import wcwidth from "wcwidth";
+
+import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 export type TextMetricTypeName = 'string' | 'number';
@@ -19,7 +21,8 @@ export class TextMetric<TypeName extends TextMetricTypeName> {
         public readonly localizedName: () => string,
         public readonly shortName: () => string,
         public readonly value: 
-            (entry: SubtitleEntry, style: SubtitleStyle) => TextMetricType<TypeName>
+            (entry: SubtitleEntry, style: SubtitleStyle) => TextMetricType<TypeName>,
+        public readonly description?: () => string
     ) {}
 };
 
@@ -53,7 +56,7 @@ function newFilterMethod<
     Arity extends 0 | 1 | 2,
 >(f: MetricFilterMethod<FromType, ParameterType, Arity>) { return f; }
 
-export type MetricFilter<
+export type SimpleMetricFilter<
     Metric extends TextMetricName = TextMetricName,
     Method extends TextMetricFilterMethodName = TextMetricFilterMethodName
 > = {
@@ -70,19 +73,19 @@ export type MetricFilter<
 export function newMetricFilter<
     Metric extends TextMetricName,
     Method extends TextMetricFilterMethodName
->(f: MetricFilter<Metric, Method>) { return f; }
+>(f: SimpleMetricFilter<Metric, Method>) { return f; }
 
-export type MetricFilterCombination = {
+export type MetricFilter = {
     type: 'and' | 'or',
-    filters: (MetricFilter<TextMetricName, TextMetricFilterMethodName> | MetricFilterCombination)[]
-} | MetricFilter<TextMetricName, TextMetricFilterMethodName>;
+    filters: (SimpleMetricFilter<TextMetricName, TextMetricFilterMethodName> | MetricFilter)[]
+} | SimpleMetricFilter<TextMetricName, TextMetricFilterMethodName>;
 
 export type EvaluateFilterResult = {
-    failed: MetricFilter<TextMetricName, TextMetricFilterMethodName>[]
+    failed: SimpleMetricFilter<TextMetricName, TextMetricFilterMethodName>[]
 };
 
 export function evaluateFilter(
-    filter: MetricFilterCombination,
+    filter: MetricFilter,
     entry: SubtitleEntry, style: SubtitleStyle
 ): EvaluateFilterResult {
     if ('type' in filter) {
@@ -99,10 +102,9 @@ export function evaluateFilter(
         }
     } else {
         const from = TextMetrics[filter.metric].value(entry, style);
-        return TextMetricFilterMethods[filter.method]
-            .exec(from as never, ...(filter.parameters as [never, any]))
-                ? { failed: [] }
-                : { failed: [filter] };
+        const success = TextMetricFilterMethods[filter.method]
+            .exec(from as never, ...(filter.parameters as [never, any])) != filter.negated;
+        return { failed: success ? [] : [filter] };
     }
 }
 
@@ -123,11 +125,23 @@ export const TextMetrics = {
         () => $_('metrics.number-of-characters'), 
         () => $_('metrics.number-of-characters-short'), 
         (e, s) => e.texts.get(s)!.length),
+    letters: new TextMetric('number', 
+        () => $_('metrics.number-of-readable-characters'), 
+        () => $_('metrics.number-of-readable-characters-short'), 
+        (e, s) => getTextLength(e.texts.get(s)!)),
     charsInLongestLine: new TextMetric('number', 
         () => $_('metrics.number-of-characters-in-longest-line'), 
         () => $_('metrics.number-of-characters-in-longest-line-short'), 
         (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map((x) => x.length))),
-    charsPerSecond: new TextMetric('number', 
+    lettersInLongestLine: new TextMetric('number', 
+        () => $_('metrics.number-of-letters-in-longest-line'), 
+        () => $_('metrics.number-of-letters-in-longest-line-short'), 
+        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(getTextLength))),
+    widthOfLongestLine: new TextMetric('number', 
+        () => $_('metrics.width-of-longest-line'), 
+        () => $_('metrics.width-of-longest-line-short'), 
+        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(wcwidth))),
+    lettersPerSecond: new TextMetric('number', 
         () => $_('metrics.readable-characters-per-second'), 
         () => $_('metrics.readable-characters-per-second-short'), 
         (e, s) => {
@@ -198,6 +212,20 @@ export const TextMetricFilterMethods = {
         parameters: 1,
         exec: (a, b) => a < b,
     }),
+    numberGeq: newFilterMethod({
+        localizedName: () => $_('filter.greater-than-or-equal'),
+        fromType: 'number',
+        parameterType: 'number',
+        parameters: 1,
+        exec: (a, b) => a >= b,
+    }),
+    numberLeq: newFilterMethod({
+        localizedName: () => $_('filter.less-than-or-equal'),
+        fromType: 'number',
+        parameterType: 'number',
+        parameters: 1,
+        exec: (a, b) => a <= b,
+    }),
     numberBetweenInclusive: newFilterMethod({
         localizedName: () => $_('filter.between-inclusive'),
         fromType: 'number',
@@ -232,7 +260,7 @@ type _ParamType<Name extends TextMetricFilterMethodName> =
 
 // serialization
 
-const FilterSchema: JSONSchemaType<MetricFilter> = {
+const SimpleFilterSchema: JSONSchemaType<SimpleMetricFilter> = {
     type: 'object',
     properties: {
         metric: { enum: Object.keys(TextMetrics) } as any,
@@ -248,7 +276,8 @@ const FilterSchema: JSONSchemaType<MetricFilter> = {
     required: ['metric', 'method', 'parameters']
 };
 
-const FilterCombinationSchema: JSONSchemaType<MetricFilter | MetricFilterCombination> = {
+export const FilterSchema: JSONSchemaType<MetricFilter> = {
+    '$id': 'filter',
     oneOf: [
         {
             type: 'object',
@@ -261,14 +290,14 @@ const FilterCombinationSchema: JSONSchemaType<MetricFilter | MetricFilterCombina
             },
             required: ['type', 'filters']
         },
-        FilterSchema
+        SimpleFilterSchema
     ]
 };
 
-const validateFilter = ajv.compile(FilterCombinationSchema);
+const validateFilter = ajv.compile(FilterSchema);
 
 function checkFilterInternal(
-    filter: MetricFilter | MetricFilterCombination
+    filter: SimpleMetricFilter | MetricFilter
 ): void {
     if ('type' in filter) {
         filter.filters.forEach(checkFilterInternal);
@@ -287,7 +316,7 @@ function checkFilterInternal(
     }
 }
 
-export function deserializeFilter(filter: {}): MetricFilterCombination {
+export function deserializeFilter(filter: {}): MetricFilter {
     const obj = parseObject(filter, validateFilter);
     checkFilterInternal(obj);
     return obj;

@@ -34,6 +34,7 @@ export enum ChangeType {
     InPlace,
     Times,     // i.e. renderer needs to re-sort
     Order,
+    Filter,
     StyleDefinitions,
     General,   // TODO: this is unclear
     Metadata

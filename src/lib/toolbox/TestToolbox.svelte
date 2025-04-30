@@ -12,7 +12,7 @@ import { Commands } from '../frontend/Commands';
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 import { Source } from '../frontend/Source';
 import FilterEdit from '../FilterEdit.svelte';
-    import { newMetricFilter, TextMetricFilterMethods, TextMetrics, type MetricFilter, type MetricFilterCombination } from '../core/Filter';
+    import { newMetricFilter, TextMetricFilterMethods, TextMetrics, type SimpleMetricFilter, type MetricFilter } from '../core/Filter';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -22,7 +22,7 @@ MAPI.version().then((x) => {
 let media: MMedia | undefined;
 let tooltipPos: TooltipPosition = $state('bottom');
 
-let filter: MetricFilterCombination = $state({
+let filter: MetricFilter = $state({
   type: 'and',
   filters: [
     newMetricFilter({

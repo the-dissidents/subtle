@@ -33,7 +33,7 @@ import { SvelteSet } from "svelte/reactivity";
 
 import { Basic } from "./Basic";
 import { Debug } from "./Debug";
-import { SubtitleEntry } from "./core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
 import { theme, LabelColor } from "./Theming.svelte";
 
 import { CanvasManager } from "./CanvasManager";
@@ -43,12 +43,12 @@ import { Actions } from "./frontend/Actions";
 import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
 import { EventHost } from "./frontend/Frontend";
 import { Interface } from "./frontend/Interface";
-import type { UIFocus } from "./frontend/Frontend";
 import { Playback } from "./frontend/Playback";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
 import { _ } from 'svelte-i18n';
 import { get } from 'svelte/store';
+    import { evaluateFilter, type MetricFilter, type SimpleMetricFilter } from "./core/Filter";
 
 let selection = $state(new SvelteSet<SubtitleEntry>);
 let canvas = $state<HTMLCanvasElement>();
@@ -56,7 +56,16 @@ let manager: CanvasManager;
 let cxt: CanvasRenderingContext2D;
 
 let uiFocus = Interface.uiFocus;
-let lines: {entry: SubtitleEntry, line: number, height: number}[] = [];
+let lines: {
+  entry: SubtitleEntry, 
+  line: number, 
+  height: number,
+  texts: {
+    style: SubtitleStyle,
+    text: string,
+    failed: SimpleMetricFilter[],
+  }[]
+}[] = [];
 let lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
 let totalLines = 0;
 let requestedLayout = false;
@@ -74,6 +83,7 @@ const headerBackground    = $derived(theme.isDark ? '#555'          : '#ddd');
 const overlapColor        = $derived(theme.isDark ? 'lightpink'     : 'crimson');
 const focusBackground     = $derived(theme.isDark ? 'darkslategray' : 'lightblue');
 const selectedBackground  = $derived(theme.isDark ? '#444'          : '#eee');
+const errorBackground     = $derived(theme.isDark ? '#a35'          : '#ed0');
 
 function font() {
   return `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`;
@@ -88,16 +98,21 @@ function layout(cxt: CanvasRenderingContext2D) {
   let textWidth = 0;
   for (const entry of Source.subs.entries) {
     let height = 0;
-    for (const [style, text] of entry.texts) {
-      // if (!Source.subs.styles.includes(style)) {
-      //   Source.subs.styles.forEach((x) => Debug.warn('styles:', x));
-      //   Debug.warn('missing:', style);
-      // }
+    const texts: (typeof lines)[number]['texts'] = [];
+    for (const style of Source.subs.styles) {
+      const text = entry.texts.get(style);
+      if (text === undefined) continue;
+
       let splitLines = text.split('\n');
       height += splitLines.length;
       textWidth = Math.max(textWidth, ...splitLines.map((x) => cxt.measureText(x).width));
+      texts.push({
+        style, text,
+        failed: style.validator === null 
+          ? [] : evaluateFilter(style.validator, entry, style).failed
+      });
     }
-    lines.push({entry, line: totalLines, height});
+    lines.push({entry, line: totalLines, height, texts});
     lineMap.set(entry, {line: totalLines, height});
     totalLines += height;
   }
@@ -110,10 +125,10 @@ function layout(cxt: CanvasRenderingContext2D) {
   colPos[4] = colPos[3] + cellPadding * 2 + Math.max(
     ...Source.subs.styles.map((x) => cxt.measureText(x.name).width), 
     cxt.measureText('style').width);
-  colPos[5] = colPos[4] + cellPadding * 2 + cxt.measureText(`999.9`).width;
+  // colPos[5] = colPos[4] + cellPadding * 2 + cxt.measureText(`999.9`).width;
 
   manager.setContentRect({
-    r: colPos[5] + cellPadding * 2 + textWidth + manager.scrollerSize,
+    r: colPos[4] + cellPadding * 2 + textWidth + manager.scrollerSize,
     b: (totalLines + 1) * lineHeight + headerHeight + manager.scrollerSize // add 1 for virtual entry
   });
 }
@@ -142,12 +157,12 @@ function render(cxt: CanvasRenderingContext2D) {
   let selection = new Set(Editing.getSelection());
   let focused = Editing.getFocusedEntry();
   let i = 0;
-  for (const {entry, line, height: lh} of lines) {
+  for (const {entry, line, height: lh, texts} of lines) {
     i += 1;
     if ((line + lh) * lineHeight < sy) continue;
     if (line * lineHeight > sy + width) break;
 
-    // background
+    // background of selection
     const y = line * lineHeight + headerHeight;
     const h = lh * lineHeight;
     if (entry == focused) {
@@ -165,7 +180,7 @@ function render(cxt: CanvasRenderingContext2D) {
     }
 
     // texts
-    cxt.fillStyle = 
+    const textFillStyle = 
       (entry !== focused 
         && focused instanceof SubtitleEntry 
         && overlappingTime(focused, entry)) ? overlapColor : textColor;
@@ -174,20 +189,23 @@ function render(cxt: CanvasRenderingContext2D) {
     
     // lines; in the order of Source.subs.styles
     let j = 0;
-    for (const style of Source.subs.styles) {
-      const text = entry.texts.get(style);
-      if (text === undefined) continue;
+    for (const {style, text, failed} of texts) {
+      const splitLines = text.split('\n');
 
+      // background for failed validation
+      if (failed.length > 0) {
+        cxt.fillStyle = errorBackground;
+        cxt.fillRect(colPos[4], y0 + 1, width + sx - colPos[4], splitLines.length * lineHeight - 2);
+      }
+
+      cxt.fillStyle = textFillStyle;
       cxt.textBaseline = 'middle';
       cxt.textAlign = 'start';
-      const splitLines = text.split('\n');
       splitLines.forEach((x, i) => 
-        cxt.fillText(x, colPos[5] + cellPadding, y0 + (i + 0.5) * lineHeight));
+        cxt.fillText(x, colPos[4] + cellPadding, y0 + (i + 0.5) * lineHeight));
 
       const cellY = y0 + (splitLines.length * lineHeight) / 2;
       cxt.fillText(style.name, colPos[3] + cellPadding, cellY);
-      cxt.textAlign = 'end';
-      cxt.fillText(getNpS(entry, text), colPos[5] - cellPadding, cellY);
 
       // inner horizontal lines
       y0 += splitLines.length * lineHeight;
@@ -235,13 +253,12 @@ function render(cxt: CanvasRenderingContext2D) {
   cxt.textBaseline = 'top';
   cxt.textAlign = 'end';
   cxt.fillText(`#`,     colPos[1] - cellPadding, sy + linePadding);
-  cxt.fillText(`nps`,   colPos[5] - cellPadding, sy + linePadding);
   cxt.textAlign = 'center';
   cxt.fillText($_('table.start'), (colPos[1] + colPos[2]) / 2, sy + linePadding);
   cxt.fillText($_('table.end'),   (colPos[2] + colPos[3]) / 2, sy + linePadding);
   cxt.fillText($_('table.style'), (colPos[3] + colPos[4]) / 2, sy + linePadding);
   cxt.textAlign = 'start';
-  cxt.fillText($_('table.text'),  colPos[5] + cellPadding, sy + linePadding);
+  cxt.fillText($_('table.text'),  colPos[4] + cellPadding, sy + linePadding);
 
   // vertical lines
   cxt.strokeStyle = gridMajorColor;
@@ -263,6 +280,7 @@ Source.onSubtitleObjectReload.bind(me, () => {
 });
 
 Source.onSubtitlesChanged.bind(me, (t) => {
+  // TODO: can we optimize this by not re-layouting everything on every edit?
   if (t !== ChangeType.Metadata) {
     requestedLayout = true;
     manager.requestRender();
@@ -340,16 +358,6 @@ onMount(() => {
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
   return e1 && e2 && e1.start < e2.end && e1.end > e2.start;
-}
-
-
-function getTextLength(s: string) {
-  return [...s.matchAll(/[\w\u4E00-\u9FFF]/g)].length;
-}
-
-function getNpS(ent: SubtitleEntry, text: string) {
-  let num = getTextLength(text) / (ent.end - ent.start);
-  return (isFinite(num) && !isNaN(num)) ? num.toFixed(1) : '--';
 }
 
 function onFocus() {

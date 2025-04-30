@@ -203,8 +203,10 @@
     "contains": "含有",
     "equals": "等于",
     "greater-than": ">",
+    "greater-than-or-equal": "≥",
     "is-not-empty": "不为空",
     "less-than": "<",
+    "less-than-or-equal": "≤",
     "matches-regex": "匹配正则",
     "number-equals": "=",
     "srt-subtitles": "SRT字幕",
@@ -287,10 +289,16 @@
     "number-of-characters-in-longest-line": "最长行的字符数",
     "number-of-characters-in-longest-line-short": "行字符数",
     "number-of-characters-short": "字符数",
+    "number-of-letters-in-longest-line": "最长行的可读字符数",
+    "number-of-letters-in-longest-line-short": "行可读字符数",
     "number-of-lines": "行数",
     "number-of-lines-short": "行数",
+    "number-of-readable-characters": "可读字符数",
+    "number-of-readable-characters-short": "可读字符数",
     "readable-characters-per-second": "每秒可读字符数",
-    "readable-characters-per-second-short": "每秒字符数"
+    "readable-characters-per-second-short": "每秒可读",
+    "width-of-longest-line": "最长行宽度",
+    "width-of-longest-line-short": "宽度"
   },
   "msg": {
     "autosave-complete": "自动保存完成 {time}",
@@ -403,7 +411,8 @@
     "top": "上",
     "top-center": "顶部居中",
     "top-left": "左上",
-    "top-right": "右上"
+    "top-right": "右上",
+    "validator": "验证条件"
   },
   "tab": {
     "properties": "属性",

@@ -1,8 +1,7 @@
 import { SvelteMap } from "svelte/reactivity";
 import { Debug } from "../Debug";
 import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
-
-export const SubtitleFormatVersion = '000400';
+import type { MetricFilter } from "./Filter";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelTypes = typeof Labels[number];
@@ -29,6 +28,7 @@ export interface SubtitleStyle {
     };
     margin: { top: number, bottom: number, left: number, right: number };
     alignment: AlignMode;
+    validator: MetricFilter | null;
 }
 
 export interface SubtitleMetadata {
@@ -86,7 +86,8 @@ export class Subtitles {
                 strikethrough: false
             },
             margin: { top: 10, bottom: 10, left: 10, right: 10 },
-            alignment: 2
+            alignment: 2,
+            validator: null
         }
     };
 

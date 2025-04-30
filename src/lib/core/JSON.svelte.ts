@@ -1,8 +1,17 @@
 import { Ajv, type JSONSchemaType, type ValidateFunction } from "ajv";
 import { Debug } from "../Debug";
-import { MigrationDuplicatedStyles, SubtitleEntry, SubtitleFormatVersion, Subtitles, type SubtitleFormat, type SubtitleMetadata, type SubtitleStyle } from "./Subtitles.svelte";
+import { MigrationDuplicatedStyles, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleMetadata, type SubtitleStyle } from "./Subtitles.svelte";
 import { ajv, DeserializationError, parseObject } from "../Serialization";
+import { FilterSchema } from "./Filter";
 
+/**
+ * Version details:
+ *  - 000400 (major) styles includes defaultStyle, which is just a name; channels are unordered
+ *  - 000402 (minor) styles have validators
+ */
+export const SubtitleFormatVersion = '000402';
+
+// FIXME: should not repeat the default values here, already defined in Subtitle.svelte.ts
 const StyleSchema: JSONSchemaType<SubtitleStyle> = {
     type: 'object',
     properties: {
@@ -33,7 +42,11 @@ const StyleSchema: JSONSchemaType<SubtitleStyle> = {
             },
             required: []
         },
-        alignment: { type: 'integer', minimum: 1, maximum: 9, default: 2 }
+        alignment: { type: 'integer', minimum: 1, maximum: 9, default: 2 },
+        validator: { 
+            anyOf: [FilterSchema, { type: 'null' }],
+            default: null
+        } as any
     },
     required: ['name', 'styles', 'margin']
 };

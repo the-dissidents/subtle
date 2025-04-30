@@ -197,8 +197,10 @@
     "contains": "contains",
     "equals": "equals",
     "greater-than": ">",
+    "greater-than-or-equal": "≥",
     "is-not-empty": "is not empty",
     "less-than": "<",
+    "less-than-or-equal": "≤",
     "matches-regex": "matches RegExp",
     "number-equals": "=",
     "srt-subtitles": "SRT subtitles",
@@ -279,10 +281,16 @@
     "number-of-characters-in-longest-line": "#characters in longest line",
     "number-of-characters-in-longest-line-short": "max(#chars per line)",
     "number-of-characters-short": "#chars",
+    "number-of-letters-in-longest-line": "#letters in longest line",
+    "number-of-letters-in-longest-line-short": "max(#ltrs per line)",
     "number-of-lines": "number of lines",
     "number-of-lines-short": "#lines",
-    "readable-characters-per-second": "readable characters per second",
-    "readable-characters-per-second-short": "#chars/sec"
+    "number-of-readable-characters": "#letters",
+    "number-of-readable-characters-short": "#ltrs",
+    "readable-characters-per-second": "letters per second",
+    "readable-characters-per-second-short": "#ltrs/sec",
+    "width-of-longest-line": "width of longest line",
+    "width-of-longest-line-short": "width"
   },
   "msg": {
     "autosave-complete": "autosave complete at {time}",
@@ -395,7 +403,8 @@
     "top": "top:",
     "top-center": "top center",
     "top-left": "top left",
-    "top-right": "top right"
+    "top-right": "top right",
+    "validator": "validator"
   },
   "tab": {
     "properties": "Properties",

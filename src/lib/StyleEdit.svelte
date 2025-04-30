@@ -11,6 +11,7 @@ import Collapsible from "./ui/Collapsible.svelte";
 import { _ } from 'svelte-i18n';
 import { Debug } from "./Debug";
 import { Utils } from "./frontend/Utils";
+import FilterEdit from "./FilterEdit.svelte";
 
 interface Props {
   style: SubtitleStyle;
@@ -174,29 +175,29 @@ async function contextMenu() {
         </tr>
         <tr>
           <td>{$_('style.size')}</td>
-          <td><input type='number' bind:value={$style.size}/></td>
+          <td class="hlayout style">
+            <input type='number' bind:value={$style.size}/>
+            <label><input type='checkbox' bind:checked={$style.styles.bold}/><b>B</b></label>
+            <label><input type='checkbox' bind:checked={$style.styles.italic}/><i>I</i></label>
+            <label><input type='checkbox' bind:checked={$style.styles.underline}/><u>U</u></label>
+            <label><input type='checkbox' bind:checked={$style.styles.strikethrough}/><s>S</s></label>
+          </td>
         </tr>
         <tr>
           <td></td>
           <td>
             <div class="flex style">
-              <div>
-                <label><input type='checkbox' bind:checked={$style.styles.bold}/><b>B</b></label>
-              </div>
-              <div>
-                <label><input type='checkbox' bind:checked={$style.styles.italic}/><i>I</i></label>
-              </div>
-              <div>
-                <label><input type='checkbox' bind:checked={$style.styles.underline}/><u>U</u></label>
-              </div>
-              <div>
-                <label><input type='checkbox' bind:checked={$style.styles.strikethrough}/><s>S</s></label>
-              </div>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
+    <!-- validator -->
+    <Collapsible header={$_('style.validator')}>
+      <FilterEdit bind:filter={$style.validator} onchange={() => {
+        Source.markChanged(ChangeType.Filter);
+      }} />
+    </Collapsible>
     <!-- advanced -->
     <Collapsible header={$_('style.more')}>
       <table class="stretch">
@@ -287,7 +288,8 @@ table td:first-child {
   /* font-weight: bold; */
 }
 
-.style div {
+.style label {
+  white-space: nowrap;
   padding-right: 5px;
   font-family: 'Times New Roman', Times, serif;
 }

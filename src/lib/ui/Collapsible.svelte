@@ -44,10 +44,14 @@ let {
 <style>
 @media (prefers-color-scheme: light) {
   button.collapsible {
-    background-color: var(--uchu-yin-1);
+    background-color: var(--uchu-gray-1);
   }
   button.checked {
     background-color: var(--uchu-red-1) !important;
+  }
+  .content {
+    /* background-color: var(--uchu-gray-1); */
+    border-left: 1px solid var(--uchu-gray-3);
   }
 }
 
@@ -92,11 +96,11 @@ button.collapsible.active .caret::before {
   margin-right: 6px;
 }
 .content {
-  max-height: 0;
-  overflow: hidden;
+  padding: 2px 0 2px 4px;
+  border-radius: 2px;
   /* transition: max-height 1s ease-out; */
 }
-.content.active {
-  max-height: max-content;
+.content:not(.active) {
+  display: none;
 }
 </style>
