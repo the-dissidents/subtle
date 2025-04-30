@@ -1,16 +1,17 @@
 import { Basic } from "../Basic";
 import { CSSColors, parseCSSColor } from "../colorparser";
 import { Debug } from "../Debug";
-import { AlignMode, SubtitleEntry, Subtitles, SubtitlesParseError, type SubtitleFormat, type SubtitleStyle } from "./Subtitles.svelte";
+import { DeserializationError } from "../Serialization";
+import { AlignMode, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleStyle } from "./Subtitles.svelte";
 
 export const ASSSubtitles: SubtitleFormat = {
     parse(source: string) {
         const sections = getASSSections(source);
         if (sections.size == 0)
-            throw new SubtitlesParseError('invalid ASS');
+            throw new DeserializationError('invalid ASS');
         let subs = new Subtitles();
         if (!parseASSScriptInfo(sections, subs))
-            throw new SubtitlesParseError('invalid ASS');
+            throw new DeserializationError('invalid ASS');
         parseASSStyles(sections, subs);
         parseASSEvents(sections, subs);
         subs.migrated = 'ASS';

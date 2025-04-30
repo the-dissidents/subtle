@@ -115,14 +115,14 @@ locale.subscribe(() => refresh++);
               && item.bounds[1] !== null}
               <div class="hlayout stretch">
                 <input type="number" value={group.data[key]} 
-                     min={item.bounds[0]} max={item.bounds[1]}
-                     step={item.type == 'integer' ? 1 : 'any'}
-                     onchange={async (ev) => {
+                  min={item.bounds[0]} max={item.bounds[1]}
+                  step={item.type == 'integer' ? 1 : 'any'}
+                  onchange={async (ev) => {
                     if (ev.currentTarget.validity.valid)
                       group.data[key] = ev.currentTarget.valueAsNumber;
                     else
                       ev.currentTarget.value = group.data[key].toString();
-                     }}/>
+                  }}/>
                 <input type="range" class="flexgrow"
                   min={item.bounds[0]} max={item.bounds[1]}
                   step={item.type == 'integer' ? 1 : 'any'}

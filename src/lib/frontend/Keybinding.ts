@@ -5,11 +5,12 @@ import { guardAsync, Interface } from "./Interface";
 import { UIFocusList, type UIFocus } from "./Frontend";
 import type { UICommand } from "./CommandBase";
 
-import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Dialogs } from "./Dialogs";
 import type { JSONSchemaType, JTDSchemaType } from "ajv/dist/core";
 import Ajv from "ajv";
 import * as fs from "@tauri-apps/plugin-fs";
+
+import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 export type KeyBinding = {

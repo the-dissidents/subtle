@@ -192,12 +192,31 @@
   },
   "filter": {
     "all-supported-formats": "All supported formats",
+    "between-exclusive": "between (exclusive)",
+    "between-inclusive": "between (inclusive)",
+    "contains": "contains",
+    "equals": "equals",
+    "greater-than": ">",
+    "is-not-empty": "is not empty",
+    "less-than": "<",
+    "matches-regex": "matches RegExp",
+    "number-equals": "=",
     "srt-subtitles": "SRT subtitles",
     "ssa-subtitles": "SSA subtitles",
     "subtitle-file": "subtitle file",
     "subtle-archive": "subtle archive",
     "video-file": "video file",
     "vtt-subtitles": "VTT subtitles"
+  },
+  "filteredit": {
+    "add-condition": "add condition",
+    "and": "and",
+    "delete": "delete",
+    "negate": "negate",
+    "new-and-clause": "new and-clause",
+    "new-or-clause": "new or-clause",
+    "not": "not",
+    "or": "or"
   },
   "importdialog": {
     "after-existing-lines": "after existing lines",
@@ -253,6 +272,17 @@
     "redo": "redo",
     "save-as": "save as",
     "undo": "undo"
+  },
+  "metrics": {
+    "content": "content",
+    "number-of-characters": "#characters",
+    "number-of-characters-in-longest-line": "#characters in longest line",
+    "number-of-characters-in-longest-line-short": "max(#chars per line)",
+    "number-of-characters-short": "#chars",
+    "number-of-lines": "number of lines",
+    "number-of-lines-short": "#lines",
+    "readable-characters-per-second": "readable characters per second",
+    "readable-characters-per-second-short": "#chars/sec"
   },
   "msg": {
     "autosave-complete": "autosave complete at {time}",

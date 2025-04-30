@@ -176,6 +176,9 @@
   },
   "filter": {
     "all-supported-formats": "所有支援格式",
+    "greater-than": ">",
+    "less-than": "<",
+    "number-equals": "=",
     "srt-subtitles": "SRT 字幕",
     "ssa-subtitles": "SSA 字幕",
     "subtitle-file": "字幕檔案",

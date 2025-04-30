@@ -9,8 +9,10 @@ import { Menu } from '@tauri-apps/api/menu';
 import { UICommand } from '../frontend/CommandBase';
 import { Dialogs } from '../frontend/Dialogs';
 import { Commands } from '../frontend/Commands';
-    import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
-    import { Source } from '../frontend/Source';
+import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
+import { Source } from '../frontend/Source';
+import FilterEdit from '../FilterEdit.svelte';
+    import { newMetricFilter, TextMetricFilterMethods, TextMetrics, type MetricFilter, type MetricFilterCombination } from '../core/Filter';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -19,6 +21,30 @@ MAPI.version().then((x) => {
 
 let media: MMedia | undefined;
 let tooltipPos: TooltipPosition = $state('bottom');
+
+let filter: MetricFilterCombination = $state({
+  type: 'and',
+  filters: [
+    newMetricFilter({
+      metric: 'charsInLongestLine',
+      method: 'numberLt',
+      negated: false,
+      parameters: [20]
+    }),
+    newMetricFilter({
+      metric: 'lines',
+      method: 'numberGt',
+      negated: true,
+      parameters: [2]
+    }),
+    newMetricFilter({
+      metric: 'content',
+      method: 'stringNonEmpty',
+      negated: false,
+      parameters: []
+    })
+  ]
+});
 
 const command = new UICommand([], {
   name: 'name', 
@@ -138,6 +164,10 @@ const command = new UICommand([], {
   onclick={() => Debug.info('integrity test:', Source.subs.debugTestIntegrity())}>
   integrity test
 </button>
+
+<br>
+
+<FilterEdit {filter} />
 
 <br>
 <span>{result}</span>

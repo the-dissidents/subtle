@@ -198,12 +198,31 @@
   },
   "filter": {
     "all-supported-formats": "所有支持格式",
+    "between-exclusive": "在区间内（不含）",
+    "between-inclusive": "在区间内（含）",
+    "contains": "含有",
+    "equals": "等于",
+    "greater-than": ">",
+    "is-not-empty": "不为空",
+    "less-than": "<",
+    "matches-regex": "匹配正则",
+    "number-equals": "=",
     "srt-subtitles": "SRT字幕",
     "ssa-subtitles": "SSA字幕",
     "subtitle-file": "字幕文件",
     "subtle-archive": "subtle存档",
     "video-file": "视频文件",
     "vtt-subtitles": "VTT字幕"
+  },
+  "filteredit": {
+    "add-condition": "添加条件",
+    "and": "并且",
+    "delete": "删除",
+    "negate": "否定",
+    "new-and-clause": "添加“并且”条件",
+    "new-or-clause": "添加“或者”条件",
+    "not": "并非",
+    "or": "或者"
   },
   "importdialog": {
     "after-existing-lines": "在现有行之后",
@@ -261,6 +280,17 @@
     "redo": "重做",
     "save-as": "另存为",
     "undo": "撤消"
+  },
+  "metrics": {
+    "content": "内容",
+    "number-of-characters": "总字符数",
+    "number-of-characters-in-longest-line": "最长行的字符数",
+    "number-of-characters-in-longest-line-short": "行字符数",
+    "number-of-characters-short": "字符数",
+    "number-of-lines": "行数",
+    "number-of-lines-short": "行数",
+    "readable-characters-per-second": "每秒可读字符数",
+    "readable-characters-per-second-short": "每秒字符数"
   },
   "msg": {
     "autosave-complete": "自动保存完成 {time}",

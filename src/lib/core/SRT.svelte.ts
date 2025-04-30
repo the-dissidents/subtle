@@ -1,5 +1,6 @@
 import { Basic } from "../Basic";
-import { SubtitleEntry, Subtitles, SubtitlesParseError, type SubtitleFormat } from "./Subtitles.svelte";
+import { DeserializationError } from "../Serialization";
+import { SubtitleEntry, Subtitles, type SubtitleFormat } from "./Subtitles.svelte";
 import { LinearFormatCombineStrategy, SubtitleUtil } from "./SubtitleUtil.svelte";
 
 function getTime(h: string, m: string, s: string, ms: string) {
@@ -73,7 +74,7 @@ export const SRTSubtitles: SubtitleFormat = {
                 buffer = '';
             }
         } else {
-            throw new SubtitlesParseError('invalid or empty SRT');
+            throw new DeserializationError('invalid or empty SRT');
         }
         
         subs.migrated = 'text';

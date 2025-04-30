@@ -160,13 +160,6 @@ export class Subtitles {
     }
 }
 
-export class SubtitlesParseError extends Error {
-    constructor(msg: string) {
-        super(msg);
-        this.name = 'SubtitlesParseError';
-    }
-}
-
 export interface SubtitleFormat {
     parse(source: string): Subtitles;
     write(subs: Subtitles, options?: {

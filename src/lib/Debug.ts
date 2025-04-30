@@ -86,7 +86,7 @@ export const Debug: {
     error(...data: any[]): Promise<void>,
     assert(cond: boolean): asserts cond,
     early(reason?: string): void,
-    never(value: never): never
+    never(value?: never): never
 } = {
     filterLevel: LogLevelFilter.Debug,
     redirectNative: true,
@@ -190,7 +190,7 @@ export const Debug: {
             callLog(LogLevel.Info, `!!!WEBVIEW_STACKTRACE\n` + trace);
         })();
     },
-    never(x: never): never {
+    never(x?: never): never {
         (async () => {
             const { file, func, trace } = await stacktrace();
             callLog(LogLevel.Error, `Unreachable code reached (never=${x})`, file);

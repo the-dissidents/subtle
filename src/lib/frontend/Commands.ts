@@ -18,7 +18,7 @@ import { InputConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { Format } from "../core/Formats";
-export const $_ = unwrapFunctionStore(_);
+const $_ = unwrapFunctionStore(_);
 
 const toJSON = (useEntries: SubtitleEntry[]) => 
     Format.JSON.write(Source.subs, { useEntries });

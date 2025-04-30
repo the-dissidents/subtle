@@ -1,11 +1,7 @@
 import { Ajv, type JSONSchemaType, type ValidateFunction } from "ajv";
 import { Debug } from "../Debug";
-import { MigrationDuplicatedStyles, SubtitleEntry, SubtitleFormatVersion, Subtitles, SubtitlesParseError, type SubtitleFormat, type SubtitleMetadata, type SubtitleStyle } from "./Subtitles.svelte";
-
-const ajv = new Ajv({
-    removeAdditional: true,
-    useDefaults: true
-});
+import { MigrationDuplicatedStyles, SubtitleEntry, SubtitleFormatVersion, Subtitles, type SubtitleFormat, type SubtitleMetadata, type SubtitleStyle } from "./Subtitles.svelte";
+import { ajv, DeserializationError, parseObject } from "../Serialization";
 
 const StyleSchema: JSONSchemaType<SubtitleStyle> = {
     type: 'object',
@@ -65,14 +61,6 @@ const MetadataSchema: JSONSchemaType<SubtitleMetadata> = {
 const validateStyle = ajv.compile(StyleSchema);
 const validateMetadata = ajv.compile(MetadataSchema);
 
-function parseObject<T>(obj: {}, validator: ValidateFunction<T>): T {
-    if (!validator(obj)) {
-        Debug.debug(validator.errors);
-        throw new SubtitlesParseError(validator.errors!.map((x) => x.message).join('; '));
-    }
-    return obj;
-}
-
 function serializeEntry(entry: SubtitleEntry) {
     return {
         start: entry.start,
@@ -103,10 +91,10 @@ function parseEntry(
 
     for (const [styleName, text] of o.texts) {
         let style = subs.styles.find((x) => x.name == styleName);
-        if (!style) throw new SubtitlesParseError(`invalid style name: ${styleName}`);
+        if (!style) throw new DeserializationError(`invalid style name: ${styleName}`);
 
         if (entry.texts.has(style)) {
-            if (version >= '000400') throw new SubtitlesParseError(
+            if (version >= '000400') throw new DeserializationError(
                 `style appeared multiple time in one entry: ${styleName}`);
 
             // migrate pre-0.4 styles
@@ -142,7 +130,7 @@ export const JSONSubtitles: SubtitleFormat = {
 
         const styles = o.styles, entries = o.entries;
         if (o.defaultStyle === undefined || !Array.isArray(styles) || !Array.isArray(entries))
-            throw new SubtitlesParseError('missing properties');
+            throw new DeserializationError('missing properties');
 
         if (version < '000400') {
             // pre 0.4: the default style is defined outside the styles array
@@ -159,7 +147,7 @@ export const JSONSubtitles: SubtitleFormat = {
                 return style;
             });
             const def = subs.styles.find((x) => x.name == o.defaultStyle);
-            if (def === undefined) throw new SubtitlesParseError('invalid default style name');
+            if (def === undefined) throw new DeserializationError('invalid default style name');
             subs.defaultStyle = def;
         }
 
