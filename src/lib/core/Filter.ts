@@ -84,6 +84,13 @@ export type EvaluateFilterResult = {
     failed: SimpleMetricFilter<TextMetricName, TextMetricFilterMethodName>[]
 };
 
+export function filterDescription(filter: SimpleMetricFilter) {
+    return `${filter.negated ? $_('filter.description.not') : ''} ${
+        TextMetrics[filter.metric].localizedName()} ${
+        TextMetricFilterMethods[filter.method].localizedName()} ${
+        (filter.parameters as (number[] | string[])).map((x) => x.toString()).join(' ')}`;
+}
+
 export function evaluateFilter(
     filter: MetricFilter,
     entry: SubtitleEntry, style: SubtitleStyle

@@ -33,12 +33,15 @@ import { SvelteSet } from "svelte/reactivity";
 
 import { Basic } from "./Basic";
 import { Debug } from "./Debug";
-import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
 import { theme, LabelColor } from "./Theming.svelte";
 
+import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
+import { evaluateFilter, filterDescription, type MetricFilter, type SimpleMetricFilter } from "./core/Filter";
+
 import { CanvasManager } from "./CanvasManager";
-import { InterfaceConfig } from "./config/Groups";
+import { InterfaceConfig, MainConfig } from "./config/Groups";
 import { PublicConfigGroup } from "./config/PublicConfig.svelte";
+
 import { Actions } from "./frontend/Actions";
 import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
 import { EventHost } from "./frontend/Frontend";
@@ -48,23 +51,28 @@ import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
 import { _ } from 'svelte-i18n';
 import { get } from 'svelte/store';
-    import { evaluateFilter, type MetricFilter, type SimpleMetricFilter } from "./core/Filter";
+
+import Popup, { type PopupHandler } from "./ui/Popup.svelte";
 
 let selection = $state(new SvelteSet<SubtitleEntry>);
 let canvas = $state<HTMLCanvasElement>();
+let popup = $state<PopupHandler>({});
+let popupMessage = $state('');
 let manager: CanvasManager;
-let cxt: CanvasRenderingContext2D;
+
+type TextLayout = {
+  style: SubtitleStyle,
+  text: string,
+  line: number, height: number,
+  failed: SimpleMetricFilter[],
+};
 
 let uiFocus = Interface.uiFocus;
 let lines: {
   entry: SubtitleEntry, 
   line: number, 
   height: number,
-  texts: {
-    style: SubtitleStyle,
-    text: string,
-    failed: SimpleMetricFilter[],
-  }[]
+  texts: TextLayout[]
 }[] = [];
 let lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
 let totalLines = 0;
@@ -83,7 +91,7 @@ const headerBackground    = $derived(theme.isDark ? '#555'          : '#ddd');
 const overlapColor        = $derived(theme.isDark ? 'lightpink'     : 'crimson');
 const focusBackground     = $derived(theme.isDark ? 'darkslategray' : 'lightblue');
 const selectedBackground  = $derived(theme.isDark ? '#444'          : '#eee');
-const errorBackground     = $derived(theme.isDark ? '#a35'          : '#ed0');
+const errorBackground     = $derived(theme.isDark ? '#aa335599'     : '#eedd0099');
 
 function font() {
   return `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`;
@@ -104,13 +112,15 @@ function layout(cxt: CanvasRenderingContext2D) {
       if (text === undefined) continue;
 
       let splitLines = text.split('\n');
-      height += splitLines.length;
       textWidth = Math.max(textWidth, ...splitLines.map((x) => cxt.measureText(x).width));
       texts.push({
-        style, text,
+        style, text, 
+        height: splitLines.length,
+        line: totalLines + height,
         failed: style.validator === null 
           ? [] : evaluateFilter(style.validator, entry, style).failed
       });
+      height += splitLines.length;
     }
     lines.push({entry, line: totalLines, height, texts});
     lineMap.set(entry, {line: totalLines, height});
@@ -335,24 +345,26 @@ onMount(() => {
     manager.requestRender();
   });
   manager.renderer = (ctx) => render(ctx);
+  manager.onMouseMove.bind(me, onMouseMove);
   manager.onMouseDown.bind(me, onMouseDown);
   manager.onDrag.bind(me, onDrag);
-  cxt = manager.context;
 
-  $effect(() => {
-    if (InterfaceConfig.data.fontSize || InterfaceConfig.data.fontFamily) {
+  MainConfig.hook(
+    () => [InterfaceConfig.data.fontSize, InterfaceConfig.data.fontFamily], 
+    () => {
       requestedLayout = true;
       manager.requestRender();
-    }
-  });
+    });
+
+  MainConfig.hook(
+    () => TableConfig.data.maxZoom, 
+    (zoom) => {
+      manager.setMaxZoom(zoom)
+    });
 
   $effect(() => {
     if (theme.isDark !== undefined)
       manager.requestRender();
-  });
-
-  $effect(() => {
-    manager.setMaxZoom(TableConfig.data.maxZoom);
   });
 });
 
@@ -368,10 +380,47 @@ let currentLine = -1;
 let autoScrollY = 0;
 let lastAnimateFrameTime = -1;
 
+function getLineFromOffset(y: number) {
+  return (y / manager.scale + manager.scroll[1] - headerHeight) / lineHeight;
+}
+
+let currentFails: SimpleMetricFilter[] = [];
+
+function onMouseMove(ev: MouseEvent) {
+  const [cx, cy] = manager.convertPosition('offset', 'canvas', ev.offsetX, ev.offsetY);
+  const currentLine = Math.floor((cy - headerHeight) / lineHeight);
+
+  let currentText: TextLayout | undefined;
+  if (currentLine <= totalLines && cx > colPos[4]) {
+    outer: for (const {texts} of lines) {
+      for (const text of texts) {
+        if (currentLine < text.line)
+          break outer;
+        currentText = text;
+      }
+    }
+  }
+
+  if (currentText?.failed !== currentFails) {
+    currentFails = currentText?.failed ?? [];
+    if (popup.isOpen!()) popup.close!();
+    if (currentFails.length > 0) {
+      Debug.assert(currentText !== undefined);
+      popupMessage = `${$_('table.requirement-not-met', {values: {n: currentFails.length}})}\n` 
+        + currentFails.map(filterDescription).join('\n');
+      let [left, top] = manager.convertPosition('canvas', 'client', 
+        colPos[4], currentText.line * lineHeight + headerHeight);
+      console.log(left, top);
+      popup.open!({left, top, width: 0, 
+        height: currentText.height * 0.5 * lineHeight / manager.scale});
+    }
+  }
+}
+
 function onMouseDown(ev: MouseEvent) {
   onFocus();
   if (ev.button == 0) {
-    currentLine = (ev.offsetY / manager.scale + manager.scroll[1] - headerHeight) / lineHeight;
+    currentLine = getLineFromOffset(ev.offsetY);
     if (currentLine > totalLines) {
       Editing.selectVirtualEntry();
       return;
@@ -393,7 +442,7 @@ function requestAutoScroll() {
     manager.setScroll({y: manager.scroll[1] + autoScrollY * (time - lastAnimateFrameTime) * 0.001})
     lastAnimateFrameTime = time;
 
-    const line = (((autoScrollY < 0) ? 0 : manager.size[1]) / manager.scale + manager.scroll[1] - headerHeight) / lineHeight;
+    const line = getLineFromOffset((autoScrollY < 0) ? 0 : manager.size[1]);
     if (line != currentLine) {
       currentLine = line;
       let i = 1;
@@ -427,7 +476,7 @@ function onDrag(offsetX: number, offsetY: number) {
     autoScrollY = 0;
   }
 
-  let line = (offsetY / manager.scale + manager.scroll[1] - headerHeight) / lineHeight;
+  const line = getLineFromOffset(offsetY);
   if (line != currentLine) {
     currentLine = line;
     let i = 1;
@@ -456,6 +505,12 @@ function onDrag(offsetX: number, offsetY: number) {
     Actions.contextMenu();
   }}
 ></canvas>
+
+<Popup bind:handler={popup} position="left">
+  <span style="white-space: pre-wrap;">
+    {popupMessage}
+  </span>
+</Popup>
 
 <style>
   canvas {

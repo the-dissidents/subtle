@@ -1,3 +1,4 @@
+import type { number } from "svelte-i18n";
 import { InterfaceConfig } from "./config/Groups";
 import { Debug } from "./Debug";
 import { EventHost, translateWheelEvent, type TranslatedWheelEvent } from "./frontend/Frontend";
@@ -8,6 +9,8 @@ const scrollerColorRgb = () => theme.isDark ? '255 255 255' : '0 0 0';
 const scrollerSize = 6;
 const scrollerFade = 1500;
 const scrollerFadeStart = 1000;
+
+export type CanvasManagerPositionSystem = 'client' | 'offset' | 'canvas';
 
 export type Rect = {
     l: number, t: number, r: number, b: number;
@@ -170,6 +173,28 @@ export class CanvasManager {
         requestAnimationFrame(() => this.#render());
     }
 
+    convertPosition(
+        from: CanvasManagerPositionSystem, 
+        to: CanvasManagerPositionSystem, 
+        x: number, y: number
+    ): [number, number] {
+        if (from == to) return [x, y];
+        if (from == 'offset' && to == 'canvas')
+            return [x / this.#scale + this.#scrollX, y / this.#scale + this.#scrollY];
+        if (from == 'canvas' && to == 'offset')
+            return [(x - this.#scrollX) * this.#scale, (y - this.#scrollY) * this.#scale];
+        if (from == 'offset' && to == 'client') {
+            const rect = this.canvas.getBoundingClientRect();
+            return [x + rect.left, y + rect.top];
+        }
+        if (from == 'client' && to == 'offset') {
+            const rect = this.canvas.getBoundingClientRect();
+            return [x - rect.left, y - rect.top];
+        }
+        const [ox, oy] = this.convertPosition(from, 'offset', x, y);
+        return this.convertPosition('offset', to, ox, oy);
+    }
+
     get #hscrollerLength () { 
         return Math.max(InterfaceConfig.data.minScrollerLength, 
             this.#width ** 2 / this.#scale / this.contentRect.w);
@@ -217,10 +242,7 @@ export class CanvasManager {
     }
 
     #onDrag(ev: MouseEvent) {
-        const rect = this.canvas.getBoundingClientRect();
-        const offsetX = ev.clientX - rect.left;
-        const offsetY = ev.clientY - rect.top;
-        
+        const [offsetX, offsetY] = this.convertPosition('client', 'offset', ev.clientX, ev.clientY);
         if (ev.buttons == 1) {
             if (this.#dragType == 'hscroll') {
                 this.#scrollX = this.#dragStartScrollX + 
@@ -264,9 +286,9 @@ export class CanvasManager {
         let handled = false;
         const tr = translateWheelEvent(ev);
         if (tr.isZoom) {
-            const oldscale = this.#scale;
             const centerX = ev.offsetX / this.#scale + this.#scrollX;
             const centerY = ev.offsetY / this.#scale + this.#scrollY;
+            const oldscale = this.#scale;
             this.#scale = Math.min(this.#maxZoom, 
                 Math.max(1, this.#scale / Math.pow(1.01, tr.amount)));
             this.#scrollX = centerX - ev.offsetX / this.#scale;

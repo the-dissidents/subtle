@@ -65,7 +65,7 @@ export class AudioSampler {
 
     tryCancelSampling() {
         Debug.assert(this.#isSampling);
-        Debug.debug('cancelling sampling');
+        Debug.trace('cancelling sampling');
         this.#cancelling = true;
     }
 
@@ -91,7 +91,7 @@ export class AudioSampler {
         this.#isSampling = true;
         this.#cancelling = false;
         this.#sampleProgress = a;
-        Debug.debug('sampling', a, b);
+        Debug.trace('sampling', a, b);
 
         let current = a;
         await this.#media.waitUntilAvailable();
@@ -118,12 +118,12 @@ export class AudioSampler {
 
             this.#sampleProgress = data.end;
             if (this.#sampleProgress > b) {
-                Debug.debug(`sampling done: ${data.start}~${data.end}`);
+                Debug.trace(`sampling done: ${data.start}~${data.end}`);
                 this.#isSampling = false;
                 return;
             }
             if (this.#cancelling && this.#sampleProgress - a > this.sampleLength) {
-                Debug.debug('sampling cancelled');
+                Debug.trace('sampling cancelled');
                 this.#isSampling = false;
                 return;
             }

@@ -201,6 +201,9 @@
     "between-exclusive": "在区间内（不含）",
     "between-inclusive": "在区间内（含）",
     "contains": "含有",
+    "description": {
+      "not": "并非"
+    },
     "equals": "等于",
     "greater-than": ">",
     "greater-than-or-equal": "≥",
@@ -421,6 +424,7 @@
   },
   "table": {
     "end": "结尾",
+    "requirement-not-met": "未满足条件：",
     "start": "开始",
     "style": "样式",
     "text": "文本"

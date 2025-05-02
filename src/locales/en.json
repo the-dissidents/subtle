@@ -195,6 +195,9 @@
     "between-exclusive": "between (exclusive)",
     "between-inclusive": "between (inclusive)",
     "contains": "contains",
+    "description": {
+      "not": "NOT:"
+    },
     "equals": "equals",
     "greater-than": ">",
     "greater-than-or-equal": "≥",
@@ -413,6 +416,7 @@
   },
   "table": {
     "end": "end",
+    "requirement-not-met": "Requirement{n,plural,one{} other{s}} not met:",
     "start": "start",
     "style": "style",
     "text": "text"
