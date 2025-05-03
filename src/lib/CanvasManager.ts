@@ -1,4 +1,3 @@
-import type { number } from "svelte-i18n";
 import { InterfaceConfig } from "./config/Groups";
 import { Debug } from "./Debug";
 import { EventHost, translateWheelEvent, type TranslatedWheelEvent } from "./frontend/Frontend";

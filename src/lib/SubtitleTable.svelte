@@ -31,7 +31,6 @@ export const TableConfig = new PublicConfigGroup(
 import { onDestroy, onMount } from "svelte";
 import { SvelteSet } from "svelte/reactivity";
 
-import { Basic } from "./Basic";
 import { Debug } from "./Debug";
 import { theme, LabelColor } from "./Theming.svelte";
 
@@ -54,7 +53,8 @@ import { get } from 'svelte/store';
 
 import Popup, { type PopupHandler } from "./ui/Popup.svelte";
 import OrderableList from "./ui/OrderableList.svelte";
-    import { Menu } from "@tauri-apps/api/menu";
+import { Menu } from "@tauri-apps/api/menu";
+import { PrivateConfig } from "./config/PrivateConfig";
 
 const MetricsList = Object.entries(Metrics) as [keyof typeof Metrics, Metric<any>][];
 
@@ -119,6 +119,7 @@ function font() {
 }
 
 function layout(cxt: CanvasRenderingContext2D) {
+  const startTime = performance.now();
   cxt.resetTransform();
   cxt.scale(devicePixelRatio, devicePixelRatio);
   cxt.font = font();
@@ -193,7 +194,8 @@ function layout(cxt: CanvasRenderingContext2D) {
     r: pos + manager.scrollerSize,
     b: (totalLines + 1) * lineHeight + headerHeight + manager.scrollerSize // add 1 for virtual entry
   });
-  Debug.debug(entryColumns, channelColumns);
+  // Debug.debug(entryColumns, channelColumns);
+  Debug.trace('layout done in', performance.now() - startTime);
 }
 
 function render(cxt: CanvasRenderingContext2D) {
@@ -410,6 +412,19 @@ onMount(() => {
   manager.onMouseDown.bind(me, onMouseDown);
   manager.onDrag.bind(me, onDrag);
 
+  PrivateConfig.onInitialized(() => {
+    let entry = PrivateConfig.get('tableEntryColumns')
+        .filter((x) => x in Metrics)
+        .map((x) => ({metric: <MetricName>x, layout: undefined}));
+    let channel = PrivateConfig.get('tableChannelColumns')
+        .filter((x) => x in Metrics)
+        .map((x) => ({metric: <MetricName>x, layout: undefined}));
+    if (entry.length > 0)
+      entryColumns = entry;
+    if (channel.length > 0)
+      channelColumns = channel;
+  });
+
   MainConfig.hook(
     () => [InterfaceConfig.data.fontSize, InterfaceConfig.data.fontFamily], 
     () => {
@@ -485,7 +500,7 @@ function onMouseDown(ev: MouseEvent) {
     if (currentLine > totalLines) {
       Editing.selectVirtualEntry();
       return;
-    } else {
+    } else if (lines.length > 0) {
       let i = 1;
       for (; i < lines.length && lines[i].line <= currentLine; i++);
       Editing.toggleEntry(lines[i-1].entry, getSelectMode(ev), ChangeCause.UIList);
@@ -504,7 +519,7 @@ function requestAutoScroll() {
     lastAnimateFrameTime = time;
 
     const line = getLineFromOffset((autoScrollY < 0) ? 0 : manager.size[1]);
-    if (line != currentLine) {
+    if (line != currentLine && lines.length > 0) {
       currentLine = line;
       let i = 1;
       for (; i < lines.length && lines[i].line < currentLine; i++);
@@ -538,12 +553,19 @@ function onDrag(offsetX: number, offsetY: number) {
   }
 
   const line = getLineFromOffset(offsetY);
-  if (line != currentLine) {
+  if (line != currentLine && lines.length > 0) {
     currentLine = line;
     let i = 1;
     for (; i < lines.length && lines[i].line < currentLine; i++);
     Editing.selectEntry(lines[i-1].entry, SelectMode.Sequence);
   }
+}
+
+function updateColumns() {
+  PrivateConfig.set('tableEntryColumns', entryColumns.map((x) => x.metric));
+  PrivateConfig.set('tableChannelColumns', channelColumns.map((x) => x.metric));
+  requestedLayout = true;
+  manager.requestRender();
 }
 </script>
 
@@ -578,17 +600,9 @@ function onDrag(offsetX: number, offsetY: number) {
 </div>
 
 {#snippet metricList(opt: {list: Column[]}, per: 'entry' | 'channel')}
-  <OrderableList bind:list={opt.list} style='width: 100%'
-    onsubmit={() => {
-      requestedLayout = true;
-      manager.requestRender();
-    }}
-  >
+  <OrderableList list={opt.list} style='width: 100%' onsubmit={updateColumns}>
     {#snippet row(col, i)}
-      <select bind:value={col.metric} onchange={() => {
-        requestedLayout = true;
-        manager.requestRender();
-      }}>
+      <select bind:value={col.metric} onchange={updateColumns}>
         {#each MetricsList as [name, m]}
           {#if m.per == per && (!opt.list.some((x) => x.metric == name) || name == col.metric)}
             <option value={name}>{m.localizedName()}</option>
@@ -597,8 +611,7 @@ function onDrag(offsetX: number, offsetY: number) {
       </select>
       <button onclick={() => {
         opt.list.splice(i, 1);
-        requestedLayout = true;
-        manager.requestRender();
+        updateColumns();
       }} aria-label='delete'>
         <svg class="feather">
           <use href={`/feather-sprite.svg#delete`} />
@@ -609,17 +622,14 @@ function onDrag(offsetX: number, offsetY: number) {
     {@const used = new Set(opt.list.map((x) => x.metric))}
     {@const unused = MetricsList.filter(([x, y]) => y.per == per && !used.has(x))}
       <button disabled={unused.length == 0} class="hlayout"
-        onclick={async () => {
-          const menu = await Menu.new({items: unused.map(([x, y]) => ({
+        onclick={async () =>
+          (await Menu.new({items: unused.map(([x, y]) => ({
             text: y.localizedName(),
             action() {
               opt.list.push({ metric: x });
-              requestedLayout = true;
-              manager.requestRender();
+              updateColumns();
             }
-          }))});
-          menu.popup();
-        }}
+          }))})).popup()}
       >
         <svg class="feather">
           <use href={`/feather-sprite.svg#plus`} />

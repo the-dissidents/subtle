@@ -72,6 +72,7 @@ export const Source = {
     },
 
     markChanged(type: ChangeType) {
+        Debug.trace('marking change:', ChangeType[type]);
         fileChanged.set(true);
         changedSinceLastAutosave = true;
 
