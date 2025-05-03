@@ -152,8 +152,9 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
           <StyleSelect currentStyle={style}
             onsubmit={async (newStyle) => {
               if (focused.texts.has(newStyle) && !await dialog.confirm(
-                  $_('msg.overwrite-style', {values: {style: newStyle.name}})))
-                return;
+                  $_('msg.overwrite-style', {values: {style: newStyle.name}}))) {
+                return true;
+              }
               focused.texts.set(newStyle, focused.texts.get(style)!);
               focused.texts.delete(style);
               Source.markChanged(ChangeType.InPlace);

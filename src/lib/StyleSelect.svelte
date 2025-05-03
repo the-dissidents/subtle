@@ -8,7 +8,7 @@ interface Props {
   disabled?: boolean,
   stretch?: boolean;
   currentStyle: SubtitleStyle;
-  onsubmit?: (style: SubtitleStyle) => void;
+  onsubmit?: (style: SubtitleStyle) => void | boolean | Promise<void | boolean>;
 }
 
 let { disabled = false, stretch = false, currentStyle = $bindable(), onsubmit }: Props = $props();
@@ -29,9 +29,11 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 
 <select tabindex='-1' class={{stretch}}
   disabled={disabled}
-  oninput={(ev) => {
+  oninput={async (ev) => {
+    let oldStyle = currentStyle;
     currentStyle = styles[ev.currentTarget.selectedIndex];
-    onsubmit?.(currentStyle);
+    if (onsubmit && await onsubmit(currentStyle))
+      currentStyle = oldStyle;
   }}
   onclick={() => refresh++}
 >

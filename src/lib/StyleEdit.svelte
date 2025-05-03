@@ -103,9 +103,10 @@ async function contextMenu() {
     <!-- add style -->
     <button
       onclick={() => {
-        let i = subtitles.styles.indexOf($style);
+        const i = subtitles.styles.indexOf($style);
         Debug.assert(i >= 0);
-        let newStyle = Subtitles.createStyle('new');
+        const name = SubtitleTools.getUniqueStyleName(subtitles, 'new');
+        const newStyle = Subtitles.createStyle(name);
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
@@ -113,7 +114,7 @@ async function contextMenu() {
     <!-- move up -->
     <button disabled={$style === subtitles.styles[0]}
       onclick={() => {
-        let i = subtitles.styles.indexOf($style);
+        const i = subtitles.styles.indexOf($style);
         Debug.assert(i >= 0);
         subtitles.styles = [
           ...subtitles.styles.slice(0, i-1), 
@@ -164,7 +165,10 @@ async function contextMenu() {
             <label style="padding-left: 5px;">
               <input type='checkbox'
                 checked={subtitles.defaultStyle == $style}
-                onchange={() => subtitles.defaultStyle = $style}/>
+                onclick={(ev) => {
+                  subtitles.defaultStyle = $style;
+                  ev.currentTarget.checked = true;
+                }}/>
               {$_('style.default')}
             </label>
           </td>
