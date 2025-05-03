@@ -28,7 +28,11 @@ let {
 
   {#if helpText != ""}
   <Tooltip position='left' text={helpText}>
-    <span class='info'>i</span>
+    <span class='info'>
+      <svg class="feather">
+        <use href="/feather-sprite.svg#info" />
+      </svg>
+    </span>
   </Tooltip>
   {/if}
   
@@ -66,10 +70,13 @@ let {
 }
 
 .info {
-  font-family: 'Webdings';
-  font-size: 120%;
+  /* font-family: 'Webdings';
+  font-size: 120%; */
   color: gray;
   margin-right: 5px;
+}
+.info svg {
+  stroke-width: 2;
 }
 .check {
   display: inline-block;
@@ -86,6 +93,7 @@ button.collapsible {
   border-radius: 3px;
   text-align: left;
   box-shadow: none;
+  align-items: center;
 }
 button.collapsible.active .caret::before {
   transform: rotate(90deg);

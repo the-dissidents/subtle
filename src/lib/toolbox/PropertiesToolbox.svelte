@@ -48,7 +48,8 @@ function newStyle() {
 function removeUnusedStyles() {
   let usedStyles = new Set<SubtitleStyle>(
     Source.subs.entries.flatMap((x) => [...x.texts.keys()]));
-  Source.subs.styles = Source.subs.styles.filter((x) => usedStyles.has(x));
+  Source.subs.styles = Source.subs.styles.filter((x) => 
+    usedStyles.has(x) && Source.subs.defaultStyle.name !== x.name);
   Source.markChanged(ChangeType.StyleDefinitions);
 }
 

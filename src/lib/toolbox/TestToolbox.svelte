@@ -11,8 +11,7 @@ import { Dialogs } from '../frontend/Dialogs';
 import { Commands } from '../frontend/Commands';
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 import { Source } from '../frontend/Source';
-import FilterEdit from '../FilterEdit.svelte';
-    import { newMetricFilter, TextMetricFilterMethods, TextMetrics, type SimpleMetricFilter, type MetricFilter } from '../core/Filter';
+import OrderableList from '../ui/OrderableList.svelte';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -22,29 +21,13 @@ MAPI.version().then((x) => {
 let media: MMedia | undefined;
 let tooltipPos: TooltipPosition = $state('bottom');
 
-let filter: MetricFilter = $state({
-  type: 'and',
-  filters: [
-    newMetricFilter({
-      metric: 'charsInLongestLine',
-      method: 'numberLt',
-      negated: false,
-      parameters: [20]
-    }),
-    newMetricFilter({
-      metric: 'lines',
-      method: 'numberGt',
-      negated: true,
-      parameters: [2]
-    }),
-    newMetricFilter({
-      metric: 'content',
-      method: 'stringNonEmpty',
-      negated: false,
-      parameters: []
-    })
-  ]
-});
+let list = $state([
+  {text: '123'}, 
+  {text: 'abc'}, 
+  {text: '543t635'}, 
+  {text: 'aeewwwbc'}, 
+  {text: 'abdfcc'}
+]);
 
 const command = new UICommand([], {
   name: 'name', 
@@ -167,7 +150,11 @@ const command = new UICommand([], {
 
 <br>
 
-<FilterEdit {filter} />
+<OrderableList bind:list={list}>
+  {#snippet row(item)}
+    <input type="text" bind:value={item.text} />
+  {/snippet}
+</OrderableList>
 
 <br>
 <span>{result}</span>

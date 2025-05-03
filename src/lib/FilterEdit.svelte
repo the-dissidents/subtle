@@ -1,10 +1,14 @@
 <script lang="ts">
-import { newMetricFilter, TextMetric, TextMetricFilterMethods, TextMetricFilterNullMethods, TextMetrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod } from "./core/Filter";
+import { newMetricFilter, Metric, MetricFilterMethods, TextMetricFilterNullMethods, Metrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod } from "./core/Filter";
 import { _, locale } from 'svelte-i18n';
 import { Debug } from "./Debug";
 import type { Action } from "svelte/action";
 import { tick } from "svelte";
 import { Menu } from "@tauri-apps/api/menu";
+import StyleSelect from "./StyleSelect.svelte";
+import type { SubtitleStyle } from "./core/Subtitles.svelte";
+import TimestampInput from "./TimestampInput.svelte";
+import { Source } from "./frontend/Source";
 
 interface Props {
   filter: MetricFilter | null
@@ -16,9 +20,12 @@ let updateCounter = $state(0);
 
 locale.subscribe(() => updateCounter++);
 
-const metrics = Object.entries(TextMetrics) as [keyof typeof TextMetrics, TextMetric<any>][];
-const methods = Object.entries(TextMetricFilterMethods) as 
-  [keyof typeof TextMetricFilterMethods, MetricFilterMethod<any, any, any>][];
+const metrics = Object.entries(Metrics) as [keyof typeof Metrics, Metric<any>][];
+const methods = Object.entries(MetricFilterMethods) as 
+  [keyof typeof MetricFilterMethods, MetricFilterMethod<any, any, any>][];
+
+const entryMetrics = metrics.filter(([_, y]) => y.per == 'entry');
+const channelMetrics = metrics.filter(([_, y]) => y.per == 'channel');
 
 const autoWidth: Action<HTMLSelectElement> = (elem) => {
   function updateSelectWidth() {
@@ -58,25 +65,47 @@ function createDefaultFilter(): SimpleMetricFilter {
 </script>
 
 {#snippet makeParameter(f: SimpleMetricFilter, i: number)}
-  {@const method = TextMetricFilterMethods[f.method]}
-  {Debug.assert((<any[]>f.parameters).length == TextMetricFilterMethods[f.method].parameters)}
-  <input type='text' size='2' value={f.parameters[i]}
-    onchange={(ev) => {
-      const params = <string[] | number[]>f.parameters;
-      if (method.parameterType == 'number') {
-        const num = Number.parseFloat(ev.currentTarget.value);
-        if (!isNaN(num)) {
-          params[i] = num;
+  {@const method = MetricFilterMethods[f.method]}
+  {Debug.assert((<any[]>f.parameters).length == MetricFilterMethods[f.method].parameters)}
+  {#if method.parameterType == 'string' || method.parameterType == 'number'}
+    <input type='text' size='2' value={f.parameters[i]}
+      onchange={(ev) => {
+        const params = <string[] | number[]>f.parameters;
+        if (method.parameterType == 'number') {
+          const num = Number.parseFloat(ev.currentTarget.value);
+          if (!isNaN(num)) {
+            params[i] = num;
+            onchange?.();
+          } else
+            ev.currentTarget.value = params[i].toString();
+        } else if (method.parameterType == 'string') {
+          params[i] = ev.currentTarget.value;
           onchange?.();
-        } else
-          ev.currentTarget.value = params[i].toString();
-      } else if (method.parameterType == 'string') {
-        params[i] = ev.currentTarget.value;
-        onchange?.();
-      } else {
-        Debug.never(method.parameterType);
-      }
-    }} />
+        } else {
+          Debug.assert(false);
+        }
+      }} />
+  {:else if method.parameterType == 'style'}
+    <span class="flexgrow">
+      <StyleSelect stretch={true}
+        currentStyle={f.parameters[i]}
+        onsubmit={(s) => {
+          (<SubtitleStyle[]>f.parameters)[i] = s;
+          onchange?.();
+        }} />
+    </span>
+  {:else if method.parameterType == 'time'}
+    <span class="flexgrow">
+      <TimestampInput stretch={true}
+        timestamp={f.parameters[i]}
+        onchange={(t) => {
+          (<number[]>f.parameters)[i] = t;
+          onchange?.();
+        }}/>
+    </span>
+  {:else}
+    {Debug.never(method.parameterType)}
+  {/if}
 {/snippet}
 
 {#snippet makeFilter(
@@ -126,10 +155,10 @@ function createDefaultFilter(): SimpleMetricFilter {
       <select value={f.metric}
         use:autoWidth
         onchange={(ev) => {
-          const method = TextMetricFilterMethods[f.method];
-          const name = <keyof typeof TextMetrics>ev.currentTarget.value;
-          Debug.assert(name in TextMetrics);
-          const newMetric = TextMetrics[name as keyof typeof TextMetrics];
+          const method = MetricFilterMethods[f.method];
+          const name = <keyof typeof Metrics>ev.currentTarget.value;
+          Debug.assert(name in Metrics);
+          const newMetric = Metrics[name as keyof typeof Metrics];
 
           if (newMetric.type == method.fromType) {
             f.metric = name;
@@ -142,36 +171,42 @@ function createDefaultFilter(): SimpleMetricFilter {
           });
         }}
       >
-        {#each metrics as [name, metric]}
+        {#each entryMetrics as [name, metric]}
+          <option value={name}>{metric.localizedName()}</option>
+        {/each}
+        <hr>
+        {#each channelMetrics as [name, metric]}
           <option value={name}>{metric.localizedName()}</option>
         {/each}
       </select>
       <select value={f.method}
         use:autoWidth
         onchange={(ev) => {
-          const name = <keyof typeof TextMetricFilterMethods>ev.currentTarget.value;
-          Debug.assert(name in TextMetricFilterMethods);
-          const newMethod = TextMetricFilterMethods
-            [name as keyof typeof TextMetricFilterMethods];
+          const name = <keyof typeof MetricFilterMethods>ev.currentTarget.value;
+          Debug.assert(name in MetricFilterMethods);
+          const newMethod = MetricFilterMethods
+            [name as keyof typeof MetricFilterMethods];
           f.method = name;
           // fill parameters
-          const params = <string[] | number[]>f.parameters;
+          const params = <any[]>f.parameters;
           if (params.length > newMethod.parameters)
             params.splice(newMethod.parameters);
           for (let i = params.length; i < newMethod.parameters; i++)
             params[i] = newMethod.parameterType == 'number' ? 0
                   : newMethod.parameterType == 'string' ? ''
-                  : Debug.never();
+                  : newMethod.parameterType == 'style' ? Source.subs.defaultStyle
+                  : newMethod.parameterType == 'time' ? 0
+                  : Debug.never(newMethod.parameterType);
           onchange?.();
         }}
       >
         {#each methods as [name, method]}
-          {#if method.fromType == TextMetrics[f.metric].type}
+          {#if method.fromType == Metrics[f.metric].type}
             <option value={name}>{method.localizedName()}</option>
           {/if}
         {/each}
       </select>
-      {#each {length: TextMetricFilterMethods[f.method].parameters}, i}
+      {#each {length: MetricFilterMethods[f.method].parameters}, i}
         {@render makeParameter(f, i)}
       {:else}
         <span class="flexgrow"></span>
@@ -228,7 +263,7 @@ function createDefaultFilter(): SimpleMetricFilter {
     <button class="hlayout" onclick={() => {
       filter = createDefaultFilter();
       onchange?.();
-    }}> 
+    }}>
       <svg class="feather">
         <use href={`/feather-sprite.svg#plus`} />
       </svg>

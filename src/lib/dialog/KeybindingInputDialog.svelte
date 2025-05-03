@@ -1,3 +1,7 @@
+<!-- TODO: KeybindingInputDialog
+  1. Support chords
+-->
+
 <script lang="ts">
 import { Debug } from '../Debug';
 import DialogBase from '../DialogBase.svelte';
@@ -102,7 +106,6 @@ function check() {
     }}>
       {$_('keyinput.clear')}
     </button>
-    <!-- TODO: support chords -->
     <!-- <label>
       <input type="checkbox" />
       {$_('keyinput.use-chord')}

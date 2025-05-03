@@ -6,29 +6,51 @@ import { ajv, DeserializationError, parseObject } from "../Serialization";
 import wcwidth from "wcwidth";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
+import { Basic } from "../Basic";
 const $_ = unwrapFunctionStore(_);
 
-export type TextMetricTypeName = 'string' | 'number';
+export type MetricTypeName = 'string' | 'number' | 'style' | 'time';
 
-export type TextMetricType<T> =
+export type MetricType<T> =
       T extends 'string' ? string
     : T extends 'number' ? number
+    : T extends 'style' ? SubtitleStyle
+    : T extends 'time' ? number
     : never;
 
-export class TextMetric<TypeName extends TextMetricTypeName> {
+export class Metric<TypeName extends MetricTypeName> {
+    public readonly integer: boolean;
+    public readonly description?: () => string;
     constructor (
         public readonly type: TypeName,
+        public readonly per: 'entry' | 'channel',
         public readonly localizedName: () => string,
         public readonly shortName: () => string,
         public readonly value: 
-            (entry: SubtitleEntry, style: SubtitleStyle) => TextMetricType<TypeName>,
-        public readonly description?: () => string
-    ) {}
+            (entry: SubtitleEntry, style: SubtitleStyle) => MetricType<TypeName>,
+        opts?: {
+            description?: () => string,
+            integer: boolean
+        }
+    ) {
+        // TODO: is this awkward? it only applies to numbers
+        this.integer = opts?.integer ?? false;
+        this.description = opts?.description;
+    }
+
+    stringValue(entry: SubtitleEntry, style: SubtitleStyle, digits = 3) {
+        const value = this.value(entry, style);
+        if (this.type == 'number') return (<number>value).toFixed(this.integer ? 0 : digits);
+        if (this.type == 'string') return (<string>value);
+        if (this.type == 'time') return Basic.formatTimestamp(<number>value);
+        if (this.type == 'style') return (<SubtitleStyle>value).name;
+        Debug.never(this.type);
+    }
 };
 
 export type MetricFilterMethod<
-    FromType extends TextMetricTypeName, 
-    ParameterType extends TextMetricTypeName,
+    FromType extends MetricTypeName, 
+    ParameterType extends MetricTypeName,
     Arity extends number,
 > = {
     fromType: FromType,
@@ -37,57 +59,57 @@ export type MetricFilterMethod<
 } & (
     Arity extends 0 ? {
         parameterType?: ParameterType,
-        exec(a: TextMetricType<FromType>): boolean
+        exec(a: MetricType<FromType>): boolean
     } : Arity extends 1 ? {
         parameterType: ParameterType,
-        exec(a: TextMetricType<FromType>, 
-             b: TextMetricType<ParameterType>): boolean
+        exec(a: MetricType<FromType>, 
+             b: MetricType<ParameterType>): boolean
     } : Arity extends 2 ? {
         parameterType: ParameterType,
-        exec(a: TextMetricType<FromType>, 
-             b: TextMetricType<ParameterType>,
-             c: TextMetricType<ParameterType>): boolean
+        exec(a: MetricType<FromType>, 
+             b: MetricType<ParameterType>,
+             c: MetricType<ParameterType>): boolean
     } : never
 );
 
 function newFilterMethod<
-    FromType extends TextMetricTypeName, 
-    ParameterType extends TextMetricTypeName,
+    FromType extends MetricTypeName, 
+    ParameterType extends MetricTypeName,
     Arity extends 0 | 1 | 2,
 >(f: MetricFilterMethod<FromType, ParameterType, Arity>) { return f; }
 
 export type SimpleMetricFilter<
-    Metric extends TextMetricName = TextMetricName,
-    Method extends TextMetricFilterMethodName = TextMetricFilterMethodName
+    Metric extends MetricName = MetricName,
+    Method extends MetricFilterMethodName = MetricFilterMethodName
 > = {
     metric: Metric,
     method: Method,
     negated: boolean,
     parameters: 
-          (typeof TextMetricFilterMethods)[Method]['parameters'] extends 0 ? []
-        : (typeof TextMetricFilterMethods)[Method]['parameters'] extends 1 ? [_ParamType<Method>]
-        : (typeof TextMetricFilterMethods)[Method]['parameters'] extends 2 ? [_ParamType<Method>, _ParamType<Method>]
+          (typeof MetricFilterMethods)[Method]['parameters'] extends 0 ? []
+        : (typeof MetricFilterMethods)[Method]['parameters'] extends 1 ? [_ParamType<Method>]
+        : (typeof MetricFilterMethods)[Method]['parameters'] extends 2 ? [_ParamType<Method>, _ParamType<Method>]
         : never
 };
 
 export function newMetricFilter<
-    Metric extends TextMetricName,
-    Method extends TextMetricFilterMethodName
+    Metric extends MetricName,
+    Method extends MetricFilterMethodName
 >(f: SimpleMetricFilter<Metric, Method>) { return f; }
 
 export type MetricFilter = {
     type: 'and' | 'or',
-    filters: (SimpleMetricFilter<TextMetricName, TextMetricFilterMethodName> | MetricFilter)[]
-} | SimpleMetricFilter<TextMetricName, TextMetricFilterMethodName>;
+    filters: (SimpleMetricFilter<MetricName, MetricFilterMethodName> | MetricFilter)[]
+} | SimpleMetricFilter<MetricName, MetricFilterMethodName>;
 
 export type EvaluateFilterResult = {
-    failed: SimpleMetricFilter<TextMetricName, TextMetricFilterMethodName>[]
+    failed: SimpleMetricFilter<MetricName, MetricFilterMethodName>[]
 };
 
 export function filterDescription(filter: SimpleMetricFilter) {
     return `${filter.negated ? $_('filter.description.not') : ''} ${
-        TextMetrics[filter.metric].localizedName()} ${
-        TextMetricFilterMethods[filter.method].localizedName()} ${
+        Metrics[filter.metric].localizedName()} ${
+        MetricFilterMethods[filter.method].localizedName()} ${
         (filter.parameters as (number[] | string[])).map((x) => x.toString()).join(' ')}`;
 }
 
@@ -108,8 +130,8 @@ export function evaluateFilter(
                 Debug.never(filter.type);
         }
     } else {
-        const from = TextMetrics[filter.metric].value(entry, style);
-        const success = TextMetricFilterMethods[filter.method]
+        const from = Metrics[filter.metric].value(entry, style);
+        const success = MetricFilterMethods[filter.method]
             .exec(from as never, ...(filter.parameters as [never, any])) != filter.negated;
         return { failed: success ? [] : [filter] };
     }
@@ -119,36 +141,58 @@ function getTextLength(s: string) {
     return [...s.matchAll(/[\w\u4E00-\u9FFF]/g)].length;
 }
 
-export const TextMetrics = {
-    content: new TextMetric('string', 
+export const Metrics = {
+    startTime: new Metric('time', 'entry',
+        () => $_('metrics.start-time'), 
+        () => $_('metrics.start-time-short'), 
+        (e) => e.start),
+    endTime: new Metric('time', 'entry',
+        () => $_('metrics.end-time'), 
+        () => $_('metrics.end-time-short'), 
+        (e) => e.end),
+    duration: new Metric('time', 'entry',
+        () => $_('metrics.duration'), 
+        () => $_('metrics.duration'), 
+        (e) => e.end - e.start),
+    style: new Metric('style', 'channel',
+        () => $_('metrics.style'), 
+        () => $_('metrics.style'), 
+        (e, s) => s),
+    content: new Metric('string', 'channel',
         () => $_('metrics.content'), 
         () => $_('metrics.content'), 
         (e, s) => e.texts.get(s)!),
-    lines: new TextMetric('number', 
+    lines: new Metric('number', 'channel',
         () => $_('metrics.number-of-lines'), 
         () => $_('metrics.number-of-lines-short'), 
-        (e, s) => e.texts.get(s)!.split('\n').length),
-    chars: new TextMetric('number', 
+        (e, s) => e.texts.get(s)!.split('\n').length,
+        { integer: true }),
+    chars: new Metric('number', 'channel',
         () => $_('metrics.number-of-characters'), 
         () => $_('metrics.number-of-characters-short'), 
-        (e, s) => e.texts.get(s)!.length),
-    letters: new TextMetric('number', 
+        (e, s) => e.texts.get(s)!.length,
+        { integer: true }),
+    letters: new Metric('number', 'channel',
         () => $_('metrics.number-of-readable-characters'), 
         () => $_('metrics.number-of-readable-characters-short'), 
-        (e, s) => getTextLength(e.texts.get(s)!)),
-    charsInLongestLine: new TextMetric('number', 
+        (e, s) => getTextLength(e.texts.get(s)!),
+        { integer: true }),
+    charsInLongestLine: new Metric('number', 'channel',
         () => $_('metrics.number-of-characters-in-longest-line'), 
         () => $_('metrics.number-of-characters-in-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map((x) => x.length))),
-    lettersInLongestLine: new TextMetric('number', 
+        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map((x) => x.length)),
+        { integer: true }),
+    lettersInLongestLine: new Metric('number', 'channel',
         () => $_('metrics.number-of-letters-in-longest-line'), 
         () => $_('metrics.number-of-letters-in-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(getTextLength))),
-    widthOfLongestLine: new TextMetric('number', 
+        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(getTextLength)),
+        { integer: true }),
+    widthOfLongestLine: new Metric('number', 'channel',
         () => $_('metrics.width-of-longest-line'), 
         () => $_('metrics.width-of-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(wcwidth))),
-    lettersPerSecond: new TextMetric('number', 
+        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(wcwidth)),
+        { integer: true }),
+    lettersPerSecond: new Metric('number', 'channel',
         () => $_('metrics.readable-characters-per-second'), 
         () => $_('metrics.readable-characters-per-second-short'), 
         (e, s) => {
@@ -158,16 +202,10 @@ export const TextMetrics = {
         }),
 } as const;
 
-export const TextMetricFilterMethods = {
+export const MetricFilterMethods = {
     stringNull: newFilterMethod({
         localizedName: () => '',
         fromType: 'string',
-        parameters: 0,
-        exec: (a) => true,
-    }),
-    numberNull: newFilterMethod({
-        localizedName: () => '',
-        fromType: 'number',
         parameters: 0,
         exec: (a) => true,
     }),
@@ -204,6 +242,12 @@ export const TextMetricFilterMethods = {
         parameterType: 'number',
         parameters: 1,
         exec: (a, b) => a == b,
+    }),
+    numberNull: newFilterMethod({
+        localizedName: () => '',
+        fromType: 'number',
+        parameters: 0,
+        exec: (a) => true,
     }),
     numberGt: newFilterMethod({
         localizedName: () => $_('filter.greater-than'),
@@ -247,31 +291,101 @@ export const TextMetricFilterMethods = {
         parameters: 2,
         exec: (a, b, c) => b < a && a < c,
     }),
+    timeNull: newFilterMethod({
+        localizedName: () => '',
+        fromType: 'time',
+        parameters: 0,
+        exec: (a) => true,
+    }),
+    timeEqual: newFilterMethod({
+        localizedName: () => $_('filter.number-equals'),
+        fromType: 'time',
+        parameterType: 'time',
+        parameters: 1,
+        exec: (a, b) => a == b,
+    }),
+    timeGt: newFilterMethod({
+        localizedName: () => $_('filter.greater-than'),
+        fromType: 'time',
+        parameterType: 'time',
+        parameters: 1,
+        exec: (a, b) => a > b,
+    }),
+    timeLt: newFilterMethod({
+        localizedName: () => $_('filter.less-than'),
+        fromType: 'time',
+        parameterType: 'time',
+        parameters: 1,
+        exec: (a, b) => a < b,
+    }),
+    timeGeq: newFilterMethod({
+        localizedName: () => $_('filter.greater-than-or-equal'),
+        fromType: 'time',
+        parameterType: 'time',
+        parameters: 1,
+        exec: (a, b) => a >= b,
+    }),
+    timeLeq: newFilterMethod({
+        localizedName: () => $_('filter.less-than-or-equal'),
+        fromType: 'time',
+        parameterType: 'time',
+        parameters: 1,
+        exec: (a, b) => a <= b,
+    }),
+    timeBetweenInclusive: newFilterMethod({
+        localizedName: () => $_('filter.between-inclusive'),
+        fromType: 'time',
+        parameterType: 'time',
+        parameters: 2,
+        exec: (a, b, c) => b <= a && a <= c,
+    }),
+    timeBetweenExclusive: newFilterMethod({
+        localizedName: () => $_('filter.between-exclusive'),
+        fromType: 'time',
+        parameterType: 'time',
+        parameters: 2,
+        exec: (a, b, c) => b < a && a < c,
+    }),
+    styleNull: newFilterMethod({
+        localizedName: () => '',
+        fromType: 'style',
+        parameters: 0,
+        exec: (a) => true,
+    }),
+    styleEqual: newFilterMethod({
+        localizedName: () => $_('filter.equals'),
+        fromType: 'style',
+        parameterType: 'style',
+        parameters: 1,
+        exec: (a, b) => a.name == b.name,
+    }),
 } as const;
 
 export const TextMetricFilterNullMethods = {
     string: 'stringNull',
     number: 'numberNull',
+    time: 'timeNull',
+    style: 'styleNull',
 } as const;
 
-export type TextMetricName = keyof typeof TextMetrics;
-export type TextMetricFilterMethodName = keyof typeof TextMetricFilterMethods;
+export type MetricName = keyof typeof Metrics;
+export type MetricFilterMethodName = keyof typeof MetricFilterMethods;
 
-type _Arity<Name extends TextMetricFilterMethodName> = 
-    (typeof TextMetricFilterMethods)[Name]['parameters'];
+type _Arity<Name extends MetricFilterMethodName> = 
+    (typeof MetricFilterMethods)[Name]['parameters'];
 
-type _ParamType<Name extends TextMetricFilterMethodName> = 
+type _ParamType<Name extends MetricFilterMethodName> = 
     _Arity<Name> extends 0 
     ? unknown 
-    : TextMetricType<(typeof TextMetricFilterMethods)[Name]['parameterType']>;
+    : MetricType<(typeof MetricFilterMethods)[Name]['parameterType']>;
 
 // serialization
 
 const SimpleFilterSchema: JSONSchemaType<SimpleMetricFilter> = {
     type: 'object',
     properties: {
-        metric: { enum: Object.keys(TextMetrics) } as any,
-        method: { enum: Object.keys(TextMetricFilterMethods) } as any,
+        metric: { enum: Object.keys(Metrics) } as any,
+        method: { enum: Object.keys(MetricFilterMethods) } as any,
         negated: { type: 'boolean' },
         parameters: { type: "array", 
             anyOf: [
@@ -309,7 +423,7 @@ function checkFilterInternal(
     if ('type' in filter) {
         filter.filters.forEach(checkFilterInternal);
     } else {
-        const method = TextMetricFilterMethods[filter.method];
+        const method = MetricFilterMethods[filter.method];
         const params = filter.parameters as any[];
         if (method.parameters == 0) {
             if (params.length > 0)

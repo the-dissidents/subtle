@@ -65,6 +65,6 @@ function findBoundingRect(element: HTMLElement): DOMRect {
 >
   {@render children?.()}
 </div>
-<Popup bind:handler={handler} {position}>
+<Popup style="tooltip" bind:handler={handler} {position}>
   {text}
 </Popup>

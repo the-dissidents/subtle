@@ -6,11 +6,12 @@ import { EventHost } from "./frontend/Frontend";
 
 interface Props {
   disabled?: boolean,
+  stretch?: boolean;
   currentStyle: SubtitleStyle;
   onsubmit?: (style: SubtitleStyle) => void;
 }
 
-let { disabled = false, currentStyle = $bindable(), onsubmit }: Props = $props();
+let { disabled = false, stretch = false, currentStyle = $bindable(), onsubmit }: Props = $props();
 let refresh = $state(0);
 let styles = $state(Source.subs.styles);
 
@@ -26,7 +27,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 });
 </script>
 
-<select tabindex='-1'
+<select tabindex='-1' class={{stretch}}
   disabled={disabled}
   oninput={(ev) => {
     currentStyle = styles[ev.currentTarget.selectedIndex];
@@ -40,3 +41,9 @@ Source.onSubtitlesChanged.bind(me, (t) => {
     {/each}
   {/key}
 </select>
+
+<style>
+  .stretch {
+    width: 100%;
+  }
+</style>

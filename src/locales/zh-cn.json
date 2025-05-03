@@ -288,6 +288,9 @@
   },
   "metrics": {
     "content": "内容",
+    "duration": "时长",
+    "end-time": "结束时间",
+    "end-time-short": "结束",
     "number-of-characters": "总字符数",
     "number-of-characters-in-longest-line": "最长行的字符数",
     "number-of-characters-in-longest-line-short": "行字符数",
@@ -300,6 +303,9 @@
     "number-of-readable-characters-short": "可读字符数",
     "readable-characters-per-second": "每秒可读字符数",
     "readable-characters-per-second-short": "每秒可读",
+    "start-time": "起始时间",
+    "start-time-short": "起始",
+    "style": "样式",
     "width-of-longest-line": "最长行宽度",
     "width-of-longest-line-short": "宽度"
   },
@@ -423,6 +429,8 @@
     "untimed-text": "无时间文本"
   },
   "table": {
+    "add-column": "添加列",
+    "edit-columns": "编辑列",
     "end": "结尾",
     "requirement-not-met": "未满足条件：",
     "start": "开始",

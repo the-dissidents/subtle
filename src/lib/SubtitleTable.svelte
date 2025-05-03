@@ -36,7 +36,7 @@ import { Debug } from "./Debug";
 import { theme, LabelColor } from "./Theming.svelte";
 
 import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
-import { evaluateFilter, filterDescription, type MetricFilter, type SimpleMetricFilter } from "./core/Filter";
+import { evaluateFilter, filterDescription, type SimpleMetricFilter, type MetricName, Metrics, Metric } from "./core/Filter";
 
 import { CanvasManager } from "./CanvasManager";
 import { InterfaceConfig, MainConfig } from "./config/Groups";
@@ -49,16 +49,38 @@ import { Interface } from "./frontend/Interface";
 import { Playback } from "./frontend/Playback";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 
-import { _ } from 'svelte-i18n';
+import { _, locale } from 'svelte-i18n';
 import { get } from 'svelte/store';
 
 import Popup, { type PopupHandler } from "./ui/Popup.svelte";
+import OrderableList from "./ui/OrderableList.svelte";
+    import { Menu } from "@tauri-apps/api/menu";
+
+const MetricsList = Object.entries(Metrics) as [keyof typeof Metrics, Metric<any>][];
 
 let selection = $state(new SvelteSet<SubtitleEntry>);
 let canvas = $state<HTMLCanvasElement>();
-let popup = $state<PopupHandler>({});
+let validationMessagePopup = $state<PopupHandler>({});
+let columnPopup = $state<PopupHandler>({});
 let popupMessage = $state('');
 let manager: CanvasManager;
+
+type Column = {
+  metric: MetricName,
+  layout?: ColumnLayout
+};
+
+type ColumnLayout = {
+  name: string,
+  align: 'start' | 'center' | 'end',
+  position: number,
+  textX: number
+  width: number
+};
+
+let entryColumns = $state<Column[]>([{ metric: 'startTime' }, { metric: 'endTime' }]);
+let channelColumns = $state<Column[]>([{ metric: 'style' }, { metric: 'content' }]);
+let indexColumnLayout: ColumnLayout = { name: '#', align: 'end', position: 0, textX: -1, width: -1 };
 
 type TextLayout = {
   style: SubtitleStyle,
@@ -77,7 +99,6 @@ let lines: {
 let lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
 let totalLines = 0;
 let requestedLayout = false;
-let colPos: [number, number, number, number, number, number,] = [0, 0, 0, 0, 0, 0];
 
 const linePadding   = $derived(InterfaceConfig.data.fontSize * 0.35);
 const lineHeight    = $derived(InterfaceConfig.data.fontSize + linePadding * 2);
@@ -102,45 +123,77 @@ function layout(cxt: CanvasRenderingContext2D) {
   cxt.scale(devicePixelRatio, devicePixelRatio);
   cxt.font = font();
 
+  for (const col of [...entryColumns, ...channelColumns]) {
+    const metric = Metrics[col.metric];
+    const name = metric.shortName();
+    col.layout = {
+      name, align: 'start',
+      position: -1, 
+      width: cxt.measureText(name).width + cellPadding * 2, 
+      textX: -1
+    };
+  }
+
   lines = []; totalLines = 0;
-  let textWidth = 0;
   for (const entry of Source.subs.entries) {
-    let height = 0;
+    for (const col of entryColumns) {
+      // FIXME: we assume no string metrics here
+      const metric = Metrics[col.metric];
+      const value = metric.stringValue(entry, Source.subs.defaultStyle);
+      col.layout!.width = 
+        Math.max(col.layout!.width, cxt.measureText(value).width + cellPadding * 2);
+    }
+
+    let entryHeight = 0;
     const texts: (typeof lines)[number]['texts'] = [];
     for (const style of Source.subs.styles) {
       const text = entry.texts.get(style);
       if (text === undefined) continue;
 
-      let splitLines = text.split('\n');
-      textWidth = Math.max(textWidth, ...splitLines.map((x) => cxt.measureText(x).width));
+      let lineHeight = 1;
+      for (const col of channelColumns) {
+        const value = Metrics[col.metric].stringValue(entry, style);
+        const splitLines = value.split('\n');
+        const w = Math.max(...splitLines.map((x) => cxt.measureText(x).width)) + cellPadding * 2;
+        col.layout!.width = Math.max(col.layout!.width, w);
+        lineHeight = Math.max(lineHeight, splitLines.length);
+      }
+
       texts.push({
-        style, text, 
-        height: splitLines.length,
-        line: totalLines + height,
+        style, text: text,
+        height: lineHeight,
+        line: totalLines + entryHeight,
         failed: style.validator === null 
           ? [] : evaluateFilter(style.validator, entry, style).failed
       });
-      height += splitLines.length;
+      entryHeight += lineHeight;
     }
-    lines.push({entry, line: totalLines, height, texts});
-    lineMap.set(entry, {line: totalLines, height});
-    totalLines += height;
+    lines.push({entry, line: totalLines, height: entryHeight, texts});
+    lineMap.set(entry, {line: totalLines, height: entryHeight});
+    totalLines += entryHeight;
   }
 
-  const timestampWidth = cxt.measureText(`99:99:99.999`).width;
-  colPos[0] = 0;
-  colPos[1] = colPos[0] + cellPadding * 2 + cxt.measureText(`${lines.length+1}`).width;
-  colPos[2] = colPos[1] + cellPadding * 2 + timestampWidth;
-  colPos[3] = colPos[2] + cellPadding * 2 + timestampWidth;
-  colPos[4] = colPos[3] + cellPadding * 2 + Math.max(
-    ...Source.subs.styles.map((x) => cxt.measureText(x.name).width), 
-    cxt.measureText('style').width);
-  // colPos[5] = colPos[4] + cellPadding * 2 + cxt.measureText(`999.9`).width;
+  let pos = 0;
+  indexColumnLayout.position = 0;
+  indexColumnLayout.width = cellPadding * 2 + cxt.measureText(`${Math.max(lines.length+1, 100)}`).width;
+  indexColumnLayout.textX = indexColumnLayout.width - cellPadding;
+  pos += indexColumnLayout.width;
+
+  for (const col of [...entryColumns, ...channelColumns]) {
+    col.layout!.position = pos;
+    col.layout!.textX = 
+          col.layout!.align == 'start'  ? col.layout!.position + cellPadding
+        : col.layout!.align == 'end'    ? col.layout!.position + col.layout!.width - cellPadding
+        : col.layout!.align == 'center' ? col.layout!.position + col.layout!.width * 0.5
+        : Debug.never(col.layout!.align);
+    pos += col.layout!.width;
+  }
 
   manager.setContentRect({
-    r: colPos[4] + cellPadding * 2 + textWidth + manager.scrollerSize,
+    r: pos + manager.scrollerSize,
     b: (totalLines + 1) * lineHeight + headerHeight + manager.scrollerSize // add 1 for virtual entry
   });
+  Debug.debug(entryColumns, channelColumns);
 }
 
 function render(cxt: CanvasRenderingContext2D) {
@@ -186,7 +239,7 @@ function render(cxt: CanvasRenderingContext2D) {
     // label
     if (entry.label !== 'none') {
       cxt.fillStyle = LabelColor(entry.label);
-      cxt.fillRect(0, y, colPos[1], h);
+      cxt.fillRect(0, y, indexColumnLayout.width, h);
     }
 
     // texts
@@ -197,43 +250,51 @@ function render(cxt: CanvasRenderingContext2D) {
     cxt.strokeStyle = gridColor;
     let y0 = y;
     
-    // lines; in the order of Source.subs.styles
     let j = 0;
-    for (const {style, text, failed} of texts) {
-      const splitLines = text.split('\n');
-
+    // lines; in the order of Source.subs.styles
+    for (const {style, failed, height} of texts) {
+      const xpos = channelColumns[0].layout!.position;
+      
       // background for failed validation
       if (failed.length > 0) {
         cxt.fillStyle = errorBackground;
-        cxt.fillRect(colPos[4], y0 + 1, width + sx - colPos[4], splitLines.length * lineHeight - 2);
+        cxt.fillRect(xpos, y0 + 1, width + sx - xpos, height * lineHeight - 2);
       }
 
-      cxt.fillStyle = textFillStyle;
-      cxt.textBaseline = 'middle';
-      cxt.textAlign = 'start';
-      splitLines.forEach((x, i) => 
-        cxt.fillText(x, colPos[4] + cellPadding, y0 + (i + 0.5) * lineHeight));
-
-      const cellY = y0 + (splitLines.length * lineHeight) / 2;
-      cxt.fillText(style.name, colPos[3] + cellPadding, cellY);
+      for (const col of channelColumns) {
+        const value = Metrics[col.metric].stringValue(entry, style);
+        let splitLines = value.split('\n');
+        cxt.textBaseline = 'middle';
+        cxt.textAlign = col.layout!.align;
+        cxt.fillStyle = textFillStyle;
+        splitLines.forEach((x, i) => 
+          cxt.fillText(x, col.layout!.textX, y0 + (i + 0.5) * lineHeight));
+      }
 
       // inner horizontal lines
-      y0 += splitLines.length * lineHeight;
+      y0 += height * lineHeight;
       if (j != entry.texts.size - 1)
-        drawLine(colPos[3], y0, width + sx, y0);
+        drawLine(xpos, y0, width + sx, y0);
       j++;
     }
 
     // entry cells
-    cxt.textBaseline = 'middle';
+    for (const col of entryColumns) {
+      const value = Metrics[col.metric].stringValue(entry, Source.subs.defaultStyle);
+      let splitLines = value.split('\n');
+      cxt.textBaseline = 'middle';
+      cxt.textAlign = col.layout!.align;
+      cxt.fillStyle = textFillStyle;
+      splitLines.forEach((line, i) => 
+        cxt.fillText(line, col.layout!.textX, y + (i + 0.5) * lineHeight));
+    }
+
+    // index
     cxt.textAlign = 'end';
-    cxt.fillText(`${i}`, 
-      colPos[1] - cellPadding, y + h * 0.5);
-    cxt.textAlign = 'start';
-    cxt.fillText(Basic.formatTimestamp(entry.start), 
-      colPos[1] + cellPadding, y + h * 0.5);
-    cxt.fillText(Basic.formatTimestamp(entry.end), 
-      colPos[2] + cellPadding, y + h * 0.5);
+    cxt.fillStyle = textFillStyle;
+    cxt.fillText(i.toString(), 
+      indexColumnLayout.width - cellPadding, 
+      y + 0.5 * lineHeight);
 
     // outer horizontal line
     cxt.strokeStyle = gridMajorColor;
@@ -253,32 +314,32 @@ function render(cxt: CanvasRenderingContext2D) {
     cxt.fillStyle = textColor;
     cxt.textBaseline = 'middle';
     cxt.textAlign = 'end';
-    cxt.fillText(`*`, colPos[1] - cellPadding, y + lineHeight * 0.5);
+    cxt.fillText(`*`, indexColumnLayout.width - cellPadding, y + lineHeight * 0.5);
   }
 
   // header
   cxt.fillStyle = headerBackground;
   cxt.fillRect(0, manager.scroll[1], sx + width, headerHeight);
   cxt.fillStyle = textColor;
-  cxt.textBaseline = 'top';
-  cxt.textAlign = 'end';
-  cxt.fillText(`#`,     colPos[1] - cellPadding, sy + linePadding);
-  cxt.textAlign = 'center';
-  cxt.fillText($_('table.start'), (colPos[1] + colPos[2]) / 2, sy + linePadding);
-  cxt.fillText($_('table.end'),   (colPos[2] + colPos[3]) / 2, sy + linePadding);
-  cxt.fillText($_('table.style'), (colPos[3] + colPos[4]) / 2, sy + linePadding);
-  cxt.textAlign = 'start';
-  cxt.fillText($_('table.text'),  colPos[4] + cellPadding, sy + linePadding);
+
+  const cols = [indexColumnLayout, 
+    ...entryColumns.map((x) => x.layout!), 
+    ...channelColumns.map((x) => x.layout!)];
+  for (const col of cols) {
+    cxt.textBaseline = 'middle';
+    cxt.textAlign = col.align;
+    cxt.fillText(col.name, col.textX, sy + lineHeight * 0.5);
+  }
 
   // vertical lines
   cxt.strokeStyle = gridMajorColor;
-
   const maxY = manager.contentRect.b;
-  drawLine(colPos[1], sy, colPos[1], 
+  drawLine(indexColumnLayout.width, sy, 
+    indexColumnLayout.width, 
     Math.min(sy + height, maxY - manager.scrollerSize));
 
   const bottom = Math.min(sy + height, maxY - lineHeight - manager.scrollerSize);
-  colPos.slice(2).map((pos) => drawLine(pos, sy, pos, bottom));
+  cols.slice(1).map((x) => drawLine(x.position, sy, x.position, bottom));
 }
 
 const me = {};
@@ -390,8 +451,9 @@ function onMouseMove(ev: MouseEvent) {
   const [cx, cy] = manager.convertPosition('offset', 'canvas', ev.offsetX, ev.offsetY);
   const currentLine = Math.floor((cy - headerHeight) / lineHeight);
 
+  let channelColumnStart = channelColumns[0].layout?.position ?? Infinity;
   let currentText: TextLayout | undefined;
-  if (currentLine <= totalLines && cx > colPos[4]) {
+  if (currentLine <= totalLines && cx > channelColumnStart) {
     outer: for (const {texts} of lines) {
       for (const text of texts) {
         if (currentLine < text.line)
@@ -403,15 +465,14 @@ function onMouseMove(ev: MouseEvent) {
 
   if (currentText?.failed !== currentFails) {
     currentFails = currentText?.failed ?? [];
-    if (popup.isOpen!()) popup.close!();
+    if (validationMessagePopup.isOpen!()) validationMessagePopup.close!();
     if (currentFails.length > 0) {
       Debug.assert(currentText !== undefined);
       popupMessage = `${$_('table.requirement-not-met', {values: {n: currentFails.length}})}\n` 
         + currentFails.map(filterDescription).join('\n');
       let [left, top] = manager.convertPosition('canvas', 'client', 
-        colPos[4], currentText.line * lineHeight + headerHeight);
-      console.log(left, top);
-      popup.open!({left, top, width: 0, 
+        channelColumnStart, currentText.line * lineHeight + headerHeight);
+      validationMessagePopup.open!({left, top, width: 0, 
         height: currentText.height * 0.5 * lineHeight / manager.scale});
     }
   }
@@ -486,33 +547,145 @@ function onDrag(offsetX: number, offsetY: number) {
 }
 </script>
 
-<canvas bind:this={canvas}
-  class:subsfocused={$uiFocus === 'Table'}
-  ondblclick={() => {
-    onFocus();
-    let focused = Editing.getFocusedEntry();
-    Debug.assert(focused !== null);
-    if (focused == 'virtual') {
-      Editing.startEditingNewVirtualEntry();
-    } else {
-      Playback.setPosition(focused.start);
-      Editing.startEditingFocusedEntry();
-    }
-  }}
-  oncontextmenu={(ev) => {
-    onFocus();
-    ev.preventDefault();
-    Actions.contextMenu();
-  }}
-></canvas>
+<div class="container">
+  <button onclick={(ev) => {
+    const rect = ev.currentTarget.getBoundingClientRect();
+    columnPopup.open!(rect);
+  }} aria-label='edit'>
+    <svg class="feather">
+      <use href={`/feather-sprite.svg#edit-3`} />
+    </svg>
+  </button>
+  <canvas bind:this={canvas}
+    class:subsfocused={$uiFocus === 'Table'}
+    ondblclick={() => {
+      onFocus();
+      let focused = Editing.getFocusedEntry();
+      Debug.assert(focused !== null);
+      if (focused == 'virtual') {
+        Editing.startEditingNewVirtualEntry();
+      } else {
+        Playback.setPosition(focused.start);
+        Editing.startEditingFocusedEntry();
+      }
+    }}
+    oncontextmenu={(ev) => {
+      onFocus();
+      ev.preventDefault();
+      Actions.contextMenu();
+    }}
+  ></canvas>
+</div>
 
-<Popup bind:handler={popup} position="left">
+{#snippet metricList(opt: {list: Column[]}, per: 'entry' | 'channel')}
+  <OrderableList bind:list={opt.list} style='width: 100%'
+    onsubmit={() => {
+      requestedLayout = true;
+      manager.requestRender();
+    }}
+  >
+    {#snippet row(col, i)}
+      <select bind:value={col.metric} onchange={() => {
+        requestedLayout = true;
+        manager.requestRender();
+      }}>
+        {#each MetricsList as [name, m]}
+          {#if m.per == per && (!opt.list.some((x) => x.metric == name) || name == col.metric)}
+            <option value={name}>{m.localizedName()}</option>
+          {/if}
+        {/each}
+      </select>
+      <button onclick={() => {
+        opt.list.splice(i, 1);
+        requestedLayout = true;
+        manager.requestRender();
+      }} aria-label='delete'>
+        <svg class="feather">
+          <use href={`/feather-sprite.svg#delete`} />
+        </svg>
+      </button>
+    {/snippet}
+    {#snippet footer()}
+    {@const used = new Set(opt.list.map((x) => x.metric))}
+    {@const unused = MetricsList.filter(([x, y]) => y.per == per && !used.has(x))}
+      <button disabled={unused.length == 0} class="hlayout"
+        onclick={async () => {
+          const menu = await Menu.new({items: unused.map(([x, y]) => ({
+            text: y.localizedName(),
+            action() {
+              opt.list.push({ metric: x });
+              requestedLayout = true;
+              manager.requestRender();
+            }
+          }))});
+          menu.popup();
+        }}
+      >
+        <svg class="feather">
+          <use href={`/feather-sprite.svg#plus`} />
+        </svg>
+        {$_('table.add-column')}
+      </button>
+    {/snippet}
+  </OrderableList>
+{/snippet}
+
+<Popup bind:handler={columnPopup} position="left">
+  {#key $locale}
+  <div class="form">
+    <h5>
+      {$_('table.edit-columns')}
+    </h5>
+    {@render metricList({list: entryColumns}, 'entry')}
+    <hr>
+    {@render metricList({list: channelColumns}, 'channel')}
+  </div>
+  {/key}
+</Popup>
+
+<Popup bind:handler={validationMessagePopup} position="left" style='tooltip'>
   <span style="white-space: pre-wrap;">
     {popupMessage}
   </span>
 </Popup>
 
 <style>
+  @media (prefers-color-scheme: dark) {
+    .container button {
+      background-color: var(--uchu-yin-5);
+    }
+  }
+
+  .form {
+    display: flex;
+    /* color: black;
+    background-color: white; */
+    flex-direction: column;
+    text-align: start;
+    align-items: center;
+  }
+  .form select {
+    flex-grow: 1;
+    min-width: 80px;
+    vertical-align: middle;
+  }
+  .form hr {
+    border-bottom: 1px solid gray;
+  }
+
+  .container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  .container button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin-right: 20px;
+    margin-top: 2px;
+  }
+
   canvas {
     width: 100%;
     height: 100%;

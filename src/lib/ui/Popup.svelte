@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { Snippet } from 'svelte';
 import { Debug } from '../Debug';
 
 export type PopupHandler = {
@@ -10,12 +11,17 @@ export type PopupHandler = {
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 interface Props {
   handler: PopupHandler;
+  style?: 'panel' | 'tooltip';
+  maxWidth?: string;
   position?: TooltipPosition;
-  children?: import('svelte').Snippet;
-  // TODO: add delay parameter
+  children?: Snippet;
 }
 
-let { position = 'top', children, handler = $bindable() }: Props = $props();
+let { 
+  position = 'top', style = 'panel', maxWidth = '200px',
+  handler = $bindable(), children
+}: Props = $props();
+
 let id = $props.id();
 let isOpen = false;
 let tooltip: HTMLElement | undefined = $state();
@@ -60,25 +66,30 @@ handler.isOpen = () => isOpen;
     .tooltip {
       background-color: var(--uchu-yin);
       color: var(--uchu-yang);
-      box-shadow: 2px 5px 10px -3px rgba(0,0,0,0.4);
+      box-shadow: 1px 3px 10px -3px rgba(0,0,0,0.4);
+    }
+    .panel {
+      background-color: var(--uchu-yang);
+      color: var(--uchu-yin);
+      box-shadow: 1px 3px 10px -3px rgba(0,0,0,0.4);
     }
   }
   @media (prefers-color-scheme: dark) {
     .tooltip {
       background-color: var(--uchu-yin-2);
       color: var(--uchu-yin);
-      box-shadow: 2px 5px 10px -3px rgba(255, 255, 255, 0.4);
+      box-shadow: 1px 3px 10px -3px rgba(255, 255, 255, 0.4);
+    }
+    .panel {
+      background-color: var(--uchu-yin-9);
+      color: var(--uchu-yang);
+      box-shadow: 1px 3px 10px -1px rgba(0,0,0,0.4);
     }
   }
 
-  .tooltip {
-    text-align: center;
-    font-size: 0.85rem;
-    line-height: 1.25;
-
+  .popup {
     border: none;
     border-radius: 6px;
-    max-width: 200px;
     padding: 6px 8px;
     margin: 0;
     position: absolute;
@@ -96,6 +107,16 @@ handler.isOpen = () => isOpen;
     }
   }
 
+  .tooltip {
+    text-align: center;
+    font-size: 0.85rem;
+    line-height: 1.25;
+  }
+
+  .panel {
+    font-size: 0.85rem;
+  }
+
   .right {
     transform: translate(0%, -50%);
   }
@@ -111,9 +132,10 @@ handler.isOpen = () => isOpen;
 </style>
 
 <span popover bind:this={tooltip}
+  style="max-width: {maxWidth};"
   role="tooltip"
   id={`${id}-tooltip`}
-  class='tooltip {position}'
+  class='popup {style} {position}'
 >
   {@render children?.()}
 </span>

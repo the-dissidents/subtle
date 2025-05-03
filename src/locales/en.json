@@ -280,6 +280,9 @@
   },
   "metrics": {
     "content": "content",
+    "duration": "duration",
+    "end-time": "end time",
+    "end-time-short": "end",
     "number-of-characters": "#characters",
     "number-of-characters-in-longest-line": "#characters in longest line",
     "number-of-characters-in-longest-line-short": "max(#chars per line)",
@@ -292,6 +295,9 @@
     "number-of-readable-characters-short": "#ltrs",
     "readable-characters-per-second": "letters per second",
     "readable-characters-per-second-short": "#ltrs/sec",
+    "start-time": "start time",
+    "start-time-short": "start",
+    "style": "style",
     "width-of-longest-line": "width of longest line",
     "width-of-longest-line-short": "width"
   },
@@ -415,6 +421,8 @@
     "untimed-text": "Untimed text"
   },
   "table": {
+    "add-column": "add column",
+    "edit-columns": "edit columns",
     "end": "end",
     "requirement-not-met": "Requirement{n,plural,one{} other{s}} not met:",
     "start": "start",

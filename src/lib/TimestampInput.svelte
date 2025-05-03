@@ -4,12 +4,15 @@ import { Basic } from './Basic';
 interface Props {
   timestamp?: number;
   stretch?: boolean;
-  onchange?: () => void;
-  oninput?: () => void;
+  oninput?: (t: number) => void;
+  // FIXME: this is nearly useless
+  onchange?: (t: number) => void;
 }
 
 let { timestamp = $bindable(0), stretch = false, onchange, oninput }: Props = $props();
 let value = $state('00:00:00.000');
+
+// FIXME: this is useless
 let changed = false;
 
 $effect(() => {
@@ -40,7 +43,7 @@ $effect(() => {
       ev.currentTarget.selectionEnd = pos+1;
       timestamp = Basic.parseTimestamp(ev.currentTarget.value) ?? 0;
       changed = true;
-      oninput?.();
+      oninput?.(timestamp);
     } 
   }}
   onkeydown={(ev) => {
@@ -55,13 +58,13 @@ $effect(() => {
       ev.preventDefault();
       timestamp = Basic.parseTimestamp(ev.currentTarget.value) ?? 0;
       changed = true;
-      oninput?.();
+      oninput?.(timestamp);
     };
   }}
   onblur={(ev) => {
     if (!changed) return;
     timestamp = Basic.parseTimestamp(ev.currentTarget.value) ?? 0;
-    onchange?.();
+    onchange?.(timestamp);
   }}/>
 
 <style>
