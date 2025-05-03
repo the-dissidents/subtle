@@ -1,3 +1,6 @@
+<!-- TODO: PropertiesToolbox
+ 1. investigate the use of reactivity here; make sure the refreshes are correct 
+-->
 <script lang="ts">
 import { onDestroy } from 'svelte';
 
@@ -24,8 +27,7 @@ onDestroy(() => EventHost.unbind(me));
 
 Source.onSubtitlesChanged.bind(me, (t) => {
   if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
-    // TODO: see if commenting out this breaks things
-    // styles = Source.subs.styles;
+    // commented out to keep animations playing
     // updateCounter += 1;
   }
 });
@@ -36,7 +38,6 @@ Source.onSubtitleObjectReload.bind(me, () => {
   subtitles = Source.subs;
   updateCounter += 1;
 });
-
 
 function newStyle() {
   let newStyle = Subtitles.createStyle(
@@ -49,8 +50,9 @@ function removeUnusedStyles() {
   let usedStyles = new Set<SubtitleStyle>(
     Source.subs.entries.flatMap((x) => [...x.texts.keys()]));
   Source.subs.styles = Source.subs.styles.filter((x) => 
-    usedStyles.has(x) && Source.subs.defaultStyle.name !== x.name);
+    usedStyles.has(x) || Source.subs.defaultStyle.name == x.name);
   Source.markChanged(ChangeType.StyleDefinitions);
+  styles = Source.subs.styles;
 }
 
 function markMetadataChange() {

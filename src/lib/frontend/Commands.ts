@@ -779,7 +779,7 @@ export const Commands: Record<string, UICommand> = {
         [],
     {
         name: () => $_('action.sort-by-time'),
-        isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
+        isApplicable: () => hasSelection(1) && !Utils.isSelectionDisjunct(),
         call() {
             const selection = Editing.getSelection();
             // assumes selection is not disjunct
@@ -816,6 +816,15 @@ export const Commands: Record<string, UICommand> = {
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
             (x) => Utils.removeStyle(Editing.getSelection(), x), 
+            selectionDistinctStyles())
+    }),
+    removeNewlines: new UICommand(
+        [],
+    {
+        name: () => $_('action.remove-newlines'),
+        isApplicable: () => hasSelection(),
+        items: () => forEachStyle(
+            (x) => Utils.removeNewlines(Editing.getSelection(), x), 
             selectionDistinctStyles())
     }),
     removeBlankChannels: new UICommand(
@@ -864,18 +873,29 @@ export const Commands: Record<string, UICommand> = {
             (x, y) => Utils.exchangeStyle(Editing.getSelection(), x, y)
         )
     }),
+    mergeChannel: new UICommand(
+        [],
+    {
+        name: () => $_('action.merge-channel'),
+        isApplicable: () => hasSelection() && selectionDistinctStyles().length > 1,
+        items: () => doubleForEachStyle(
+            selectionDistinctStyles(), selectionDistinctStyles(),
+            () => $_('cxtmenu.and'),
+            (x, y) => Utils.mergeStyle(Editing.getSelection(), x, y)
+        )
+    }),
     mergeDuplicates: new UICommand(
         [],
     {
         name: () => $_('action.merge-overlapping-duplicates'),
-        isApplicable: () => hasSelection(),
+        isApplicable: () => hasSelection(1),
         call: () => Utils.mergeDuplicate(Editing.getSelection())
     }),
     fixOverlap: new UICommand(
         [],
     {
         name: () => $_('action.fix-erroneous-overlapping'),
-        isApplicable: () => hasSelection(),
+        isApplicable: () => hasSelection(1),
         call: () => Utils.fixOverlap(Editing.getSelection())
     }),
     combineDialog: new UICommand(

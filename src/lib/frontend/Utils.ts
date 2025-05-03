@@ -125,13 +125,28 @@ export const Utils = {
             let textA = ent.texts.get(a);
             let textB = ent.texts.get(b);
 
-            if (textA == undefined) ent.texts.delete(b);
+            if (textA === undefined) ent.texts.delete(b);
             else ent.texts.set(b, textA);
-            if (textB == undefined) ent.texts.delete(a);
+            if (textB === undefined) ent.texts.delete(a);
             else ent.texts.set(a, textB);
 
             if (textA !== undefined || textB !== undefined)
                 done++;
+        }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace);
+    },
+
+    mergeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
+        let done = 0;
+        for (const ent of entries) {
+            let textA = ent.texts.get(a)?.trimEnd() ?? '';
+            let textB = ent.texts.get(b)?.trimStart();
+            if (textB == undefined) continue;
+            ent.texts.set(a, textA + ' ' + textB);
+            ent.texts.delete(b);
+            done++;
         }
         Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
@@ -170,6 +185,18 @@ export const Utils = {
         }
         Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
         if (done) Source.markChanged(ChangeType.Times);
+    },
+
+    removeNewlines(entries: SubtitleEntry[], style: SubtitleStyle) {
+        let done = 0;
+        for (const ent of entries) {
+            let text = ent.texts.get(style)?.split('\n');
+            if (text === undefined || text.length == 1) continue;
+            ent.texts.set(style, text.join(' '));
+            done++;
+        }
+        Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done) Source.markChanged(ChangeType.InPlace);
     },
 
     mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {
