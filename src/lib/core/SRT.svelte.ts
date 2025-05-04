@@ -30,7 +30,7 @@ export const SRTSubtitles: SubtitleFormat = {
             if (times) {
                 if (start >= 0) {
                     const standalone_number = /^\d+$/.test(line_cache);
-                    if (standalone_number && buffer.length == 0)
+                    if (!standalone_number && buffer.length == 0)
                         buffer = line_cache;
                     line_cache = '';
 

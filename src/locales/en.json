@@ -97,6 +97,13 @@
     "dark": "dark",
     "debug": "debug",
     "debug-d": "⚠️ Advanced options for debug purpose only. You shouldn't change them unless you know what you're doing.",
+    "double-click-playback-behavior": {
+      "name": "double-click playback behavior",
+      "none": "none",
+      "play": "play from position",
+      "seek": "seek to position"
+    },
+    "double-click-starts-edit": "double-click starts editing",
     "each-style-of-selection": "endpoints of each styles in the selection",
     "editor-font-family": "editor font family",
     "editor-font-size": "editor font size",

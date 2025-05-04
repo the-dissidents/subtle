@@ -97,6 +97,13 @@
     "dark": "深色",
     "debug": "调试",
     "debug-d": "⚠️ 仅用于调试，通常不需要修改",
+    "double-click-playback-behavior": {
+      "name": "双击条目时媒体行为",
+      "none": "无",
+      "play": "播放",
+      "seek": "跳转"
+    },
+    "double-click-starts-edit": "双击条目开始编辑",
     "each-style-of-selection": "选区中每种样式的头尾",
     "editor-font-family": "编辑框字体",
     "editor-font-size": "编辑框字号",

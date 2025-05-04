@@ -8,7 +8,7 @@ interface Props {
   disabled?: boolean,
   stretch?: boolean;
   currentStyle: SubtitleStyle;
-  onsubmit?: (style: SubtitleStyle) => void | boolean | Promise<void | boolean>;
+  onsubmit?: (style: SubtitleStyle, cancel: () => void) => void;
 }
 
 let { disabled = false, stretch = false, currentStyle = $bindable(), onsubmit }: Props = $props();
@@ -32,8 +32,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
   oninput={async (ev) => {
     let oldStyle = currentStyle;
     currentStyle = styles[ev.currentTarget.selectedIndex];
-    if (onsubmit && await onsubmit(currentStyle))
-      currentStyle = oldStyle;
+    onsubmit?.(currentStyle, () => currentStyle = oldStyle);
   }}
   onclick={() => refresh++}
 >

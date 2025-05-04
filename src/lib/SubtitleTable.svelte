@@ -24,6 +24,27 @@ export const TableConfig = new PublicConfigGroup(
     bounds: [1, 2],
     default: 1.5
   },
+  doubleClickStartEdit: {
+    localizedName: () => get(_)('config.double-click-starts-edit'),
+    type: 'boolean',
+    default: true
+  },
+  doubleClickPlaybackBehavior: {
+    localizedName: () => get(_)('config.double-click-playback-behavior.name'),
+    type: 'dropdown',
+    options: {
+      none: {
+        localizedName: () => get(_)('config.double-click-playback-behavior.none')
+      },
+      seek: {
+        localizedName: () => get(_)('config.double-click-playback-behavior.seek')
+      },
+      play: {
+        localizedName: () => get(_)('config.double-click-playback-behavior.play')
+      }
+    },
+    default: 'seek'
+  }
 });
 </script>
 
@@ -580,15 +601,28 @@ function updateColumns() {
   </button>
   <canvas bind:this={canvas}
     class:subsfocused={$uiFocus === 'Table'}
-    ondblclick={() => {
+    ondblclick={async () => {
       onFocus();
       let focused = Editing.getFocusedEntry();
       Debug.assert(focused !== null);
       if (focused == 'virtual') {
-        Editing.startEditingNewVirtualEntry();
+        if (TableConfig.data.doubleClickStartEdit)
+          Editing.startEditingNewVirtualEntry();
       } else {
-        Playback.setPosition(focused.start);
-        Editing.startEditingFocusedEntry();
+        switch (TableConfig.data.doubleClickPlaybackBehavior) {
+          case 'none': break;
+          case 'seek':
+            Playback.setPosition(focused.start);
+            break;
+          case 'play':
+            await Playback.forceSetPosition(focused.start);
+            Playback.play(true);
+            break;
+          default:
+            Debug.never(<never>TableConfig.data.doubleClickPlaybackBehavior);
+        }
+        if (TableConfig.data.doubleClickStartEdit)
+          Editing.startEditingFocusedEntry();
       }
     }}
     oncontextmenu={(ev) => {

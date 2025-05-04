@@ -150,10 +150,11 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
       <tr>
         <td class="vlayout">
           <StyleSelect currentStyle={style}
-            onsubmit={async (newStyle) => {
+            onsubmit={async (newStyle, cancel) => {
               if (focused.texts.has(newStyle) && !await dialog.confirm(
                   $_('msg.overwrite-style', {values: {style: newStyle.name}}))) {
-                return true;
+                cancel();
+                return;
               }
               focused.texts.set(newStyle, focused.texts.get(style)!);
               focused.texts.delete(style);
