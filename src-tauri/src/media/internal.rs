@@ -66,6 +66,7 @@ pub struct VideoContext {
 
     framerate: Rational,
     output_size: (u32, u32),
+    sample_aspect_ratio: Rational,
     original_size: (u32, u32),
     length: i64,
 }
@@ -160,12 +161,21 @@ impl MediaPlayback {
         );
         // we decide to use r_frame_rate
 
+        let sample_aspect_ratio = match decoder.aspect_ratio() {
+            Rational(0, _) => Rational(1, 1),
+            x => if f64::from(x) <= 0.0 { Rational(1, 1) } else { x }
+        };
+
+        if sample_aspect_ratio != Rational(1, 1) {
+            debug!("note: SAR is {:?}", sample_aspect_ratio);
+        }
+
         let scaler = check!(scaling::Context::get(
             decoder.format(),
             decoder.width(),
             decoder.height(),
             format::Pixel::RGBA,
-            decoder.width(),
+            decoder.width().rescale(Rational(1, 1), sample_aspect_ratio).try_into().unwrap(),
             decoder.height(),
             scaling::Flags::BILINEAR,
         ))?;
@@ -185,6 +195,7 @@ impl MediaPlayback {
             output_size: (decoder.width(), decoder.height()),
             original_size: (decoder.width(), decoder.height()),
             framerate: stream_rfr,
+            sample_aspect_ratio,
             length,
             decoder,
             scaler,
@@ -544,11 +555,15 @@ impl VideoContext {
     }
 
     pub fn output_size(&self) -> (u32, u32) {
-        return self.output_size;
+        self.output_size
     }
 
     pub fn original_size(&self) -> (u32, u32) {
-        return self.original_size;
+        self.original_size
+    }
+
+    pub fn sample_aspect_ratio(&self) -> Rational {
+        self.sample_aspect_ratio
     }
 
     pub fn framerate(&self) -> Rational {

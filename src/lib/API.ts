@@ -31,6 +31,7 @@ type MediaEvent = {
     data: {
         length: number,
         framerate: number,
+        sampleAspectRatio: number,
         width: number, height: number,
         outWidth: number, outHeight: number
     }
@@ -133,10 +134,11 @@ export class MMedia {
     #height: number = -1;
     #outWidth: number = -1;
     #outHeight: number = -1;
+    #SAR: number = 1;
     #currentJobs = 0;
-    #_finalizationReg = new FinalizationRegistry((x) => {
-        Debug.debug('finalizing:', x);
-    });
+    // #_finalizationReg = new FinalizationRegistry((x) => {
+    //     Debug.debug('finalizing:', x);
+    // });
 
     get streams(): readonly string[] {
         return this._streams;
@@ -152,6 +154,10 @@ export class MMedia {
 
     get videoOutputSize() {
         return [this.#outWidth, this.#outHeight];
+    }
+
+    get sampleAspectRatio() {
+        return this.#SAR;
     }
 
     get hasJob() {
@@ -293,6 +299,7 @@ export class MMedia {
         let status = await new Promise<{
             length: number,
             framerate: number,
+            sampleAspectRatio: number,
             width: number, height: number,
             outWidth: number, outHeight: number
         } | null>((resolve, reject) => {
@@ -307,6 +314,7 @@ export class MMedia {
             this.#outWidth = status.outWidth;
             this.#height = status.height;
             this.#outHeight = status.outHeight;
+            this.#SAR = status.sampleAspectRatio;
         }
         return status;
     }

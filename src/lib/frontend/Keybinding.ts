@@ -398,15 +398,15 @@ export const KeybindingManager = {
         if (Dialogs.modalOpenCounter > 0)
             return { type: 'disabled' }; // TODO: more sophisticated disabling?
         const key = this.parseKey(ev);
+        const focus = Interface.getUIFocus();
         if (!key) return { type: 'incomplete' };
-        Debug.trace(key);
+        Debug.trace('key:', key, focus);
         currentSequence.push(key);
 
         const map = currentNode?.children ?? bindingTree;
         const seq = [...currentSequence];
         let node = map.get(key);
         if (node) {
-            const focus = Interface.getUIFocus();
             const cmd = node.values.find(
                 (x) => !x.contexts || x.contexts.has(focus));
             if (cmd) {

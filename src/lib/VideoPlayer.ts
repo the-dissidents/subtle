@@ -157,9 +157,11 @@ export class VideoPlayer {
 
     async #updateOutputSize() {
         Debug.assert(this.#opened !== undefined);
-        let [w, h] = this.#manager.physicalSize;
-        let [width, height] = this.#opened.media.videoSize!;
-        let ratio = width / height;
+        const [w, h] = this.#manager.physicalSize;
+        const width = this.#opened.media.videoSize[0] * this.#opened.media.sampleAspectRatio;
+        const height = this.#opened.media.videoSize[1];
+        const ratio = width / height;
+
         let oh: number, ow: number;
         if (w / h < ratio)
             [ow, oh] = [w, w / ratio];
@@ -429,7 +431,7 @@ export class VideoPlayer {
                         && !this.#setPositionInProgress) break;
                     pos = this.#requestedSetPositionTarget;
                     Debug.assert(pos >= 0);
-                    Debug.debug('delaying forceSetPositionFrame');
+                    Debug.trace('delaying forceSetPositionFrame');
                     await Basic.wait(10);
                 }
 

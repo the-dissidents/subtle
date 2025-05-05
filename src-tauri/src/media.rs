@@ -52,6 +52,7 @@ pub enum MediaEvent<'a> {
         framerate: f64,
         out_width: u32,
         out_height: u32,
+        sample_aspect_ratio: f64,
         width: u32,
         height: u32,
     },
@@ -167,6 +168,7 @@ pub fn video_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Cha
         MediaEvent::VideoStatus {
             length: ctx.length(),
             framerate: ctx.framerate().into(),
+            sample_aspect_ratio: ctx.sample_aspect_ratio().into(),
             width,
             height,
             out_width,
