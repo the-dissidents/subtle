@@ -348,9 +348,11 @@
   "ppty": {
     "default": "default",
     "language": "language",
+    "match-video-resolution": "set to match video",
     "other": "other",
     "remove-all-unused": "remove all unused",
     "resolution": "resolution",
+    "scaling": "scaling",
     "styles": "styles",
     "title": "title"
   },

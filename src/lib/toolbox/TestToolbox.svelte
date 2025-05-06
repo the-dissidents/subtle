@@ -12,10 +12,11 @@ import { Commands } from '../frontend/Commands';
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 import { Source } from '../frontend/Source';
 import OrderableList from '../ui/OrderableList.svelte';
+    import { Typography } from '../details/Typography';
 
 let result = $state("");
 MAPI.version().then((x) => {
-  result = `ffmpeg version is ${x}; UA is ${navigator.userAgent}`;
+  result = `ffmpeg version is ${x}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}`;
 });
 
 let media: MMedia | undefined;

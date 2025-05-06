@@ -1,5 +1,6 @@
 import { Basic } from "./Basic";
 import { SubtitleEntry, type SubtitleStyle, Subtitles, AlignMode } from "./core/Subtitles.svelte";
+import { Typography } from "./details/Typography";
 
 type WrappedEntry = {
     oldIndex: number,
@@ -103,11 +104,12 @@ export class SubtitleRenderer {
         let ratio = this.#subs.metadata.width / this.#subs.metadata.height;
         if (width / height < ratio) {
             [this.#hMargin, this.#vMargin] = [0, (height - width / ratio) / 2];
-            this.#scale = width / this.#subs.metadata.width;
+            this.#scale = width / this.#subs.metadata.width * this.#subs.metadata.scalingFactor;
         } else {
             [this.#hMargin, this.#vMargin] = [(width - height * ratio) / 2, 0];
-            this.#scale = height / this.#subs.metadata.height;
+            this.#scale = height / this.#subs.metadata.height * this.#subs.metadata.scalingFactor;
         }
+        // TODO: investigate https://github.com/libass/libass/blob/695509365f152bd28720a0c0e036d46836ee9345/libass/ass_render.c#L2161
     }
 
     updateTimes() {
@@ -207,9 +209,10 @@ export class SubtitleRenderer {
             if (font == '') font = 'sans-serif';
             if (color == '') color = 'white';
             if (lineColor == '') lineColor = 'black';
-            // I'm making sure this is compatible to libass, though I believe 3/4 is
-            // a mistake for 4/3
-            ctx.font = `${style.styles.bold ? 'bold ' : ''}${style.styles.italic ? 'italic ' : ''}${size * this.#scale * 3/4}px "${font}", sans-serif`;
+            const fontFamily = `"${font}", sans-serif`;
+            const cssSize = 
+                Typography.getRealDimFactor(fontFamily, ctx) * size * this.#scale;
+            ctx.font = `${style.styles.bold ? 'bold ' : ''} ${style.styles.italic ? 'italic ' : ''} ${cssSize}px ${fontFamily}`;
             ctx.fillStyle = color;
 
             let width = this.width - this.#hMargin * 2 - 
@@ -222,6 +225,7 @@ export class SubtitleRenderer {
             for (let line of lines) {
                 // TODO: revise the algorithm
                 let metrics = ctx.measureText(line);
+
                 let [x, y] = [bx, by];
                 let newBox = getBoxFromMetrics(metrics, x, y);
                 let yOffset = 0;

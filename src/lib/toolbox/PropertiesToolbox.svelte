@@ -16,11 +16,14 @@ import { _ } from 'svelte-i18n';
 import { flip } from 'svelte/animate';
 import { SubtitleTools } from '../core/SubtitleUtil.svelte';
 import { Debug } from '../Debug';
+    import NumberInput from '../ui/NumberInput.svelte';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
 let subtitles = $state(Source.subs);
 let updateCounter = $state(0);
+
+let playbackLoaded = Playback.isLoaded;
 
 const me = {};
 onDestroy(() => EventHost.unbind(me));
@@ -60,7 +63,6 @@ function markMetadataChange() {
 }
 
 function changeResolution() {
-  Debug.debug('changeResolution', metadata.width, metadata.height);
   Playback.video?.subRenderer?.changeResolution();
   markMetadataChange();
 }
@@ -86,11 +88,32 @@ function changeResolution() {
       <tr>
         <td>{$_('ppty.resolution')}</td>
         <td>
-          <input type='number' class='res' bind:value={metadata.width}
-            onchange={() => changeResolution()}/>
+          <NumberInput class='res' bind:value={metadata.width}
+            min={1} max={10000}
+            onchange={changeResolution}/>
           ×
-          <input type='number' class='res' bind:value={metadata.height}
-            onchange={() => changeResolution()}/>
+          <NumberInput class='res' bind:value={metadata.height} 
+            min={1} max={10000}
+            onchange={changeResolution}/>
+          <button disabled={!$playbackLoaded} onclick={() => {
+            Debug.assert(Playback.video?.videoSize !== undefined);
+            Debug.assert(Playback.video?.sampleAspectRatio !== undefined);
+            const [w, h] = Playback.video.videoSize;
+            const sar = Playback.video.sampleAspectRatio;
+            metadata.width = Math.round(w * sar);
+            metadata.height = Math.round(h);
+            changeResolution();
+          }}>
+            {$_('ppty.match-video-resolution')}
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td>{$_('ppty.scaling')}</td>
+        <td>
+          <NumberInput class='res' bind:value={metadata.scalingFactor} 
+            step='any' min={0.01}
+            onchange={changeResolution}/>
         </td>
       </tr>
     </tbody>
@@ -113,9 +136,6 @@ function changeResolution() {
 </div>
 
 <style>
-.res {
-  width: 80px;
-}
 .txt {
   width: 100%;
 }

@@ -85,6 +85,9 @@ export class VideoPlayer {
     #fallbackTime: number = 0;
 
     get duration() { return this.#opened?.media.duration; }
+    get videoSize() { return this.#opened?.media.videoSize; }
+    get sampleAspectRatio() { return this.#opened?.media.sampleAspectRatio; }
+
     get currentPosition() {
         if (!this.#opened) return null;
         if (this.#opened.playEOF) return this.#opened.lastFrame?.position ?? null;

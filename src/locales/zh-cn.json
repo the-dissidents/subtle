@@ -356,9 +356,11 @@
   "ppty": {
     "default": "默认",
     "language": "语言",
+    "match-video-resolution": "设为视频分辨率",
     "other": "其它",
     "remove-all-unused": "删除所有未使用的样式",
     "resolution": "分辨率",
+    "scaling": "缩放",
     "styles": "样式",
     "title": "标题"
   },

@@ -36,8 +36,7 @@ export interface SubtitleMetadata {
     language: string,
     width: number,
     height: number,
-    mediaWidth?: number | null,
-    mediaHeight?: number | null,
+    scalingFactor: number,
     special: {
         untimedText: string
     }
@@ -97,8 +96,7 @@ export class Subtitles {
             language: '',
             width: 1920,
             height: 1080,
-            mediaWidth: null,
-            mediaHeight: null,
+            scalingFactor: 1,
             special: {
                 untimedText: ''
             }

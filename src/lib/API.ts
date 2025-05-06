@@ -148,7 +148,7 @@ export class MMedia {
         return this._duration;
     }
 
-    get videoSize() {
+    get videoSize(): [number, number] {
         return [this.#width, this.#height];
     }
 

@@ -3,6 +3,7 @@ import { CSSColors, parseCSSColor } from "../colorparser";
 import { Debug } from "../Debug";
 import { DeserializationError } from "../Serialization";
 import { AlignMode, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleStyle } from "./Subtitles.svelte";
+import { SubtitleTools } from "./SubtitleUtil.svelte";
 
 export const ASSSubtitles: SubtitleFormat = {
     parse(source: string) {
@@ -19,6 +20,7 @@ export const ASSSubtitles: SubtitleFormat = {
     },
     write(subs: Subtitles, options) {
         let result = '';
+        const defaultName = SubtitleTools.getUniqueStyleName(subs, '_default');
         const reverseStyles = subs.styles.toReversed();
         const entries = options?.useEntries ?? subs.entries;
         for (const entry of entries) {
@@ -27,7 +29,11 @@ export const ASSSubtitles: SubtitleFormat = {
             for (const style of reverseStyles) {
                 let text = entry.texts.get(style);
                 if (!text) continue;
-                result += `Dialogue: 0,${t0},${t1},${style},,0,0,0,,${
+                // `default` seems to be a reserved word in the SSA format that always
+                // points to the built-in default style, so if we have a style with this
+                // name we must rename it
+                const styleName = style.name == 'default' ? defaultName : style.name;
+                result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${
                     text.replaceAll('\n', '\\N')}\n`;
             }
         }
@@ -67,21 +73,26 @@ export function fromASSColor(str: string) {
 }
 
 function writeASSHeader(subs: Subtitles) {
+    const width = subs.metadata.width / subs.metadata.scalingFactor;
+    const height = subs.metadata.height / subs.metadata.scalingFactor;
+
     let result = 
 `[Script Info]
 ScriptType: v4.00+
 YCbCr Matrix: None
 Title: ${subs.metadata.title}
-PlayResX: ${subs.metadata.width}
-PlayResY: ${subs.metadata.height}
-LayoutResX: ${subs.metadata.width}
-LayoutResY: ${subs.metadata.height}
+PlayResX: ${width}
+PlayResY: ${height}
+LayoutResX: ${width}
+LayoutResY: ${height}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 `;
-    for (let s of subs.styles)
-        result += `Style: ${s.name},`
+    const defaultName = SubtitleTools.getUniqueStyleName(subs, '_default');
+    for (let s of subs.styles) {
+        const styleName = s.name == 'default' ? defaultName : s.name;
+        result += `Style: ${styleName},`
                 + `${s.font == '' ? 'Arial' : s.font},${s.size},`
                 + `${toASSColor(s.color)},`
                 + `${toASSColor(s.color)},`
@@ -97,6 +108,7 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
                 + `${s.margin.left},${s.margin.right},`
                 + `${Math.max(s.margin.top, s.margin.bottom)},`
                 + `1\n`;
+    }
     result += '\n' +
 `[Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;

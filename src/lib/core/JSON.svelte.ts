@@ -8,6 +8,7 @@ import { FilterSchema } from "./Filter";
  * Version details:
  *  - 000400 (major) styles includes defaultStyle, which is just a name; channels are unordered
  *  - 000402 (minor) styles have validators
+ *  - 000403 (minor) scaling factor in metadata
  */
 export const SubtitleFormatVersion = '000402';
 
@@ -58,8 +59,7 @@ const MetadataSchema: JSONSchemaType<SubtitleMetadata> = {
         language: { type: 'string', default: '' },
         width: { type: 'number', exclusiveMinimum: 0, default: 1920 },
         height: { type: 'number', exclusiveMinimum: 0, default: 1080 },
-        mediaWidth: { type: 'number', nullable: true, exclusiveMinimum: 0, default: null },
-        mediaHeight: { type: 'number', nullable: true, exclusiveMinimum: 0, default: null },
+        scalingFactor: { type: 'number', exclusiveMinimum: 0, default: 1 },
         special: {
             type: 'object',
             properties: {
