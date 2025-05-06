@@ -67,31 +67,35 @@ export function parseSubtitleSource(source: string): Subtitles | null {
     return null;
 }
 
-function isTrackpad(e: WheelEvent) {
+function isTrackpad(x: number, y: number) {
     return DebugConfig.data.mouseWheelDetection == 'multiple'
-        ? e.deltaX % 120 != 0 || e.deltaY % 120 != 0
-        : Math.abs(e.deltaX) < 100 && Math.abs(e.deltaY) < 100;
+        ? x % 120 != 0 || y % 120 != 0
+        : Math.abs(x) < 100 && Math.abs(y) < 100;
 }
 
 export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
+    // @ts-expect-error
+    const deltaX = -(e.wheelDeltaX ?? -e.deltaX);
+    // @ts-expect-error
+    const deltaY = -(e.wheelDeltaY ?? -e.deltaY);
     if (e.ctrlKey) {
         // zoom. only look at Y
-        const isTrackpad = e.deltaY % 1 != 0;
+        const isTrackpad = deltaY % 1 != 0;
         return {
             isZoom: true,
             isTrackpad,
-            amount: e.deltaY * (isTrackpad 
+            amount: deltaY * (isTrackpad 
                 ? InputConfig.data.trackpadZoomFactor
                 : InputConfig.data.mouseZoomFactor)
         };
-    } else if (isTrackpad(e)) {
+    } else if (isTrackpad(deltaX, deltaY)) {
         // trackpad scroll
         // console.log('trackpad scroll', e.deltaX, e.deltaY);
         return {
             isZoom: false,
             isTrackpad: true,
-            amountX: e.deltaX * InputConfig.data.trackpadScrollFactor,
-            amountY: e.deltaY * InputConfig.data.trackpadScrollFactor,
+            amountX: deltaX * InputConfig.data.trackpadScrollFactor,
+            amountY: deltaY * InputConfig.data.trackpadScrollFactor,
         };
     } else {
         // mouse scroll
@@ -99,8 +103,8 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
         return {
             isZoom: false,
             isTrackpad: false,
-            amountX: e.deltaX * InputConfig.data.mouseScrollFactor,
-            amountY: e.deltaY * InputConfig.data.mouseScrollFactor,
+            amountX: deltaX * InputConfig.data.mouseScrollFactor,
+            amountY: deltaY * InputConfig.data.mouseScrollFactor,
         };
     }
 }

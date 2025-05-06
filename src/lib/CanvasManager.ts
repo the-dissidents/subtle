@@ -284,6 +284,7 @@ export class CanvasManager {
     #onMouseWheel(ev: WheelEvent) {
         let handled = false;
         const tr = translateWheelEvent(ev);
+        // console.log(tr, ev);
         if (tr.isZoom) {
             const centerX = ev.offsetX / this.#scale + this.#scrollX;
             const centerY = ev.offsetY / this.#scale + this.#scrollY;
