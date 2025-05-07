@@ -112,8 +112,8 @@ export const InputConfig = new PublicConfigGroup(
             localizedName: () => $_('config.mouse-scroll-sensitivity'),
             type: 'number',
             // description: () => $_('config.mouse-scroll-sensitivity-d'),
-            bounds: [0.1, 5],
-            default: 1
+            bounds: [0.5, 10],
+            default: 4
         },
         mouseZoomFactor: {
             localizedName: () => $_('config.mouse-zoom-sensitivity'),
@@ -194,7 +194,7 @@ export const DebugConfig = new PublicConfigGroup(
             type: 'dropdown',
             options: {
                 threshold: { localizedName: () => 'delta >= 100' },
-                multiple: { localizedName: () => 'delta is multiple of 120' }
+                multiple: { localizedName: () => 'delta is ±120 or ±100' }
             },
             default: 'multiple'
         }

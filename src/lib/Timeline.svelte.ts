@@ -661,7 +661,7 @@ export class Timeline {
             const amount = 
                 tr.isTrackpad ? tr.amountX :
                 tr.amountX == 0 ? tr.amountY : tr.amountX;
-            this.setViewOffset(this.#offset + amount / this.#scale);
+            this.setViewOffset(this.#offset + amount * 0.5 / this.#scale);
         }
     }
 

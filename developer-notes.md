@@ -28,6 +28,86 @@
 
 以下是一些笔记和参考资料
 
+## The `wheel` Event Across Browsers and OS's
+
+### Trackpad pinching
+
+#### macOS / Safari
+
+> X = `deltaY` (floating point), Y = `wheelDeltaY`
+
+![](doc/image.png)
+
+$Y = \text{trunc}(-3X)$
+
+#### macOS / Chrome
+
+`deltaY` looks like the same as Safari.
+
+`wheelDeltaY` is always ±120.
+
+#### Windows / Edge
+
+No data yet (remote controller doesn't support trackpad pinching)
+
+### Trackpad scrolling
+
+#### macOS / Safari
+
+> X = `delta*` (integer), Y = `wheelDelta*`
+
+![](doc/image%20copy.png)
+
+$Y = \text{trunc}(-3X)$
+
+#### macOS / Chrome
+
+The same
+
+#### Windows / Edge
+
+> X = `delta*`, Y = `wheelDelta*` (integer)
+
+![](doc/image%20copy%202.png)
+
+$X = Y / -1.2$
+
+### Mouse wheel scrolling
+
+#### macOS / Safari
+
+`deltaY` is always ±120, for one wheel step (positive = down)
+
+`wheelDeltaY` is `deltaY * -3`.
+
+#### macOS / Chrome
+
+The same
+
+#### Windows / Edge
+
+`deltaY` is always ±100, for one wheel step (positive = down)
+
+`wheelDeltaY` is `deltaY * -1.2`.
+
+### Summary
+
+#### delta*
+
+|Environment|Pinch|Trackpad scroll|Mouse scroll|
+|--|--|--|--|
+|macOS/Safari|float|integer|±120|
+|macOS/Chrome|float|integer|±120|
+|Windows/Edge|N/A|multiple of $5/6$|±100|
+
+#### wheelDelta*
+
+|Environment|Pinch|Trackpad scroll|Mouse scroll|
+|--|--|--|--|
+|macOS/Safari|trunc(-3*`delta*`)|trunc(-3*`delta*`)|-3*`delta*`|
+|macOS/Chrome|±120|trunc(-3*`delta*`)|-3*`delta*`|
+|Windows/Edge|N/A|-1.2*`delta*`|-1.2*`delta*`|
+
 ## Terribly Unintuitive Aspects of Svelte 5's Proxy-Based Reactivity
 
 The `state_proxy_equality_mismatch` message reads: "Reactive `$state(...)` proxies and the values they proxy have different identities ..." But what does that mean? It means you just **can't** compare the reference equality between them. And note that objects and arrays are deeply reactive; consider:
