@@ -220,9 +220,11 @@ export const Interface = {
             file = selected;
         }
         const text = Format.JSON.write(Source.subs);
-        if (await Source.saveTo(file, text) && Playback.video?.source) {
-            await PrivateConfig.setVideo(file, Playback.video.source);
+        if (await Source.saveTo(file, text)) {
             Source.subs.migrated = 'none';
+            if (Playback.video?.source) {
+                await PrivateConfig.setVideo(file, Playback.video.source);
+            }
         }
         Source.startAutoSave();
     },
