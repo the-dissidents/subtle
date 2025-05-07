@@ -119,7 +119,7 @@ let lines: {
 }[] = [];
 let lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
 let totalLines = 0;
-let requestedLayout = false;
+let requestedLayout = true;
 
 const linePadding   = $derived(InterfaceConfig.data.fontSize * 0.35);
 const lineHeight    = $derived(InterfaceConfig.data.fontSize + linePadding * 2);

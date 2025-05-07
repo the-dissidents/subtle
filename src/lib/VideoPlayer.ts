@@ -134,7 +134,7 @@ export class VideoPlayer {
 
         let [w, h] = this.#manager.physicalSize;
         this.#canvas = new OffscreenCanvas(w, h);
-        let bufcxt = this.#canvas.getContext('2d', { alpha: false });
+        let bufcxt = this.#canvas.getContext('2d', { alpha: true });
         if (!bufcxt) throw new Error("VideoPlayer: cannot create offscreen context");
         this.#ctxbuf = bufcxt;
     }
