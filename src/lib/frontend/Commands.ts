@@ -113,6 +113,15 @@ export const Commands: Record<string, UICommand> = {
         isApplicable: () => Source.canRedo(),
         call: () => { Source.redo() }
     }),
+    newFile: new UICommand(
+        [ binding(['CmdOrCtrl+N']) ],
+    {
+        name: () => $_('menu.new-file'),
+        call: async () => { 
+            if (await Interface.warnIfNotSaved())
+                Interface.newFile();
+        }
+    }),
     openMenu: new UICommand(
         [ binding(['CmdOrCtrl+O']), ],
     {
@@ -139,7 +148,7 @@ export const Commands: Record<string, UICommand> = {
                             .slice(-2).join(Basic.pathSeparator),
                         async call() {
                             if (await Interface.warnIfNotSaved())
-                            Interface.openFile(x.name);
+                                Interface.openFile(x.name);
                         }
                     }))
                 ),

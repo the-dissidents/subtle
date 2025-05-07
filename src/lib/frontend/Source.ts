@@ -115,8 +115,9 @@ export const Source = {
         return true;
     },
 
-    async openDocument(newSubs: Subtitles, path: string) {
-        PrivateConfig.pushRecent(path);
+    async openDocument(newSubs: Subtitles, path: string = '') {
+        if (path !== '')
+            PrivateConfig.pushRecent(path);
         this.subs = newSubs;
         Editing.clearFocus(false);
         Editing.clearSelection();

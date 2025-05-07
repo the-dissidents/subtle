@@ -238,6 +238,7 @@ appWindow.onDragDropEvent(async (ev) => {
   <!-- toolbar -->
   <div>
     <ul class='menu'>
+      <li><button onclick={() => Commands.newFile.menu()}>{$_('menu.new-file')}</button></li>
       <li><button onclick={() => Commands.openMenu.menu()}>{$_('menu.open')}</button></li>
       <li><button onclick={() => Commands.saveAs.menu()}>{$_('menu.save-as')}</button></li>
       <li><button onclick={() => Commands.import.menu()}>{$_('menu.import')}</button></li>

@@ -8,7 +8,7 @@ import { Menu } from "@tauri-apps/api/menu";
 import chardet from 'chardet';
 import * as iconv from 'iconv-lite';
 
-import { type Subtitles } from "../core/Subtitles.svelte";
+import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/Formats";
 
 import { Dialogs } from "./Dialogs";
@@ -105,6 +105,12 @@ export const Interface = {
         }, $_('msg.unable-to-read-file-path', {values: {path}}), null);
     },
 
+    async newFile() {
+        await Source.openDocument(new Subtitles());
+        if (get(Playback.isLoaded)) await Playback.close();
+        Interface.status.set($_('msg.created-new-file'));
+    },
+
     async openFile(path: string) {
         const text = await this.readTextFile(path);
         if (!text) return;
@@ -119,7 +125,7 @@ export const Interface = {
                 $_('msg.note-file-is-migrated-path', {values: {path}}));
         const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);
-        else if (Playback.isLoaded) await Playback.close();
+        else if (get(Playback.isLoaded)) await Playback.close();
         Interface.status.set($_('msg.opened-path', {values: {path}}));
     },
 
