@@ -7,7 +7,7 @@ import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
 
 import { TableConfig } from "./lib/SubtitleTable.svelte";
-import { TimelineConfig } from "./lib/Timeline.svelte";
+import Timeline, { TimelineConfig } from "./lib/Timeline.svelte";
 import { MediaConfig } from "./lib/VideoPlayer";
 
 MainConfig.addGroup('timeline', TimelineConfig);
@@ -64,7 +64,7 @@ let leftPane: HTMLElement | undefined = $state();
 let editTable: HTMLElement | undefined = $state();
 let videoCanvasContainer: HTMLElement | undefined = $state();
 let videoCanvas: HTMLCanvasElement | undefined = $state();
-let timelineCanvas: HTMLCanvasElement | undefined = $state();
+let timelineCanvasContainer: HTMLDivElement | undefined = $state();
 
 let isPlaying = $state(false);
 let sliderDisabled = $state(true);
@@ -86,21 +86,16 @@ Source.onUndoBufferChanged.bind(me, () => {
   undoRedoUpdateCounter++;
 });
 
-Playback.onRefreshPlaybackControl = () => {
+Playback.onRefreshPlaybackControl.bind(me, () => {
   sliderDisabled = !$isMediaLoaded;
   playPos = $isMediaLoaded ? Playback.position / Playback.duration : 0;
   isPlaying = Playback.isPlaying;
   playPosInput = Playback.position ?? 0;
-};
+});
 
 let setupVideoView: Action = () => {
   Debug.assert(videoCanvasContainer !== undefined && videoCanvas !== undefined);
   Playback.createVideo(videoCanvas);
-};
-
-let setupTimelineView: Action = () => {
-  Debug.assert(timelineCanvas !== undefined);
-  Playback.createTimeline(timelineCanvas);
 };
 
 PrivateConfig.init();
@@ -112,7 +107,7 @@ PrivateConfig.onInitialized(() => {
     Math.max(PrivateConfig.get('windowW'), 500),
     Math.max(PrivateConfig.get('windowH'), 500)));
   videoCanvasContainer!.style.height = `${PrivateConfig.get('videoH')}px`;
-  timelineCanvas!.style.height = `${PrivateConfig.get('timelineH')}px`;
+  timelineCanvasContainer!.style.height = `${PrivateConfig.get('timelineH')}px`;
   editTable!.style.height = `${PrivateConfig.get('editorH')}px`;
   leftPane!.style.width = `${PrivateConfig.get('leftPaneW')}px`;
 });
@@ -161,7 +156,6 @@ async function updateTheme() {
   await appWindow.setTheme(InterfaceConfig.data.theme == 'light' ? 'light'
                : InterfaceConfig.data.theme == 'dark' ? 'dark'
                : undefined);
-  Playback.timeline?.requestRender();
   settingTheme = false;
   Debug.debug('changed theme', InterfaceConfig.data.theme);
 }
@@ -192,7 +186,7 @@ appWindow.onCloseRequested(async (ev) => {
   await PrivateConfig.set('windowX', pos.x);
   await PrivateConfig.set('windowY', pos.y);
   await PrivateConfig.set('videoH', videoCanvasContainer!.clientHeight);
-  await PrivateConfig.set('timelineH', timelineCanvas!.clientHeight);
+  await PrivateConfig.set('timelineH', timelineCanvasContainer!.clientHeight);
   await PrivateConfig.set('editorH', editTable!.clientHeight);
   await PrivateConfig.set('leftPaneW', leftPane!.clientWidth);
   await Interface.savePublicConfig();
@@ -360,15 +354,11 @@ appWindow.onDragDropEvent(async (ev) => {
   </div>
   <!-- resizer -->
   <div>
-    <Resizer control={timelineCanvas!} reverse={true}/>
+    <Resizer control={timelineCanvasContainer!} reverse={true}/>
   </div>
   <!-- timeline -->
-  <div>
-    <canvas class="timeline fill" bind:this={timelineCanvas}
-      use:setupTimelineView
-      onclick={() => $uiFocus = 'Timeline'}
-      class:timelinefocused={$uiFocus === 'Timeline'}
-      style="height: 150px;"></canvas>
+  <div bind:this={timelineCanvasContainer}>
+    <Timeline/>
   </div>
 
   <!-- status bar -->
@@ -382,9 +372,6 @@ appWindow.onDragDropEvent(async (ev) => {
   }
   ul.menu {
     background-color: var(--uchu-yin-4);
-  }
-  .timelinefocused {
-    box-shadow: 0 5px 10px gray;
   }
   ul.menu button {
     background-color: transparent;
@@ -406,17 +393,11 @@ appWindow.onDragDropEvent(async (ev) => {
   .player-container canvas {
     background-color: lightgray;
   }
-  canvas.timeline {
-    background-color: var(--uchu-gray-1);
-  }
 }
 
 @media (prefers-color-scheme: dark) {
   .status, ul.menu {
     background-color: var(--uchu-yin-7);
-  }
-  .timelinefocused {
-    box-shadow: 0 5px 10px gray;
   }
   ul.menu button {
     color: white;
@@ -436,9 +417,6 @@ appWindow.onDragDropEvent(async (ev) => {
     background-color: rgb(193, 193, 193);
   }
   .player-container canvas {
-    background-color: black;
-  }
-  canvas.timeline {
     background-color: black;
   }
 }
@@ -517,14 +495,6 @@ ul.menu .separator {
   height: 100%;
   display: block; /* to get rid of extra spacing at the bottom */
   box-sizing: border-box;
-}
-
-.timeline {
-  border-radius: 4px;
-  display: block;
-  background-color: gray;
-  user-select: none; -webkit-user-select: none;
-  -moz-user-select: none; -ms-user-select: none;
 }
 
 .status {

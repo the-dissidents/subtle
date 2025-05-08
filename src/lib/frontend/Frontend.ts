@@ -17,7 +17,7 @@ export type TranslatedWheelEvent = {
 };
 
 export class EventHost<T extends unknown[] = []> {
-    #listeners = new Map<object, ((...args: [...T]) => void)[]>();
+    #listeners = new Map<object, ((...args: [...T]) => void | Promise<void>)[]>();
 
     static globalEventHosts: EventHost<any>[] = [];
     constructor() {
@@ -25,13 +25,20 @@ export class EventHost<T extends unknown[] = []> {
     }
 
     dispatch(...args: [...T]) {
-        for (const [obj, f] of this.#listeners) {
+        for (const [_, f] of this.#listeners) {
             // console.log(`dispatch`, obj, f, this);
             f.forEach((x) => x(...args));
         }
     };
+
+    async dispatchAndAwaitAll(...args: [...T]) {
+        const list = [...this.#listeners]
+            .flatMap(([_, f]) => f.map((x) => x(...args)))
+            .filter((x) => x !== undefined);
+        await Promise.allSettled(list);
+    };
     
-    bind(obj: object, f: (...args: [...T]) => void) {
+    bind(obj: object, f: (...args: [...T]) => void | Promise<void>) {
         if (!this.#listeners.has(obj))
             this.#listeners.set(obj, []);
         this.#listeners.get(obj)!.push(f);

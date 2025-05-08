@@ -332,13 +332,13 @@ export const Commands: Record<string, UICommand> = {
     {
         name: () => $_('action.toggle-in-point'),
         call() {
-            if (Playback.timeline === null) return;
-            const pos = Playback.timeline.cursorPos;
-            const area = Playback.playArea;
-            Playback.playArea.start = 
-                (area.start == pos || (area.end !== undefined && area.end <= pos)) 
-                ? undefined : pos;
-            Playback.timeline.requestRender();
+            const pos = Playback.cursorPosition;
+            Playback.playArea.update((area) => {
+                area.start = 
+                    (area.start == pos || (area.end !== undefined && area.end <= pos)) 
+                    ? undefined : pos;
+                return area;
+            });
         }
     }),
     toggleOutPoint: new UICommand(
@@ -347,13 +347,13 @@ export const Commands: Record<string, UICommand> = {
     {
         name: () => $_('action.toggle-out-point'),
         call() {
-            if (Playback.timeline === null) return;
-            const pos = Playback.timeline.cursorPos;
-            const area = Playback.playArea;
-            Playback.playArea.end =
-                (area.end == pos || (area.start !== undefined && area.start >= pos)) 
-                ? undefined : pos;
-            Playback.timeline.requestRender();
+            const pos = Playback.cursorPosition;
+            Playback.playArea.update((area) => {
+                area.end =
+                    (area.end == pos || (area.start !== undefined && area.start >= pos)) 
+                    ? undefined : pos;
+                return area;
+            });
         }
     }),
     playEntry: new UICommand(
@@ -362,7 +362,7 @@ export const Commands: Record<string, UICommand> = {
     {
         name: () => $_('action.play-entry'),
         async call() {
-            if (Playback.timeline === null || Playback.video === null) return;
+            if (Playback.video === null) return;
             const current = Editing.selection.focused;
             if (current === null) return;
             Playback.playAreaOverride = {

@@ -726,7 +726,7 @@ function updateColumns() {
     position: absolute;
     top: 0;
     right: 0;
-    margin-right: 20px;
+    margin-right: 2px;
     margin-top: 2px;
   }
 
