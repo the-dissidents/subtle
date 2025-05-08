@@ -332,7 +332,7 @@ export const Commands: Record<string, UICommand> = {
     {
         name: () => $_('action.toggle-in-point'),
         call() {
-            const pos = Playback.cursorPosition;
+            const pos = Playback.position;
             Playback.playArea.update((area) => {
                 area.start = 
                     (area.start == pos || (area.end !== undefined && area.end <= pos)) 
@@ -347,7 +347,7 @@ export const Commands: Record<string, UICommand> = {
     {
         name: () => $_('action.toggle-out-point'),
         call() {
-            const pos = Playback.cursorPosition;
+            const pos = Playback.position;
             Playback.playArea.update((area) => {
                 area.end =
                     (area.end == pos || (area.start !== undefined && area.start >= pos)) 

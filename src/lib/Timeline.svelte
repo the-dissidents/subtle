@@ -66,7 +66,6 @@ import { CanvasManager } from "./CanvasManager";
 import { DebugConfig, InterfaceConfig, MainConfig } from "./config/Groups";
 import { LabelColor, theme } from "./Theming.svelte";
 import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
-import { Actions } from "./frontend/Actions";
 import { Editing, SelectMode } from "./frontend/Editing";
 import { type TranslatedWheelEvent } from "./frontend/Frontend";
 import { Playback } from "./frontend/Playback";
@@ -74,6 +73,7 @@ import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 import { Debug } from "./Debug";
 import { Interface } from './frontend/Interface';
 import Popup, { type PopupHandler } from './ui/Popup.svelte';
+import { SvelteSet } from 'svelte/reactivity';
 
 let timelineCanvas: HTMLCanvasElement | undefined = $state();
 let rowPopup: PopupHandler = $state({});
@@ -92,7 +92,16 @@ let entryHeight = 0;
 let stylesMap = new Map<SubtitleStyle, number>();
 
 let selectBox: Box | null = null;
-let selection = new Set<SubtitleEntry>;
+let selection = $state(new SvelteSet<SubtitleEntry>);
+let selectionFirst = $derived(
+  [...selection].reduce<SubtitleEntry>(
+    (x, current) => current.start < x.start ? current : x, 
+    [...selection][0]));
+let selectionLast = $derived(
+  [...selection].reduce<SubtitleEntry>(
+    (x, current) => current.end > x.end ? current : x, 
+    [...selection][0]));
+
 let alignmentLine: {x: number, y1: number, y2: number} | null = null;
 
 let manager: CanvasManager;
@@ -152,10 +161,14 @@ function setupTimelineCanvas(canvas: HTMLCanvasElement) {
   manager.renderer = (ctx) => render(ctx);
 
   canvas.oncontextmenu = (e) => e.preventDefault();
-  canvas.ondblclick = () => precessDoubleClick();
-  manager.onMouseMove.bind(me, (ev) => processMouseMove(ev));
-  manager.onMouseDown.bind(me, (ev) => processMouseDown(ev));
-  manager.onMouseWheel.bind(me, (tr, e) => processWheel(tr, e));
+  canvas.ondblclick = () => onDoubleClick();
+  manager.onMouseMove.bind(me, onMouseMove);
+  manager.canBeginDrag = canBeginDrag;
+  manager.onDrag.bind(me, onDrag);
+  manager.onDragEnd.bind(me, onDragEnd);
+  manager.onDragInterrupted.bind(me, onDragInterrupted);
+
+  manager.onMouseWheel.bind(me, onMouseWheel);
   manager.onUserScroll.bind(me, () => {requestedSampler = true});
 
   setViewScale(10);
@@ -168,7 +181,7 @@ function setupTimelineCanvas(canvas: HTMLCanvasElement) {
 
   Editing.onSelectionChanged.bind(me, (cause) => {
     if (cause != ChangeCause.Timeline) {
-      selection = new Set(Editing.getSelection());
+      selection = new SvelteSet(Editing.getSelection());
       let focused = Editing.getFocusedEntry();
       if (focused instanceof SubtitleEntry) keepEntryInView(focused);
       manager.requestRender();
@@ -322,7 +335,7 @@ function snapMove(points: number[], origStart: number, desiredStart: number) {
   let minDist = TimelineConfig.data.snapDistance / scale;
   let snapped = desiredStart; 
   alignmentLine = null;
-  snap(Playback.cursorPosition, 0, height);
+  snap(Playback.position, 0, height);
   for (const e of getVisibleEntries()) {
     if (selection.has(e)) continue;
     let positions = getEntryPositions(e);
@@ -350,7 +363,7 @@ function snapEnds(start: number, end: number, desired: number, isStart: boolean)
   let minDist = TimelineConfig.data.snapDistance / scale;
   let snapped = desired;
   alignmentLine = null;
-  snap(Playback.cursorPosition, 0, height);
+  snap(Playback.position, 0, height);
   for (const e of getVisibleEntries()) {
     if (selection.has(e)) continue;
     let positions = getEntryPositions(e);
@@ -383,7 +396,7 @@ function keepPosInSafeArea(pos: number) {
 }
 
 // UI events
-function processMouseMove(e: MouseEvent) {
+function onMouseMove(e: MouseEvent) {
   const canvas = manager.canvas;
   canvas.style.cursor = 'default';
   if (e.offsetY < HEADER_HEIGHT) {
@@ -394,44 +407,247 @@ function processMouseMove(e: MouseEvent) {
   const under = findEntriesByPosition(
     e.offsetX + manager.scroll[0], e.offsetY);
   if (under.length == 0) return;
-  if ((selection.size > 1 
-     || (Basic.ctrlKey() == 'Meta' ? e.metaKey : e.ctrlKey)) 
-    && under.some((x) => selection.has(x)))
+  canvas.style.cursor = 'move';
+
+  const ctrlKey = Basic.ctrlKey() == 'Meta' ? e.metaKey : e.ctrlKey;
+  const resizeArea = TimelineConfig.data.dragResizeArea;
+  if ((selection.size > 1 || ctrlKey)
+   && under.some((x) => selection.has(x)))
   {
-    canvas.style.cursor = 'move';
+    if (!ctrlKey) {
+      const x1 = (selectionFirst.start - getOffset()) * scale,
+            w2 = (selectionLast.end - selectionLast.start) * scale,
+            x2 = (selectionLast.start - getOffset()) * scale;
+      if (under.includes(selectionFirst) 
+       && e.offsetX - x1 < resizeArea)
+      {
+        canvas.style.cursor = 'e-resize';
+      } else if (under.includes(selectionLast)
+              && x2 + w2 - e.offsetX < resizeArea)
+      {
+        canvas.style.cursor = 'w-resize';
+      }
+    }
   } else {
     let ent = under.find((x) => selection.has(x)) ?? under[0];
     const w = (ent.end - ent.start) * scale,
-        x = (ent.start - getOffset()) * scale;
-    if (e.offsetX - x < TimelineConfig.data.dragResizeArea)
+          x = (ent.start - getOffset()) * scale;
+    if (e.offsetX - x < resizeArea)
       canvas.style.cursor = 'e-resize';
-    else if (x + w - e.offsetX < TimelineConfig.data.dragResizeArea)
+    else if (x + w - e.offsetX < resizeArea)
       canvas.style.cursor = 'w-resize';
-    // else
-    //     canvas.style.cursor = 'move';
   }
 }
 
-function processMouseDown(e0: MouseEvent) {
+type DragContext = null | {
+  type: 'scale', 
+  readonly origPos: number, 
+  readonly origScale: number,
+  readonly e0: MouseEvent
+} | {
+  type: 'moveCursor',
+} | {
+  type: 'boxSelect',
+  readonly x1: number,
+  readonly y1: number,
+  readonly originalSelection: SubtitleEntry[],
+  thisGroup: SubtitleEntry[],
+} | {
+  type: 'dragMove',
+  readonly origPos: number,
+  readonly points: number[],
+  readonly start: number,
+  readonly origPositions: Map<SubtitleEntry, {
+    start: number;
+    end: number;
+  }>,
+  readonly afterEnd: () => void,
+  changed: boolean
+} | {
+  type: 'dragResize',
+  readonly origPos: number,
+  readonly origVal: number,
+  readonly isStart: boolean,
+  readonly start: number,
+  readonly end: number,
+  readonly origPositions: Map<SubtitleEntry, {
+    start: number;
+    end: number;
+  }>,
+  readonly afterEnd: () => void,
+  changed: boolean
+};
+let dragContext: DragContext = null;
+
+function onDrag(offsetX: number, offsetY: number, ev: MouseEvent) {
+  Debug.assert(dragContext !== null);
+  switch (dragContext.type) {
+    case 'scale':
+      setViewScale(dragContext.origScale / 
+        Math.pow(1.03, (dragContext.e0.clientX - ev.clientX)));
+      setViewOffset(dragContext.origPos - dragContext.e0.offsetX / scale);
+      break;
+    case 'moveCursor':
+      moveCursor((offsetX + manager.scroll[0]) / scale);
+      break;
+    case 'boxSelect':
+      let x2 = offsetX + manager.scroll[0],
+          y2 = offsetY;
+      let b: Box = {
+        x: Math.min(dragContext.x1, x2), y: Math.min(dragContext.y1, y2), 
+        w: Math.abs(dragContext.x1 - x2), h: Math.abs(dragContext.y1 - y2)};
+      selectBox = b;
+      let newGroup =
+        findEntriesByPosition(b.x, b.y, b.w, b.h);
+      if (newGroup.length != dragContext.thisGroup.length) {
+        selection = new SvelteSet(
+          [...dragContext.originalSelection, ...newGroup]);
+        dragContext.thisGroup = newGroup;
+        dispatchSelectionChanged();
+      }
+      keepPosInSafeArea(x2 / scale);
+      manager.requestRender();
+      break;
+    case 'dragMove':
+      let dval = offsetX / scale + getOffset() - dragContext.origPos;
+      if (ev.altKey !== TimelineConfig.data.enableSnap)
+        dval = snapMove(
+          dragContext.points,
+          Math.min(...dragContext.points), 
+          dragContext.start + dval
+        ) - dragContext.start;
+      dragContext.changed = dval != 0;
+      for (const [ent, pos] of dragContext.origPositions.entries()) {
+        ent.start = pos.start + dval;
+        ent.end = pos.end + dval;
+      }
+      manager.requestRender();
+      break;
+    case 'dragResize':
+      let val = dragContext.origVal + offsetX / scale + getOffset() - dragContext.origPos;
+      if (ev.altKey !== TimelineConfig.data.enableSnap)
+        val = snapEnds(
+          dragContext.start, 
+          dragContext.end, 
+          val, 
+          dragContext.isStart);
+      let newStart: number, newEnd: number;
+      if (dragContext.isStart) {
+        newStart = Math.min(dragContext.end, val);
+        newEnd = dragContext.end;
+      } else {
+        newStart = dragContext.start;
+        newEnd = Math.max(dragContext.start, val);
+      }
+      // transform selection
+      const factor = (newEnd - newStart) / (dragContext.end - dragContext.start);
+      for (const [ent, pos] of dragContext.origPositions.entries()) {
+        ent.start = (pos.start - dragContext.start) * factor + newStart;
+        ent.end = (pos.end - dragContext.start) * factor + newStart;
+      }
+      dragContext.changed = val != dragContext.origVal;
+      keepPosInSafeArea(val);
+      manager.requestRender();
+      break;
+    default:
+      Debug.never(dragContext);
+  }
+}
+
+function onDragInterrupted() {
+  Debug.assert(dragContext !== null);
+  switch (dragContext.type) {
+    case 'dragMove':
+    case 'dragResize':
+      alignmentLine = null;
+      for (const [ent, pos] of dragContext.origPositions.entries()) {
+        ent.start = pos.start;
+        ent.end = pos.end;
+      }
+      manager.requestRender();
+    case 'scale':
+    case 'moveCursor':
+      break;
+    case 'boxSelect':
+      selectBox = null;
+      selection = new SvelteSet(dragContext.originalSelection);
+      dispatchSelectionChanged();
+      manager.requestRender();
+      break;
+    default:
+      Debug.never(dragContext);
+  }
+}
+
+function onDragEnd() {
+  Debug.assert(dragContext !== null);
+  document.removeEventListener('keydown', onDocumentKeyWhenDragging);
+  switch (dragContext.type) {
+    case 'dragMove':
+    case 'dragResize':
+      alignmentLine = null;
+      manager.requestRender();
+      if (dragContext.changed)
+        Source.markChanged(ChangeType.Times);
+      else
+        dragContext.afterEnd();
+      break;
+    case 'scale':
+    case 'moveCursor':
+      break;
+    case 'boxSelect':
+      selectBox = null;
+      manager.requestRender();
+      break;
+    default:
+      Debug.never(dragContext);
+  }
+}
+
+function onDocumentKeyWhenDragging(ev: KeyboardEvent) {
+  if (ev.key == 'Escape') {
+    document.removeEventListener('keydown', onDocumentKeyWhenDragging);
+    manager.interruptDrag();
+  }
+};
+
+function getEachStyleReferencePoints(sels: SubtitleEntry[]) {
+  const map = sels.reduce(
+    (prev, current) => {
+      const start = current.start;
+      const end = current.end;
+      for (const style of current.texts.keys()) {
+        if (Source.subs.view.timelineExcludeStyles.has(style))
+          continue;
+        let tuple = prev.get(style.name);
+        if (tuple) {
+          if (start < tuple[0]) tuple[0] = start;
+          if (end > tuple[1]) tuple[1] = end;
+        } else
+          prev.set(style.name, [start, end]);
+      };
+      return prev;
+    }, 
+    new Map<string, [number, number]>());
+  const points = [...map.values()].flat();
+  return [...new Set(points)]
+}
+
+function canBeginDrag(e0: MouseEvent): boolean {
   e0.preventDefault();
-  let onMove = (_: MouseEvent, offsetX: number, offsetY: number) => {};
-  let onUp = (_: MouseEvent, offsetX: number, offsetY: number) => {};
-  let onReset = () => {};
   const origPos = getOffset() + e0.offsetX / scale;
   const scrollX = manager.scroll[0];
+  document.addEventListener('keydown', onDocumentKeyWhenDragging);
   if (e0.button == 1) {
     // scale
-    const orig = scale;
-    onMove = (e1) => {
-      setViewScale(orig / Math.pow(1.03, (e0.clientX - e1.clientX)));
-      setViewOffset(origPos - e0.offsetX / scale);
-    };
+    dragContext = { type: 'scale', origScale: scale, origPos, e0 };
+    return true;
   } else {
     if (e0.offsetY < HEADER_HEIGHT) {
       // move cursor
-      onMove = async (_, offsetX: number, offsetY: number) => 
-        await moveCursor((offsetX + scrollX) / scale);
-      onMove(e0, e0.offsetX, e0.offsetY);
+      dragContext = { type: 'moveCursor' };
+      onDrag(e0.offsetX, e0.offsetY, e0);
+      return true;
     } else {
       let underMouse = findEntriesByPosition(
         e0.offsetX + scrollX, e0.offsetY);
@@ -444,41 +660,14 @@ function processMouseDown(e0: MouseEvent) {
           manager.requestRender();
         }
         // initiate box select
-        selectBox = null;
-        const originalSelection = [...selection];
-        let thisGroup = [];
-        onMove = (_, offsetX: number, offsetY: number) => {
-          let x1 = origPos * scale,
-            x2 = offsetX + scrollX,
-            y1 = e0.offsetY,
-            y2 = offsetY;
-          let b: Box = {
-            x: Math.min(x1, x2), y: Math.min(y1, y2), 
-            w: Math.abs(x1 - x2), h: Math.abs(y1 - y2)};
-          selectBox = b;
-          let newGroup =
-            findEntriesByPosition(b.x, b.y, b.w, b.h);
-          if (newGroup.length != thisGroup.length) {
-            selection = new Set(
-              [...originalSelection, ...newGroup]);
-            thisGroup = newGroup;
-            dispatchSelectionChanged();
-          }
-          keepPosInSafeArea(x2 / scale);
-          manager.requestRender();
+        dragContext = {
+          type: 'boxSelect', 
+          x1: origPos * scale,
+          y1: e0.offsetY,
+          originalSelection: [...selection], 
+          thisGroup: []
         };
-        // reset box select
-        onReset = () => {
-          selectBox = null;
-          selection = new Set(originalSelection);
-          dispatchSelectionChanged();
-          manager.requestRender();
-        };
-        // stop box select
-        onUp = () => {
-          selectBox = null;
-          manager.requestRender();
-        };
+        return true;
       } else if (e0.button == 2) {
         // right-clicked on something
         // clear selection and re-select only if it's not selected
@@ -487,21 +676,19 @@ function processMouseDown(e0: MouseEvent) {
           Editing.selectEntry(underMouse[0], 
             SelectMode.Single, ChangeCause.Action);
         }
-        // you can't drag in this case! no onMove.
-        // start context menu on mouse up
-        // note we do it here instead of in oncontextmenu
-        onUp = () => Actions.contextMenu();
+        // TODO: context menu?
+        return false;
       } else {
         // left-clicked on something
         // renew selection
-        let afterUp = () => {};
+        let afterEnd = () => {};
         if (Basic.ctrlKey() == 'Meta' ? e0.metaKey : e0.ctrlKey) {
           // multiple select. Only the first entry counts
           if (!selection.has(underMouse[0])) {
             selection.add(underMouse[0]);
             dispatchSelectionChanged();
             manager.requestRender();
-          } else afterUp = () => {
+          } else afterEnd = () => {
             // if hasn't dragged
             selection.delete(underMouse[0]);
             dispatchSelectionChanged();
@@ -510,7 +697,7 @@ function processMouseDown(e0: MouseEvent) {
         } else {
           // single select
           if (selection.size > 1) {
-            afterUp = () => {
+            afterEnd = () => {
               selection.clear();
               selection.add(underMouse[0]);
               Editing.selectEntry(underMouse[0], 
@@ -529,154 +716,61 @@ function processMouseDown(e0: MouseEvent) {
         }
         // drag if necessary
         const sels = [...selection];
-        if (sels.length == 0) return;
+        if (sels.length == 0) return false;
 
         // save original positions
-        const origPositions = new Map(sels.map((x) => [x, {
-          start: x.start,
-          end: x.end
-        }]));
-
-        onReset = () => {
-          alignmentLine = null;
-          for (const [ent, pos] of origPositions.entries()) {
-            ent.start = pos.start;
-            ent.end = pos.end;
-          }
-          manager.requestRender();
-        }
+        const origPositions = new Map(
+          sels.map((x) => [x, { start: x.start, end: x.end }]));
 
         const [first, last] = sels.reduce<[SubtitleEntry, SubtitleEntry]>(
           ([pf, pl], current) => [
             current.start < pf.start ? current : pf,
             current.end > pl.end ? current : pf], 
           [sels[0], sels[0]]);
-        const distL = (origPos - first.start) * scale, 
-            distR = (last.end - origPos) * scale;
+        const distL = (origPos - selectionFirst.start) * scale, 
+              distR = (selectionLast.end - origPos) * scale;
         if (distL > TimelineConfig.data.dragResizeArea 
          && distR > TimelineConfig.data.dragResizeArea)
         {
           // drag-move
-          let dragged = false;
           const one = underMouse.find((x) => selection.has(x))!;
+          const ref = TimelineConfig.data.multiselectDragReference;
           const points = 
-              TimelineConfig.data.multiselectDragReference == 'eachStyleofWhole' 
-            ? [...new Set([...sels.reduce(
-              (prev, current) => {
-                const start = current.start;
-                const end = current.end;
-                for (const style of current.texts.keys()) {
-                  if (!Source.subs.view.timelineExcludeStyles.has(style))
-                    continue;
-
-                  let tuple = prev.get(style.name);
-                  if (tuple) {
-                    if (start < tuple[0]) tuple[0] = start;
-                    if (end > tuple[1]) tuple[1] = end;
-                  } else
-                    prev.set(style.name, [start, end]);
-                };
-                return prev;
-              }, 
-              new Map<string, [number, number]>()).values()].flat())]
-            : TimelineConfig.data.multiselectDragReference == 'whole' 
-            ? [first.start, last.end]
-            : [one.start, one.end];
-
-          const origStart = Math.min(...points);
-          const firstStart = first.start;
-          onMove = (e, offsetX: number, offsetY: number) => {
-            const newPos = 
-              offsetX / scale + getOffset();
-            let dval = newPos - origPos;
-            if (e.altKey !== TimelineConfig.data.enableSnap)
-              dval = snapMove(
-                points, origStart, firstStart + dval) - firstStart;
-            dragged = newPos != origPos;
-            for (const [ent, pos] of origPositions.entries()) {
-              ent.start = pos.start + dval;
-              ent.end = pos.end + dval;
-            }
-            manager.requestRender();
+              ref == 'eachStyleofWhole' 
+                ? getEachStyleReferencePoints(sels)
+            : ref == 'whole' 
+                ? [selectionFirst.start, selectionLast.end]
+            : ref == 'one'
+                ? [one.start, one.end] 
+            : Debug.never(ref as never);
+          dragContext = {
+            type: 'dragMove', 
+            origPos, origPositions, points, 
+            start: selectionFirst.start,
+            changed: false,
+            afterEnd
           };
-          onUp = () => {
-            alignmentLine = null;
-            manager.requestRender();
-            if (dragged) {
-              Source.markChanged(ChangeType.Times);
-            } else afterUp();
-          };
+          return true;
         } else {
           // drag-resize
           const isStart = distL <= TimelineConfig.data.dragResizeArea;
-          const origVal = isStart ? first.start : last.end;
-          const firstStart = first.start;
-          const lastEnd = last.end;
-          let dragged = false;
-          onMove = (e, offsetX: number, offsetY: number) => {
-            const newPos = 
-              offsetX / scale + getOffset();
-            let val = origVal + newPos - origPos;
-            if (e.altKey !== TimelineConfig.data.enableSnap)
-              val = snapEnds(firstStart, lastEnd, val, isStart);
-            let newStart: number, newEnd: number;
-            if (isStart) {
-              newStart = Math.min(lastEnd, val);
-              newEnd = lastEnd;
-            } else {
-              newStart = firstStart;
-              newEnd = Math.max(firstStart, val);
-            }
-            // transform selection
-            const factor = (newEnd - newStart) / (lastEnd - firstStart);
-            for (const [ent, pos] of origPositions.entries()) {
-              ent.start = (pos.start - firstStart) * factor + newStart;
-              ent.end = (pos.end - firstStart) * factor + newStart;
-            }
-            dragged = val != origVal;
-            keepPosInSafeArea(val);
-            manager.requestRender();
+          dragContext = {
+            type: 'dragResize', 
+            origPos, origPositions, isStart,
+            origVal: isStart ? selectionFirst.start : selectionLast.end,
+            start: selectionFirst.start,
+            end: selectionLast.end,
+            changed: false,
+            afterEnd
           };
-          onUp = () => {
-            alignmentLine = null;
-            manager.requestRender();
-            if (dragged) {
-              Source.markChanged(ChangeType.Times);
-            } else afterUp();
-          };
+          return true;
         }
       }
     }
   };
-  
-  const onKey = (ev: KeyboardEvent) => {
-    if (ev.key == 'Escape') {
-      onReset();
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    }
-  };
-  const onMouseMove = (ev: MouseEvent) => {
-    let rect = manager.canvas.getBoundingClientRect();
-    const offsetX = ev.clientX - rect.left;
-    const offsetY = ev.clientY - rect.top;
-    onMove(ev, offsetX, offsetY);
-  }
-  const onMouseUp = (ev: MouseEvent) => {
-    let rect = manager.canvas.getBoundingClientRect();
-    const offsetX = ev.clientX - rect.left;
-    const offsetY = ev.clientY - rect.top;
-    onUp(ev, offsetX, offsetY);
-    document.removeEventListener('keydown', onKey);
-    document.removeEventListener('mousemove', onMouseMove);
-  };
-  document.addEventListener('keydown', onKey);
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp, { once: true });
 }
 
-function precessDoubleClick() {
+function onDoubleClick() {
   if (selection.size == 1) {
     let one = [...selection][0];
     if (Editing.getFocusedEntry() == one)
@@ -684,7 +778,7 @@ function precessDoubleClick() {
   }
 }
 
-function processWheel(tr: TranslatedWheelEvent, e: WheelEvent) {
+function onMouseWheel(tr: TranslatedWheelEvent, e: WheelEvent) {
   if (tr.isZoom) {
     const origPos = getOffset() + e.offsetX / scale;
     setViewScale(scale / Math.pow(1.03, tr.amount));
@@ -719,15 +813,13 @@ Playback.onClose.bind(me, async () => {
   await sampler.close();
   samplerMedia = undefined;
   sampler = null;
-  Playback.setCursorPosition(0);
+  Playback.setPosition(0);
   manager.requestRender();
   await Debug.info('closed timeline');
 });
 
 Playback.onLoad.bind(me, async (rawurl) => {
-  if (samplerMedia !== undefined && !samplerMedia.isClosed) {
-    await close();
-  }
+  Debug.assert(samplerMedia === undefined || samplerMedia.isClosed)
   if (DebugConfig.data.disableWaveform) return;
 
   samplerMedia = await MMedia.open(rawurl);
@@ -736,7 +828,7 @@ Playback.onLoad.bind(me, async (rawurl) => {
   sampler.onProgress = () => manager.requestRender();
   setViewScale(Math.max(width / sampler.duration, 10));
   setViewOffset(0);
-  Playback.setCursorPosition(0);
+  Playback.setPosition(0);
   requestedSampler = true;
   manager.requestRender();
 });
@@ -745,7 +837,7 @@ Playback.onLoad.bind(me, async (rawurl) => {
 function getMaxPosition() {
   return sampler 
     ? sampler.duration 
-    : Math.max(...Source.subs.entries.map((x) => x.end)) + 20;
+    : Math.max(0, ...Source.subs.entries.map((x) => x.end)) + 20;
 }
 
 function processSampler() {
@@ -767,7 +859,7 @@ function processSampler() {
 
   const resolution = sampler.resolution;
   const i = Math.floor(getOffset() * resolution),
-      i_end = Math.ceil(end * resolution);
+        i_end = Math.ceil(end * resolution);
   const subarray = sampler.detail.subarray(i, i_end);
   const first0 = subarray.findIndex((x) => x == 0);
   if (Playback.isPlaying) {
@@ -805,24 +897,23 @@ function setViewOffset(v: number) {
   requestedSampler = true;
 }
 
-Playback.onCursorPositionChanged.bind(me, (pos) => {
-  const originalPos = pos;
-  if (pos < 0) pos = 0;
-  pos = Math.min(pos, getMaxPosition());
-  if (pos == originalPos) {
-    keepPosInSafeArea(pos);
-    manager.requestRender();
-  } else {
-    Playback.setCursorPosition(pos);
+Playback.onPositionChanged.bind(me, (pos) => {
+  if (!get(Playback.isLoaded)) {
+    const originalPos = pos;
+    if (pos < 0) pos = 0;
+    pos = Math.min(pos, getMaxPosition());
+    if (pos != originalPos) {
+      Playback.setPosition(pos);
+      return;
+    }
   }
+
+  keepPosInSafeArea(pos);
+  manager.requestRender();
 });
 
-Playback.onPositionChanged.bind(me, (pos) => {
-  Playback.setCursorPosition(pos);
-})
-
 async function moveCursor(pos: number) {
-  if (pos == Playback.cursorPosition) return;
+  if (pos == Playback.position) return;
   Playback.setPosition(pos);
 }
 
@@ -968,7 +1059,8 @@ function renderTracks(ctx: CanvasRenderingContext2D) {
 }
 
 function renderCursor(ctx: CanvasRenderingContext2D) {
-  let pos = Playback.cursorPosition * scale;
+  let pos = Playback.position * scale;
+  Interface.status.set(`pos=${pos},scale=${scale}`);
   if (selectBox) {
     ctx.fillStyle = BOXSELECT_BACK;
     ctx.strokeStyle = BOXSELECT_BORDER;

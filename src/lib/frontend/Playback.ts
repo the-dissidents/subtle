@@ -15,7 +15,6 @@ export type PlayArea = {
 
 let isLoaded = writable(false),
     position = 0,
-    cursorPosition = 0,
     duration = 0;
 
 const me = {};
@@ -58,7 +57,6 @@ async function handlePlayArea() {
 
 export const Playback = {
     get position() { return position; },
-    get cursorPosition() { return cursorPosition; },
     get duration() { return duration; },
     get isLoaded(): Readable<boolean> { return isLoaded; },
     get isPlaying() { return this.video?.isPlaying ?? false; },
@@ -77,7 +75,6 @@ export const Playback = {
     onClose: new EventHost<[]>(),
     
     onPositionChanged: new EventHost<[pos: number]>(),
-    onCursorPositionChanged: new EventHost<[pos: number]>(),
     onRefreshPlaybackControl: new EventHost<[]>(),
 
     createVideo(canvas: HTMLCanvasElement) {
@@ -119,20 +116,9 @@ export const Playback = {
         Playback.onRefreshPlaybackControl.dispatch();
     },
 
-    setCursorPosition(pos: number) {
-        if (cursorPosition != pos) {
-            cursorPosition = pos;
-            this.onCursorPositionChanged.dispatch(pos);
-        }
-    },
-
     setPosition(pos: number, opt?: SetPositionOptions) {
-        // TODO: investigate
-        if (this.video) {
-            this.video.requestSetPosition(pos, opt);
-        } else {
-            updateProgress(pos);
-        }
+        Debug.assert(this.video !== null);
+        this.video.requestSetPosition(pos, opt);
     },
 
     async forceSetPosition(pos: number) {

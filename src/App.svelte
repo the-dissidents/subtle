@@ -67,7 +67,6 @@ let videoCanvas: HTMLCanvasElement | undefined = $state();
 let timelineCanvasContainer: HTMLDivElement | undefined = $state();
 
 let isPlaying = $state(false);
-let sliderDisabled = $state(true);
 let playPos = $state(0);
 let playPosInput = $state(0);
 
@@ -87,10 +86,9 @@ Source.onUndoBufferChanged.bind(me, () => {
 });
 
 Playback.onRefreshPlaybackControl.bind(me, () => {
-  sliderDisabled = !$isMediaLoaded;
   playPos = $isMediaLoaded ? Playback.position / Playback.duration : 0;
   isPlaying = Playback.isPlaying;
-  playPosInput = Playback.position ?? 0;
+  playPosInput = Playback.position;
 });
 
 let setupVideoView: Action = () => {
@@ -300,7 +298,8 @@ appWindow.onDragDropEvent(async (ev) => {
           </svg>
         </button>
         <input type='range' class='play-pointer flexgrow'
-          step="any" max="1" min="0" disabled={sliderDisabled}
+          step="any" max="1" min="0"
+          disabled={!$isMediaLoaded}
           bind:value={playPos}
           oninput={() => {
             if (!$isMediaLoaded) {
@@ -310,6 +309,7 @@ appWindow.onDragDropEvent(async (ev) => {
             Playback.setPosition(playPos * Playback.duration, {imprecise: true});
           }}/>
         <TimestampInput bind:timestamp={playPosInput}
+          disabled={!$isMediaLoaded}
           onchange={() => Playback.setPosition(playPosInput)}/>
       </div>
       <!-- resizer -->

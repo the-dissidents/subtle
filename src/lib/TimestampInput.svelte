@@ -4,12 +4,18 @@ import { Basic } from './Basic';
 interface Props {
   timestamp?: number;
   stretch?: boolean;
+  disabled?: boolean;
   oninput?: (t: number) => void;
   // FIXME: this is nearly useless
   onchange?: (t: number) => void;
 }
 
-let { timestamp = $bindable(0), stretch = false, onchange, oninput }: Props = $props();
+let { 
+  timestamp = $bindable(0), 
+  stretch = false, 
+  disabled = false, 
+  onchange, oninput 
+}: Props = $props();
 let value = $state('00:00:00.000');
 
 // FIXME: this is useless
@@ -25,7 +31,7 @@ $effect(() => {
 </script>
 
 <input class={{timestamp: true, stretch}}
-  type="text"
+  type="text" {disabled}
   bind:value={value}
   onbeforeinput={(ev) => {
     // Note: Safari fires beforeinput and input *before* keydown if the IME is on, so

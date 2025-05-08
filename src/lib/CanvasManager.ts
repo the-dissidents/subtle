@@ -43,6 +43,8 @@ export class CanvasManager {
     #scrollerHighlight: 'v' | 'h' | 'none' = 'none';
     #scrollerFadeStartTime = 0;
 
+    #endDrag?: (ev?: MouseEvent) => void;
+
     readonly onDisplaySizeChanged = 
         new EventHost<[w: number, h: number, rw: number, rh: number]>();
     readonly onMouseDown =
@@ -53,8 +55,15 @@ export class CanvasManager {
         new EventHost<[ev: MouseEvent]>();
     readonly onDrag =
         new EventHost<[offsetX: number, offsetY: number, ev: MouseEvent]>();
+    readonly onDragInterrupted =
+        new EventHost<[]>();
+    readonly onDragEnd =
+        new EventHost<[offsetX: number, offsetY: number, ev: MouseEvent]>();
+
     readonly onUserZoom = new EventHost();
     readonly onUserScroll = new EventHost();
+
+    canBeginDrag: (ev: MouseEvent) => boolean = () => false;
 
     renderer?: (ctx: CanvasRenderingContext2D) => void;
     doNotPrescaleHighDPI = false;
@@ -172,6 +181,11 @@ export class CanvasManager {
         requestAnimationFrame(() => this.#render());
     }
 
+    interruptDrag() {
+        Debug.assert(this.dragType == 'custom');
+        this.#endDrag!(undefined);
+    }
+
     convertPosition(
         from: CanvasManagerPositionSystem, 
         to: CanvasManagerPositionSystem, 
@@ -213,31 +227,45 @@ export class CanvasManager {
     } 
 
     #onMouseDown(ev: MouseEvent) {
-        let handled = false;
+        let doDrag = false;
         if (ev.button == 0) {
-            [this.#dragStartX, this.#dragStartY] = [ev.offsetX, ev.offsetY];
-            [this.#dragStartScrollX, this.#dragStartScrollY] = [this.#scrollX, this.#scrollY];
-
             const [hasH, hasW] = this.hasScrollers;
             if (hasW && ev.offsetX > this.#width - scrollerSize) {
                 this.#dragType = 'vscroll';
-                handled = true;
+                doDrag = true;
             } else if (hasH && ev.offsetY > this.#height - scrollerSize) {
                 this.#dragType = 'hscroll';
-                handled = true;
-            } else {
+                doDrag = true;
+            } else if (this.canBeginDrag(ev)) {
                 this.#dragType = 'custom';
+                this.onMouseDown.dispatch(ev);
+                doDrag = true;
             }
         
-            const handler = (ev: MouseEvent) => this.#onDrag(ev);
-            document.addEventListener('mousemove', handler);
-            document.addEventListener('mouseup', () => {
-                document.removeEventListener('mousemove', handler);
-                this.#dragType = 'none';
-            }, { once: true });
+            if (doDrag) {
+                [this.#dragStartX, this.#dragStartY] = [ev.offsetX, ev.offsetY];
+                [this.#dragStartScrollX, this.#dragStartScrollY] = [this.#scrollX, this.#scrollY];
+
+                const handlerMove = (ev: MouseEvent) => this.#onDrag(ev);
+                const handlerUp = (ev: MouseEvent) => this.#endDrag!(ev);
+                this.#endDrag = (ev) => {
+                    if (!ev)
+                        this.onDragInterrupted.dispatch();
+                    else if (this.#dragType == 'custom') {
+                        const [offsetX, offsetY] = 
+                            this.convertPosition('client', 'offset', ev.clientX, ev.clientY);
+                        this.onDragEnd.dispatch(offsetX, offsetY, ev);
+                    }
+                    document.removeEventListener('mousemove', handlerMove);
+                    document.removeEventListener('mouseup', handlerUp);
+                    this.#dragType = 'none';
+                }
+                document.addEventListener('mousemove', handlerMove);
+                document.addEventListener('mouseup', handlerUp, { once: true });
+            }
         }
 
-        if (!handled) this.onMouseDown.dispatch(ev);
+        if (!doDrag) this.onMouseDown.dispatch(ev);
     }
 
     #onDrag(ev: MouseEvent) {

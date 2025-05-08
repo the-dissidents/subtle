@@ -213,10 +213,10 @@ function layout(cxt: CanvasRenderingContext2D) {
 
   manager.setContentRect({
     r: pos + manager.scrollerSize,
-    b: (totalLines + 1) * lineHeight + headerHeight + manager.scrollerSize // add 1 for virtual entry
+    b: (totalLines + 1) * lineHeight + headerHeight + manager.scrollerSize
+    // add 1 for virtual entry
   });
-  // Debug.debug(entryColumns, channelColumns);
-  Debug.trace('layout done in', performance.now() - startTime);
+  Debug.trace(`layout done in ${performance.now() - startTime}ms`);
 }
 
 function render(cxt: CanvasRenderingContext2D) {
@@ -448,6 +448,7 @@ onMount(() => {
     manager.requestRender();
   });
   manager.renderer = (ctx) => render(ctx);
+  manager.canBeginDrag = (ev) => ev.offsetY > headerHeight / manager.scale;
   manager.onMouseMove.bind(me, onMouseMove);
   manager.onMouseDown.bind(me, onMouseDown);
   manager.onDrag.bind(me, onDrag);
@@ -522,6 +523,9 @@ function onMouseMove(ev: MouseEvent) {
 
 function onMouseDown(ev: MouseEvent) {
   onFocus();
+  // don't do anything if mouse is within header area
+  if (ev.offsetY < headerHeight / manager.scale) return;
+
   if (ev.button == 0) {
     currentLine = getLineFromOffset(ev.offsetY);
     if (currentLine > totalLines) {
@@ -608,7 +612,7 @@ function onDrag(_: number, offsetY: number) {
         if (TableConfig.data.doubleClickStartEdit)
           Editing.startEditingNewVirtualEntry();
       } else {
-        switch (TableConfig.data.doubleClickPlaybackBehavior) {
+        if (get(Playback.isLoaded)) switch (TableConfig.data.doubleClickPlaybackBehavior) {
           case 'none': break;
           case 'seek':
             Playback.setPosition(focused.start);

@@ -455,6 +455,7 @@ export class VideoPlayer {
             this.subRenderer?.setTime(t);
             this.requestRender();
         }
+        this.onVideoPositionChange();
     }
 
     #setPositionInProgress = false;
