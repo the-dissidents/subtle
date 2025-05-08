@@ -1,7 +1,7 @@
-import { SvelteMap } from "svelte/reactivity";
+import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { Debug } from "../Debug";
 import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
-import type { MetricFilter } from "./Filter";
+import type { MetricFilter, MetricName } from "./Filter";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelTypes = typeof Labels[number];
@@ -38,7 +38,7 @@ export interface SubtitleMetadata {
     height: number,
     scalingFactor: number,
     special: {
-        untimedText: string
+        untimedText: string,
     }
 }
 
@@ -50,16 +50,14 @@ export class SubtitleEntry {
     start: number = $state(0);
     end: number = $state(0);
 
-    constructor(
-        start: number,
-        end: number) 
+    constructor(start: number, end: number) 
     {
         this.start = start;
         this.end = end;
     }
 }
 
-type MigrationInfo = 'none' | 'ASS' | 'text' | 'olderVersion';
+type MigrationInfo = 'none' | 'ASS' | 'text' | 'olderVersion' | 'newerVersion';
 
 export class Subtitles {
     metadata: SubtitleMetadata = $state(Subtitles.#createMetadata());
@@ -69,6 +67,12 @@ export class Subtitles {
     styles: SubtitleStyle[] = $state([this.defaultStyle]);
     entries: SubtitleEntry[] = [];
     migrated: MigrationInfo = 'none';
+
+    view = $state({
+        perEntryColumns: ['startTime', 'endTime'] as MetricName[],
+        perChannelColumns: ['style', 'content'] as MetricName[],
+        timelineExcludeStyles: new SvelteSet<SubtitleStyle>()
+    });
 
     static createStyle(name: string): SubtitleStyle {
         return {

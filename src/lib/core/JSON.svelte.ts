@@ -1,16 +1,18 @@
-import { Ajv, type JSONSchemaType, type ValidateFunction } from "ajv";
+import { type JSONSchemaType } from "ajv";
 import { Debug } from "../Debug";
 import { MigrationDuplicatedStyles, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleMetadata, type SubtitleStyle } from "./Subtitles.svelte";
 import { ajv, DeserializationError, parseObject } from "../Serialization";
-import { FilterSchema } from "./Filter";
+import { FilterSchema, Metrics, type MetricName } from "./Filter";
+import { SvelteSet } from "svelte/reactivity";
 
 /**
  * Version details:
  *  - 000400 (major) styles includes defaultStyle, which is just a name; channels are unordered
  *  - 000402 (minor) styles have validators
  *  - 000403 (minor) scaling factor in metadata
+ *  - 000404 (minor) view in archive
  */
-export const SubtitleFormatVersion = '000402';
+export const SubtitleFormatVersion = '000404';
 
 // FIXME: should not repeat the default values here, already defined in Subtitle.svelte.ts
 const StyleSchema: JSONSchemaType<SubtitleStyle> = {
@@ -71,8 +73,55 @@ const MetadataSchema: JSONSchemaType<SubtitleMetadata> = {
     required: ['special']
 }
 
+type SerializedView = {
+    perEntryColumns: string[],
+    perChannelColumns: string[],
+    timelineExcludeStyles: string[]
+}
+
+const ViewSchema: JSONSchemaType<SerializedView> = {
+    type: 'object',
+    properties: {
+        perEntryColumns: { 
+            type: 'array', items: { type: 'string' }, 
+            default: ['startTime', 'endTime'] 
+        },
+        perChannelColumns: { 
+            type: 'array', items: { type: 'string' }, 
+            default: ['style', 'content'] 
+        },
+        timelineExcludeStyles: { 
+            type: 'array', items: { type: 'string' }, 
+            default: [] 
+        }
+    },
+    required: []
+}
+
 const validateStyle = ajv.compile(StyleSchema);
 const validateMetadata = ajv.compile(MetadataSchema);
+const validateView = ajv.compile(ViewSchema);
+
+function serializeView(view: Subtitles['view']) {
+    return {
+        perEntryColumns: view.perEntryColumns,
+        perChannelColumns: view.perChannelColumns,
+        timelineExcludeStyles: [...view.timelineExcludeStyles].map((x) => x.name)
+    };
+}
+
+function parseView(o: any, subs: Subtitles, version: string) {
+    let sv = parseObject(o, validateView);
+    subs.view.perEntryColumns = sv.perEntryColumns.filter((x) => 
+        x in Metrics && Metrics[x as MetricName].per == 'entry') as MetricName[];
+    subs.view.perChannelColumns = sv.perChannelColumns.filter((x) => 
+        x in Metrics && Metrics[x as MetricName].per == 'channel') as MetricName[];
+    const styleMap = new Map(subs.styles.map((x) => [x.name, x]));
+    if (sv.timelineExcludeStyles.some((x) => !styleMap.has(x)))
+        throw new DeserializationError('invalid item in timelineExcludeStyles');
+    subs.view.timelineExcludeStyles = 
+        new SvelteSet(sv.timelineExcludeStyles.map((x) => styleMap.get(x)!));
+}
 
 function serializeEntry(entry: SubtitleEntry) {
     return {
@@ -137,9 +186,8 @@ export const JSONSubtitles: SubtitleFormat = {
         const o = globalThis.JSON.parse(source);
         const version = o.version ?? '0';
         let subs = new Subtitles();
-        if (o.metadata) {
-            subs.metadata = parseObject(o.metadata, validateMetadata);
-        }
+
+        if (o.metadata) subs.metadata = parseObject(o.metadata, validateMetadata);
 
         const styles = o.styles, entries = o.entries;
         if (o.defaultStyle === undefined || !Array.isArray(styles) || !Array.isArray(entries))
@@ -155,6 +203,9 @@ export const JSONSubtitles: SubtitleFormat = {
             })];
             subs.migrated = 'olderVersion';
         } else {
+            if (version > SubtitleFormatVersion) {
+                subs.migrated = 'newerVersion';
+            }
             subs.styles = styles.map((x) => {
                 let style = $state(parseObject(x, validateStyle));
                 return style;
@@ -163,6 +214,8 @@ export const JSONSubtitles: SubtitleFormat = {
             if (def === undefined) throw new DeserializationError('invalid default style name');
             subs.defaultStyle = def;
         }
+
+        if (o.view) parseView(o.view, subs, version);
 
         subs.entries = entries
             .map((x) => parseEntry(x, subs, version))
@@ -176,6 +229,7 @@ export const JSONSubtitles: SubtitleFormat = {
             metadata: subs.metadata,
             defaultStyle: subs.defaultStyle.name,
             styles: subs.styles,
+            view: serializeView(subs.view),
             entries: (options?.useEntries ?? subs.entries)
                 .map((x) => serializeEntry(x)),
         }, undefined, 2);

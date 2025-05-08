@@ -369,13 +369,15 @@ const me = {};
 onDestroy(() => EventHost.unbind(me));
 
 Source.onSubtitleObjectReload.bind(me, () => {
-  requestedLayout = true;
-  manager.requestRender();
+  updateColumns();
 });
 
 Source.onSubtitlesChanged.bind(me, (t) => {
   // TODO: can we optimize this by not re-layouting everything on every edit?
-  if (t !== ChangeType.Metadata) {
+  if (t == ChangeType.View) {
+    // the only way columns are updated is through the subtitle table
+    // updateColumns();
+  } else if (t !== ChangeType.Metadata) {
     requestedLayout = true;
     manager.requestRender();
   }
@@ -422,6 +424,23 @@ Editing.onKeepEntryInView.bind(me, (ent) => {
   }
 });
 
+function updateColumns() {
+  entryColumns = Source.subs.view.perEntryColumns
+    .map((x) => ({metric: x, layout: undefined}));
+  channelColumns = Source.subs.view.perChannelColumns
+    .map((x) => ({metric: x, layout: undefined}));
+  requestedLayout = true;
+  manager.requestRender();
+}
+
+function changeColumns() {
+  Source.subs.view.perEntryColumns = entryColumns.map((x) => x.metric);
+  Source.subs.view.perChannelColumns = channelColumns.map((x) => x.metric);
+  Source.markChanged(ChangeType.View);
+  requestedLayout = true;
+  manager.requestRender();
+}
+
 onMount(() => {
   Debug.assert(canvas !== undefined);
   manager = new CanvasManager(canvas);
@@ -432,19 +451,6 @@ onMount(() => {
   manager.onMouseMove.bind(me, onMouseMove);
   manager.onMouseDown.bind(me, onMouseDown);
   manager.onDrag.bind(me, onDrag);
-
-  PrivateConfig.onInitialized(() => {
-    let entry = PrivateConfig.get('tableEntryColumns')
-        .filter((x) => x in Metrics)
-        .map((x) => ({metric: <MetricName>x, layout: undefined}));
-    let channel = PrivateConfig.get('tableChannelColumns')
-        .filter((x) => x in Metrics)
-        .map((x) => ({metric: <MetricName>x, layout: undefined}));
-    if (entry.length > 0)
-      entryColumns = entry;
-    if (channel.length > 0)
-      channelColumns = channel;
-  });
 
   MainConfig.hook(
     () => [InterfaceConfig.data.fontSize, InterfaceConfig.data.fontFamily], 
@@ -559,7 +565,7 @@ function powWithSign(x: number, y: number) {
   return Math.sign(x) * Math.pow(Math.abs(x), y);
 }
 
-function onDrag(offsetX: number, offsetY: number) {
+function onDrag(_: number, offsetY: number) {
   // auto scroll if pointing outside
   const speed = TableConfig.data.autoScrollSpeed;
   const exponent = TableConfig.data.autoScrollExponent;
@@ -580,13 +586,6 @@ function onDrag(offsetX: number, offsetY: number) {
     for (; i < lines.length && lines[i].line < currentLine; i++);
     Editing.selectEntry(lines[i-1].entry, SelectMode.Sequence);
   }
-}
-
-function updateColumns() {
-  PrivateConfig.set('tableEntryColumns', entryColumns.map((x) => x.metric));
-  PrivateConfig.set('tableChannelColumns', channelColumns.map((x) => x.metric));
-  requestedLayout = true;
-  manager.requestRender();
 }
 </script>
 
@@ -634,9 +633,9 @@ function updateColumns() {
 </div>
 
 {#snippet metricList(opt: {list: Column[]}, per: 'entry' | 'channel')}
-  <OrderableList list={opt.list} style='width: 100%' onsubmit={updateColumns}>
+  <OrderableList list={opt.list} style='width: 100%' onsubmit={changeColumns}>
     {#snippet row(col, i)}
-      <select bind:value={col.metric} onchange={updateColumns}>
+      <select bind:value={col.metric} onchange={changeColumns}>
         {#each MetricsList as [name, m]}
           {#if m.per == per && (!opt.list.some((x) => x.metric == name) || name == col.metric)}
             <option value={name}>{m.localizedName()}</option>
@@ -645,7 +644,7 @@ function updateColumns() {
       </select>
       <button onclick={() => {
         opt.list.splice(i, 1);
-        updateColumns();
+        changeColumns();
       }} aria-label='delete'>
         <svg class="feather">
           <use href={`/feather-sprite.svg#delete`} />
@@ -661,7 +660,7 @@ function updateColumns() {
             text: y.localizedName(),
             action() {
               opt.list.push({ metric: x });
-              updateColumns();
+              changeColumns();
             }
           }))})).popup()}
       >
@@ -702,11 +701,11 @@ function updateColumns() {
 
   .form {
     display: flex;
-    /* color: black;
-    background-color: white; */
     flex-direction: column;
     text-align: start;
-    align-items: center;
+  }
+  .form h5 {
+    padding-top: 0;
   }
   .form select {
     flex-grow: 1;
@@ -726,7 +725,7 @@ function updateColumns() {
     position: absolute;
     top: 0;
     right: 0;
-    margin-right: 2px;
+    margin-right: 12px;
     margin-top: 2px;
   }
 

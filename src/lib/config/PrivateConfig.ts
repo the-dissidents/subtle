@@ -28,9 +28,6 @@ let configData = {
     timelineH: 150,
     leftPaneW: 300,
     videoH: 200,
-
-    tableEntryColumns: [] as string[],
-    tableChannelColumns: [] as string[]
 };
 
 let initialized = false;

@@ -51,8 +51,6 @@ export type SetPositionOptions = {
 export class VideoPlayer {
     #canvas: OffscreenCanvas;
     #ctxbuf: OffscreenCanvasRenderingContext2D;
-
-    #sourceUrl: string | undefined = undefined;
     #playing = false;
 
     #outOffsetX = 0;
@@ -61,6 +59,7 @@ export class VideoPlayer {
     #outH = 0;
 
     #opened?: {
+        url: string | undefined;
         framerate: number;
         sampleRate: number;
         media: MMedia;
@@ -103,7 +102,7 @@ export class VideoPlayer {
     get isLoaded() { return this.#opened !== undefined; }
     get isPlaying() { return this.#playing; }
     get isPreloading() { return this.#requestedPreload; }
-    get source() { return this.#sourceUrl; }
+    get source() { return this.#opened?.url; }
 
     #subRenderer?: SubtitleRenderer;
     #manager: CanvasManager;
@@ -237,8 +236,8 @@ export class VideoPlayer {
         }
         worklet.connect(audioCxt.destination);
 
-        this.#sourceUrl = rawurl;
         this.#opened = {
+            url: rawurl,
             media, audioCxt, worklet,
             framerate: videoStatus.framerate,
             sampleRate: audioStatus.sampleRate,

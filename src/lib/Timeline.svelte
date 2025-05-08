@@ -73,8 +73,11 @@ import { Playback } from "./frontend/Playback";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
 import { Debug } from "./Debug";
 import { Interface } from './frontend/Interface';
+import Popup, { type PopupHandler } from './ui/Popup.svelte';
 
 let timelineCanvas: HTMLCanvasElement | undefined = $state();
+let rowPopup: PopupHandler = $state({});
+let styleRefreshCounter = $state(0);
 let uiFocus = Interface.uiFocus;
 
 // Private fields (were prefixed with # in the class)
@@ -84,8 +87,7 @@ let samplerMedia: MMedia | undefined;
 /** pixels per second */
 let scale = 1;
 
-let width = 100;
-let height = 100;
+let width = 100, height = 100;
 let entryHeight = 0;
 let stylesMap = new Map<SubtitleStyle, number>();
 
@@ -250,9 +252,19 @@ function processDisplaySizeChanged(w: number, h: number): void {
 
 function preprocessStyles() {
   const subs = Source.subs;
+  const exclude = subs.view.timelineExcludeStyles;
+  for (const s of [...exclude])
+    if (!subs.styles.includes(s))
+      exclude.delete(s);
+  if (exclude.size == subs.styles.length)
+    exclude.clear();
+  styleRefreshCounter++;
+
+  const include = subs.styles.filter((x) => !exclude.has(x));
   entryHeight = (height - HEADER_HEIGHT - TRACK_AREA_MARGIN * 2) 
-    / subs.styles.length;
-  stylesMap = new Map(subs.styles.map((x, i) => [x, i]));
+    / include.length;
+  stylesMap = new Map([...include].map((x, i) => [x, i]));
+  manager.requestRender();
 }
 
 // Offset getter
@@ -271,10 +283,12 @@ function getEntryPositions(ent: SubtitleEntry): (Box & {text: string})[] {
   const w = (ent.end - ent.start) * scale,
       x = ent.start * scale;
   
-  return [...ent.texts.entries()].map(([style, text]) => {
+  return [...ent.texts.entries()].flatMap(([style, text]) => {
+    if (Source.subs.view.timelineExcludeStyles.has(style)) return [];
+
     let i = stylesMap.get(style) ?? 0;
     let y = entryHeight * i + HEADER_HEIGHT + TRACK_AREA_MARGIN;
-    return {x: x, y: y, w: w, h: entryHeight, text};
+    return [{x: x, y: y, w: w, h: entryHeight, text}];
   });
 }
 
@@ -552,6 +566,9 @@ function processMouseDown(e0: MouseEvent) {
                 const start = current.start;
                 const end = current.end;
                 for (const style of current.texts.keys()) {
+                  if (!Source.subs.view.timelineExcludeStyles.has(style))
+                    continue;
+
                   let tuple = prev.get(style.name);
                   if (tuple) {
                     if (start < tuple[0]) tuple[0] = start;
@@ -1036,13 +1053,50 @@ function render(ctx: CanvasRenderingContext2D) {
 }
 </script>
 
-<canvas class="timeline fill" bind:this={timelineCanvas}
-  use:setupTimelineCanvas
-  onclick={() => $uiFocus = 'Timeline'}
-  class:timelinefocused={$uiFocus === 'Timeline'}></canvas>
+<div class="container">
+  <button onclick={(ev) => {
+    const rect = ev.currentTarget.getBoundingClientRect();
+    rowPopup.open!(rect);
+  }} aria-label='edit'>
+    <svg class="feather">
+      <use href={`/feather-sprite.svg#edit-3`} />
+    </svg>
+  </button>
+  <canvas class="timeline fill" bind:this={timelineCanvas}
+    use:setupTimelineCanvas
+    onclick={() => $uiFocus = 'Timeline'}
+    class:timelinefocused={$uiFocus === 'Timeline'}>
+  </canvas>
+</div>
+
+<Popup bind:handler={rowPopup} position="left">
+  <div class="vlayout">
+    <h5>
+      {$_('timeline.filter-styles')}
+    </h5>
+    {#key styleRefreshCounter}
+    {@const exclude = Source.subs.view.timelineExcludeStyles}
+    {#each Source.subs.styles as style }
+      <label>
+        <input type="checkbox"
+          checked={!exclude.has(style)}
+          disabled={!exclude.has(style) && exclude.size >= Source.subs.styles.length - 1}
+          onchange={(ev) => {
+            if (ev.currentTarget.checked)
+              exclude.delete(style);
+            else
+              exclude.add(style);
+            preprocessStyles();
+            Source.markChanged(ChangeType.View);
+          }} />
+        {style.name}
+      </label>
+    {/each}
+    {/key}
+  </div>
+</Popup>
 
 <style>
-
 @media (prefers-color-scheme: light) {
   canvas.timeline {
     background-color: var(--uchu-gray-1);
@@ -1061,11 +1115,28 @@ function render(ctx: CanvasRenderingContext2D) {
   }
 }
 
+h5 {
+  padding-top: 0;
+}
+
 .timeline {
   border-radius: 4px;
   display: block;
   background-color: gray;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
+}
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.container button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-right: 12px;
+  margin-top: 2px;
 }
 </style>

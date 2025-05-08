@@ -123,6 +123,9 @@ export const Interface = {
         if (newSubs.migrated == 'olderVersion') 
             await dialog.message(
                 $_('msg.note-file-is-migrated-path', {values: {path}}));
+        if (newSubs.migrated == 'newerVersion') 
+            await dialog.message(
+                $_('msg.note-file-is-from-newer-version-path', {values: {path}}));
         const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);
         else if (get(Playback.isLoaded)) await Playback.close();
@@ -227,10 +230,8 @@ export const Interface = {
         }
         const text = Format.JSON.write(Source.subs);
         if (await Source.saveTo(file, text)) {
+            await PrivateConfig.setVideo(file, Playback.video?.source);
             Source.subs.migrated = 'none';
-            if (Playback.video?.source) {
-                await PrivateConfig.setVideo(file, Playback.video.source);
-            }
         }
         Source.startAutoSave();
     },
