@@ -690,10 +690,12 @@ export const Commands: Record<string, UICommand> = {
         call() {
             const selection = Editing.getSelection();
             const first = selection[0];
-            for (let i = 1; i < selection.length; i++) {
-                const entry = selection[i];
+            for (const entry of selection.slice(1)) {
                 for (const [style, text] of entry.texts)
                     first.texts.set(style, text);
+                const index = Source.subs.entries.indexOf(entry);
+                Debug.assert(index >= 0);
+                Source.subs.entries.splice(index, 1);
             }
             Source.markChanged(ChangeType.Times);
         },

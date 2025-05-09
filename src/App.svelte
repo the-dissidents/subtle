@@ -7,8 +7,8 @@ import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
 
 import { TableConfig } from "./lib/SubtitleTable.svelte";
-import Timeline, { TimelineConfig } from "./lib/Timeline.svelte";
 import { MediaConfig } from "./lib/VideoPlayer";
+import { TimelineConfig } from './lib/component/timeline/Config';
 
 MainConfig.addGroup('timeline', TimelineConfig);
 MainConfig.addGroup('media', MediaConfig);
@@ -24,9 +24,10 @@ import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import KeybindingDialog from './lib/dialog/KeybindingDialog.svelte';
 import KeybindingInputDialog from './lib/dialog/KeybindingInputDialog.svelte';
 
+import TimestampInput from './lib/TimestampInput.svelte';
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/SubtitleTable.svelte';
-import TimestampInput from './lib/TimestampInput.svelte';
+import Timeline from './lib/component/timeline/Timeline.svelte';
 
 import Resizer from './lib/ui/Resizer.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
@@ -55,6 +56,7 @@ import { Debug, GetLevelFilter } from './lib/Debug';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 import Tooltip from './lib/ui/Tooltip.svelte';
+
     
 Debug.init();
 
