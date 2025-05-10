@@ -92,7 +92,7 @@ export class TimelineRenderer {
     this.manager.renderer = (ctx) => this.#render(ctx);
 
     MainConfig.hook(
-      () => InterfaceConfig.data.theme, 
+      () => theme.isDark, 
       () => this.manager.requestRender());
     Playback.playArea.subscribe(() => this.manager.requestRender());
   }

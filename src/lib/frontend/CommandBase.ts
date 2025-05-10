@@ -86,10 +86,8 @@ export class UICommand {
         if ('call' in this.options) {
             const focus = Interface.getUIFocus();
             const b = this.bindings.find((x) => !x.contexts || x.contexts.has(focus));
-            if (b && b.sequence.length == 1) {
+            if (b && b.sequence.length == 1)
                 this.options.displayAccel = bindingToString(b.sequence[0]);
-                console.log(this.options.displayAccel);
-            }
         }
         return commandOptionToMenu(this.options);
     }

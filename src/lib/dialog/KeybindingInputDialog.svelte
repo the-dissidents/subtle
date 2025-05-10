@@ -8,7 +8,7 @@ import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
 import { _ } from 'svelte-i18n';
 import { bindingToString, KeybindingManager, type CommandBinding, type KeyBinding } from '../frontend/Keybinding';
-import type { UIFocus } from '../frontend/Frontend';
+import { UIFocusList, type UIFocus } from '../frontend/Frontend';
 import type { UICommand } from '../frontend/CommandBase';
 
 interface Props {
@@ -35,7 +35,7 @@ handler.showModal = async ([cmd, bind]) => {
   if (result == 'ok' && binding !== null) {
     return {
       sequence: [binding],
-      contexts: undefined
+      contexts: contexts
     }
   }
   return null;
@@ -118,13 +118,16 @@ function check() {
           onclick={check} />
         {$_('keyinput.any')}
       </label>
-      {#each (['EditingField', 'Table', 'Timeline', 'Other'] as const) as x}
+      {#each UIFocusList as x}
         <label>
           <input type="checkbox"
             disabled={anyContext}
             checked={anyContext || contexts.has(x)}
-            onclick={() => {
-              contexts.add(x);
+            onchange={(ev) => {
+              if (ev.currentTarget.checked)
+                contexts.add(x);
+              else
+                contexts.delete(x);
               check();
             }} />
           {$_(`context.${x}`)}

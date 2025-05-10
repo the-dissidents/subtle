@@ -32,6 +32,7 @@ import Timeline from './lib/component/timeline/Timeline.svelte';
 import Resizer from './lib/ui/Resizer.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
 import TabView from './lib/ui/TabView.svelte';
+import Tooltip from './lib/ui/Tooltip.svelte';
 
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
@@ -51,11 +52,10 @@ import { Dialogs } from './lib/frontend/Dialogs';
 import { Interface } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
-
-import { Debug, GetLevelFilter } from './lib/Debug';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
-import Tooltip from './lib/ui/Tooltip.svelte';
+
+import { Debug, GetLevelFilter } from './lib/Debug';
 
     
 Debug.init();

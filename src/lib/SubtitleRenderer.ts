@@ -189,6 +189,16 @@ export class SubtitleRenderer {
         ctx.rect(this.#hMargin, this.#vMargin, 
             this.width - 2 * this.#hMargin, this.height - 2 * this.#vMargin);
         ctx.stroke();
+
+        const styleFonts = new Map(this.#subs.styles.map((style) => {
+            const size = style.size || 48;
+            const font = style.font || 'sans-serif';
+            const fontFamily = `"${font}", sans-serif`;
+            const cssSize = 
+                Typography.getRealDimFactor(fontFamily, ctx) * size * this.#scale;
+            return [style, `${style.styles.bold ? 'bold ' : ''} ${style.styles.italic ? 'italic ' : ''} ${cssSize}px ${fontFamily}`];
+        }));
+
         const reverseStyles = this.#subs.styles.toReversed();
         for (const ent of this.#currentEntries)
         for (const style of reverseStyles) {
@@ -199,49 +209,28 @@ export class SubtitleRenderer {
             if (isCenterH(style.alignment)) ctx.textAlign = 'center';
             if (isRight(style.alignment)) ctx.textAlign = 'right';
     
-            let size = style.size;
-            let font = style.font;
-            let color = style.color;
-            let lineColor = style.outlineColor;
-            let lineWidth = style.outline;
-            if (isNaN(size)) size = 48;
-            if (isNaN(lineWidth)) lineWidth = 0;
-            if (font == '') font = 'sans-serif';
-            if (color == '') color = 'white';
-            if (lineColor == '') lineColor = 'black';
-            const fontFamily = `"${font}", sans-serif`;
-            const cssSize = 
-                Typography.getRealDimFactor(fontFamily, ctx) * size * this.#scale;
-            ctx.font = `${style.styles.bold ? 'bold ' : ''} ${style.styles.italic ? 'italic ' : ''} ${cssSize}px ${fontFamily}`;
-            ctx.fillStyle = color;
+            ctx.font = styleFonts.get(style)!;
+            ctx.fillStyle = style.color || 'white';
 
-            let width = this.width - this.#hMargin * 2 - 
+            const width = this.width - this.#hMargin * 2 - 
                 (style.margin.left + style.margin.right) * this.#scale;
-            let lines = this.#breakWords(text, width, ctx);
+            const lines = this.#breakWords(text, width, ctx);
             
             // loop for each line, starting from the bottom
-            let [bx, by, dy] = this.#basePoint(style);
+            const [bx, by, dy] = this.#basePoint(style);
             if (dy < 0) lines.reverse();
-            for (let line of lines) {
-                // TODO: revise the algorithm
-                let metrics = ctx.measureText(line);
-
-                let [x, y] = [bx, by];
-                let newBox = getBoxFromMetrics(metrics, x, y);
-                let yOffset = 0;
-                if (isTop(style.alignment))
-                    yOffset = newBox.h;
-                if (isCenterV(style.alignment))
-                    yOffset = newBox.h * 0.5;
-                newBox.y += yOffset;
+            for (const line of lines) {
+                const metrics = ctx.measureText(line);
+                const [x, y] = [bx, by];
+                const newBox = getBoxFromMetrics(metrics, x, y);
+                newBox.y += isTop(style.alignment)     ? newBox.h
+                          : isCenterV(style.alignment) ? newBox.h * 0.5 : 0;
                 while (true) {
-                    let overlapping = boxes.find((box) => boxIntersects(box, newBox));
+                    const overlapping = boxes.find((box) => boxIntersects(box, newBox));
                     if (!overlapping) break;
-                    if (dy > 0) {
-                        newBox.y = Math.max(newBox.y + 1, overlapping.y + overlapping.h);
-                    } else {
-                        newBox.y = Math.min(newBox.y - 1, overlapping.y - overlapping.h);
-                    }
+                    newBox.y = dy > 0
+                        ? Math.max(newBox.y + 1, overlapping.y + overlapping.h)
+                        : Math.min(newBox.y - 1, overlapping.y - overlapping.h);
                 }
                 boxes.push(newBox);
                 ctx.beginPath();
@@ -249,9 +238,9 @@ export class SubtitleRenderer {
                 ctx.strokeStyle = 'white';
                 ctx.lineWidth = 1;
                 ctx.stroke();
-                if (lineWidth > 0) {
-                    ctx.strokeStyle = lineColor;
-                    ctx.lineWidth = lineWidth * this.#scale;
+                if (style.outline) {
+                    ctx.strokeStyle = style.outlineColor || 'black';
+                    ctx.lineWidth = style.outline * this.#scale;
                     ctx.strokeText(line, x, newBox.y + newBox.diffy);
                 }
                 ctx.fillText(line, x, newBox.y + newBox.diffy);
