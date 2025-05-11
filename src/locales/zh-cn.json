@@ -335,6 +335,7 @@
     "exported-to-file": "已导出：{file}",
     "failed-to-parse-as-subtitles-path": "无法解析字幕：{path}",
     "failed-to-parse-clipboard-data-as-subtitles": "无法将剪贴板数据解析为字幕",
+    "filter-is-empty": "查找条件为空",
     "hotkey-not-found": "未定义快捷键：{key}",
     "imported": "成功导入文件",
     "new-entry-appended": "已添加新条目",
@@ -368,6 +369,7 @@
     "title": "标题"
   },
   "search": {
+    "advanced": "高级",
     "all": "全部",
     "case-sensitive": "区分大小写",
     "expression": "表达式",
@@ -387,6 +389,7 @@
     "search-only-in-selected-entries": "仅在选定的条目中搜索",
     "search-only-in-style": "仅在这个样式中搜索：",
     "selected-n-lines": "已选择 {n} 行",
+    "simple": "简单",
     "use-regular-expressions": "使用正则表达式"
   },
   "splitbylinedialog": {

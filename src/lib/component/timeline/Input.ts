@@ -108,11 +108,11 @@ export class TimelineInput {
     Editing.clearFocus();
     Editing.selection.submitted = new Set(this.selection);
     if (this.selection.size == 1) {
-      let array = [...this.selection.values()];
-      Editing.selection.currentGroup = array;
+      const array = [...this.selection.values()];
+      Editing.selection.currentGroup = new Set(array);
       Editing.selection.focused = array[0];
     } else {
-      Editing.selection.currentGroup = [];
+      Editing.selection.currentGroup.clear();
       Editing.selection.focused = null;
     }
     Editing.onSelectionChanged.dispatch(ChangeCause.Timeline);

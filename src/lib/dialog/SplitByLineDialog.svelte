@@ -11,6 +11,7 @@ import { _ } from 'svelte-i18n';
 import { ChangeType, Source } from "../frontend/Source";
 import LabelSelect from "../LabelSelect.svelte";
 import StyleSelect from "../StyleSelect.svelte";
+import NumberInput from "../ui/NumberInput.svelte";
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -238,15 +239,9 @@ let hasError = $state(true);
         <input type='checkbox'
           bind:checked={markMoreThan.use}/>
         {$_('splitbylinedialog.with-lines-more-than')}
-        <input type="number" disabled={!markMoreThan.use}
-          value={markMoreThan.n} 
-          min={0} step={1}
-          onchange={async (ev) => {
-            if (ev.currentTarget.validity.valid)
-              markMoreThan.n = ev.currentTarget.valueAsNumber;
-            else
-              ev.currentTarget.value = markMoreThan.n.toString();
-          }}/>
+        <NumberInput disabled={!markMoreThan.use}
+          bind:value={markMoreThan.n} 
+          min={0} step={1} width="50px"/>
         {$_('splitbylinedialog.as')}
         <LabelSelect disabled={!markMoreThan.use}
           bind:value={markMoreThan.label} />
@@ -255,15 +250,9 @@ let hasError = $state(true);
         <input type='checkbox'
           bind:checked={markLessThan.use}/>
         {$_('splitbylinedialog.fewer-than')}
-        <input type="number" disabled={!markLessThan.use}
-          value={markLessThan.n}
-          min={0} step={1}
-          onchange={async (ev) => {
-            if (ev.currentTarget.validity.valid)
-              markLessThan.n = ev.currentTarget.valueAsNumber;
-            else
-              ev.currentTarget.value = markLessThan.n.toString();
-          }}/>
+        <NumberInput disabled={!markLessThan.use}
+          bind:value={markLessThan.n} 
+          min={0} step={1} width="50px"/>
         {$_('splitbylinedialog.as')}
         <LabelSelect disabled={!markLessThan.use}
           bind:value={markLessThan.label} />
@@ -301,9 +290,4 @@ let hasError = $state(true);
     max-width: 30em;
     flex: 1 0;
   }
-
-  input[type='number'] {
-    width: 50px;
-  }
-
 </style>

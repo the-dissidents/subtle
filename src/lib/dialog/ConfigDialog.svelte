@@ -9,6 +9,7 @@ import type { DialogHandler } from '../frontend/Dialogs';
 import { appLocalDataDir, appLogDir } from "@tauri-apps/api/path";
 import { _, locale } from 'svelte-i18n';
 import { Interface } from '../frontend/Interface';
+import NumberInput from '../ui/NumberInput.svelte';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -114,15 +115,10 @@ locale.subscribe(() => refresh++);
               && item.bounds[0] !== null 
               && item.bounds[1] !== null}
               <div class="hlayout stretch">
-                <input type="number" value={group.data[key]} 
+                <NumberInput bind:value={group.data[key] as number}
+                  width="60px"
                   min={item.bounds[0]} max={item.bounds[1]}
-                  step={item.type == 'integer' ? 1 : 'any'}
-                  onchange={async (ev) => {
-                    if (ev.currentTarget.validity.valid)
-                      group.data[key] = ev.currentTarget.valueAsNumber;
-                    else
-                      ev.currentTarget.value = group.data[key].toString();
-                  }}/>
+                  step={item.type == 'integer' ? 1 : 'any'} />
                 <input type="range" class="flexgrow"
                   min={item.bounds[0]} max={item.bounds[1]}
                   step={item.type == 'integer' ? 1 : 'any'}
@@ -130,15 +126,10 @@ locale.subscribe(() => refresh++);
                   onchange={async () => await MainConfig.save()}/>
               </div>
             {:else}
-              <input class="stretch" type="number" value={group.data[key]} 
+              <NumberInput bind:value={group.data[key] as number}
+                class="stretch" 
                 min={item.bounds?.[0]} max={item.bounds?.[1]}
-                step={item.type == 'integer' ? 1 : 'any'}
-                onchange={async (ev) => {
-                  if (ev.currentTarget.validity.valid)
-                    group.data[key] = ev.currentTarget.valueAsNumber;
-                  else
-                    ev.currentTarget.value = group.data[key].toString();
-                }}/>
+                step={item.type == 'integer' ? 1 : 'any'} />
             {/if}
 
           {:else}
@@ -234,10 +225,7 @@ input[type='checkbox'] {
 input[type='radio'] {
   width: auto;
 }
-.hlayout input[type='number'] {
-  width: 60px;
-}
-input.stretch {
+.stretch {
   width: 100%;
 }
 label {

@@ -15,10 +15,10 @@ import { Dialogs } from "../frontend/Dialogs";
 import { Editing } from "../frontend/Editing";
 import { EventHost } from "../frontend/Frontend";
 import { Interface } from "../frontend/Interface";
-import type { UIFocus } from "../frontend/Frontend";
 import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 
 import { _ } from 'svelte-i18n';
+import NumberInput from "../ui/NumberInput.svelte";
 
 let locked = $state(false);
 let textsize = $state(14);
@@ -271,11 +271,11 @@ function clear() {
           </tr>
           <tr>
             <td>max skip</td>
-            <td><input type='number' bind:value={fuzzy.maxSkip} min='0' step='1'/></td>
+            <td><NumberInput bind:value={fuzzy.maxSkip} min='0' step='1'/></td>
           </tr>
           <tr>
             <td>threshold</td>
-            <td><input type='number' bind:value={fuzzy.minScore} min='0' max='1'/></td>
+            <td><NumberInput bind:value={fuzzy.minScore} min='0' max='1'/></td>
           </tr>
           <tr>
             <td>

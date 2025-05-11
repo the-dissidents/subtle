@@ -13,7 +13,7 @@ const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
     submitted: Set<SubtitleEntry>,
-    currentGroup: SubtitleEntry[],
+    currentGroup: Set<SubtitleEntry>,
     focused: SubtitleEntry | null
 };
 
@@ -43,7 +43,7 @@ export function getSelectMode(ev: MouseEvent | KeyboardEvent) {
 export const Editing = {
     selection: {
         submitted: new Set(),
-        currentGroup: [],
+        currentGroup: new Set(),
         focused: null
     } as SelectionState,
     
@@ -67,10 +67,18 @@ export const Editing = {
         return get(this.focused.entry);
     },
 
+    inSelection(entry: SubtitleEntry) {
+        return this.selection.submitted.has(entry)
+            || this.selection.currentGroup.has(entry);
+    },
+
+    /**
+     * @returns the currently selected entries, in source order
+     */
     getSelection() {
         return Source.subs.entries.filter(
             (x) => this.selection.submitted.has(x) || 
-                this.selection.currentGroup.includes(x));
+                this.selection.currentGroup.has(x));
     },
 
     startEditingFocusedEntry() {
@@ -178,14 +186,15 @@ export const Editing = {
         for (let ent of entries)
             Editing.selection.submitted.add(ent);
         Editing.selection.focused = entries[0];
-        Editing.selection.currentGroup = [entries[0]];
+        Editing.selection.currentGroup.clear();
+        Editing.selection.currentGroup.add(entries[0]);
         this.clearFocus();
         Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     },
 
     clearSelection(cause = ChangeCause.UIList) {
         this.selection.submitted.clear();
-        this.selection.currentGroup = [];
+        Editing.selection.currentGroup.clear();
         this.selection.focused = null;
         this.clearFocus();
         this.onSelectionChanged.dispatch(cause);
@@ -234,11 +243,11 @@ export const Editing = {
             if (this.getFocusedEntry() == ent) {
                 this.clearFocus();
             }
-            if (this.selection.currentGroup.includes(ent)) {
+            if (this.selection.currentGroup.has(ent)) {
                 for (let e of this.selection.currentGroup)
                     this.selection.submitted.add(e);
                 this.selection.focused = null;
-                this.selection.currentGroup = [];
+                Editing.selection.currentGroup.clear();
             }
             if (this.selection.submitted.has(ent)) {
                 this.selection.submitted.delete(ent);
@@ -263,14 +272,15 @@ export const Editing = {
             case SelectMode.Sequence:
                 if (this.selection.focused == null) {
                     this.selection.focused = ent;
-                    this.selection.currentGroup = [ent];
+                    this.selection.currentGroup.clear();
+                    this.selection.currentGroup.add(ent);
                     // this.#status = 'selection initiated';
                 } else {
                     let a = Source.subs.entries.indexOf(this.selection.focused);
                     let b = Source.subs.entries.indexOf(ent);
                     Debug.assert(a >= 0 && b >= 0);
-                    this.selection.currentGroup = 
-                    Source.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1);
+                    this.selection.currentGroup = new Set(
+                        Source.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1));
                     // this.#status = 'seqselect updated';
                 }
                 break;
@@ -278,13 +288,15 @@ export const Editing = {
                 for (let e of this.selection.currentGroup)
                     this.selection.submitted.add(e);
                 this.selection.focused = ent;
-                this.selection.currentGroup = [ent];
+                this.selection.currentGroup.clear();
+                this.selection.currentGroup.add(ent);
                 // this.#status = 'multiselect added item';
                 break;
             case SelectMode.Single:
                 // clear selection
                 this.selection.submitted.clear();
-                this.selection.currentGroup = [ent];
+                this.selection.currentGroup.clear();
+                this.selection.currentGroup.add(ent);
                 this.selection.focused = ent;
                 break;
         }

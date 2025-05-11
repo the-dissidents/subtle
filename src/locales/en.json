@@ -327,6 +327,7 @@
     "exported-to-file": "exported to {file}",
     "failed-to-parse-as-subtitles-path": "failed to parse as subtitles: {path}",
     "failed-to-parse-clipboard-data-as-subtitles": "failed to parse clipboard data as subtitles",
+    "filter-is-empty": "filter is empty!",
     "hotkey-not-found": "hotkey not found: {key}",
     "imported": "file imported",
     "new-entry-appended": "new entry appended",
@@ -360,6 +361,7 @@
     "title": "title"
   },
   "search": {
+    "advanced": "advanced",
     "all": "all",
     "case-sensitive": "case sensitive",
     "expression": "expression",
@@ -379,6 +381,7 @@
     "search-only-in-selected-entries": "search only in selected entries",
     "search-only-in-style": "search only in style",
     "selected-n-lines": "selected {n} {n,plural,one{line} other{lines}}",
+    "simple": "simple",
     "use-regular-expressions": "use regular expressions"
   },
   "splitbylinedialog": {

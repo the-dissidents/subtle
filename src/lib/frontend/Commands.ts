@@ -495,7 +495,7 @@ export const Commands: Record<string, UICommand> = {
             if (Editing.selection.submitted.size > 0 || Editing.selection.focused) {
                 position = Source.subs.entries.findIndex(
                     (x) => Editing.selection.submitted.has(x) 
-                        || Editing.selection.currentGroup.includes(x));
+                        || Editing.selection.currentGroup.has(x));
                 Editing.clearSelection();
             } else position = Source.subs.entries.length;
 
@@ -530,7 +530,7 @@ export const Commands: Record<string, UICommand> = {
         name: () => $_('action.select-all'),
         call() {
             Editing.selection.focused = null;
-            Editing.selection.currentGroup = [];
+            Editing.selection.currentGroup.clear();
             for (let e of Source.subs.entries)
                 Editing.selection.submitted.add(e);
             Editing.onSelectionChanged.dispatch(ChangeCause.Action);
@@ -542,7 +542,7 @@ export const Commands: Record<string, UICommand> = {
         name: () => $_('action.select-all-by-channel'),
         isApplicable: hasSelection,
         items: () => forEachStyle((style) => {
-            Editing.selection.currentGroup = [];
+            Editing.selection.currentGroup.clear();
             Editing.selection.focused = null;
             Editing.selection.submitted = new Set(
                 Source.subs.entries.filter((e) => e.texts.has(style)));
@@ -561,7 +561,7 @@ export const Commands: Record<string, UICommand> = {
                 if (!oldSelection.has(e)) newSelection.add(e);
             Editing.clearFocus();
             Editing.selection.focused = null;
-            Editing.selection.currentGroup = [];
+            Editing.selection.currentGroup.clear();
             Editing.selection.submitted = newSelection;
             Editing.onSelectionChanged.dispatch(ChangeCause.Action);
         },

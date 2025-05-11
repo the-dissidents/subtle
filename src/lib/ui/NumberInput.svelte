@@ -3,15 +3,17 @@
 
   interface Props extends HTMLInputAttributes {
     value: number,
+    width?: string,
     onchange?: ChangeEventHandler<HTMLInputElement>
   };
 
-  let { value = $bindable<number>(), onchange, ...rest }: Props = $props();
+  let { value = $bindable(), width, onchange, ...rest }: Props = $props();
 </script>
 
 <input type="number" value={value} {...rest}
+  style={width ? `width: ${width};` : ''}
   onchange={(ev) => {
-    if (ev.currentTarget.validity.valid) {
+    if (ev.currentTarget.value !== '' && ev.currentTarget.validity.valid) {
       value = ev.currentTarget.valueAsNumber;
       onchange?.(ev);
     } else {

@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { Snippet } from "svelte";
 import Tooltip from "./Tooltip.svelte";
 
 interface Props {
@@ -7,7 +8,9 @@ interface Props {
   active?: boolean;
   showCheck?: boolean;
   checked?: boolean;
-  children?: import('svelte').Snippet;
+  onActiveChanged?: (v: boolean) => void;
+  onCheckedChanged?: (v: boolean) => void;
+  children?: Snippet;
 }
 
 let {
@@ -16,13 +19,15 @@ let {
   active = $bindable(false),
   showCheck = false,
   checked = $bindable(false),
+  onActiveChanged,
+  onCheckedChanged,
   children
 }: Props = $props();
 </script>
 
 <button type="button" class="collapsible hlayout"
   class:active class:checked
-  onclick={() => {active = !active}}
+  onclick={() => { active = !active; onActiveChanged?.(active) }}
 >
   <span class='caret flexgrow'>{header}</span>
 
@@ -38,6 +43,7 @@ let {
   
   <span class='check' class:hidden={!showCheck}>
     <input type='checkbox' bind:checked 
+      onchange={() => onCheckedChanged?.(checked)}
       onclick={(e) => e.stopPropagation()}/>
   </span>
 </button>

@@ -7,6 +7,7 @@ import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
 import { Editing } from '../frontend/Editing';
 import TimestampInput from '../TimestampInput.svelte';
+import NumberInput from '../ui/NumberInput.svelte';
 
 import { _ } from 'svelte-i18n';
 
@@ -120,13 +121,13 @@ function fromTransformed() {
       <tr>
         <td>{$_('transformdialog.fps-before-after')}</td>
         <td>
-          <input type="number" class="number" 
+          <NumberInput width="60px"
             bind:value={fpsBefore}
-            oninput={() => toTransformed()}/>
+            onchange={() => toTransformed()}/>
           :
-          <input type="number" class="number" 
+          <NumberInput width="60px"
             bind:value={fpsAfter}
-            oninput={() => toTransformed()}/>
+            onchange={() => toTransformed()}/>
         </td>
       </tr>
       <tr>
@@ -171,10 +172,3 @@ function fromTransformed() {
     </tbody>
   </table>
 </DialogBase>
-
-<style>
-  .number {
-    width: 60px;
-  }
-</style>
-  

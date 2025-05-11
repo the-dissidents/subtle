@@ -20,7 +20,7 @@ export const Utils = {
         for (let i = 0; i < Source.subs.entries.length; i++) {
             let ent = Source.subs.entries[i];
             if (Editing.selection.submitted.has(ent)
-             || Editing.selection.currentGroup.includes(ent))
+             || Editing.selection.currentGroup.has(ent))
             {
                 if (state == 2) return true;
                 else state = 1;

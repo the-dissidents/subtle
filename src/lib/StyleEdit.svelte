@@ -12,6 +12,7 @@ import { _ } from 'svelte-i18n';
 import { Debug } from "./Debug";
 import { Utils } from "./frontend/Utils";
 import FilterEdit from "./FilterEdit.svelte";
+import NumberInput from "./ui/NumberInput.svelte";
 
 interface Props {
   style: SubtitleStyle;
@@ -180,7 +181,7 @@ async function contextMenu() {
         <tr>
           <td>{$_('style.size')}</td>
           <td class="hlayout style">
-            <input type='number' bind:value={$style.size}/>
+            <NumberInput width="100%" bind:value={$style.size}/>
             <label><input type='checkbox' bind:checked={$style.styles.bold}/><b>B</b></label>
             <label><input type='checkbox' bind:checked={$style.styles.italic}/><i>I</i></label>
             <label><input type='checkbox' bind:checked={$style.styles.underline}/><u>U</u></label>
@@ -216,11 +217,11 @@ async function contextMenu() {
           </tr>
           <tr>
             <td>{$_('style.line-size')}</td>
-            <td><input type='number' bind:value={$style.outline}/></td>
+            <td><NumberInput width="100%" bind:value={$style.outline}/></td>
           </tr>
           <tr>
             <td>{$_('style.shadow')}</td>
-            <td><input type='number' bind:value={$style.shadow}/></td>
+            <td><NumberInput width="100%" bind:value={$style.shadow}/></td>
           </tr>
           <tr>
             <td>{$_('style.alignment')}</td>
@@ -244,16 +245,20 @@ async function contextMenu() {
             <td>
               <div class="flex margin">
                 <div><label>{$_('style.top')}
-                    <input type='number' bind:value={$style.margin.top}/>
+                  <NumberInput min={0} max={1000}
+                    bind:value={$style.margin.top}/>
                 </label></div>
                 <div><label>{$_('style.bottom')}
-                  <input type='number' bind:value={$style.margin.bottom}/>
+                  <NumberInput min={0} max={1000}
+                    bind:value={$style.margin.bottom}/>
                 </label></div>
                 <div><label>{$_('style.left')}
-                  <input type='number' bind:value={$style.margin.left}/>
+                  <NumberInput min={0} max={1000}
+                    bind:value={$style.margin.left}/>
                 </label></div>
                 <div><label>{$_('style.right')}
-                  <input type='number' bind:value={$style.margin.right}/>
+                  <NumberInput min={0} max={1000}
+                    bind:value={$style.margin.right}/>
                 </label></div>
               </div>
             </td>
@@ -310,9 +315,6 @@ input {
 input[type='checkbox'] {
   width: auto;
   margin-right: 5px;
-}
-.margin input {
-  width: 60px;
 }
 .margin label {
   width: 50px;

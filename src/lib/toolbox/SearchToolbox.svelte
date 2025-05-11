@@ -1,3 +1,8 @@
+<!-- TODO: SearchToolbox.svelte
+ 1. only search for/replace one occurence at a time, and highlight it in the editing boxes
+ 2. note that clicking replace should replace the current occurence, and select the next
+ 2. make hotkeys for next/previous
+-->
 <script lang="ts">
 import { Basic } from '../Basic';
 import { Labels, SubtitleEntry, type LabelTypes, type SubtitleStyle } from '../core/Subtitles.svelte';
@@ -9,24 +14,35 @@ import { Interface } from '../frontend/Interface';
 import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 
 import { _ } from 'svelte-i18n';
+import Collapsible from '../ui/Collapsible.svelte';
+import FilterEdit from '../FilterEdit.svelte';
+import { evaluateFilter, type MetricFilter } from '../core/Filter';
 
 let searchTerm  = $state(''),
     replaceTerm = $state('');
 
-let useRegex      = $state(false), 
-    caseSensitive = $state(true), 
-    selectionOnly = $state(false),
-    useStyle      = $state(false), 
-    replaceStyle  = $state(false),
-    useLabel      = $state(false);
+let useRegex        = $state(false), 
+    caseSensitive   = $state(true);
+    
+// condition (simple)
+let selectionOnly   = $state(false),
+    useStyle        = $state(false), 
+    useReplaceStyle = $state(false),
+    useLabel        = $state(false);
 
-let style1 = $state(Source.subs.defaultStyle),
-    style2 = $state(Source.subs.defaultStyle);
-
+let searchStyle  = $state(Source.subs.defaultStyle),
+    replaceStyle = $state(Source.subs.defaultStyle);
 let label: LabelTypes = $state('none');
 
-let currentEntry: SubtitleEntry | null = null;
-let currentStyle: SubtitleStyle | null = null;
+// condition (advanced)
+let useFilter = $state(false);
+let filter: MetricFilter | null = $state(null);
+
+// states of ongoing search
+let resumeFrom: {
+  entry: SubtitleEntry,
+  style: SubtitleStyle
+} | null = null;
 
 enum SearchAction {
   Find, Select,
@@ -37,24 +53,40 @@ enum SearchOption {
   None, Global, Reverse
 }
 
+function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
+  if (useFilter) {
+    Debug.assert(filter !== null);
+    return evaluateFilter(filter, entry, style).failed.length == 0;
+  } else {
+    // not using filter
+    return (!useStyle || style.name === searchStyle.name)
+        && (!selectionOnly || Editing.inSelection(entry))
+        && (!useLabel || entry.label === label);
+  }
+}
+
 function findAndReplace(type: SearchAction, option: SearchOption) {
   const entries = Source.subs.entries;
   if (entries.length == 0) return;
-  const selection = Editing.getSelection();
-  const selectionSet = new Set(selection);
 
   const focusedEntry = Editing.getFocusedEntry();
   let focus = focusedEntry instanceof SubtitleEntry ? focusedEntry : entries[0];
-  if (selectionOnly) focus = selection.at(0) ?? focus;
+  if (selectionOnly) 
+    focus = Source.subs.entries.find((x) => Editing.inSelection(x)) ?? focus;
 
-  if (focus !== currentEntry || option == SearchOption.Global) {
-    currentEntry = null;
-    currentStyle = null;
+  if (resumeFrom)
+    if (resumeFrom.entry !== focus || option == SearchOption.Global)
+      resumeFrom = null;
+
+  if (useFilter && filter == null) {
+    Interface.status.set($_('msg.filter-is-empty'));
+    return;
   }
 
   let expr: RegExp;
   let usingEmptyTerm = false;
   if (searchTerm !== '') {
+    // construct regex from search term
     try {
       expr = new RegExp(
         useRegex ? searchTerm : Basic.escapeRegexp(searchTerm), 
@@ -64,7 +96,8 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
       Interface.status.set($_('msg.search-failed') + e.message);
       return;
     }
-  } else if (useLabel || useStyle) {
+  } else if (useLabel || useStyle || useFilter) {
+    // permit empty term if using conditions
     expr = /.*/;
     usingEmptyTerm = true;
   } else {
@@ -78,56 +111,52 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 
   let nDone = 0;
   const repl = type == SearchAction.Replace ? replaceTerm : '';
-  let i = option == SearchOption.Global ? 0 : Math.max(entries.indexOf(focus), 0);
-  let currentTextIndex = currentStyle ? Source.subs.styles.indexOf(currentStyle) : -1;
+  const startIndex = option == SearchOption.Global 
+    ? 0 : Math.max(entries.indexOf(focus), 0);
+  const resumeFromStyleIndex = resumeFrom ? Source.subs.styles.indexOf(resumeFrom.style) : -1;
+  const startStyleIndex = resumeFromStyleIndex + 1;
 
-  outerLoop: while (i < entries.length && i >= 0) 
+  outerLoop: for (
+    let i = startIndex;
+    i < entries.length && i >= 0;
+    i += option == SearchOption.Reverse ? -1 : 1) 
   {
-    let ent = entries[i];
-    if (!(selectionOnly && !selectionSet.has(ent)) 
-      && !(useLabel && ent.label != label)
-      && !(usingEmptyTerm && ent === currentEntry))
+    const entry = entries[i];
+    // loop over styles
+    for (
+      let j = i == startIndex ? startStyleIndex : 0; 
+      j < Source.subs.styles.length; j++) 
     {
-      for (
-        let j = (ent === currentEntry ? currentTextIndex + 1 : 0); 
-        j < Source.subs.styles.length; j++) 
-      {
-        const style = Source.subs.styles[j];
-        if (useStyle && style.name != style1.name) continue;
+      const style = Source.subs.styles[j];
+      const text = entry.texts.get(style);
+      if (text === undefined || !test(entry, style)) continue;
 
-        let text = ent.texts.get(style);
-        if (text === undefined) continue;
-
-        let replaced = text.replace(expr, repl);
-        if (replaced != text) {
-          Debug.debug(j, currentTextIndex, ent, currentEntry);
-          nDone++;
-          if (type == SearchAction.Select) {
-            Editing.selection.submitted.add(ent);
-            break; // selecting one channel suffices
-          }
-          let focusStyle = style1;
-          if (type == SearchAction.ReplaceStyleOnly
-           || (replaceStyle && type == SearchAction.Replace))
-          {
-            // FIXME: should warn when overwriting? or add an option
-            ent.texts.delete(style);
-            ent.texts.set(style2, replaced);
-            focusStyle = style2;
-          } else if (type == SearchAction.Replace) {
-            ent.texts.set(style, replaced);
-          }
-          if (option != SearchOption.Global) {
-            currentEntry = ent;
-            currentTextIndex = j;
-            Editing.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
-            Editing.focused.style = focusStyle;
-            break outerLoop;
-          }
+      const replaced = text.replace(expr, repl);
+      if (replaced != text) {
+        nDone++;
+        resumeFrom = { entry, style };
+        if (type == SearchAction.Select) {
+          Editing.selection.submitted.add(entry);
+          break; // selecting one channel suffices
+        }
+        let focusStyle = searchStyle;
+        if (type == SearchAction.ReplaceStyleOnly
+          || (useReplaceStyle && type == SearchAction.Replace))
+        {
+          // FIXME: should warn when overwriting? or add an option
+          entry.texts.delete(style);
+          entry.texts.set(replaceStyle, replaced);
+          focusStyle = replaceStyle;
+        } else if (type == SearchAction.Replace) {
+          entry.texts.set(style, replaced);
+        }
+        if (option != SearchOption.Global) {
+          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.Action);
+          Editing.focused.style = focusStyle;
+          break outerLoop;
         }
       }
     }
-    if (option == SearchOption.Reverse) i--; else i++;
   }
   let status: string;
   if (nDone > 0) {
@@ -143,8 +172,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
     }
   } else {
     status = $_('search.found-nothing');
-    currentEntry = null;
-    currentTextIndex = 0;
+    resumeFrom = null;
     if (option != SearchOption.Global) {
       Editing.clearFocus();
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
@@ -159,43 +187,6 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 <input class='wfill' type="text" bind:value={replaceTerm}
   id='repl' placeholder={$_('search.replace-term')}/>
 
-<div class='form'>
-  <h5>{$_('search.options')}</h5>
-  <label><input type='checkbox' bind:checked={useRegex}/>
-    {$_('search.use-regular-expressions')}
-  </label><br/>
-  <label><input type='checkbox' bind:checked={caseSensitive}/>
-    {$_('search.case-sensitive')}
-  </label><br/>
-  <label><input type='checkbox' bind:checked={replaceStyle}/>
-    {$_('search.replace-by-style')}
-    <StyleSelect
-      onsubmit={() => replaceStyle = true}
-      bind:currentStyle={style2}/>
-  </label><br/>
-
-  <h5>{$_('search.range')}</h5>
-  <label><input type='checkbox' bind:checked={selectionOnly}/>
-    {$_('search.search-only-in-selected-entries')}
-  </label><br/>
-  <label><input type='checkbox' bind:checked={useLabel}/>
-    {$_('search.search-only-in-label')}
-    <select
-      bind:value={label}
-      oninput={() => useLabel = true}
-    >
-      {#each Labels as color}
-      <option value={color}>{color}</option>
-      {/each}
-    </select>
-  </label><br/>
-  <label><input type='checkbox' bind:checked={useStyle}/>
-    {$_('search.search-only-in-style')}
-    <StyleSelect
-      onsubmit={() => useStyle = true}
-      bind:currentStyle={style1}/>
-  </label>
-  <br>
   <table class="wfill">
     <tbody>
       <tr>
@@ -235,11 +226,61 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
       </tr>
     </tbody>
   </table>
+
+<div class='form vlayout'>
+  <h5>{$_('search.options')}</h5>
+  <label><input type='checkbox' bind:checked={useRegex}/>
+    {$_('search.use-regular-expressions')}
+  </label>
+  <label><input type='checkbox' bind:checked={caseSensitive}/>
+    {$_('search.case-sensitive')}
+  </label>
+  <label><input type='checkbox' bind:checked={useReplaceStyle}/>
+    {$_('search.replace-by-style')}
+    <StyleSelect
+      onsubmit={() => useReplaceStyle = true}
+      bind:currentStyle={replaceStyle}/>
+  </label>
+
+  <h5>{$_('search.range')}</h5>
+  <Collapsible header={$_('search.simple')}
+    active={!useFilter} checked={!useFilter}
+    onActiveChanged={(a) => useFilter = !a}
+  >
+    <div class="form vlayout">
+      <label><input type='checkbox' bind:checked={selectionOnly}/>
+        {$_('search.search-only-in-selected-entries')}
+      </label>
+      <label><input type='checkbox' bind:checked={useLabel}/>
+        {$_('search.search-only-in-label')}
+        <select
+          bind:value={label}
+          oninput={() => useLabel = true}
+        >
+          {#each Labels as color}
+          <option value={color}>{color}</option>
+          {/each}
+        </select>
+      </label>
+      <label><input type='checkbox' bind:checked={useStyle}/>
+        {$_('search.search-only-in-style')}
+        <StyleSelect
+          onsubmit={() => useStyle = true}
+          bind:currentStyle={searchStyle}/>
+      </label>
+    </div>
+  </Collapsible>
+  <Collapsible header={$_('search.advanced')}
+    active={useFilter} checked={useFilter}
+    onActiveChanged={(a) => useFilter = a}
+  >
+    <FilterEdit bind:filter />
+  </Collapsible>
 </div>
 
 <style>
   .form > * {
-    margin: 2px 0;
+    margin-top: 2px;
   }
 
   .wfill {

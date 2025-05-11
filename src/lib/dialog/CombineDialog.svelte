@@ -8,6 +8,7 @@ import { ChangeType, Source } from '../frontend/Source';
 
 import { _ } from 'svelte-i18n';
 import LabelSelect from '../LabelSelect.svelte';
+import NumberInput from '../ui/NumberInput.svelte';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -124,13 +125,13 @@ function run(doit: boolean)
       </tr>
       <tr>
         <td>{$_('combinedialog.start-time-threshold')}</td>
-        <td><input type='number' min='0' step="0.001" 
+        <td><NumberInput min='0' step="0.001" 
           bind:value={start}
           onchange={() => run(false)} /></td>
       </tr>
       <tr>
         <td>{$_('combinedialog.end-time-threshold')}</td>
-        <td><input type='number' min='0' step="0.001"
+        <td><NumberInput min='0' step="0.001"
           bind:value={end}
           onchange={() => run(false)} /></td>
       </tr>
@@ -143,14 +144,14 @@ function run(doit: boolean)
       </tr>
       <tr>
         <td>{$_('combinedialog.start-time-threshold')}</td>
-        <td><input type='number' min='0' step="0.001" 
+        <td><NumberInput min='0' step="0.001" 
           disabled={!doMark}
           bind:value={markStart}
           onchange={() => run(false)} /></td>
       </tr>
       <tr>
         <td>{$_('combinedialog.end-time-threshold')}</td>
-        <td><input type='number' min='0' step="0.001"
+        <td><NumberInput min='0' step="0.001"
           disabled={!doMark}
           bind:value={markEnd}
           onchange={() => run(false)} /></td>
