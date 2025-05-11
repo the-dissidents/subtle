@@ -65,6 +65,10 @@
   },
   "action-all-styles": "all styles",
   "back": "back",
+  "boolean": {
+    "false": "false",
+    "true": "true"
+  },
   "cancel": "cancel",
   "combinedialog": {
     "combine": "combine",
@@ -210,7 +214,9 @@
     "equals": "equals",
     "greater-than": ">",
     "greater-than-or-equal": "≥",
+    "is": "is",
     "is-not-empty": "is not empty",
+    "is-true": "is true",
     "less-than": "<",
     "less-than-or-equal": "≤",
     "matches-regex": "matches RegExp",
@@ -293,6 +299,7 @@
     "duration": "duration",
     "end-time": "end time",
     "end-time-short": "end",
+    "label": "label",
     "number-of-characters": "#characters",
     "number-of-characters-in-longest-line": "#characters in longest line",
     "number-of-characters-in-longest-line-short": "max(#chars per line)",
@@ -305,6 +312,7 @@
     "number-of-readable-characters-short": "#ltrs",
     "readable-characters-per-second": "letters per second",
     "readable-characters-per-second-short": "#ltrs/sec",
+    "selected": "selected",
     "start-time": "start time",
     "start-time-short": "start",
     "style": "style",

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Labels, type LabelTypes } from "./core/Subtitles.svelte";
+import { Labels, type LabelType } from "./core/Subtitles.svelte";
 import { LabelColor } from "./Theming.svelte";
 
 import { _ } from 'svelte-i18n';
@@ -7,8 +7,8 @@ import { _ } from 'svelte-i18n';
 interface Props {
   disabled?: boolean;
   stretch?: boolean;
-  value: LabelTypes;
-  onsubmit?: (style: LabelTypes) => void;
+  value: LabelType;
+  onsubmit?: (style: LabelType) => void;
 }
 
 let { disabled = false, stretch = false, value = $bindable(), onsubmit }: Props = $props();

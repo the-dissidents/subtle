@@ -65,6 +65,10 @@
   },
   "action-all-styles": "所有样式",
   "back": "返回",
+  "boolean": {
+    "false": "假",
+    "true": "真"
+  },
   "cancel": "取消",
   "combinedialog": {
     "combine": "合并",
@@ -216,7 +220,9 @@
     "equals": "等于",
     "greater-than": ">",
     "greater-than-or-equal": "≥",
+    "is": "为",
     "is-not-empty": "不为空",
+    "is-true": "为真",
     "less-than": "<",
     "less-than-or-equal": "≤",
     "matches-regex": "匹配正则",
@@ -301,6 +307,7 @@
     "duration": "时长",
     "end-time": "结束时间",
     "end-time-short": "结束",
+    "label": "标签",
     "number-of-characters": "总字符数",
     "number-of-characters-in-longest-line": "最长行的字符数",
     "number-of-characters-in-longest-line-short": "行字符数",
@@ -313,6 +320,7 @@
     "number-of-readable-characters-short": "可读字符数",
     "readable-characters-per-second": "每秒可读字符数",
     "readable-characters-per-second-short": "每秒可读",
+    "selected": "被选中",
     "start-time": "起始时间",
     "start-time-short": "起始",
     "style": "样式",

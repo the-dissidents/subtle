@@ -4,7 +4,7 @@ import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
 import type { MetricFilter, MetricName } from "./Filter";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
-export type LabelTypes = typeof Labels[number];
+export type LabelType = typeof Labels[number];
 
 export enum AlignMode {
     BottomLeft = 1, BottomCenter, BottomRight,
@@ -45,7 +45,7 @@ export interface SubtitleMetadata {
 export const MigrationDuplicatedStyles = new WeakMap<SubtitleStyle, SubtitleStyle[]>();
 
 export class SubtitleEntry {
-    label: LabelTypes = $state('none');
+    label: LabelType = $state('none');
     texts = new SvelteMap<SubtitleStyle, string>();
     start: number = $state(0);
     end: number = $state(0);

@@ -1,4 +1,4 @@
-import type { LabelTypes } from "./core/Subtitles.svelte";
+import type { LabelType } from "./core/Subtitles.svelte";
 
 export let theme = $state({
     isDark: false
@@ -16,9 +16,9 @@ export const LabelColorOklch = {
     'green':    ['88.77% 0.096 147.71', '52.77% 0.138 145.41'], 
     'blue':     ['80.17% 0.091 258.88', '39.53% 0.15 259.87'], 
     'purple':   ['78.68% 0.091 305',    '36.01% 0.145 298.35']
-} satisfies {[k in LabelTypes]: [string, string]};
+} satisfies {[k in LabelType]: [string, string]};
 
-export function LabelColor(label: LabelTypes, opacity = 1) {
+export function LabelColor(label: LabelType, opacity = 1) {
     let raw = LabelColorOklch[label][theme.isDark ? 1 : 0];
     return raw ? `oklch(${raw} / ${opacity})` : 'none';
 }

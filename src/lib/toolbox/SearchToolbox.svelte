@@ -5,7 +5,7 @@
 -->
 <script lang="ts">
 import { Basic } from '../Basic';
-import { Labels, SubtitleEntry, type LabelTypes, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { Labels, SubtitleEntry, type LabelType, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { Debug } from "../Debug";
 import StyleSelect from '../StyleSelect.svelte';
 
@@ -32,7 +32,7 @@ let selectionOnly   = $state(false),
 
 let searchStyle  = $state(Source.subs.defaultStyle),
     replaceStyle = $state(Source.subs.defaultStyle);
-let label: LabelTypes = $state('none');
+let label: LabelType = $state('none');
 
 // condition (advanced)
 let useFilter = $state(false);
@@ -186,7 +186,6 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
   id='expr' placeholder={$_('search.expression')}/>
 <input class='wfill' type="text" bind:value={replaceTerm}
   id='repl' placeholder={$_('search.replace-term')}/>
-
   <table class="wfill">
     <tbody>
       <tr>
@@ -274,7 +273,8 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
     active={useFilter} checked={useFilter}
     onActiveChanged={(a) => useFilter = a}
   >
-    <FilterEdit bind:filter />
+    <FilterEdit bind:filter
+      availableContexts={['editing', 'entry', 'style', 'channel']} />
   </Collapsible>
 </div>
 

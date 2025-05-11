@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SubtitleEntry, type LabelTypes } from '../core/Subtitles.svelte';
+import { SubtitleEntry, type LabelType } from '../core/Subtitles.svelte';
 import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
@@ -26,7 +26,7 @@ let markStart = $state(0.05),
 let number = $state([0, 0, 0] as [number, number, number]);
 let selectionOnly = $state(true), 
     doMark = $state(true),
-    markLabel = $state('red' as LabelTypes),
+    markLabel = $state('red' as LabelType),
     hasbeen = $state(false);
 
 handler.showModal = async () => {

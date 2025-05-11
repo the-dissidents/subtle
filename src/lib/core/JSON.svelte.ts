@@ -112,10 +112,12 @@ function serializeView(view: Subtitles['view']) {
 
 function parseView(o: any, subs: Subtitles, version: string) {
     let sv = parseObject(o, validateView);
+    // currently this doesn't detect whether the metrics are really valid
+    // e.g. entry columns should not be channel metrics
     subs.view.perEntryColumns = sv.perEntryColumns.filter((x) => 
-        x in Metrics && Metrics[x as MetricName].per == 'entry') as MetricName[];
+        x in Metrics && Metrics[x as MetricName]) as MetricName[];
     subs.view.perChannelColumns = sv.perChannelColumns.filter((x) => 
-        x in Metrics && Metrics[x as MetricName].per == 'channel') as MetricName[];
+        x in Metrics && Metrics[x as MetricName]) as MetricName[];
     const styleMap = new Map(subs.styles.map((x) => [x.name, x]));
     if (sv.timelineExcludeStyles.some((x) => !styleMap.has(x)))
         throw new DeserializationError('invalid item in timelineExcludeStyles');

@@ -199,9 +199,9 @@ async function contextMenu() {
     </table>
     <!-- validator -->
     <Collapsible header={$_('style.validator')}>
-      <FilterEdit bind:filter={$style.validator} onchange={() => {
-        Source.markChanged(ChangeType.Filter);
-      }} />
+      <FilterEdit bind:filter={$style.validator} 
+        availableContexts={['entry', 'channel']}
+        onchange={() => Source.markChanged(ChangeType.Filter)} />
     </Collapsible>
     <!-- advanced -->
     <Collapsible header={$_('style.more')}>

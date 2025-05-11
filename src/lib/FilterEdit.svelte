@@ -1,32 +1,36 @@
 <script lang="ts">
-import { newMetricFilter, Metric, MetricFilterMethods, TextMetricFilterNullMethods, Metrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod } from "./core/Filter";
+import { newMetricFilter, Metric, MetricFilterMethods, Metrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod, TextMetricFilterDefaultMethods, type MetricName, type MetricTypeName, type MetricContext, MetricContextList } from "./core/Filter";
 import { _, locale } from 'svelte-i18n';
 import { Debug } from "./Debug";
 import type { Action } from "svelte/action";
 import { tick } from "svelte";
 import { Menu } from "@tauri-apps/api/menu";
 import StyleSelect from "./StyleSelect.svelte";
-import type { SubtitleStyle } from "./core/Subtitles.svelte";
+import { type SubtitleStyle } from "./core/Subtitles.svelte";
 import TimestampInput from "./TimestampInput.svelte";
 import { Source } from "./frontend/Source";
+    import LabelSelect from "./LabelSelect.svelte";
 
 interface Props {
-  filter: MetricFilter | null
+  filter: MetricFilter | null;
+  availableContexts?: MetricContext[];
   onchange?: () => void;
 }
 
-let { filter = $bindable(), onchange }: Props = $props();
+let { filter = $bindable(), availableContexts, onchange }: Props = $props();
 let updateCounter = $state(0);
 
 locale.subscribe(() => updateCounter++);
 
-const metrics = Object.entries(Metrics) as [keyof typeof Metrics, Metric<any>][];
+const metrics = Object.entries(Metrics) as [MetricName, Metric<any>][];
 const methods = Object.entries(MetricFilterMethods) as 
   [keyof typeof MetricFilterMethods, MetricFilterMethod<any, any, any>][];
 
-const entryMetrics = metrics.filter(([_, y]) => y.per == 'entry');
-const channelMetrics = metrics.filter(([_, y]) => y.per == 'channel');
+const groupedMetrics = $derived(
+  (availableContexts ?? MetricContextList).map(
+    (x) => [x, metrics.filter(([_, y]) => y.context == x)] as const));
 
+// FIXME: sometimes not triggered
 const autoWidth: Action<HTMLSelectElement> = (elem) => {
   function updateSelectWidth() {
     const checked = elem.querySelector('option:checked');
@@ -54,14 +58,29 @@ const autoWidth: Action<HTMLSelectElement> = (elem) => {
   });
 }
 
-function createDefaultFilter(): SimpleMetricFilter {
+function createDefaultValue(type: MetricTypeName) {
+  return type == 'number' ? 0
+       : type == 'string' ? ''
+       : type == 'style' ? Source.subs.defaultStyle
+       : type == 'time' ? 0
+       : type == 'label' ? 'none'
+       : type == 'boolean' ? 'false'
+       : Debug.never(type);
+}
+
+function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter {
+  const method = TextMetricFilterDefaultMethods[Metrics[metric].type];
+  const m = MetricFilterMethods[method];
+  const params = [];
+  for (let i = 0; i < m.parameters; i++)
+    params.push(createDefaultValue(m.parameterType!));
   return newMetricFilter({
-    metric: 'chars',
-    method: 'numberNull',
+    metric, method,
+    parameters: params as never,
     negated: false,
-    parameters: []
   });
 }
+
 </script>
 
 {#snippet makeParameter(f: SimpleMetricFilter, i: number)}
@@ -103,6 +122,15 @@ function createDefaultFilter(): SimpleMetricFilter {
           onchange?.();
         }}/>
     </span>
+  {:else if method.parameterType == 'label'}
+    <span class="flexgrow">
+      <LabelSelect stretch={true}
+        bind:value={f.parameters[i]}
+        onsubmit={ () => onchange?.() }/>
+    </span>
+  {:else if method.parameterType == 'boolean'}
+    <!-- TODO: in case we actually need a boolean parameter?? -->
+    {Debug.assert(false)}
   {:else}
     {Debug.never(method.parameterType)}
   {/if}
@@ -163,20 +191,15 @@ function createDefaultFilter(): SimpleMetricFilter {
           if (newMetric.type == method.fromType) {
             f.metric = name;
             onchange?.();
-          } else replace({
-            metric: name,
-            method: TextMetricFilterNullMethods[method.fromType],
-            negated: false,
-            parameters: [] as never
-          });
+          } else
+            replace(createDefaultFilter(name));
         }}
       >
-        {#each entryMetrics as [name, metric]}
-          <option value={name}>{metric.localizedName()}</option>
-        {/each}
-        <hr>
-        {#each channelMetrics as [name, metric]}
-          <option value={name}>{metric.localizedName()}</option>
+        {#each groupedMetrics as [_, ms]}
+          {#each ms as [name, metric]}
+            <option value={name}>{metric.localizedName()}</option>
+          {/each}
+          <hr>
         {/each}
       </select>
       <select value={f.method}
@@ -192,11 +215,7 @@ function createDefaultFilter(): SimpleMetricFilter {
           if (params.length > newMethod.parameters)
             params.splice(newMethod.parameters);
           for (let i = params.length; i < newMethod.parameters; i++)
-            params[i] = newMethod.parameterType == 'number' ? 0
-                  : newMethod.parameterType == 'string' ? ''
-                  : newMethod.parameterType == 'style' ? Source.subs.defaultStyle
-                  : newMethod.parameterType == 'time' ? 0
-                  : Debug.never(newMethod.parameterType);
+            params[i] = createDefaultValue(newMethod.parameterType!);
           onchange?.();
         }}
       >

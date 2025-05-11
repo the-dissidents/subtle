@@ -3,7 +3,7 @@ import LabelSelect from './LabelSelect.svelte';
 import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
 
-import { SubtitleEntry, type LabelTypes, type SubtitleStyle } from './core/Subtitles.svelte';
+import { SubtitleEntry, type LabelType, type SubtitleStyle } from './core/Subtitles.svelte';
 import { Editing } from './frontend/Editing';
 import { Interface } from './frontend/Interface';
 import type { UIFocus } from "./frontend/Frontend";
@@ -21,7 +21,7 @@ let keepDuration = $state(false);
 let editingT0 = $state(0);
 let editingT1 = $state(0);
 let editingDt = $state(0);
-let editingLabel: LabelTypes = $state('none');
+let editingLabel: LabelType = $state('none');
 let uiFocus = Interface.uiFocus;
 
 const me = {};

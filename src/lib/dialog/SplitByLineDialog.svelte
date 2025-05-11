@@ -1,7 +1,7 @@
 <script lang="ts">
 import * as dialog from "@tauri-apps/plugin-dialog";
 
-import { Subtitles, type LabelTypes, type SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { Subtitles, type LabelType, type SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
@@ -156,8 +156,8 @@ let data: LineSplitData[] = $state([]);
 let removeEmptyLines = $state(true);
 let selectedRow = $state(-1);
 let previewLines: string[] = $state([]);
-let markMoreThan = $state({use: false, n: 2, label: 'red' as LabelTypes});
-let markLessThan = $state({use: false, n: 2, label: 'red' as LabelTypes});
+let markMoreThan = $state({use: false, n: 2, label: 'red' as LabelType});
+let markLessThan = $state({use: false, n: 2, label: 'red' as LabelType});
 let hasError = $state(true);
 
 </script>

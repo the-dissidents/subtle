@@ -56,7 +56,7 @@ import { Debug } from "./Debug";
 import { theme, LabelColor } from "./Theming.svelte";
 
 import { SubtitleEntry, type SubtitleStyle } from "./core/Subtitles.svelte";
-import { evaluateFilter, filterDescription, type SimpleMetricFilter, type MetricName, Metrics, Metric } from "./core/Filter";
+import { evaluateFilter, filterDescription, type SimpleMetricFilter, type MetricName, Metrics, Metric, type MetricContext } from "./core/Filter";
 
 import { CanvasManager } from "./CanvasManager";
 import { InterfaceConfig, MainConfig } from "./config/Groups";
@@ -636,12 +636,13 @@ function onDrag(_: number, offsetY: number) {
   ></canvas>
 </div>
 
-{#snippet metricList(opt: {list: Column[]}, per: 'entry' | 'channel')}
+{#snippet metricList(opt: {list: Column[]}, category: MetricContext[])}
   <OrderableList list={opt.list} style='width: 100%' onsubmit={changeColumns}>
     {#snippet row(col, i)}
       <select bind:value={col.metric} onchange={changeColumns}>
         {#each MetricsList as [name, m]}
-          {#if m.per == per && (!opt.list.some((x) => x.metric == name) || name == col.metric)}
+          {#if category.includes(m.context)
+            && (!opt.list.some((x) => x.metric == name) || name == col.metric)}
             <option value={name}>{m.localizedName()}</option>
           {/if}
         {/each}
@@ -657,7 +658,8 @@ function onDrag(_: number, offsetY: number) {
     {/snippet}
     {#snippet footer()}
     {@const used = new Set(opt.list.map((x) => x.metric))}
-    {@const unused = MetricsList.filter(([x, y]) => y.per == per && !used.has(x))}
+    {@const unused = MetricsList.filter(
+        ([x, y]) => category.includes(y.context) && !used.has(x))}
       <button disabled={unused.length == 0} class="hlayout"
         onclick={async () =>
           (await Menu.new({items: unused.map(([x, y]) => ({
@@ -683,9 +685,9 @@ function onDrag(_: number, offsetY: number) {
     <h5>
       {$_('table.edit-columns')}
     </h5>
-    {@render metricList({list: entryColumns}, 'entry')}
+    {@render metricList({list: entryColumns}, ['entry'])}
     <hr>
-    {@render metricList({list: channelColumns}, 'channel')}
+    {@render metricList({list: channelColumns}, ['style', 'channel'])}
   </div>
   {/key}
 </Popup>

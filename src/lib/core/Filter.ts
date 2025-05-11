@@ -1,6 +1,6 @@
 import type { JSONSchemaType } from "ajv";
 import { Debug } from "../Debug";
-import type { SubtitleEntry, SubtitleStyle } from "./Subtitles.svelte"
+import type { LabelType, SubtitleEntry, SubtitleStyle } from "./Subtitles.svelte"
 
 import { ajv, DeserializationError, parseObject } from "../Serialization";
 import wcwidth from "wcwidth";
@@ -9,13 +9,19 @@ import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Basic } from "../Basic";
 const $_ = unwrapFunctionStore(_);
 
-export type MetricTypeName = 'string' | 'number' | 'style' | 'time';
+import { Editing } from "../frontend/Editing";
+
+export const MetricContextList = ['editing', 'entry', 'style', 'channel'] as const;
+export type MetricContext = (typeof MetricContextList)[number];
+export type MetricTypeName = 'string' | 'number' | 'style' | 'time' | 'label' | 'boolean';
 
 export type MetricType<T> =
       T extends 'string' ? string
     : T extends 'number' ? number
     : T extends 'style' ? SubtitleStyle
     : T extends 'time' ? number
+    : T extends 'label' ? LabelType
+    : T extends 'boolean' ? boolean
     : never;
 
 export class Metric<TypeName extends MetricTypeName> {
@@ -23,7 +29,7 @@ export class Metric<TypeName extends MetricTypeName> {
     public readonly description?: () => string;
     constructor (
         public readonly type: TypeName,
-        public readonly per: 'entry' | 'channel',
+        public readonly context: MetricContext,
         public readonly localizedName: () => string,
         public readonly shortName: () => string,
         public readonly value: 
@@ -44,6 +50,8 @@ export class Metric<TypeName extends MetricTypeName> {
         if (this.type == 'string') return (<string>value);
         if (this.type == 'time') return Basic.formatTimestamp(<number>value);
         if (this.type == 'style') return (<SubtitleStyle>value).name;
+        if (this.type == 'label') return $_('label.' + <LabelType>value);
+        if (this.type == 'boolean') return $_('boolean.' + (<boolean>value).toString());
         Debug.never(this.type);
     }
 };
@@ -142,6 +150,10 @@ function getTextLength(s: string) {
 }
 
 export const Metrics = {
+    selected: new Metric('boolean', 'editing',
+        () => $_('metrics.selected'), 
+        () => $_('metrics.selected'), 
+        (e) => Editing.inSelection(e)),
     startTime: new Metric('time', 'entry',
         () => $_('metrics.start-time'), 
         () => $_('metrics.start-time-short'), 
@@ -154,7 +166,11 @@ export const Metrics = {
         () => $_('metrics.duration'), 
         () => $_('metrics.duration'), 
         (e) => e.end - e.start),
-    style: new Metric('style', 'channel',
+    label: new Metric('label', 'entry',
+        () => $_('metrics.label'), 
+        () => $_('metrics.label'), 
+        (e) => e.label),
+    style: new Metric('style', 'style',
         () => $_('metrics.style'), 
         () => $_('metrics.style'), 
         (e, s) => s),
@@ -203,12 +219,6 @@ export const Metrics = {
 } as const;
 
 export const MetricFilterMethods = {
-    stringNull: newFilterMethod({
-        localizedName: () => '',
-        fromType: 'string',
-        parameters: 0,
-        exec: (a) => true,
-    }),
     stringNonEmpty: newFilterMethod({
         localizedName: () => $_('filter.is-not-empty'),
         fromType: 'string',
@@ -242,12 +252,6 @@ export const MetricFilterMethods = {
         parameterType: 'number',
         parameters: 1,
         exec: (a, b) => a == b,
-    }),
-    numberNull: newFilterMethod({
-        localizedName: () => '',
-        fromType: 'number',
-        parameters: 0,
-        exec: (a) => true,
     }),
     numberGt: newFilterMethod({
         localizedName: () => $_('filter.greater-than'),
@@ -290,12 +294,6 @@ export const MetricFilterMethods = {
         parameterType: 'number',
         parameters: 2,
         exec: (a, b, c) => b < a && a < c,
-    }),
-    timeNull: newFilterMethod({
-        localizedName: () => '',
-        fromType: 'time',
-        parameters: 0,
-        exec: (a) => true,
     }),
     timeEqual: newFilterMethod({
         localizedName: () => $_('filter.number-equals'),
@@ -346,26 +344,37 @@ export const MetricFilterMethods = {
         parameters: 2,
         exec: (a, b, c) => b < a && a < c,
     }),
-    styleNull: newFilterMethod({
-        localizedName: () => '',
-        fromType: 'style',
-        parameters: 0,
-        exec: (a) => true,
-    }),
     styleEqual: newFilterMethod({
-        localizedName: () => $_('filter.equals'),
+        localizedName: () => $_('filter.is'),
         fromType: 'style',
         parameterType: 'style',
         parameters: 1,
         exec: (a, b) => a.name == b.name,
     }),
+    labelEqual: newFilterMethod({
+        localizedName: () => $_('filter.is'),
+        fromType: 'label',
+        parameterType: 'label',
+        parameters: 1,
+        exec: (a, b) => a == b,
+    }),
+    isTrue: newFilterMethod({
+        localizedName: () => $_('filter.is-true'),
+        fromType: 'boolean',
+        parameters: 0,
+        exec: (a) => a,
+    }),
 } as const;
 
-export const TextMetricFilterNullMethods = {
-    string: 'stringNull',
-    number: 'numberNull',
-    time: 'timeNull',
-    style: 'styleNull',
+export const TextMetricFilterDefaultMethods: 
+    {[key in MetricTypeName]: MetricFilterMethodName} = 
+{
+    string: 'stringNonEmpty',
+    number: 'numberEqual',
+    time: 'timeEqual',
+    style: 'styleEqual',
+    label: 'labelEqual',
+    boolean: 'isTrue'
 } as const;
 
 export type MetricName = keyof typeof Metrics;
