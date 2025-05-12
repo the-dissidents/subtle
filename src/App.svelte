@@ -49,15 +49,13 @@ import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
 
 import { Dialogs } from './lib/frontend/Dialogs';
-import { Interface } from './lib/frontend/Interface';
+import { guard, Interface } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
-
-    
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow();
@@ -67,10 +65,12 @@ let editTable: HTMLElement | undefined = $state();
 let videoCanvasContainer: HTMLElement | undefined = $state();
 let videoCanvas: HTMLCanvasElement | undefined = $state();
 let timelineCanvasContainer: HTMLDivElement | undefined = $state();
+let statusBar: HTMLDivElement | undefined = $state();
 
 let isPlaying = $state(false);
 let playPos = $state(0);
 let playPosInput = $state(0);
+let statusTwinkling = $state(false);
 
 let undoRedoUpdateCounter = $state(0);
 
@@ -85,6 +85,12 @@ const me = {};
 
 Source.onUndoBufferChanged.bind(me, () => {
   undoRedoUpdateCounter++;
+});
+
+Interface.status.subscribe(() => { 
+  // twinkle status bar
+  if (InterfaceConfig.data.statusBarTwinkle)
+    statusTwinkling = true;
 });
 
 Playback.onRefreshPlaybackControl.bind(me, () => {
@@ -291,8 +297,7 @@ appWindow.onDragDropEvent(async (ev) => {
       <!-- video playback controls -->
       <div class='hlayout'>
         <button aria-label="play/pause"
-          onclick={() => Playback.toggle()
-            .catch((e) => $status = `Error playing video: ${e}`)}>
+          onclick={() => Playback.toggle()}>
           <svg class="feather">
             <use href={isPlaying 
               ? "/feather-sprite.svg#pause" 
@@ -364,7 +369,10 @@ appWindow.onDragDropEvent(async (ev) => {
   </div>
 
   <!-- status bar -->
-  <div class='status'>{$status}</div>
+  <div bind:this={statusBar}
+    class={[{status: true, twinkling: statusTwinkling}, $status.type]}
+    onanimationend={() => statusTwinkling = false}
+  >{$status.msg}</div>
 </main>
 
 <style>
@@ -395,6 +403,12 @@ appWindow.onDragDropEvent(async (ev) => {
   .player-container canvas {
     background-color: lightgray;
   }
+  .twinkling.error {
+    --twinkle-color: var(--uchu-red-3);
+  }
+  .twinkling.info {
+    --twinkle-color: var(--uchu-blue-3);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -421,6 +435,28 @@ appWindow.onDragDropEvent(async (ev) => {
   .player-container canvas {
     background-color: black;
   }
+  .twinkling.error {
+    --twinkle-color: var(--uchu-red-3);
+  }
+  .twinkling.info {
+    --twinkle-color: var(--uchu-blue-3);
+  }
+}
+
+@keyframes twinkle-effect {
+  0% {
+    box-shadow: 0 0 0px 0px rgba(0, 0, 0, 0.0);
+  }
+  50% {
+    box-shadow: 0 0 2px 2px var(--twinkle-color);
+  }
+  100% {
+    box-shadow: 0 0 0px 0px rgba(0, 0, 0, 0.0);
+  }
+}
+
+.twinkling {
+  animation: twinkle-effect 0.3s ease-in-out 1;
 }
 
 .container {

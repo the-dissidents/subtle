@@ -6,7 +6,6 @@ import TimestampInput from './TimestampInput.svelte';
 import { SubtitleEntry, type LabelType, type SubtitleStyle } from './core/Subtitles.svelte';
 import { Editing } from './frontend/Editing';
 import { Interface } from './frontend/Interface';
-import type { UIFocus } from "./frontend/Frontend";
 import { ChangeType, Source } from './frontend/Source';
 
 import { Menu } from '@tauri-apps/api/menu';
@@ -202,7 +201,6 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
               Editing.focused.control = ev.currentTarget;
             }}
             onblur={(x) => {
-              // TODO: this works but looks like nonsense
               if ($uiFocus === 'EditingField')
                 $uiFocus = 'Other';
               Editing.submitFocusedEntry();

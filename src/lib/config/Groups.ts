@@ -73,6 +73,12 @@ export const InterfaceConfig = new PublicConfigGroup(
             description: () => $_('config.autosave-interval-d'),
             bounds: [0, 60],
             default: 5
+        },
+        statusBarTwinkle: {
+            localizedName: () => $_('config.twinkle-status-bar'),
+            type: 'boolean',
+            description: () => $_('config.twinkle-status-bar-d'),
+            default: true
         }
     });
 MainConfig.addGroup('interface', InterfaceConfig);

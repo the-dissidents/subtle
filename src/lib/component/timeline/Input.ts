@@ -10,6 +10,8 @@ import { Playback } from "../../frontend/Playback";
 import type { TranslatedWheelEvent } from "../../frontend/Frontend";
 import { TimelineConfig } from "./Config";
 
+
+// TODO: should be rewritten with classes
 type DragContext = null | {
   type: 'scale', 
   readonly origPos: number, 

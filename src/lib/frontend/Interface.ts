@@ -1,6 +1,6 @@
 console.info('Interface loading');
 
-import { get, writable } from "svelte/store";
+import { get, readonly, writable, type Readable } from "svelte/store";
 
 import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
@@ -43,7 +43,7 @@ export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback?:
         try {
             return await x();
         } catch (x) {
-            Interface.status.set(`${msg}: ${x}`);
+            Interface.setStatus(`${msg}: ${x}`, 'error');
             Debug.info('guardAsync:', msg, x);
             return fallback;
         };
@@ -63,16 +63,28 @@ export function guard<T>(x: () => T, msg: string, fallback?: T) {
         try {
             return x();
         } catch (x) {
-            Interface.status.set(`${msg}: ${x}`);
+            Interface.setStatus(`${msg}: ${x}`, 'error');
             Debug.info('guard:', msg, x);
             return fallback;
         };
     }
 }
 
+export type StatusType = 'info' | 'error';
+
+const status = writable({ msg: 'ok', type: 'info' as StatusType });
+
 export const Interface = {
     uiFocus: writable<UIFocus>('Other'),
-    status: writable('ok'),
+
+    get status() {
+        return readonly(status);
+    },
+
+    setStatus(msg: string, type: StatusType = 'info') {
+        Debug.debug('status ->', msg, type);
+        status.set({ msg, type });
+    },
 
     getUIFocus(): UIFocus {
         return get(this.uiFocus);
@@ -82,12 +94,13 @@ export const Interface = {
         try {
             const stats = await fs.stat(path);
             if (!stats.isFile) {
-                Interface.status.set($_('msg.not-a-file', {values: {path}}));
+                Interface.setStatus($_('msg.not-a-file', {values: {path}}), 'error');
                 return;
             }
-            if (stats.size > 1024*1024*5 && !await dialog.ask($_('msg.very-large-file-warning'), {kind: 'warning'})) return null;
+            if (stats.size > 1024*1024*5 && !await dialog.ask(
+                $_('msg.very-large-file-warning'), {kind: 'warning'})) return null;
         } catch {
-            Interface.status.set($_('msg.does-not-exist', {values: {path}}));
+            Interface.setStatus($_('msg.does-not-exist', {values: {path}}), 'error');
             return;
         }
         return guardAsync(async () => {
@@ -108,7 +121,7 @@ export const Interface = {
     async newFile() {
         await Source.openDocument(new Subtitles());
         if (get(Playback.isLoaded)) await Playback.close();
-        Interface.status.set($_('msg.created-new-file'));
+        Interface.setStatus($_('msg.created-new-file'));
     },
 
     async openFile(path: string) {
@@ -116,7 +129,8 @@ export const Interface = {
         if (!text) return;
         let newSubs = parseSubtitleSource(text);
         if (!newSubs) {
-            this.status.set($_('msg.failed-to-parse-as-subtitles-path', {values: {path}}));
+            Interface.setStatus(
+                $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
             return;
         }
         await Source.openDocument(newSubs, path);
@@ -129,7 +143,7 @@ export const Interface = {
         const video = PrivateConfig.getVideo(path);
         if (video) await this.openVideo(video);
         else if (get(Playback.isLoaded)) await Playback.close();
-        Interface.status.set($_('msg.opened-path', {values: {path}}));
+        Interface.setStatus($_('msg.opened-path', {values: {path}}));
     },
 
     async openVideo(path: string) {
@@ -181,8 +195,8 @@ export const Interface = {
         if (!text) return;
         let newSubs = parseSubtitleSource(text);
         if (!newSubs) {
-            this.status.set($_('msg.failed-to-parse-as-subtitles-path', 
-                {values: {path: selected}}));
+            Interface.setStatus(
+                $_('msg.failed-to-parse-as-subtitles-path', {values: {path: selected}}), 'error');
             return;
         }
         const options = await Dialogs.importOptions.showModal!(newSubs.migrated != 'text');
@@ -194,7 +208,7 @@ export const Interface = {
         }
         Source.markChanged(ChangeType.General);
         Source.markChanged(ChangeType.StyleDefinitions);
-        Interface.status.set($_('msg.imported'));
+        Interface.setStatus($_('msg.imported'));
     },
 
     async askExportFile(ext: string, func: (s: Subtitles) => string) {
@@ -237,8 +251,7 @@ export const Interface = {
     },
 
     async savePublicConfig() {
-        await guardAsync(() => MainConfig.save(),
-            `error saving public config`);
+        await guardAsync(() => MainConfig.save(), $_('msg.error-saving-public-config'));
     },
 
     async closeVideo() {

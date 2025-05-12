@@ -92,7 +92,7 @@ function fuzzyMatch() {
   // perform search
   const fail = () => {
     textarea.selectionEnd = textarea.selectionStart;
-    Interface.status.set($_('untimed.fuzzy-search-failed-to-find-anything'));
+    Interface.setStatus($_('untimed.fuzzy-search-failed-to-find-anything'));
   };
   let result = fuzzy.engine.search(current, fuzzy.maxSkip);
   if (!result) {
@@ -113,7 +113,7 @@ function fuzzyMatch() {
   // display
   if (i0 >= i1) fail(); else {
     setSelectionAndScroll(i0, i1);
-    Interface.status.set($_('untimed.fuzzy-match-found', {values: {x: n / m}}));
+    Interface.setStatus($_('untimed.fuzzy-match-found', {values: {x: n / m}}));
   }
 }
 

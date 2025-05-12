@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { Snippet } from 'svelte';
 import { Debug } from '../Debug';
 import Popup, { type PopupHandler } from './Popup.svelte';
 
@@ -6,7 +7,7 @@ export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 interface Props {
   position?: TooltipPosition;
   text?: string;
-  children?: import('svelte').Snippet;
+  children?: Snippet;
   // TODO: add delay parameter
 }
 

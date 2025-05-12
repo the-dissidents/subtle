@@ -36,7 +36,7 @@ async function copySelection(transform: (use: SubtitleEntry[]) => string) {
     let selection = Editing.getSelection();
     if (selection.length == 0) return;
     await clipboard.writeText(transform(selection));
-    Interface.status.set($_('msg.copied'));
+    Interface.setStatus($_('msg.copied'));
 };
 
 function hasSelection(n = 0) {
@@ -466,7 +466,7 @@ export const Commands: Record<string, UICommand> = {
                 if (text) results.push(text);
             })
             clipboard.writeText(results.join(' '));
-            Interface.status.set($_('msg.copied'));
+            Interface.setStatus($_('msg.copied'));
         }, selectionDistinctStyles())
     }),
     cut: new UICommand(
@@ -488,7 +488,7 @@ export const Commands: Record<string, UICommand> = {
             if (!source) return;
             let portion = parseSubtitleSource(source);
             if (!portion) {
-                Interface.status.set($_('msg.failed-to-parse-clipboard-data-as-subtitles'));
+                Interface.setStatus($_('msg.failed-to-parse-clipboard-data-as-subtitles'), 'error');
                 return;
             }
             let position: number;
@@ -508,9 +508,9 @@ export const Commands: Record<string, UICommand> = {
             if (entries.length > 0) {
                 Editing.setSelection(entries);
                 Source.markChanged(ChangeType.General);
-                Interface.status.set($_('msg.pasted'));
+                Interface.setStatus($_('msg.pasted'));
             } else {
-                Interface.status.set($_('msg.nothing-to-paste'));
+                Interface.setStatus($_('msg.nothing-to-paste'), 'error');
             }
         },
     }),
@@ -858,7 +858,7 @@ export const Commands: Record<string, UICommand> = {
                     }
                 }
             }
-            Interface.status.set($_('msg.changed-n-entries', {values: {n: done}}));
+            Interface.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
             if (done) Source.markChanged(ChangeType.Times);
         },
     }),

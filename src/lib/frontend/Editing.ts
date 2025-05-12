@@ -111,7 +111,7 @@ export const Editing = {
     },
 
     startEditingNewVirtualEntry() {
-        Interface.status.set($_('msg.new-entry-appended'));
+        Interface.setStatus($_('msg.new-entry-appended'));
         let last = Source.subs.entries.at(-1);
         let entry = last 
             ? new SubtitleEntry(last.end, last.end + 2) 

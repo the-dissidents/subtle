@@ -67,7 +67,10 @@ function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
 
 function findAndReplace(type: SearchAction, option: SearchOption) {
   const entries = Source.subs.entries;
-  if (entries.length == 0) return;
+  if (entries.length == 0) {
+    Interface.setStatus($_('msg.subtitle-is-empty'), 'error');
+    return;
+  }
 
   const focusedEntry = Editing.getFocusedEntry();
   let focus = focusedEntry instanceof SubtitleEntry ? focusedEntry : entries[0];
@@ -79,7 +82,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
       resumeFrom = null;
 
   if (useFilter && filter == null) {
-    Interface.status.set($_('msg.filter-is-empty'));
+    Interface.setStatus($_('msg.filter-is-empty'), 'error');
     return;
   }
 
@@ -93,7 +96,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
         `g${caseSensitive ? '' : 'i'}`);
     } catch (e) {
       Debug.assert(e instanceof Error);
-      Interface.status.set($_('msg.search-failed') + e.message);
+      Interface.setStatus($_('msg.search-failed') + e.message, 'error');
       return;
     }
   } else if (useLabel || useStyle || useFilter) {
@@ -101,7 +104,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
     expr = /.*/;
     usingEmptyTerm = true;
   } else {
-    Interface.status.set($_('msg.search-expression-is-empty'));
+    Interface.setStatus($_('msg.search-expression-is-empty'), 'error');
     return;
   }
 
@@ -178,7 +181,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     }
   }
-  Interface.status.set(status);
+  Interface.setStatus(status);
 }
 </script>
 

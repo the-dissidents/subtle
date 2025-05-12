@@ -138,7 +138,7 @@ export const Source = {
     async exportTo(file: string, text: string) {
         return guardAsync(async () => {
             await fs.writeTextFile(file, text);
-            Interface.status.set($_('msg.exported-to-file', {values: {file}}));
+            Interface.setStatus($_('msg.exported-to-file', {values: {file}}));
             return true;
         }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
     },
@@ -146,7 +146,7 @@ export const Source = {
     async saveTo(file: string, text: string) {
         return guardAsync(async () => {
             await fs.writeTextFile(file, text);
-            Interface.status.set($_('msg.saved-to-file', {values: {file}}));
+            Interface.setStatus($_('msg.saved-to-file', {values: {file}}));
             fileChanged.set(false);
             changedSinceLastAutosave = false;
             if (file != get(this.currentFile)) {
@@ -186,7 +186,7 @@ export const Source = {
             await fs.writeTextFile(autoSaveName, text, { baseDir: fs.BaseDirectory.AppLocalData });
             changedSinceLastAutosave = false;
             Debug.info('autosaved', currentFile ?? '<untitled>');
-            Interface.status.set($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
+            Interface.setStatus($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
         }, $_('msg.autosave-failed'));
     },
 

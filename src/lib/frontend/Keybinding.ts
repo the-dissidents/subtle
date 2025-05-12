@@ -315,10 +315,10 @@ export const KeybindingManager = {
                 case 'disabled': break;
                 case "notFound":
                     if (result.sequence.length > 1) {
-                        Interface.status.set($_('msg.hotkey-not-found', 
+                        Interface.setStatus($_('msg.hotkey-not-found', 
                             { values: { key: 
                                 result.sequence.map(bindingToString).join(' ')
-                            } }));
+                            } }), 'error');
                     }
                     break;
                 case "ok":
@@ -328,7 +328,7 @@ export const KeybindingManager = {
                     break;
                 case "waitNext":
                     ev.preventDefault();
-                    Interface.status.set($_('msg.waiting-for-chord-after-pressing', 
+                    Interface.setStatus($_('msg.waiting-for-chord-after-pressing', 
                         { values: { key: 
                             result.currentSequence.map(bindingToString).join(' ')
                         } }));

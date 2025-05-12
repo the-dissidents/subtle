@@ -68,7 +68,7 @@ function makePreview() {
 
 async function copy() {
   await navigator.clipboard.writeText(preview);
-  Interface.status.set($_('msg.copied-exported-data'));
+  Interface.setStatus($_('msg.copied-exported-data'));
 }
 </script>
 
