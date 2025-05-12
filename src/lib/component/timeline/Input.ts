@@ -134,7 +134,10 @@ export class TimelineInput {
       for (const point of points) {
         const d = Math.abs(desiredStart - x + point - origStart);
         if (d < minDist) {
-          this.alignmentLine = {x: x * this.layout.scale, y1, y2};
+          this.alignmentLine = {
+            x: x * this.layout.scale + this.layout.leftColumnWidth, 
+            y1, y2
+          };
           snapped = x - point + origStart;
           minDist = d;
         }
@@ -164,7 +167,10 @@ export class TimelineInput {
       let d = Math.abs(desired - x);
       if (d < minDist) {
         minDist = d;
-        this.alignmentLine = {x: x * this.layout.scale, y1, y2};
+        this.alignmentLine = {
+          x: x * this.layout.scale + this.layout.leftColumnWidth, 
+          y1, y2
+        };
         snapped = x;
       }
     };
@@ -216,23 +222,16 @@ export class TimelineInput {
     {
       if (!ctrlKey) {
         let [first, last] = this.#selectionFirstLast();
-        const x1 = (first.start - this.layout.offset) * this.layout.scale,
-              w2 = (last.end - last.start) * this.layout.scale,
-              x2 = (last.start - this.layout.offset) * this.layout.scale;
-        if (under.includes(first) 
-         && e.offsetX - x1 < resizeArea)
-        {
+        const [ _, x1] = this.layout.getHorizontalPos(first, {local: true});
+        const [w2, x2] = this.layout.getHorizontalPos(last, {local: true});
+        if (under.includes(first) && e.offsetX - x1 < resizeArea)
           canvas.style.cursor = 'e-resize';
-        } else if (under.includes(last)
-                && x2 + w2 - e.offsetX < resizeArea)
-        {
+        else if (under.includes(last) && x2 + w2 - e.offsetX < resizeArea)
           canvas.style.cursor = 'w-resize';
-        }
       }
     } else {
       let ent = under.find((x) => this.selection.has(x)) ?? under[0];
-      const w = (ent.end - ent.start) * this.layout.scale,
-            x = (ent.start - this.layout.offset) * this.layout.scale;
+      const [w, x] = this.layout.getHorizontalPos(ent, {local: true});
       if (e.offsetX - x < resizeArea)
         canvas.style.cursor = 'e-resize';
       else if (x + w - e.offsetX < resizeArea)
@@ -242,7 +241,8 @@ export class TimelineInput {
 
   #canBeginDrag(e0: MouseEvent): boolean {
     e0.preventDefault();
-    const origPos = this.layout.offset + e0.offsetX / this.layout.scale;
+    const origPos = this.layout.offset + 
+      (e0.offsetX - this.layout.leftColumnWidth) / this.layout.scale;
     const scrollX = this.manager.scroll[0];
     document.addEventListener('keydown', this.#onDocumentKeyWhenDragging);
     if (e0.button == 1) {
@@ -269,7 +269,7 @@ export class TimelineInput {
           // initiate box select
           this.dragContext = {
             type: 'boxSelect', 
-            x1: origPos * this.layout.scale,
+            x1: e0.offsetX + this.manager.scroll[0],
             y1: e0.offsetY,
             originalSelection: [...this.selection], 
             thisGroup: []
@@ -374,6 +374,8 @@ export class TimelineInput {
   }
   
   #onDrag(offsetX: number, offsetY: number, ev: MouseEvent) {
+    const curPos = 
+      (offsetX - this.layout.leftColumnWidth) / this.layout.scale + this.layout.offset;
     const dragContext = this.dragContext;
     Debug.assert(dragContext !== null);
     switch (dragContext.type) {
@@ -383,7 +385,7 @@ export class TimelineInput {
         this.layout.setOffset(dragContext.origPos - dragContext.e0.offsetX / this.layout.scale);
         break;
       case 'moveCursor':
-        this.#moveCursor((offsetX + this.manager.scroll[0]) / this.layout.scale);
+        this.#moveCursor(curPos);
         break;
       case 'boxSelect':
         let x2 = offsetX + this.manager.scroll[0],
@@ -399,11 +401,11 @@ export class TimelineInput {
           dragContext.thisGroup = newGroup;
           this.#dispatchSelectionChanged();
         }
-        this.layout.keepPosInSafeArea(x2 / this.layout.scale);
+        this.layout.keepPosInSafeArea((x2 - this.layout.leftColumnWidth) / this.layout.scale);
         this.manager.requestRender();
         break;
       case 'dragMove':
-        let dval = offsetX / this.layout.scale + this.layout.offset - dragContext.origPos;
+        let dval = curPos - dragContext.origPos;
         if (ev.altKey !== TimelineConfig.data.enableSnap)
           dval = this.#snapMove(
             dragContext.points,
@@ -418,8 +420,7 @@ export class TimelineInput {
         this.manager.requestRender();
         break;
       case 'dragResize':
-        let val = dragContext.origVal 
-          + offsetX / this.layout.scale + this.layout.offset - dragContext.origPos;
+        let val = dragContext.origVal + curPos - dragContext.origPos;
         if (ev.altKey !== TimelineConfig.data.enableSnap)
           val = this.#snapEnds(
             dragContext.start, 
@@ -510,9 +511,11 @@ export class TimelineInput {
 
   #onMouseWheel(tr: TranslatedWheelEvent, e: WheelEvent) {
     if (tr.isZoom) {
-      const origPos = this.layout.offset + e.offsetX / this.layout.scale;
+      const origPos = this.layout.offset 
+        + (e.offsetX - this.layout.leftColumnWidth) / this.layout.scale;
       this.layout.setScale(this.layout.scale / Math.pow(1.03, tr.amount));
-      this.layout.setOffset(origPos - e.offsetX / this.layout.scale);
+      this.layout.setOffset(origPos 
+        - (e.offsetX - this.layout.leftColumnWidth) / this.layout.scale);
     } else {
       const amount = 
         tr.isTrackpad ? tr.amountX :

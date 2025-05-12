@@ -5,13 +5,14 @@ import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
 import { ChangeType, Source } from "../../frontend/Source";
 import { Debug } from "../../Debug";
 import { Playback } from "../../frontend/Playback";
-import { DebugConfig } from "../../config/Groups";
+import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { get } from "svelte/store";
 import { TimelineConfig } from "./Config";
+import { EventHost } from "../../frontend/Frontend";
 
 const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
-const CURSOR_AREA_MARGIN = 50;
+const CURSOR_SAFE_AREA_RIGHT_MARGIN = 50;
 
 export type Box = {
   x: number, y: number,
@@ -20,18 +21,25 @@ export type Box = {
 
 export class TimelineLayout {
   static readonly HEADER_HEIGHT = 15;
-  static readonly TRACK_AREA_MARGIN = 20;
+  static readonly TRACKS_PADDING = 15;
+  static readonly LEFT_COLUMN_MARGIN = 5;
 
   readonly manager: CanvasManager;
 
   requestedSampler = false;
+  requestedLayout = false;
   sampler: AudioSampler | null = null;
   samplerMedia: MMedia | undefined;
+
+  onLayout = new EventHost();
 
   /** pixels per second */
   #scale = 1;
   width = 100; height = 100;
   entryHeight = 0;
+  leftColumnWidth = 100;
+
+  #shownStyles: SubtitleStyle[] = [];
   stylesMap = new Map<SubtitleStyle, number>();
 
   constructor(
@@ -85,19 +93,20 @@ export class TimelineLayout {
     });
     Source.onSubtitlesChanged.bind(this, (type) => {
       if (type == ChangeType.StyleDefinitions || type == ChangeType.General)
-        this.preprocessStyles();
+        this.requestedLayout = true;
       if (type == ChangeType.Times || type == ChangeType.General)
         this.#updateContentArea();
       if (type != ChangeType.Metadata)
         this.manager.requestRender();
     });
     Source.onSubtitleObjectReload.bind(this, () => {
-      this.preprocessStyles();
       this.#updateContentArea();
+      this.requestedLayout = true;
       this.manager.requestRender();
     });
   }
 
+  // TODO: cache it
   get maxPosition() {
     return this.sampler 
       ? this.sampler.duration 
@@ -110,6 +119,10 @@ export class TimelineLayout {
   
   get offset() {
     return this.manager.scroll[0] / this.scale;
+  }
+
+  get shownStyles(): readonly SubtitleStyle[] {
+    return this.#shownStyles;
   }
 
   setScale(v: number) {
@@ -136,15 +149,21 @@ export class TimelineLayout {
     return Source.subs.entries.filter(
       (ent) => ent.end > this.offset && ent.start < end);
   }
-  
+
+  getHorizontalPos(ent: SubtitleEntry, opt?: {local?: boolean}): [w: number, x: number] {
+    return [
+      (ent.end - ent.start) * this.scale,
+      (ent.start - (opt?.local ? this.offset : 0)) * this.scale + this.leftColumnWidth
+    ];
+  }
+
   getEntryPositions(ent: SubtitleEntry): (Box & {text: string})[] {
-    const w = (ent.end - ent.start) * this.scale,
-          x = ent.start * this.scale;
+    const [w, x] = this.getHorizontalPos(ent);
     return [...ent.texts.entries()].flatMap(([style, text]) => {
       if (Source.subs.view.timelineExcludeStyles.has(style)) return [];
       const i = this.stylesMap.get(style) ?? 0;
       const y = this.entryHeight * i 
-        + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACK_AREA_MARGIN;
+        + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
       return [{x: x, y: y, w: w, h: this.entryHeight, text}];
     });
   }
@@ -153,20 +172,19 @@ export class TimelineLayout {
     x: number, y: number, w = 0, h = 0): SubtitleEntry[] 
   {
     let result = [];
-    const start = x / this.scale;
-    const end = (x + w) / this.scale;
+    const start = (x - this.leftColumnWidth) / this.scale;
+    const end = (x - this.leftColumnWidth + w) / this.scale;
     for (let ent of Source.subs.entries) {
       if (ent.end < start || ent.start > end) continue;
       if (this.getEntryPositions(ent)
         .some((b) => b.x <= x + w && b.x + b.w >= x 
-              && b.y <= y + h && b.y + b.h >= y)) result.push(ent);
+                  && b.y <= y + h && b.y + b.h >= y)) result.push(ent);
     }
     return result;
   }
 
   keepEntryInView(ent: SubtitleEntry) {
-    const w = (ent.end - ent.start) * this.scale,
-          x = (ent.start - this.offset) * this.scale;
+    const [w, x] = this.getHorizontalPos(ent, {local: true});
     const dxStart = x;
     const dxEnd = (x + w) - this.width;
     if (dxStart >= 0 && dxEnd <= 0) return;
@@ -177,14 +195,16 @@ export class TimelineLayout {
   }
 
   keepPosInSafeArea(pos: number) {
-    const margin = CURSOR_AREA_MARGIN / this.#scale;
-    const left = this.offset + margin,
-        right = this.offset + this.width / this.#scale - margin;
-    if (pos < left) this.setOffset(this.offset + pos - left);
+    const marginL = this.leftColumnWidth / this.#scale;
+    const marginR = CURSOR_SAFE_AREA_RIGHT_MARGIN / this.#scale;
+    const left = this.offset,
+         right = this.offset + this.width / this.#scale - marginR;
+    if (pos < left)  this.setOffset(this.offset + pos - left);
     if (pos > right) this.setOffset(this.offset + pos - right);
   }
 
-  preprocessStyles() {
+  layout(ctx: CanvasRenderingContext2D) {
+    this.requestedLayout = false;
     const subs = Source.subs;
     const exclude = subs.view.timelineExcludeStyles;
     for (const s of [...exclude])
@@ -194,22 +214,32 @@ export class TimelineLayout {
       exclude.clear();
     // styleRefreshCounter++;
     
-    const include = subs.styles.filter((x) => !exclude.has(x));
-    this.entryHeight = 
-      (this.height - TimelineLayout.HEADER_HEIGHT - TimelineLayout.TRACK_AREA_MARGIN * 2) 
-        / include.length;
-    this.stylesMap = new Map([...include].map((x, i) => [x, i]));
+    this.#shownStyles = subs.styles.filter((x) => !exclude.has(x));
+    this.entryHeight = TimelineConfig.data.fontSize + 15;
+    this.stylesMap = new Map(this.#shownStyles.map((x, i) => [x, i]));
+
+    ctx.font = `${TimelineConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`;
+    this.leftColumnWidth =
+      Math.max(30, ...this.#shownStyles.map((x) => ctx.measureText(x.name).width))
+      + TimelineLayout.LEFT_COLUMN_MARGIN * 2;
+
     this.manager.requestRender();
+    this.onLayout.dispatch();
   }
 
   #updateContentArea() {
-    this.manager.setContentRect({ r: this.maxPosition * this.scale });
+    this.manager.setContentRect({ 
+      r: this.maxPosition * this.scale,
+      b: this.entryHeight * this.#shownStyles.length 
+          + TimelineLayout.TRACKS_PADDING * 2 
+          + TimelineLayout.HEADER_HEIGHT
+    });
   }
 
   #processDisplaySizeChanged(w: number, h: number): void {
     this.width = w;
     this.height = h;
-    this.preprocessStyles();
+    this.requestedLayout = true;
     this.#updateContentArea();
     this.#setViewOffset(this.offset);
     this.manager.requestRender();

@@ -10,9 +10,11 @@ import { TimelineRenderer } from "./Render.svelte";
 
 let rowPopup: PopupHandler = $state({});
 let styleRefreshCounter = $state(0);
+let buttonPosX = $state(0);
+let buttonPosY = $state(0);
 let uiFocus = Interface.uiFocus;
 
-let layout: TimelineLayout;
+let layout = $state<TimelineLayout>();
 let input: TimelineInput;
 let renderer: TimelineRenderer;
 
@@ -21,19 +23,32 @@ function setup(canvas: HTMLCanvasElement) {
   layout = new TimelineLayout(canvas);
   input = new TimelineInput(layout);
   renderer = new TimelineRenderer(layout, input);
+
+  layout.onLayout.bind(layout, () => {
+    buttonPosX = layout!.leftColumnWidth - TimelineLayout.LEFT_COLUMN_MARGIN;
+  });
+  layout.manager.onUserScroll.bind(layout, () => {
+    buttonPosY = -layout!.manager.scroll[1];
+  });
 }
 
 </script>
 
 <div class="container">
-  <button onclick={(ev) => {
-    const rect = ev.currentTarget.getBoundingClientRect();
-    rowPopup.open!(rect);
-  }} aria-label='edit'>
-    <svg class="feather">
-      <use href={`/feather-sprite.svg#edit-3`} />
-    </svg>
-  </button>
+  <div class="button-container"
+       style:width="{buttonPosX}px">
+    <button aria-label='edit'
+      style:top="{buttonPosY}px"
+      onclick={(ev) => {
+        const rect = ev.currentTarget.getBoundingClientRect();
+        rowPopup.open!(rect);
+      }}
+    >
+      <svg class="feather">
+        <use href={`/feather-sprite.svg#edit-3`} />
+      </svg>
+    </button>
+  </div>
   <canvas class="timeline fill"
     use:setup
     onclick={() => $uiFocus = 'Timeline'}
@@ -41,14 +56,14 @@ function setup(canvas: HTMLCanvasElement) {
   </canvas>
 </div>
 
-<Popup bind:handler={rowPopup} position="left">
+<Popup bind:handler={rowPopup} position="right">
   <div class="vlayout">
     <h5>
       {$_('timeline.filter-styles')}
     </h5>
     {#key styleRefreshCounter}
     {@const exclude = Source.subs.view.timelineExcludeStyles}
-    {#each Source.subs.styles as style }
+    {#each Source.subs.styles as style}
       <label>
         <input type="checkbox"
           checked={!exclude.has(style)}
@@ -58,7 +73,7 @@ function setup(canvas: HTMLCanvasElement) {
               exclude.delete(style);
             else
               exclude.add(style);
-            layout.preprocessStyles();
+            layout!.requestedLayout = true;
             Source.markChanged(ChangeType.View);
           }} />
         {style.name}
@@ -99,16 +114,25 @@ h5 {
   -moz-user-select: none; -ms-user-select: none;
 }
 
+.button-container {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.button-container button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-right: 0;
+  margin-top: 2px;
+}
+
 .container {
   position: relative;
   width: 100%;
   height: 100%;
-}
-.container button {
-  position: absolute;
-  top: 0;
-  right: 0;
-  margin-right: 12px;
-  margin-top: 2px;
 }
 </style>

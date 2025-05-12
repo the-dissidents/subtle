@@ -8,10 +8,11 @@ import { Basic } from "../../Basic";
 import { TimelineConfig } from "./Config";
 import type { TimelineInput } from "./Input";
 
-const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%)' : 'hsl(0deg 0% 85%)');
+const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(0deg 0% 75%/50%)');
 const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
 const LINE_BIG_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 40%)');
 const LINE_MED_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 30%)' : 'hsl(0deg 0% 70%)');
+const TRACK_LINE_COLOR  = $derived(theme.isDark ? 'hsl(0deg 0% 20%)' : 'hsl(0deg 0% 80%)');
 const RULER_TEXT        = $derived(theme.isDark ? 'white' : 'hsl(0deg 0% 20%)');
 
 const ENTRY_WIDTH = 1;
@@ -98,12 +99,16 @@ export class TimelineRenderer {
   }
 
   #render(ctx: CanvasRenderingContext2D) {
+    if (this.layout.requestedLayout)
+      this.layout.layout(ctx);
+
     const t0 = Date.now();
   
-    this.#renderRuler(ctx);
     this.#renderWaveform(ctx);
     this.#renderTracks(ctx);
+    this.#renderRuler(ctx);
     this.#renderCursor(ctx);
+    this.#renderLeftColumn(ctx);
   
     ctx.font = 'bold ' + font(TimelineConfig.data.fontSize);
     ctx.fillStyle = INOUT_TEXT;
@@ -119,12 +124,17 @@ export class TimelineRenderer {
     
     if (!TimelineConfig.data.showDebug) return;
     ctx.translate(this.manager.scroll[0], 0);
+    const x = this.layout.width - 5;
+    const y = this.layout.height - 5;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
     ctx.font = `8px Courier, monospace`;
     ctx.fillStyle = theme.isDark ? 'white' : 'black';
-    ctx.fillText(`offset=${this.layout.offset.toFixed(2)}`, 5, 15);
-    ctx.fillText(`scale=${this.layout.scale.toFixed(2)}`, 5, 25);
-    ctx.fillText(`render time=${(Date.now() - t0).toFixed(1)}`, 80, 15);
-    ctx.fillText(`dpr=${devicePixelRatio}`, 80, 25);
+    ctx.fillText(`off=${this.layout.offset.toFixed(2).padEnd(6)}`, x, y);
+    ctx.fillText(`rt=${(Date.now() - t0).toFixed(1).padEnd(5)}`, x - 80, y);
+    ctx.fillText(`scale=${this.layout.scale.toFixed(2).padEnd(6)}`, x, y - 10);
+    ctx.fillText(`dpr=${devicePixelRatio.toString().padEnd(5)}`, x - 80, y - 10);
+    ctx.fillText(`lcw=${this.layout.leftColumnWidth.toFixed(2).padEnd(6)}`, x, y - 20);
   }
 
   #renderWaveform(ctx: CanvasRenderingContext2D) {
@@ -154,7 +164,7 @@ export class TimelineRenderer {
         this.layout.requestedSampler = true;
       }
   
-      let value = detail == 0 
+      const value = detail == 0 
         ? 0 
         : data[i] * (this.layout.height - TimelineLayout.HEADER_HEIGHT);
       const point = {x, y: value / 2};
@@ -182,10 +192,12 @@ export class TimelineRenderer {
   }
 
   #renderRuler(ctx: CanvasRenderingContext2D) {
+    const y = this.manager.scroll[1];
+
     const line = (pos: number, height: number) => {
       ctx.beginPath();
-      ctx.moveTo(pos, 0);
-      ctx.lineTo(pos, height);
+      ctx.moveTo(pos, y);
+      ctx.lineTo(pos, y + height);
       ctx.stroke();
     };
     const [small, nMed, nBig] = getTick(this.layout.scale);
@@ -193,12 +205,14 @@ export class TimelineRenderer {
           end = this.layout.offset + this.layout.width / this.layout.scale;
     const n = Math.ceil((end - start) / small);
     ctx.fillStyle = HEADER_BACK;
-    ctx.fillRect(this.manager.scroll[0], 0, this.layout.width, TimelineLayout.HEADER_HEIGHT);
+    ctx.fillRect(
+      this.manager.scroll[0], y, 
+      this.layout.width, TimelineLayout.HEADER_HEIGHT);
 
     ctx.lineWidth = 0.5;
     for (let i = 0; i < n; i++) {
       const t = start + i * small;
-      const pos = t * this.layout.scale;
+      const pos = t * this.layout.scale + this.layout.leftColumnWidth;
       let tickHeight;
       if (i % nBig == 0) {
         tickHeight = TimelineLayout.HEADER_HEIGHT;
@@ -218,17 +232,20 @@ export class TimelineRenderer {
     ctx.fillStyle = RULER_TEXT;
     ctx.font = font(TimelineLayout.HEADER_HEIGHT * 0.8);
     ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'start';
     for (let t = start; t < end; t += nBig * small) {
-      const pos = Math.round(t * this.layout.scale);
-      ctx.fillText(Basic.formatTimestamp(t, 2), pos + 5, TimelineLayout.HEADER_HEIGHT);
+      ctx.fillText(Basic.formatTimestamp(t, 2), 
+        Math.round(t * this.layout.scale + this.layout.leftColumnWidth) + 5, 
+        y + TimelineLayout.HEADER_HEIGHT);
     }
   }
 
   #renderTracks(ctx: CanvasRenderingContext2D) {
     ellipsisWidth = -1;
+    ctx.textAlign = 'start';
     ctx.textBaseline = 'top';
     ctx.font = font(TimelineConfig.data.fontSize);
-    for (let ent of this.layout.getVisibleEntries()) {
+    for (const ent of this.layout.getVisibleEntries()) {
       this.layout.getEntryPositions(ent).forEach((b) => {
         ctx.fillStyle = ent.label === 'none' 
           ? ENTRY_BACK 
@@ -252,10 +269,19 @@ export class TimelineRenderer {
         }
       });
     }
+
+    ctx.strokeStyle = TRACK_LINE_COLOR;
+    ctx.beginPath();
+    for (let i = 0; i <= this.layout.shownStyles.length; i++) {
+      const y = i * this.layout.entryHeight 
+        + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
+      ctx.moveTo(this.manager.scroll[0], y);
+      ctx.lineTo(this.manager.scroll[0] + this.layout.width, y);
+    }
+    ctx.stroke();
   }
 
   #renderCursor(ctx: CanvasRenderingContext2D) {
-    let pos = Playback.position * this.layout.scale;
     const selectBox = this.input.selectBox;
     if (selectBox) {
       ctx.fillStyle = BOXSELECT_BACK;
@@ -268,6 +294,7 @@ export class TimelineRenderer {
       ctx.fill();
       ctx.stroke();
     }
+
     const alignmentLine = this.input.alignmentLine;
     if (alignmentLine) {
       ctx.strokeStyle = ALIGNLINE_COLOR;
@@ -300,15 +327,60 @@ export class TimelineRenderer {
       ctx.fillRect(end, 0, this.layout.width + scrollX - end, this.layout.height);
     }
   
+    const x = Playback.position * this.layout.scale + this.layout.leftColumnWidth;
+    const y = this.manager.scroll[1];
     ctx.fillStyle = CURSOR_COLOR;
     ctx.beginPath();
-    ctx.moveTo(pos + 4, 0);
-    ctx.lineTo(pos - 4, 0);
-    ctx.lineTo(pos - 1, 10);
-    ctx.lineTo(pos - 1, this.layout.height);
-    ctx.lineTo(pos + 1, this.layout.height);
-    ctx.lineTo(pos + 1, 10);
-    ctx.lineTo(pos + 4, 0);
+    ctx.moveTo(x + 4, y);
+    ctx.lineTo(x - 4, y);
+    ctx.lineTo(x - 1, y + 10);
+    ctx.lineTo(x - 1, y + this.layout.height);
+    ctx.lineTo(x + 1, y + this.layout.height);
+    ctx.lineTo(x + 1, y + 10);
+    ctx.lineTo(x + 4, y);
     ctx.fill();
+  }
+
+  #renderLeftColumn(ctx: CanvasRenderingContext2D) {
+    const [x, y] = this.manager.convertPosition('offset', 'canvas', 0, 0);
+    ctx.fillStyle = 'lightgray';
+    if (this.layout.offset > 0) {
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#333a';
+    } else {
+      ctx.shadowColor = 'transparent';
+    }
+    ctx.fillRect(x, y, 
+      this.layout.leftColumnWidth, 
+      this.layout.height);
+    ctx.shadowColor = 'transparent';
+
+    ctx.strokeStyle = '#888';
+    ctx.beginPath();
+    ctx.moveTo(x + this.layout.leftColumnWidth, y);
+    ctx.lineTo(x + this.layout.leftColumnWidth, y + this.layout.height);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#aaa';
+    ctx.beginPath();
+    for (let i = 0; i <= this.layout.shownStyles.length; i++) {
+      const y = i * this.layout.entryHeight 
+        + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + this.layout.leftColumnWidth, y);
+    }
+    ctx.stroke();
+    
+    let y1 = 0 + TimelineLayout.HEADER_HEIGHT 
+               + TimelineLayout.TRACKS_PADDING
+               + this.layout.entryHeight * 0.5;
+    ctx.fillStyle = 'black';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'end';
+    for (const s of this.layout.shownStyles) {
+      ctx.fillText(s.name, 
+        x + this.layout.leftColumnWidth - TimelineLayout.LEFT_COLUMN_MARGIN, y1);
+      y1 += this.layout.entryHeight;
+    }
   }
 }
