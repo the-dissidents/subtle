@@ -50,10 +50,11 @@ export const Editing = {
     // TODO: make it more private to prevent direct editing
     focused: {
         entry: writable(null),
-        channel: null,
         control: null,
         style: null
     } as FocusState,
+
+    activeChannel: null as SubtitleStyle | null,
 
     editChanged: false,
     isEditingVirtualEntry: writable(false),

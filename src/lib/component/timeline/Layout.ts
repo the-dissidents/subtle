@@ -9,6 +9,7 @@ import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { get } from "svelte/store";
 import { TimelineConfig } from "./Config";
 import { EventHost } from "../../frontend/Frontend";
+import { Editing } from "../../frontend/Editing";
 
 const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
@@ -29,7 +30,7 @@ export class TimelineLayout {
   requestedSampler = false;
   requestedLayout = false;
   sampler: AudioSampler | null = null;
-  samplerMedia: MMedia | undefined;
+  #samplerMedia: MMedia | undefined;
 
   onLayout = new EventHost();
 
@@ -40,7 +41,7 @@ export class TimelineLayout {
   leftColumnWidth = 100;
 
   #shownStyles: SubtitleStyle[] = [];
-  stylesMap = new Map<SubtitleStyle, number>();
+  #stylesMap = new Map<SubtitleStyle, number>();
 
   constructor(
     public readonly canvas: HTMLCanvasElement
@@ -51,12 +52,12 @@ export class TimelineLayout {
     this.setScale(10);
 
     Playback.onLoad.bind(this, async (rawurl) => {
-      Debug.assert(this.samplerMedia === undefined || this.samplerMedia.isClosed)
+      Debug.assert(this.#samplerMedia === undefined || this.#samplerMedia.isClosed)
       if (DebugConfig.data.disableWaveform) return;
     
-      this.samplerMedia = await MMedia.open(rawurl);
+      this.#samplerMedia = await MMedia.open(rawurl);
       this.sampler = await AudioSampler.open(
-        this.samplerMedia, TimelineConfig.data.waveformResolution);
+        this.#samplerMedia, TimelineConfig.data.waveformResolution);
       this.sampler.onProgress = () => this.manager.requestRender();
       this.setScale(Math.max(this.width / this.sampler.duration, 10));
       this.setOffset(0);
@@ -68,10 +69,10 @@ export class TimelineLayout {
     Playback.onClose.bind(this, async () => {
       if (this.sampler == undefined)
         return Debug.early('already closed');
-      Debug.assert(this.samplerMedia !== undefined && !this.samplerMedia.isClosed);
+      Debug.assert(this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed);
       await Debug.info('closing timeline');
       await this.sampler.close();
-      this.samplerMedia = undefined;
+      this.#samplerMedia = undefined;
       this.sampler = null;
       Playback.setPosition(0);
       this.manager.requestRender();
@@ -91,6 +92,7 @@ export class TimelineLayout {
       this.keepPosInSafeArea(pos);
       this.manager.requestRender();
     });
+
     Source.onSubtitlesChanged.bind(this, (type) => {
       if (type == ChangeType.StyleDefinitions || type == ChangeType.General)
         this.requestedLayout = true;
@@ -161,7 +163,7 @@ export class TimelineLayout {
     const [w, x] = this.getHorizontalPos(ent);
     return [...ent.texts.entries()].flatMap(([style, text]) => {
       if (Source.subs.view.timelineExcludeStyles.has(style)) return [];
-      const i = this.stylesMap.get(style) ?? 0;
+      const i = this.#stylesMap.get(style) ?? 0;
       const y = this.entryHeight * i 
         + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
       return [{x: x, y: y, w: w, h: this.entryHeight, text}];
@@ -216,7 +218,10 @@ export class TimelineLayout {
     
     this.#shownStyles = subs.styles.filter((x) => !exclude.has(x));
     this.entryHeight = TimelineConfig.data.fontSize + 15;
-    this.stylesMap = new Map(this.#shownStyles.map((x, i) => [x, i]));
+    this.#stylesMap = new Map(this.#shownStyles.map((x, i) => [x, i]));
+
+    if (Editing.activeChannel && !this.#shownStyles.includes(Editing.activeChannel))
+        Editing.activeChannel = null;
 
     ctx.font = `${TimelineConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`;
     this.leftColumnWidth =

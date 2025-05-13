@@ -7,6 +7,7 @@ import { InterfaceConfig, MainConfig } from "../../config/Groups";
 import { Basic } from "../../Basic";
 import { TimelineConfig } from "./Config";
 import type { TimelineInput } from "./Input";
+import { Editing } from "../../frontend/Editing";
 
 const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(0deg 0% 75%/50%)');
 const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
@@ -14,6 +15,14 @@ const LINE_BIG_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg
 const LINE_MED_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 30%)' : 'hsl(0deg 0% 70%)');
 const TRACK_LINE_COLOR  = $derived(theme.isDark ? 'hsl(0deg 0% 20%)' : 'hsl(0deg 0% 80%)');
 const RULER_TEXT        = $derived(theme.isDark ? 'white' : 'hsl(0deg 0% 20%)');
+
+const LEFT_COLUMN_BACK      = $derived(theme.isDark ? '#333' : '#d3d3d3');
+const LEFT_COLUMN_SELECTED  = $derived(theme.isDark ? '#555' : '#bbb');
+const LEFT_COLUMN_SHADOW    = $derived(theme.isDark ? '#eeea' : '#333a');
+const LEFT_COLUMN_OUTLINE   = $derived(theme.isDark ? '#555' : '#888');
+const LEFT_COLUMN_SEPARATOR = $derived(theme.isDark ? '#444' : '#aaa');
+const LEFT_COLUMN_TEXT      = $derived(theme.isDark ? '#fff' : '#000');
+const SELECTED_TRACK_BACK   = $derived(theme.isDark ? '#222' : '#eaeaea');
 
 const ENTRY_WIDTH = 1;
 const ENTRY_WIDTH_FOCUS = 2;
@@ -241,6 +250,27 @@ export class TimelineRenderer {
   }
 
   #renderTracks(ctx: CanvasRenderingContext2D) {
+    let y = TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
+    for (const s of this.layout.shownStyles) {
+      if (Editing.activeChannel == s) {
+        ctx.fillStyle = SELECTED_TRACK_BACK;
+        ctx.fillRect(this.manager.scroll[0], y, 
+          this.layout.width, 
+          this.layout.entryHeight);
+      }
+      y += this.layout.entryHeight;
+    }
+
+    ctx.strokeStyle = TRACK_LINE_COLOR;
+    ctx.beginPath();
+    for (let i = 0; i <= this.layout.shownStyles.length; i++) {
+      const y = i * this.layout.entryHeight 
+        + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
+      ctx.moveTo(this.manager.scroll[0], y);
+      ctx.lineTo(this.manager.scroll[0] + this.layout.width, y);
+    }
+    ctx.stroke();
+
     ellipsisWidth = -1;
     ctx.textAlign = 'start';
     ctx.textBaseline = 'top';
@@ -269,16 +299,6 @@ export class TimelineRenderer {
         }
       });
     }
-
-    ctx.strokeStyle = TRACK_LINE_COLOR;
-    ctx.beginPath();
-    for (let i = 0; i <= this.layout.shownStyles.length; i++) {
-      const y = i * this.layout.entryHeight 
-        + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
-      ctx.moveTo(this.manager.scroll[0], y);
-      ctx.lineTo(this.manager.scroll[0] + this.layout.width, y);
-    }
-    ctx.stroke();
   }
 
   #renderCursor(ctx: CanvasRenderingContext2D) {
@@ -319,12 +339,16 @@ export class TimelineRenderer {
     if (area.start !== undefined) {
       const start = area.start * this.layout.scale;
       ctx.fillStyle = INOUT_AREA_OUTSIDE;
-      ctx.fillRect(scrollX, 0, start - scrollX, this.layout.height);
+      ctx.fillRect(scrollX, 0, 
+        start + this.layout.leftColumnWidth - scrollX, 
+        this.layout.height);
     }
     if (area.end !== undefined) {
       const end = area.end * this.layout.scale;
       ctx.fillStyle = INOUT_AREA_OUTSIDE;
-      ctx.fillRect(end, 0, this.layout.width + scrollX - end, this.layout.height);
+      ctx.fillRect(end + this.layout.leftColumnWidth, 0, 
+        this.layout.width + scrollX - end, 
+        this.layout.height);
     }
   
     const x = Playback.position * this.layout.scale + this.layout.leftColumnWidth;
@@ -343,10 +367,10 @@ export class TimelineRenderer {
 
   #renderLeftColumn(ctx: CanvasRenderingContext2D) {
     const [x, y] = this.manager.convertPosition('offset', 'canvas', 0, 0);
-    ctx.fillStyle = 'lightgray';
+    ctx.fillStyle = LEFT_COLUMN_BACK;
     if (this.layout.offset > 0) {
       ctx.shadowBlur = 10;
-      ctx.shadowColor = '#333a';
+      ctx.shadowColor = LEFT_COLUMN_SHADOW;
     } else {
       ctx.shadowColor = 'transparent';
     }
@@ -355,13 +379,32 @@ export class TimelineRenderer {
       this.layout.height);
     ctx.shadowColor = 'transparent';
 
-    ctx.strokeStyle = '#888';
+    ctx.strokeStyle = LEFT_COLUMN_OUTLINE;
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x + this.layout.leftColumnWidth, y);
     ctx.lineTo(x + this.layout.leftColumnWidth, y + this.layout.height);
     ctx.stroke();
+    
+    let y1 = TimelineLayout.HEADER_HEIGHT 
+           + TimelineLayout.TRACKS_PADDING;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'end';
+    for (const s of this.layout.shownStyles) {
+      if (Editing.activeChannel == s) {
+        ctx.fillStyle = LEFT_COLUMN_SELECTED;
+        ctx.fillRect(x, y1, 
+          this.layout.leftColumnWidth, 
+          this.layout.entryHeight);
+      }
+      ctx.fillStyle = LEFT_COLUMN_TEXT;
+      ctx.fillText(s.name, 
+        x + this.layout.leftColumnWidth - TimelineLayout.LEFT_COLUMN_MARGIN, 
+        y1 + this.layout.entryHeight * 0.5);
+      y1 += this.layout.entryHeight;
+    }
 
-    ctx.strokeStyle = '#aaa';
+    ctx.strokeStyle = LEFT_COLUMN_SEPARATOR;
     ctx.beginPath();
     for (let i = 0; i <= this.layout.shownStyles.length; i++) {
       const y = i * this.layout.entryHeight 
@@ -370,17 +413,5 @@ export class TimelineRenderer {
       ctx.lineTo(x + this.layout.leftColumnWidth, y);
     }
     ctx.stroke();
-    
-    let y1 = 0 + TimelineLayout.HEADER_HEIGHT 
-               + TimelineLayout.TRACKS_PADDING
-               + this.layout.entryHeight * 0.5;
-    ctx.fillStyle = 'black';
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'end';
-    for (const s of this.layout.shownStyles) {
-      ctx.fillText(s.name, 
-        x + this.layout.leftColumnWidth - TimelineLayout.LEFT_COLUMN_MARGIN, y1);
-      y1 += this.layout.entryHeight;
-    }
   }
 }

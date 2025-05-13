@@ -87,6 +87,8 @@ export class TimelineInput {
     this.manager.canvas.oncontextmenu = (e) => e.preventDefault();
     this.manager.canvas.ondblclick = () => this.#onDoubleClick();
     this.manager.onMouseMove.bind(this, this.#onMouseMove.bind(this));
+    this.manager.onMouseDown.bind(this, this.#onMouseDown.bind(this));
+
     this.manager.canBeginDrag = this.#canBeginDrag.bind(this);
     this.manager.onDrag.bind(this, this.#onDrag.bind(this));
     this.manager.onDragEnd.bind(this, this.#onDragEnd.bind(this));
@@ -194,6 +196,21 @@ export class TimelineInput {
     Playback.setPosition(pos);
   }
 
+  #onMouseDown(e: MouseEvent) {
+    if (e.offsetX < this.layout.leftColumnWidth) {
+      const i = Math.floor((e.offsetY + this.manager.scroll[1] 
+        - TimelineLayout.HEADER_HEIGHT - TimelineLayout.TRACKS_PADDING) / this.layout.entryHeight);
+      if (i >= 0 && i < this.layout.shownStyles.length) {
+        const style = this.layout.shownStyles[i];
+        if (Editing.activeChannel == style)
+          Editing.activeChannel = null;
+        else 
+          Editing.activeChannel = style;
+        this.manager.requestRender();
+      }
+    }
+  }
+
   #onDoubleClick() {
     if (this.selection.size == 1) {
       let one = [...this.selection][0];
@@ -205,6 +222,9 @@ export class TimelineInput {
   #onMouseMove(e: MouseEvent) {
     const canvas = this.manager.canvas;
     canvas.style.cursor = 'default';
+    if (e.offsetX < this.layout.leftColumnWidth)
+      return;
+
     if (e.offsetY < TimelineLayout.HEADER_HEIGHT) {
       canvas.style.cursor = 'col-resize';
       return;
@@ -240,7 +260,10 @@ export class TimelineInput {
   }
 
   #canBeginDrag(e0: MouseEvent): boolean {
-    e0.preventDefault();
+    if (e0.offsetX < this.layout.leftColumnWidth)
+      return false;
+    
+    // e0.preventDefault();
     const origPos = this.layout.offset + 
       (e0.offsetX - this.layout.leftColumnWidth) / this.layout.scale;
     const scrollX = this.manager.scroll[0];

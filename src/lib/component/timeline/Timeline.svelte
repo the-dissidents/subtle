@@ -121,6 +121,7 @@ h5 {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  pointer-events: none;
 }
 .button-container button {
   position: absolute;
@@ -128,6 +129,7 @@ h5 {
   right: 0;
   margin-right: 0;
   margin-top: 2px;
+  pointer-events: auto;
 }
 
 .container {
