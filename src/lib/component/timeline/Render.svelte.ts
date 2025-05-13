@@ -13,7 +13,7 @@ const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(
 const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
 const LINE_BIG_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 40%)');
 const LINE_MED_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 30%)' : 'hsl(0deg 0% 70%)');
-const TRACK_LINE_COLOR  = $derived(theme.isDark ? 'hsl(0deg 0% 20%)' : 'hsl(0deg 0% 80%)');
+const TRACK_LINE_COLOR  = $derived(theme.isDark ? 'hsl(0deg 0% 20%)' : 'hsl(0deg 0% 90%)');
 const RULER_TEXT        = $derived(theme.isDark ? 'white' : 'hsl(0deg 0% 20%)');
 
 const LEFT_COLUMN_BACK      = $derived(theme.isDark ? '#333' : '#d3d3d3');
@@ -22,7 +22,7 @@ const LEFT_COLUMN_SHADOW    = $derived(theme.isDark ? '#eeea' : '#333a');
 const LEFT_COLUMN_OUTLINE   = $derived(theme.isDark ? '#555' : '#888');
 const LEFT_COLUMN_SEPARATOR = $derived(theme.isDark ? '#444' : '#aaa');
 const LEFT_COLUMN_TEXT      = $derived(theme.isDark ? '#fff' : '#000');
-const SELECTED_TRACK_BACK   = $derived(theme.isDark ? '#222' : '#eaeaea');
+const SELECTED_TRACK_BACK   = $derived(theme.isDark ? '#7772' : '#aaa2');
 
 const ENTRY_WIDTH = 1;
 const ENTRY_WIDTH_FOCUS = 2;
@@ -166,7 +166,7 @@ export class TimelineRenderer {
     ctx.fillStyle = PENDING_WAVEFORM_COLOR;
     for (let i = start; i < end; i++) {
       const detail = this.layout.sampler.detail[i * step];
-      const x = i * width_v;
+      const x = i * width_v + this.layout.leftColumnWidth;
   
       if (detail == 0) {
         ctx.fillRect(x, 0, drawWidth, this.layout.height);
@@ -182,10 +182,10 @@ export class TimelineRenderer {
     const baseline = 
       (this.layout.height - TimelineLayout.HEADER_HEIGHT) / 2 + TimelineLayout.HEADER_HEIGHT;
     ctx.beginPath();
-    ctx.moveTo(start * width_v, baseline);
+    ctx.moveTo(start * width_v + this.layout.leftColumnWidth, baseline);
     points.forEach(
       ({x, y}) => ctx.lineTo(x, baseline + 0.5 / devicePixelRatio + y));
-    ctx.lineTo(end * width_v, baseline);
+    ctx.lineTo(end * width_v + this.layout.leftColumnWidth, baseline);
     points.reverse().forEach(
       ({x, y}) => ctx.lineTo(x, baseline - 0.5 / devicePixelRatio - y));
     ctx.closePath();

@@ -8,7 +8,7 @@ import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Editing, KeepInViewMode, SelectMode } from "./Editing";
-import { parseSubtitleSource } from "./Frontend";
+import { EventHost, parseSubtitleSource } from "./Frontend";
 import { Source, ChangeType, ChangeCause } from "./Source";
 import { Labels, SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Playback } from "./Playback";
@@ -96,7 +96,7 @@ function doubleForEachStyle(
     }));
 }
 
-export const Commands: Record<string, UICommand> = {
+export const Commands = {
     undo: new UICommand(
         [ binding(['CmdOrCtrl+Z'], ['Table', 'Timeline']),
           binding(['CmdOrCtrl+Alt+Z']) ],
@@ -201,11 +201,11 @@ export const Commands: Record<string, UICommand> = {
         items: [
             {
                 name: () => 'ASS',
-                call: () => Commands.exportASS.call()
+                call: () => {Commands.exportASS.call()}
             },
             {
                 name: () => $_('cxtmenu.srt-plaintext'),
-                call: () => Commands.exportSRTPlaintext.call()
+                call: () => {Commands.exportSRTPlaintext.call()}
             }
         ]
     }),
@@ -408,11 +408,21 @@ export const Commands: Record<string, UICommand> = {
         [ binding(['J'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-1'),
-        call: () => {
-            Debug.debug('1 start');
+        isApplicable: () => Playback.isPlaying && Editing.activeChannel !== null,
+        call: async () => {
+            if (Commands.holdToCreateEntry2.activated)
+                await Commands.holdToCreateEntry2.end();
+
+            Debug.assert(Editing.activeChannel !== null);
+            const pos = Playback.position;
+            const entry = Editing.insertAtTime(pos, pos, Editing.activeChannel);
+            Playback.onPositionChanged.bind(entry, 
+                (newpos) => { entry.end = Math.max(entry.end, newpos) });
+            return entry;
         },
-        onDeactivate: () => {
-            Debug.debug('1 end');
+        onDeactivate: (entry) => {
+            EventHost.unbind(entry);
+            Source.markChanged(ChangeType.Times);
         }
     }),
 
@@ -420,11 +430,21 @@ export const Commands: Record<string, UICommand> = {
         [ binding(['K'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-2'),
-        call: () => {
-            Debug.debug('2 start');
+        isApplicable: () => Playback.isPlaying && Editing.activeChannel !== null,
+        call: async () => {
+            if (Commands.holdToCreateEntry1.activated)
+                await Commands.holdToCreateEntry1.end();
+            
+            Debug.assert(Editing.activeChannel !== null);
+            const pos = Playback.position;
+            const entry = Editing.insertAtTime(pos, pos, Editing.activeChannel);
+            Playback.onPositionChanged.bind(entry, 
+                (newpos) => { entry.end = Math.max(entry.end, newpos) });
+            return entry;
         },
-        onDeactivate: () => {
-            Debug.debug('2 end');
+        onDeactivate: (entry) => {
+            EventHost.unbind(entry);
+            Source.markChanged(ChangeType.Times);
         }
     }),
 
@@ -622,7 +642,8 @@ export const Commands: Record<string, UICommand> = {
                     end = Math.min(start + 2, ent.start);
                 }
             }
-            Editing.insertEntry(ent, start, end, index);
+            Editing.insertEntry(ent.texts.keys(), start, end, index);
+            Source.markChanged(ChangeType.Times);
         },
     }),
     insertAfterFocus: new UICommand(
@@ -652,7 +673,8 @@ export const Commands: Record<string, UICommand> = {
                     end = start + 2;
                 }
             }
-            Editing.insertEntry(ent ?? undefined, start, end, index);
+            Editing.insertEntry(ent?.texts?.keys() ?? undefined, start, end, index);
+            Source.markChanged(ChangeType.Times);
         },
     }),
     moveUp: new UICommand(
@@ -950,4 +972,4 @@ export const Commands: Record<string, UICommand> = {
         isApplicable: () => hasSelection(),
         call: () => Dialogs.splitByLine.showModal!()
     }),
-}
+};

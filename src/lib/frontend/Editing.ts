@@ -97,16 +97,28 @@ export const Editing = {
         elem.scrollIntoView();
     },
 
-    insertEntry(like: SubtitleEntry | undefined, start: number, end: number, index: number) {
+    insertAtTime(start: number, end: number, style: SubtitleStyle) {
+        let index = Source.subs.entries.length;
+        let beforeTime = -Infinity;
+        Source.subs.entries.forEach((ent, i) => {
+            if (ent.texts.has(style) && ent.end <= start && ent.end >= beforeTime) {
+                beforeTime = ent.end;
+                index = i + 1;
+            }
+        });
+        return this.insertEntry([style], start, end, index);
+    },
+
+    insertEntry(
+        styles: Iterable<SubtitleStyle> | undefined, 
+        start: number, end: number, index: number
+    ) {
         let entry = new SubtitleEntry(start, end);
-        if (like) {
-            for (const [style, _] of like.texts)
-                entry.texts.set(style, '');
-        } else {
-            entry.texts.set(Source.subs.defaultStyle, '');
-        }
+        if (!styles) styles = [Source.subs.defaultStyle];
+        for (const s of styles)
+            entry.texts.set(s, '');
+
         Source.subs.entries.splice(index, 0, entry);
-        Source.markChanged(ChangeType.Times);
         setTimeout(() => this.selectEntry(entry, SelectMode.Single), 0);
         return entry;
     },

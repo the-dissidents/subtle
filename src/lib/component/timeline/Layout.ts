@@ -197,10 +197,9 @@ export class TimelineLayout {
   }
 
   keepPosInSafeArea(pos: number) {
-    const marginL = this.leftColumnWidth / this.#scale;
-    const marginR = CURSOR_SAFE_AREA_RIGHT_MARGIN / this.#scale;
     const left = this.offset,
-         right = this.offset + this.width / this.#scale - marginR;
+         right = this.offset + (this.width 
+            - CURSOR_SAFE_AREA_RIGHT_MARGIN - this.leftColumnWidth) / this.#scale;
     if (pos < left)  this.setOffset(this.offset + pos - left);
     if (pos > right) this.setOffset(this.offset + pos - right);
   }

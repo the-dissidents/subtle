@@ -4,19 +4,19 @@ import { Interface } from "./Interface";
 import { bindingToString, type KeyBinding, type CommandBinding } from "./Keybinding";
 import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api/menu";
 
-export type CommandOptions = ({
+export type CommandOptions<TState = any> = ({
     name: string | (() => string),
     displayAccel?: string,
     isApplicable?: () => boolean,
     isDialog?: boolean,
-    call: () => (void | Promise<void>)
+    call: () => (TState | Promise<TState>)
 } | {
     name: string | (() => string),
     menuName?: string | (() => string),
     isApplicable?: () => boolean,
-    items: CommandOptions[] | (() => CommandOptions[])
+    items: CommandOptions<TState>[] | (() => CommandOptions<TState>[])
 }) & {
-    onDeactivate?: () => (void | Promise<void>)
+    onDeactivate?: (state: TState) => (void | Promise<void>)
 };
 
 /** T should not be a function type */
@@ -25,52 +25,34 @@ function unwrap<T>(fv: T | (() => T)): T {
     return typeof fv === 'function' ? fv() : fv;
 }
 
-async function commandOptionCall(item: CommandOptions) {
-    const enabled = item.isApplicable ? item.isApplicable() : true;
-    Debug.assert(enabled);
-    if ('items' in item) {
-        const items = unwrap(item.items);
-        let n = await Dialogs.overlayMenu(
-            items.map((x) => ({
-                text: unwrap(x.name),
-                disabled: x.isApplicable ? !x.isApplicable() : false
-            })), 
-            unwrap(item.name),
-            unwrap(item.menuName ?? '')
-        );
-        if (n < 0) return;
-        await commandOptionCall(items[n]);
-    } else {
-        await item.call();
-    }
-}
-
 function commandOptionToMenu(item: CommandOptions): MenuItemOptions | SubmenuOptions {
     const enabled = item.isApplicable ? item.isApplicable() : true;
     return 'call' in item ? {
         text: unwrap(item.name),
         enabled,
         accelerator: item.displayAccel,
-        action: item.call
+        action: () => item.call()
     } : {
         text: unwrap(item.name),
         enabled,
         items: enabled ? [...item.menuName ? [{
             text: unwrap(item.menuName),
             enabled: false
-        }] : [], ...unwrap(item.items).map(commandOptionToMenu)] : []
+        }] : [], ...unwrap(item.items).map((x) => commandOptionToMenu(x))] : []
     }
 }
 
 export type UICommandType = 'simple' | 'menu' | 'dialog';
 
-export class UICommand {
-    static #activated = new Map<UICommand, KeyBinding | null>();
-    static get activeCommands(): ReadonlyMap<UICommand, KeyBinding | null> {
+export class UICommand<TState = void> {
+    static #activated = new Map<UICommand<any>, KeyBinding | null>();
+    static get activeCommands(): ReadonlyMap<UICommand<any>, KeyBinding | null> {
         return this.#activated;
     }
 
     public readonly defaultBindings: readonly CommandBinding[];
+    
+    #state: TState | undefined;
 
     get activated() {
         return UICommand.#activated.has(this);
@@ -78,7 +60,7 @@ export class UICommand {
 
     constructor(
         public bindings: CommandBinding[], 
-        private options: CommandOptions
+        private options: CommandOptions<TState>
     ) {
         this.defaultBindings = structuredClone(bindings);
     }
@@ -121,6 +103,26 @@ export class UICommand {
             await this.end();
     }
 
+    async #runCommand(item: CommandOptions) {
+        const enabled = item.isApplicable ? item.isApplicable() : true;
+        Debug.assert(enabled);
+        if ('items' in item) {
+            const items = unwrap(item.items);
+            let n = await Dialogs.overlayMenu(
+                items.map((x) => ({
+                    text: unwrap(x.name),
+                    disabled: x.isApplicable ? !x.isApplicable() : false
+                })), 
+                unwrap(item.name),
+                unwrap(item.menuName ?? '')
+            );
+            if (n < 0) return;
+            await this.#runCommand(items[n]);
+        } else {
+            this.#state = await item.call();
+        }
+    }
+
     async start(key: KeyBinding | null = null) {
         // don't start if already running
         if (this.activated) return false;
@@ -130,7 +132,7 @@ export class UICommand {
 
         Debug.debug('executing command', this.name);
         UICommand.#activated.set(this, key);
-        await commandOptionCall(this.options);
+        await this.#runCommand(this.options);
         // end immediately when there's no onDeactivate handler. this is for reducing the 
         // probability of accidentally leaving a command marked as activated for too long, 
         // e.g. in the case where the key is lifted only after the window lost focus
@@ -140,9 +142,11 @@ export class UICommand {
     }
 
     async end() {
-        Debug.assert(this.activated);
-        if (this.options.onDeactivate)
-            await this.options.onDeactivate();
+        Debug.assert(this.activated && this.#state !== undefined);
+        if (this.options.onDeactivate) {
+            Debug.debug('executing onDeactivate', this.name);
+            await this.options.onDeactivate(this.#state);
+        }
         UICommand.#activated.delete(this);
     }
 };
