@@ -1,10 +1,10 @@
 import { Debug } from "../Debug";
 import { Dialogs } from "./Dialogs";
 import { Interface } from "./Interface";
-import { bindingToString, type CommandBinding } from "./Keybinding";
+import { bindingToString, type KeyBinding, type CommandBinding } from "./Keybinding";
 import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api/menu";
 
-export type CommandOptions = {
+export type CommandOptions = ({
     name: string | (() => string),
     displayAccel?: string,
     isApplicable?: () => boolean,
@@ -15,6 +15,8 @@ export type CommandOptions = {
     menuName?: string | (() => string),
     isApplicable?: () => boolean,
     items: CommandOptions[] | (() => CommandOptions[])
+}) & {
+    onDeactivate?: () => (void | Promise<void>)
 };
 
 /** T should not be a function type */
@@ -63,7 +65,16 @@ function commandOptionToMenu(item: CommandOptions): MenuItemOptions | SubmenuOpt
 export type UICommandType = 'simple' | 'menu' | 'dialog';
 
 export class UICommand {
+    static #activated = new Map<UICommand, KeyBinding | null>();
+    static get activeCommands(): ReadonlyMap<UICommand, KeyBinding | null> {
+        return this.#activated;
+    }
+
     public readonly defaultBindings: readonly CommandBinding[];
+
+    get activated() {
+        return UICommand.#activated.has(this);
+    }
 
     constructor(
         public bindings: CommandBinding[], 
@@ -82,6 +93,7 @@ export class UICommand {
         return unwrap(this.options.name);
     }
 
+    // FIXME: using command as menu item does not update its `activated` state
     toMenuItem(): SubmenuOptions {
         if ('call' in this.options) {
             const focus = Interface.getUIFocus();
@@ -105,8 +117,32 @@ export class UICommand {
     }
 
     async call() {
+        if (await this.start() && this.activated)
+            await this.end();
+    }
+
+    async start(key: KeyBinding | null = null) {
+        // don't start if already running
+        if (this.activated) return false;
+
         const enabled = this.options.isApplicable ? this.options.isApplicable() : true;
-        if (!enabled) return;
+        if (!enabled) return false;
+
+        Debug.debug('executing command', this.name);
+        UICommand.#activated.set(this, key);
         await commandOptionCall(this.options);
+        // end immediately when there's no onDeactivate handler. this is for reducing the 
+        // probability of accidentally leaving a command marked as activated for too long, 
+        // e.g. in the case where the key is lifted only after the window lost focus
+        if (!this.options.onDeactivate)
+            UICommand.#activated.delete(this);
+        return true;
+    }
+
+    async end() {
+        Debug.assert(this.activated);
+        if (this.options.onDeactivate)
+            await this.options.onDeactivate();
+        UICommand.#activated.delete(this);
     }
 };

@@ -82,7 +82,7 @@ export const Interface = {
     },
 
     setStatus(msg: string, type: StatusType = 'info') {
-        Debug.debug('status ->', msg, type);
+        Debug.trace('status ->', msg, type);
         status.set({ msg, type });
     },
 

@@ -403,6 +403,31 @@ export const Commands: Record<string, UICommand> = {
         name: () => $_('action.jump-forward'),
         call: () => Playback.setPosition(Playback.position + InputConfig.data.skipDuration)
     }),
+
+    holdToCreateEntry1: new UICommand(
+        [ binding(['J'], ['Timeline']) ],
+    {
+        name: () => $_('action.hold-to-create-entry-1'),
+        call: () => {
+            Debug.debug('1 start');
+        },
+        onDeactivate: () => {
+            Debug.debug('1 end');
+        }
+    }),
+
+    holdToCreateEntry2: new UICommand(
+        [ binding(['K'], ['Timeline']) ],
+    {
+        name: () => $_('action.hold-to-create-entry-2'),
+        call: () => {
+            Debug.debug('2 start');
+        },
+        onDeactivate: () => {
+            Debug.debug('2 end');
+        }
+    }),
+
     copyJSON: new UICommand(
         [ binding(['CmdOrCtrl+C'], ['Table', 'Timeline']) ],
     {

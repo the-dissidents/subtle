@@ -19,6 +19,8 @@
     "exchange-channel": "exchange channels",
     "fix-erroneous-overlapping": "fix erroneous overlapping",
     "focus-on-table": "focus on table",
+    "hold-to-create-entry-1": "hold to create entry (1)",
+    "hold-to-create-entry-2": "hold to create entry (2)",
     "insert-after": "insert after",
     "insert-before": "insert before",
     "invert-selection": "invert selection",

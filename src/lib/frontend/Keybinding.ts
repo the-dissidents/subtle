@@ -3,7 +3,7 @@ import { Debug } from "../Debug";
 import { HashMap } from "../details/HashMap";
 import { guardAsync, Interface } from "./Interface";
 import { UIFocusList, type UIFocus } from "./Frontend";
-import type { UICommand } from "./CommandBase";
+import { UICommand } from "./CommandBase";
 
 import { Dialogs } from "./Dialogs";
 import type { JSONSchemaType, JTDSchemaType } from "ajv/dist/core";
@@ -14,7 +14,9 @@ import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 export type KeyBinding = {
+    /** key code, as used by Tauri menus */
     key: KeyCode,
+    /** modifers, as used by `getModifierState` */
     modifiers: Set<ModifierKey>,
 };
 
@@ -210,7 +212,8 @@ function isKeyCode(code: string): code is KeyCode {
     return keyCodeSet.has(code as any);
 }
 
-function translateCode(code: string): KeyCode | null {
+/** Convert DOM a key code (`KeyboardEvent.code`) into Tauri key code */
+function fromDOM(code: string): KeyCode | null {
     if (code in codeMap)
         return codeMap[code as keyof typeof codeMap];
     return null;
@@ -234,17 +237,25 @@ let currentSequence: KeyBinding[] = [];
 let currentNode: KeyTreeNode | undefined;
 let bindingTree = new KeyTree([]);
 
-export type AcceptKeyResult = {
+export type AcceptKeyDownResult = {
     type: 'notFound',
     sequence: KeyBinding[]
 } | {
-    type: 'ok',
+    type: 'activate',
+    key: KeyBinding,
     command: UICommand
 } | {
     type: 'waitNext',
     currentSequence: KeyBinding[]
 } | {
     type: 'incomplete' | 'disabled'
+};
+
+export type AcceptKeyUpResult = {
+    type: 'deactivate',
+    commands: UICommand[]
+} | {
+    type: 'notFound'
 };
 
 type KeybindingSerialization = Record<string, {
@@ -321,10 +332,9 @@ export const KeybindingManager = {
                             } }), 'error');
                     }
                     break;
-                case "ok":
+                case "activate":
                     ev.preventDefault();
-                    Debug.debug('keyboard command', result.command.name);
-                    result.command.call();
+                    result.command.start(result.key);
                     break;
                 case "waitNext":
                     ev.preventDefault();
@@ -332,6 +342,18 @@ export const KeybindingManager = {
                         { values: { key: 
                             result.currentSequence.map(bindingToString).join(' ')
                         } }));
+                    break;
+                default:
+                    Debug.never(result);
+            }
+        });
+        document.addEventListener('keyup', (ev) => {
+            const result = this.processKeyUp(ev);
+            switch (result.type) {
+                case 'deactivate':
+                    result.commands.forEach((x) => x.end());
+                    break;
+                case 'notFound':
                     break;
                 default:
                     Debug.never(result);
@@ -386,7 +408,7 @@ export const KeybindingManager = {
     parseKey(ev: KeyboardEvent): KeyBinding | null {
         if (ModifierKeys.includes(ev.key as any))
             return null;
-        let key = translateCode(ev.code);
+        let key = fromDOM(ev.code);
         if (!key) return null;
         return {
             key,
@@ -394,7 +416,7 @@ export const KeybindingManager = {
         };
     },
 
-    processKeydown(ev: KeyboardEvent): AcceptKeyResult {
+    processKeydown(ev: KeyboardEvent): AcceptKeyDownResult {
         if (Dialogs.modalOpenCounter > 0)
             return { type: 'disabled' }; // TODO: more sophisticated disabling?
         const key = this.parseKey(ev);
@@ -412,8 +434,8 @@ export const KeybindingManager = {
             if (cmd) {
                 currentSequence = [];
                 return {
-                    type: 'ok',
-                    command: cmd.command
+                    type: 'activate',
+                    key, command: cmd.command
                 };
             }
             if (node.children.size > 0 
@@ -429,6 +451,24 @@ export const KeybindingManager = {
         return {
             type: 'notFound',
             sequence: seq
+        };
+    },
+
+    processKeyUp(ev: KeyboardEvent): AcceptKeyUpResult {
+        const code = fromDOM(ev.code);
+        const commands: UICommand[] = [];
+        for (const [cmd, key] of UICommand.activeCommands) {
+            if (!key) continue;
+            if (key.key === code || key.modifiers.has(ev.key as ModifierKey))
+                commands.push(cmd);
+        }
+        if (commands.length > 0) {
+            return {
+                type: 'deactivate',
+                commands
+            };
+        } else return {
+            type: 'notFound'
         };
     },
 

@@ -19,6 +19,8 @@
     "exchange-channel": "交换频道",
     "fix-erroneous-overlapping": "修复错误的重叠",
     "focus-on-table": "聚焦到字幕表格",
+    "hold-to-create-entry-1": "按住创建字幕块 (1)",
+    "hold-to-create-entry-2": "按住创建字幕块 (2)",
     "insert-after": "在之后插入",
     "insert-before": "在之前插入",
     "invert-selection": "反选",
