@@ -75,7 +75,7 @@ $effect(() => {
 
 <style>
   .timestamp {
-    font-family: Menlo, Consolas, 'Courier New', Courier, monospace;
+    font-family: var(--monospaceFontFamily);
     text-align: center;
     box-sizing: border-box;
     width: 110px;

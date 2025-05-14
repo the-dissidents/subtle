@@ -130,6 +130,9 @@ MainConfig.hook(() => InterfaceConfig.data.editorFontSize,
 MainConfig.hook(() => InterfaceConfig.data.editorFontFamily, 
   (v) => document.documentElement.style.setProperty('--editorFontFamily', v));
 
+MainConfig.hook(() => InterfaceConfig.data.monospaceFontFamily, 
+  (v) => document.documentElement.style.setProperty('--monospaceFontFamily', v));
+
 MainConfig.hook(() => InterfaceConfig.data.language, (lang) => {
   locale.set(lang);
   console.log('language =', lang);
@@ -153,22 +156,19 @@ MainConfig.hook(() => DebugConfig.data.logLevel, (v) => {
 MainConfig.hook(() => DebugConfig.data.persistentLogLevel, (v) => 
   Debug.setPersistentFilterLevel(GetLevelFilter[v as keyof typeof GetLevelFilter]));
 
-MainConfig.init();
-
 let settingTheme = false;
-async function updateTheme() {
-  if (settingTheme) return;
-  settingTheme = true;
-  await appWindow.setTheme(InterfaceConfig.data.theme == 'light' ? 'light'
-               : InterfaceConfig.data.theme == 'dark' ? 'dark'
-               : undefined);
-  settingTheme = false;
-  Debug.debug('changed theme', InterfaceConfig.data.theme);
-}
+MainConfig.hook(() => InterfaceConfig.data.theme, 
+  async (theme) => {
+    if (settingTheme) return;
+    settingTheme = true;
+    await appWindow.setTheme(theme == 'light' ? 'light'
+                           : theme == 'dark' ? 'dark'
+                           : undefined);
+    settingTheme = false;
+    Debug.debug('changed theme', InterfaceConfig.data.theme);
+  });
 
-$effect(() => {
-  updateTheme();
-});
+MainConfig.init();
 
 KeybindingManager.commands = new Map(Object.entries(Commands));
 KeybindingManager.init();

@@ -57,8 +57,12 @@ export const InterfaceConfig = new PublicConfigGroup(
         editorFontFamily: {
             localizedName: () => $_('config.editor-font-family'),
             type: 'string',
-            description: () => $_('config.ui-font-family-d'),
             default: 'Arial, Helvetica, sans-serif'
+        },
+        monospaceFontFamily: {
+            localizedName: () => $_('config.monospace-font-family'),
+            type: 'string',
+            default: "Menlo, Consolas, 'Courier New', Courier, monospace"
         },
         minScrollerLength: {
             localizedName: () => $_('config.minimum-scroller-length'),

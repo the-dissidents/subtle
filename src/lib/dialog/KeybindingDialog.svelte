@@ -52,7 +52,7 @@ locale.subscribe(() => refresh = !refresh);
     <table class="data">
     {#key refresh}
     <tbody>
-      {#each commands as [key, cmd]}
+      {#each commands as [__, cmd]}
         {@const lines = cmd.bindings.length}
         {#snippet row(binding: CommandBinding)}
           {@const error = KeybindingManager.findConflict(binding, cmd).length > 0}
@@ -199,6 +199,9 @@ locale.subscribe(() => refresh = !refresh);
     width: 100%;
     text-align: start;
     box-shadow: none;
+  }
+  kbd {
+    font-family: var(--monospaceFontFamily);
   }
   .add {
     box-shadow: none;

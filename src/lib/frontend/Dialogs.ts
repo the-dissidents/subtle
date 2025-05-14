@@ -19,7 +19,8 @@ export const Dialogs = {
     combine: new DialogHandler<void, void>(),
     configuration: new DialogHandler<void, void>(),
     keybinding: new DialogHandler<void, void>(),
-    keybindingInput: new DialogHandler<[UICommand, CommandBinding | null], CommandBinding | null>(),
+    keybindingInput: new DialogHandler<
+        [UICommand<any>, CommandBinding | null], CommandBinding | null>(),
     splitByLine: new DialogHandler<void, void>(),
     export: new DialogHandler<void, {content: string, ext: string} | null>(),
     encoding: new DialogHandler<

@@ -125,6 +125,7 @@
     "media": "媒体",
     "minimum-scroller-length": "滚动条最小长度",
     "minimum-scroller-length-d": "滚动条的最小长度（防止它变得太小而看不见），以CSS像素为单位",
+    "monospace-font-family": "等宽字体",
     "mouse-scroll-sensitivity": "鼠标滚动灵敏度",
     "mouse-scroll-sensitivity-d": "使用鼠标滚轮时的滚动速度系数。调整以使滚动速度与触控板保持一致",
     "mouse-zoom-sensitivity": "鼠标缩放灵敏度",

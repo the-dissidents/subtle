@@ -342,9 +342,18 @@ function render(cxt: CanvasRenderingContext2D) {
 
   // header
   cxt.fillStyle = headerBackground;
+  if (manager.scroll[1] > 0) {
+    cxt.shadowBlur = 10;
+    cxt.shadowColor = '#333a';
+  }
   cxt.fillRect(0, manager.scroll[1], sx + width, headerHeight);
-  cxt.fillStyle = textColor;
 
+  cxt.shadowColor = 'transparent';
+  cxt.strokeStyle = gridMajorColor;
+  drawLine(0, manager.scroll[1] + headerHeight, 
+    width + sx, manager.scroll[1] + headerHeight);
+
+  cxt.fillStyle = textColor;
   const cols = [indexColumnLayout, 
     ...entryColumns.map((x) => x.layout!), 
     ...channelColumns.map((x) => x.layout!)];

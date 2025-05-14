@@ -125,6 +125,7 @@
     "media": "media",
     "minimum-scroller-length": "minimum scroller length",
     "minimum-scroller-length-d": "Minimum scroller length to prevent it from becoming too small, in CSS pixels.",
+    "monospace-font-family": "monospace font family",
     "mouse-scroll-sensitivity": "mouse scroll sensitivity",
     "mouse-scroll-sensitivity-d": "Multiplier for scrolling speed using mouse wheel. Adjust to make scrolling speed desirable and consistent with trackpad.",
     "mouse-zoom-sensitivity": "mouse zoom sensitivity",

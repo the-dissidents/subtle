@@ -31,10 +31,12 @@ function setup(canvas: HTMLCanvasElement) {
     buttonPosY = -layout!.manager.scroll[1];
   });
 }
-
 </script>
 
-<div class="container">
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="container"
+     onclick={() => $uiFocus = 'Timeline'}>
   <div class="button-container"
        style:width="{buttonPosX}px">
     <button aria-label='edit'
@@ -51,7 +53,6 @@ function setup(canvas: HTMLCanvasElement) {
   </div>
   <canvas class="timeline fill"
     use:setup
-    onclick={() => $uiFocus = 'Timeline'}
     class:timelinefocused={$uiFocus === 'Timeline'}>
   </canvas>
 </div>

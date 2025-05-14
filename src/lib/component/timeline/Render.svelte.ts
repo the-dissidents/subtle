@@ -13,22 +13,22 @@ const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(
 const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
 const LINE_BIG_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 40%)');
 const LINE_MED_COLOR    = $derived(theme.isDark ? 'hsl(0deg 0% 30%)' : 'hsl(0deg 0% 70%)');
-const TRACK_LINE_COLOR  = $derived(theme.isDark ? 'hsl(0deg 0% 20%)' : 'hsl(0deg 0% 90%)');
 const RULER_TEXT        = $derived(theme.isDark ? 'white' : 'hsl(0deg 0% 20%)');
+const TRACK_LINE_COLOR  = $derived(theme.isDark ? '#ccc5' : '#aaa5');
 
 const LEFT_COLUMN_BACK      = $derived(theme.isDark ? '#333' : '#d3d3d3');
-const LEFT_COLUMN_SELECTED  = $derived(theme.isDark ? '#555' : '#bbb');
+const LEFT_COLUMN_SELECTED  = $derived(theme.isDark ? '#555' : '#ddd');
 const LEFT_COLUMN_SHADOW    = $derived(theme.isDark ? '#eeea' : '#333a');
 const LEFT_COLUMN_OUTLINE   = $derived(theme.isDark ? '#555' : '#888');
 const LEFT_COLUMN_SEPARATOR = $derived(theme.isDark ? '#444' : '#aaa');
 const LEFT_COLUMN_TEXT      = $derived(theme.isDark ? '#fff' : '#000');
-const SELECTED_TRACK_BACK   = $derived(theme.isDark ? '#7772' : '#aaa2');
+const SELECTED_TRACK_BACK   = $derived(theme.isDark ? '#aaa5' : '#fff5');
 
 const ENTRY_WIDTH = 1;
 const ENTRY_WIDTH_FOCUS = 2;
-const ENTRY_BACK_OPACITY = 0.4;
+const ENTRY_BACK_OPACITY = 0.45;
 const ENTRY_BACK = 
-  $derived(theme.isDark ? 'hsl(0deg 0% 20%/40%)' : 'hsl(0deg 0% 80%/40%)');
+  $derived(theme.isDark ? 'hsl(0deg 0% 20%/45%)' : 'hsl(0deg 0% 85%/45%)');
 const ENTRY_BORDER       = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 80%)');
 const ENTRY_BORDER_FOCUS = $derived(theme.isDark ? 'goldenrod' : 'oklch(70.94% 0.136 258.06)');
 const ENTRY_TEXT         = $derived(theme.isDark ? 'hsl(0deg 0% 90%)' : 'hsl(0deg 0% 20%)');
@@ -39,7 +39,7 @@ const CURSOR_COLOR =
 const PENDING_WAVEFORM_COLOR = 
   $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 40%)`);
 const WAVEFORM_COLOR = 
-  $derived(theme.isDark ? `rgb(100 255 255)` : 'oklch(76.37% 0.101 355.37)');
+  $derived(theme.isDark ? `#5bb` : 'oklch(76.37% 0.101 355.37)');
 const INOUT_AREA_OUTSIDE = 
   $derived(theme.isDark ? 'hsl(0deg 0% 80% / 40%)' : 'hsl(0deg 0% 40% / 40%)');
 
@@ -114,8 +114,8 @@ export class TimelineRenderer {
     const t0 = Date.now();
   
     this.#renderWaveform(ctx);
-    this.#renderTracks(ctx);
     this.#renderRuler(ctx);
+    this.#renderTracks(ctx);
     this.#renderCursor(ctx);
     this.#renderLeftColumn(ctx);
   

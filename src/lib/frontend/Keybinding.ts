@@ -314,7 +314,7 @@ const validate = ajv.compile(KeybindingSchema);
 const ConfigFile = 'keybinding.json';
 
 export const KeybindingManager = {
-    commands: new Map<string, UICommand>(),
+    commands: new Map<string, UICommand<any>>(),
 
     async init() {
         await this.read();
@@ -506,9 +506,9 @@ export const KeybindingManager = {
                 registerBinding(binding, cmd);
     },
 
-    findConflict(key: CommandBinding, cmd: UICommand) {
+    findConflict(key: CommandBinding, cmd: UICommand<any>) {
         Debug.assert(bindingTree !== undefined);
-        let conflicts: [UICommand, UIFocus[]][] = [];
+        let conflicts: [UICommand<any>, UIFocus[]][] = [];
         let current = bindingTree;
         let node: KeyTreeNode | undefined;
         for (const step of key.sequence) {
