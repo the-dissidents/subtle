@@ -71,11 +71,14 @@ export function guard<T>(x: () => T, msg: string, fallback?: T) {
 }
 
 export type StatusType = 'info' | 'error';
+export type ToolboxPage = 'properties' | 'search' | 'untimed' | 'test' | undefined;
 
 const status = writable({ msg: 'ok', type: 'info' as StatusType });
 
 export const Interface = {
     uiFocus: writable<UIFocus>('Other'),
+    // FIXME: this immediately gets overwritten by App.svelte
+    toolboxFocus: writable<ToolboxPage>(),
 
     get status() {
         return readonly(status);

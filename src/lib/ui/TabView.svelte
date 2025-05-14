@@ -2,45 +2,58 @@
 import { type Readable, type Writable } from "svelte/store";
 
 export type TabAPIType = {};
-export type TabPageData = {name: Readable<string>};
+export type TabPageData = {
+  readonly id: string,
+  readonly name: Readable<string>
+};
 export const TabAPIContext: TabAPIType = {};
 
 export type TabAPI = {
-  registerPage(id: Symbol, data: TabPageData): void,
-  selected(): Writable<Symbol | undefined>
+  registerPage(data: TabPageData): void,
+  selected(): Readable<string | undefined>
 };
 </script>
 
 <script lang="ts">
-import { onDestroy, setContext } from "svelte";
+import { onDestroy, setContext, type Snippet } from "svelte";
 import { writable, get } from "svelte/store";
-    import { Debug } from "../Debug";
+import { Debug } from "../Debug";
 
 interface Props {
-  children: import('svelte').Snippet;
+  children: Snippet;
+  value?: string;
 }
 
-let { children }: Props = $props();
+let { children, value = $bindable() }: Props = $props();
 
-let Pages: [Symbol, TabPageData][] = [];
-let Selected = writable<Symbol | undefined>(undefined);
+let Pages = new Map<string, TabPageData>();
+let Selected = writable<string | undefined>(undefined);
 let update = $state(0);
 
+Selected.subscribe((x) => {
+  value = x;
+});
+
+$effect(() => {
+  $Selected = value === undefined ? undefined : Pages.get(value)?.id;
+});
+
 setContext<TabAPI>(TabAPIContext, {
-  registerPage(id, data) {
+  registerPage(data) {
     // console.log('register page:', get(data.name));
-    Pages.push([id, data]);
-    Selected.update((x) => x ?? id);
+    if (Pages.has(data.id)) {
+      Debug.error('duplicate tab id:', data.id);
+      return;
+    }
+    Pages.set(data.id, data);
+    $Selected = $Selected ?? data.id;
     data.name.subscribe(() => update++);
     update++;
 
     onDestroy(() => {
-      const i = Pages.findIndex((x) => x[0] === id);
-      if (i < 0) return Debug.early('page not found');
-      Pages.splice(i, 1);
-      if (Pages.length == 0) $Selected = undefined;
-      else Selected.update((x) => x === id 
-        ? (Pages[i] ?? Pages[Pages.length - 1])[0] : x);
+      Pages.delete(data.id);
+      if (Pages.size == 0 || $Selected == data.id)
+        $Selected = undefined;
     });
   },
   selected() {

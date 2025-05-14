@@ -12,7 +12,8 @@ import { Commands } from '../frontend/Commands';
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 import { Source } from '../frontend/Source';
 import OrderableList from '../ui/OrderableList.svelte';
-    import { Typography } from '../details/Typography';
+import { Typography } from '../details/Typography';
+import { Interface } from '../frontend/Interface';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -147,6 +148,10 @@ const command = new UICommand([], {
 <button
   onclick={() => Debug.info('integrity test:', Source.subs.debugTestIntegrity())}>
   integrity test
+</button>
+
+<button onclick={() => Interface.toolboxFocus.set('search')}>
+  test toolbox focus
 </button>
 
 <br>

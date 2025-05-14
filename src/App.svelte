@@ -76,6 +76,7 @@ let undoRedoUpdateCounter = $state(0);
 
 let status = Interface.status;
 let uiFocus = Interface.uiFocus;
+let toolboxFocus = Interface.toolboxFocus;
 let isMediaLoaded = Playback.isLoaded;
 let filenameDisplay = 
   derived([Source.currentFile, Source.fileChanged, _], 
@@ -325,18 +326,18 @@ appWindow.onDragDropEvent(async (ev) => {
       </div>
       <!-- toolbox -->
       <div class="flexgrow fixminheight">
-        <TabView>
+        <TabView bind:value={$toolboxFocus}>
         {#snippet children()}
-          <TabPage name={$_('tab.properties')}>
+          <TabPage name={$_('tab.properties')} id='properties'>
             <PropertiesToolbox/>
           </TabPage>
-          <TabPage name={$_('tab.untimed-text')} active={true}>
+          <TabPage name={$_('tab.untimed-text')} id='untimed'>
             <UntimedToolbox/>
           </TabPage>
-          <TabPage name={$_('tab.search-replace')}>
+          <TabPage name={$_('tab.search-replace')} id='search'>
             <SearchToolbox/>
           </TabPage>
-          <TabPage name="Test">
+          <TabPage name="Test" id='test'>
             <TestToolbox/>
           </TabPage>
         {/snippet}

@@ -1,33 +1,27 @@
 <script lang="ts">
 import { getContext, type Snippet } from "svelte";
 import { TabAPIContext, type TabAPI, type TabPageData } from "./TabView.svelte";
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 
 interface Props {
+  id: string;
   name?: string;
-  active?: boolean;
   children?: Snippet;
 }
 
-let { name = $bindable("Tab"), active = $bindable(false), children }: Props = $props();
+let { id, name = $bindable("Tab"), children }: Props = $props();
 
 const tabApi: TabAPI = getContext(TabAPIContext);
 const writableName = writable(name);
-const page: TabPageData = {name: writableName}
-const id = Symbol();
+const page: TabPageData = {id, name: writableName};
 
-tabApi.registerPage(id, page);
+tabApi.registerPage(page);
 const selection = tabApi.selected();
 
 $effect(() => { $writableName = name; });
-$effect(() => { if (active) $selection = id; });
-
-selection.subscribe((x) => {
-  active = x === id;
-});
 </script>
 
-<div class='page fill' class:active>
+<div class={['page', 'fill', {active: $selection === id}]}>
 {@render children?.()}
 </div>
 
