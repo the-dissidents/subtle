@@ -3,6 +3,23 @@
  2. note that clicking replace should replace the current occurence, and select the next
  2. make hotkeys for next/previous
 -->
+<script lang="ts" module>
+export type SearchAction = 'select' | 'replace' | 'replaceStyles';
+export type SearchOption = 'all' | 'next' | 'previous';
+
+export type SearchHandler = {
+  term: string,
+  replaceTerm: string,
+  useRegex: boolean,
+  useEscapeSequenceInReplacement: boolean,
+  caseSensitive: boolean,
+  replaceStyle: SubtitleStyle,
+  // todo: condition
+  readonly execute: (action: SearchAction, dir: SearchOption) => void,
+  readonly focus: () => void
+};
+</script>
+
 <script lang="ts">
 import { Basic } from '../Basic';
 import { Labels, SubtitleEntry, type LabelType, type SubtitleStyle } from '../core/Subtitles.svelte';
@@ -17,21 +34,32 @@ import { _ } from 'svelte-i18n';
 import Collapsible from '../ui/Collapsible.svelte';
 import FilterEdit from '../FilterEdit.svelte';
 import { evaluateFilter, type MetricFilter } from '../core/Filter';
+import { Toolboxes } from '../frontend/Toolboxes';
 
-let searchTerm  = $state(''),
-    replaceTerm = $state('');
+const handler: SearchHandler = $state({
+  term: '',
+  replaceTerm: '',
+  useRegex: false,
+  useEscapeSequenceInReplacement: true,
+  caseSensitive: true,
+  replaceStyle: Source.subs.defaultStyle,
+  execute,
+  focus() {
+    Interface.toolboxFocus.set('search');
+    setTimeout(() => termInput?.focus(), 0);
+  }
+});
+Toolboxes.search = handler;
 
-let useRegex        = $state(false), 
-    caseSensitive   = $state(true);
-    
+let termInput = $state<HTMLInputElement>();
+
 // condition (simple)
 let selectionOnly   = $state(false),
     useStyle        = $state(false), 
     useReplaceStyle = $state(false),
     useLabel        = $state(false);
 
-let searchStyle  = $state(Source.subs.defaultStyle),
-    replaceStyle = $state(Source.subs.defaultStyle);
+let searchStyle  = $state(Source.subs.defaultStyle);
 let label: LabelType = $state('none');
 
 // condition (advanced)
@@ -41,17 +69,9 @@ let filter: MetricFilter | null = $state(null);
 // states of ongoing search
 let resumeFrom: {
   entry: SubtitleEntry,
-  style: SubtitleStyle
+  style: SubtitleStyle,
+  fromIndex: number
 } | null = null;
-
-enum SearchAction {
-  Find, Select,
-  Replace, ReplaceStyleOnly
-}
-
-enum SearchOption {
-  None, Global, Reverse
-}
 
 function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
   if (useFilter) {
@@ -65,7 +85,86 @@ function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
   }
 }
 
-function findAndReplace(type: SearchAction, option: SearchOption) {
+function* iterate(
+  startIndex: number, startStyleIndex: number, backwards = false
+): Generator<[SubtitleEntry, SubtitleStyle, string, boolean], void, boolean> {
+  const entries = Source.subs.entries;
+  let first = true;
+  for (let i = startIndex;
+    i < entries.length && i >= 0;
+    i += backwards ? -1 : 1) 
+  {
+    const entry = entries[i];
+    for (let j = i == startIndex ? startStyleIndex : 0; 
+      j < Source.subs.styles.length; j++)
+    {
+      const style = Source.subs.styles[j];
+      const text = entry.texts.get(style);
+      if (text === undefined || !test(entry, style)) continue;
+      const skip = yield [entry, style, text, first];
+      first = false;
+      if (skip) break;
+    }
+  }
+}
+
+const replEscapedSequences = {
+  't': '\t',
+  'n': '\n',
+  'v': '\v'
+}
+
+function processReplacement(original: string, match: RegExpExecArray, repl: string) {
+  if (!handler.useEscapeSequenceInReplacement)
+    return repl;
+  let i = 0;
+  let result = '';
+  const digits = /\d{1,2}/y;
+  while (i < repl.length) {
+    const char = repl[i];
+    if (char == '\\') {
+      i++;
+      if (i >= repl.length) {
+        result += char;
+        break;
+      }
+      const char2 = repl[i];
+      result += (char2 in replEscapedSequences) 
+        ? replEscapedSequences[char2 as keyof typeof replEscapedSequences] : char2;
+    } else if (char == '$') {
+      i++;
+      if (i >= repl.length) {
+        result += char;
+        break;
+      }
+      const char2 = repl[i];
+      if (char2 == '&') {
+        result += match[0];
+      } else if (char2 == '`') {
+        result += original.slice(0, match.index);
+      } else if (char2 == "'") {
+        result += original.slice(match.index + match[0].length);
+      } else if (char2 == '$') {
+        result += '$';
+      } else {
+        digits.lastIndex = i;
+        const match2 = digits.exec(repl);
+        if (match2) {
+          result += match[Number.parseInt(match2[0])] ?? '';
+          i += match2[0].length - 1;
+        } else {
+          result += char + char2;
+        }
+      }
+    } else {
+      result += char;
+    }
+    i++;
+  }
+  return result;
+}
+
+async function execute(type: SearchAction, option: SearchOption) {
   const entries = Source.subs.entries;
   if (entries.length == 0) {
     Interface.setStatus($_('msg.subtitle-is-empty'), 'error');
@@ -78,7 +177,7 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
     focus = Source.subs.entries.find((x) => Editing.inSelection(x)) ?? focus;
 
   if (resumeFrom)
-    if (resumeFrom.entry !== focus || option == SearchOption.Global)
+    if (resumeFrom.entry !== focus || option == "all")
       resumeFrom = null;
 
   if (useFilter && filter == null) {
@@ -88,12 +187,12 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 
   let expr: RegExp;
   let usingEmptyTerm = false;
-  if (searchTerm !== '') {
+  if (handler.term !== '') {
     // construct regex from search term
     try {
       expr = new RegExp(
-        useRegex ? searchTerm : Basic.escapeRegexp(searchTerm), 
-        `g${caseSensitive ? '' : 'i'}`);
+        handler.useRegex ? handler.term : Basic.escapeRegexp(handler.term), 
+        `g${handler.caseSensitive ? '' : 'i'}`);
     } catch (e) {
       Debug.assert(e instanceof Error);
       Interface.setStatus($_('msg.search-failed') + e.message, 'error');
@@ -108,75 +207,125 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
     return;
   }
 
-  if (type == SearchAction.Select || !selectionOnly) {
+  Debug.debug('executing search:', expr.source, type, option);
+
+  if (type == "select" || !selectionOnly) {
     Editing.clearSelection(ChangeCause.Action);
   }
 
-  let nDone = 0;
-  const repl = type == SearchAction.Replace ? replaceTerm : '';
-  const startIndex = option == SearchOption.Global 
+  const repl = type == "replace" ? handler.replaceTerm : '';
+  const startIndex = option == "all" 
     ? 0 : Math.max(entries.indexOf(focus), 0);
-  const resumeFromStyleIndex = resumeFrom ? Source.subs.styles.indexOf(resumeFrom.style) : -1;
-  const startStyleIndex = resumeFromStyleIndex + 1;
+  const styleIndex = resumeFrom ? Source.subs.styles.indexOf(resumeFrom.style) : 0;
 
-  outerLoop: for (
-    let i = startIndex;
-    i < entries.length && i >= 0;
-    i += option == SearchOption.Reverse ? -1 : 1) 
-  {
-    const entry = entries[i];
-    // loop over styles
-    for (
-      let j = i == startIndex ? startStyleIndex : 0; 
-      j < Source.subs.styles.length; j++) 
+  if (!resumeFrom && option !== 'all') {
+    type = 'select';
+    Debug.trace('no resumeFrom; falling back to select');
+  }
+
+  let nDone = 0, nEntries = 0;
+  const gen = iterate(startIndex, styleIndex, option == 'previous');
+  let res = gen.next(false);
+  let newType = type;
+  outer: while (!res.done) {
+    const [entry, style, text, first] = res.value;
+    // Debug.trace('search at', text);
+    expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
+
+    if (!expr.test(text) || (first && resumeFrom && type == 'select')) {
+      res = gen.next(false);
+      continue;
+    }
+
+    // matched
+    nEntries++;
+
+    if (type == 'select' && option == 'all') {
+      Editing.selection.submitted.add(entry);
+      res = gen.next(true);
+      Debug.trace('selected', text);
+      continue; // selecting one channel suffices
+    }
+
+    let newStyle = style;
+    if (newType == "replaceStyles"
+      || (useReplaceStyle && newType == "replace"))
     {
-      const style = Source.subs.styles[j];
-      const text = entry.texts.get(style);
-      if (text === undefined || !test(entry, style)) continue;
+      // FIXME: should warn when overwriting? or add an option
+      entry.texts.delete(style);
+      entry.texts.set(handler.replaceStyle, text);
+      Debug.trace('replaced with style:', text);
+      newStyle = handler.replaceStyle;
+    }
 
-      const replaced = text.replace(expr, repl);
-      if (replaced != text) {
-        nDone++;
-        resumeFrom = { entry, style };
-        if (type == SearchAction.Select) {
-          Editing.selection.submitted.add(entry);
-          break; // selecting one channel suffices
-        }
-        let focusStyle = searchStyle;
-        if (type == SearchAction.ReplaceStyleOnly
-          || (useReplaceStyle && type == SearchAction.Replace))
-        {
-          // FIXME: should warn when overwriting? or add an option
-          entry.texts.delete(style);
-          entry.texts.set(replaceStyle, replaced);
-          focusStyle = replaceStyle;
-        } else if (type == SearchAction.Replace) {
-          entry.texts.set(style, replaced);
-        }
-        if (option != SearchOption.Global) {
+    let match: RegExpExecArray | null;
+    let newText = text;
+    expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
+    while (match = expr.exec(newText)) {
+      nDone++;
+      if (newType == 'replace') {
+        newText = newText.slice(0, match.index) 
+          + processReplacement(text, match, repl) 
+          + newText.slice(match.index + match[0].length);
+        expr.lastIndex += repl.length - match[0].length;
+      }
+      if (option != "all") {
+        if (newType == 'select') {
+          // select this, and done
           Editing.selectEntry(entry, SelectMode.Single, ChangeCause.Action);
-          Editing.focused.style = focusStyle;
-          break outerLoop;
+          Editing.focused.style = newStyle;
+          setTimeout(() => {
+            const editor = Editing.styleToEditor.get(newStyle);
+            if (!editor) {
+              Debug.warn('no editor', entry);
+            } else {
+              editor.focus();
+              editor.scrollIntoView();
+              editor.setSelectionRange(match!.index, match!.index + match![0].length);
+            }
+          }, 0);
+          Debug.trace('done selecting', text);
+          resumeFrom = { entry, style: newStyle, fromIndex: match.index };
+          break outer;
+        } else {
+          // just replaced one, select next
+          entry.texts.set(newStyle, newText);
+          Debug.trace('replaced 1:', text, '->', newText);
+          newType = 'select';
+          Debug.trace('just replaced, start selecting');
         }
       }
     }
+
+    if (type == 'replace') {
+      entry.texts.set(newStyle, newText);
+      Debug.trace('replacing:', text, '->', newText);
+    }
+    
+    res = gen.next(false);
   }
+
+  if (res.done) {
+    // reached the end
+    resumeFrom = null;
+  }
+
   let status: string;
-  if (nDone > 0) {
-    if (type == SearchAction.Select) {
-      status = $_('search.selected-n-lines', {values: {n: nDone}});
+  if (nEntries > 0) {
+    if (type == "select") {
+      status = $_('search.selected-n-lines', {values: {n: nEntries}});
       // manually call this because we didn't use selectEntry etc.
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
-    } else if (type == SearchAction.Replace || type === SearchAction.ReplaceStyleOnly) {
-      status = $_('search.replaced-n-lines', {values: {n: nDone}});
+    } else if (type == "replace" || type === "replaceStyles") {
+      status = $_('search.replaced-n-lines', {values: {n: nDone, nEntries}});
       Source.markChanged(ChangeType.InPlace);
     } else {
-      status = $_('search.found-n-lines', {values: {n: nDone}});
+      status = $_('search.found-n-lines', {values: {n: nEntries}});
     }
   } else {
     status = $_('search.found-nothing');
     resumeFrom = null;
-    if (option != SearchOption.Global) {
+    if (option != "all") {
       Editing.clearFocus();
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     }
@@ -185,9 +334,10 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 }
 </script>
 
-<input class='wfill' type="text" bind:value={searchTerm}
+<input class='wfill' type="text" bind:value={handler.term}
+  bind:this={termInput}
   id='expr' placeholder={$_('search.expression')}/>
-<input class='wfill' type="text" bind:value={replaceTerm}
+<input class='wfill' type="text" bind:value={handler.replaceTerm}
   id='repl' placeholder={$_('search.replace-term')}/>
   <table class="wfill">
     <tbody>
@@ -197,13 +347,13 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
         </td>
         <td class="hlayout">
           <button class="middle"
-            onclick={() => findAndReplace(SearchAction.Find, SearchOption.None)}
+            onclick={() => execute("select", "next")}
           >{$_('search.next')}</button>
           <button class="middle"
-            onclick={() => findAndReplace(SearchAction.Find, SearchOption.Reverse)}
+            onclick={() => execute("select", "previous")}
           >{$_('search.previous')}</button>
           <button class="right flexgrow"
-            onclick={() => findAndReplace(SearchAction.Select, SearchOption.Global)}
+            onclick={() => execute("select", "all")}
           >{$_('search.all')}</button>
         </td>
       </tr>
@@ -213,16 +363,16 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
         </td>
         <td class="hlayout">
           <button class="middle"
-            onclick={() => findAndReplace(SearchAction.Replace, SearchOption.None)}
+            onclick={() => execute("replace", "next")}
           >{$_('search.next')}</button>
           <button class="middle"
-            onclick={() => findAndReplace(SearchAction.Replace, SearchOption.Reverse)}
+            onclick={() => execute("replace", "previous")}
           >{$_('search.previous')}</button>
           <button class="middle"
-            onclick={() => findAndReplace(SearchAction.Replace, SearchOption.Global)}
+            onclick={() => execute("replace", "all")}
           >{$_('search.all')}</button>
           <button class="right flexgrow"
-            onclick={() => findAndReplace(SearchAction.ReplaceStyleOnly, SearchOption.Global)}
+            onclick={() => execute("replaceStyles", "all")}
           >{$_('search.only-styles')}</button>
         </td>
       </tr>
@@ -231,17 +381,20 @@ function findAndReplace(type: SearchAction, option: SearchOption) {
 
 <div class='form vlayout'>
   <h5>{$_('search.options')}</h5>
-  <label><input type='checkbox' bind:checked={useRegex}/>
+  <label><input type='checkbox' bind:checked={handler.useRegex}/>
     {$_('search.use-regular-expressions')}
   </label>
-  <label><input type='checkbox' bind:checked={caseSensitive}/>
+  <label><input type='checkbox' bind:checked={handler.useEscapeSequenceInReplacement}/>
+    {$_('search.use-escape-sequences-in-replacement')}
+  </label>
+  <label><input type='checkbox' bind:checked={handler.caseSensitive}/>
     {$_('search.case-sensitive')}
   </label>
   <label><input type='checkbox' bind:checked={useReplaceStyle}/>
     {$_('search.replace-by-style')}
     <StyleSelect
       onsubmit={() => useReplaceStyle = true}
-      bind:currentStyle={replaceStyle}/>
+      bind:currentStyle={handler.replaceStyle}/>
   </label>
 
   <h5>{$_('search.range')}</h5>

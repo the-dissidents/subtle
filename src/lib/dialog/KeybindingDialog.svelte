@@ -5,6 +5,7 @@ import { Commands } from '../frontend/Commands';
 import { Dialogs, type DialogHandler } from '../frontend/Dialogs';
 import { _, locale } from 'svelte-i18n';
 import { bindingToString, KeybindingManager, type CommandBinding, type KeyBinding } from '../frontend/Keybinding';
+    import type { UICommand } from '../frontend/CommandBase';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -22,8 +23,20 @@ handler.showModal = async () => {
 
 let inner: DialogHandler<void> = {};
 let filter = $state('');
-let commands = Object.entries(Commands);
 let refresh = $state(false);
+
+
+function groupedCommands() {
+  const result = new Map<string, UICommand<any>[]>();
+  Object.entries(Commands).forEach(([_, cmd]) => {
+    const category = cmd.category();
+    if (!result.has(category))
+      result.set(category, []);
+    result.get(category)!.push(cmd);
+  });
+  return result;
+}
+
 
 locale.subscribe(() => refresh = !refresh);
 
@@ -52,13 +65,19 @@ locale.subscribe(() => refresh = !refresh);
     <table class="data">
     {#key refresh}
     <tbody>
-      {#each commands as [__, cmd]}
+      {#each groupedCommands() as [category, cmds]}
+      <tr class='heading'>
+        <td colspan="6">
+          {category}
+        </td>
+      </tr>
+      {#each cmds as cmd}
         {@const lines = cmd.bindings.length}
         {#snippet row(binding: CommandBinding)}
           {@const error = KeybindingManager.findConflict(binding, cmd).length > 0}
+          <!-- keybinding -->
           <td>
             <button onclick={async () => {
-              // edit keybinding
               const result = await Dialogs.keybindingInput.showModal!([cmd, binding]);
               if (result) {
                 binding.contexts = result.contexts;
@@ -70,6 +89,7 @@ locale.subscribe(() => refresh = !refresh);
               <kbd>{binding.sequence.map(bindingToString).join(' ')}</kbd>
             </button>
           </td>
+          <!-- contexts -->
           <td class="ctx">
             {#if !binding.contexts}
               {$_('keyinput.any')}
@@ -84,9 +104,9 @@ locale.subscribe(() => refresh = !refresh);
             </div>
             {/if}
           </td>
+          <!-- delete -->
           <td>
             <button aria-label='delete' onclick={() => {
-                // delete keybinding
                 const i = cmd.bindings.indexOf(binding);
                 Debug.assert(i >= 0);
                 cmd.bindings.splice(i, 1);
@@ -101,9 +121,9 @@ locale.subscribe(() => refresh = !refresh);
         {/snippet}
 
         {#snippet addrow()}
-          <td class={{major: true}}>
+          <td>
+            <!-- add -->
             <button class="add" aria-label='add' onclick={async () => {
-              // new keybinding
               const result = await Dialogs.keybindingInput.showModal!([cmd, null]);
               if (result) {
                 cmd.bindings.push(result);
@@ -116,12 +136,11 @@ locale.subscribe(() => refresh = !refresh);
               </svg>
             </button>
           </td>
-          <td colspan="2" class={{major: true}}></td>
+          <td colspan="2"></td>
         {/snippet}
 
-        <tr>
-          <!-- TODO: category -->
-          <td class="rowhead" rowspan={lines+1}>
+        <tr class="rowhead">
+          <td rowspan={lines+1}>
             <button aria-label="reset" onclick={() => {
               cmd.bindings = structuredClone(cmd.defaultBindings) as CommandBinding[];
               refresh = !refresh;
@@ -132,8 +151,8 @@ locale.subscribe(() => refresh = !refresh);
               </svg>
             </button>
           </td>
-          <td class="rowhead" rowspan={lines+1}>{cmd.name}</td>
-          <td class="rowhead" rowspan={lines+1}>
+          <td rowspan={lines+1}>{cmd.name}</td>
+          <td rowspan={lines+1}>
             {@render icon(
                 cmd.type == 'menu' ? 'menu' 
               : cmd.type == 'dialog' ? 'credit-card'
@@ -152,6 +171,7 @@ locale.subscribe(() => refresh = !refresh);
         <tr>{@render addrow()}</tr>
         {/if}
       {/each}
+      {/each}
     </tbody>
     {/key}
     </table>
@@ -163,8 +183,8 @@ locale.subscribe(() => refresh = !refresh);
     .error {
       background-color: lightcoral;
     }
-    .rowhead, .major {
-      border-bottom: 1px solid var(--uchu-yin-5);
+    .rowhead {
+      border-top: 1px solid var(--uchu-yin-5);
     }
     span.separator {
       color: var(--uchu-yin-5);
@@ -174,8 +194,8 @@ locale.subscribe(() => refresh = !refresh);
     .error {
       background-color: var(--uchu-red-9);
     }
-    .rowhead, .major {
-      border-bottom: 1px solid var(--uchu-yin-7);
+    .rowhead {
+      border-top: 1px solid var(--uchu-yin-7);
     }
     span.separator {
       color: var(--uchu-yin-4);
@@ -186,8 +206,17 @@ locale.subscribe(() => refresh = !refresh);
     border-collapse: collapse;
   }
   tr {
-    padding: 6px 0 6px 0;
+    padding: 0;
+    margin: 0;
     box-sizing: content-box;
+  }
+  .heading {
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    & td {
+      padding-top: 10px;
+    }
   }
   .rowhead {
     vertical-align: top;

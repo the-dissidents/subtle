@@ -5,17 +5,15 @@ import { bindingToString, type KeyBinding, type CommandBinding } from "./Keybind
 import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api/menu";
 
 export type CommandOptions<TState = any> = ({
-    name: string | (() => string),
     displayAccel?: string,
-    isApplicable?: () => boolean,
     isDialog?: boolean,
     call: () => (TState | Promise<TState>)
 } | {
-    name: string | (() => string),
     menuName?: string | (() => string),
-    isApplicable?: () => boolean,
     items: CommandOptions<TState>[] | (() => CommandOptions<TState>[])
 }) & {
+    name: string | (() => string),
+    isApplicable?: () => boolean,
     onDeactivate?: (state: TState) => (void | Promise<void>)
 };
 
@@ -59,6 +57,7 @@ export class UICommand<TState = void> {
     }
 
     constructor(
+        public readonly category: () => string,
         public bindings: CommandBinding[], 
         private options: CommandOptions<TState>
     ) {

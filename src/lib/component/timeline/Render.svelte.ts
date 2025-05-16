@@ -17,12 +17,12 @@ const RULER_TEXT        = $derived(theme.isDark ? 'white' : 'hsl(0deg 0% 20%)');
 const TRACK_LINE_COLOR  = $derived(theme.isDark ? '#ccc5' : '#aaa5');
 
 const LEFT_COLUMN_BACK      = $derived(theme.isDark ? '#333' : '#d3d3d3');
-const LEFT_COLUMN_SELECTED  = $derived(theme.isDark ? '#555' : '#ddd');
+const LEFT_COLUMN_SELECTED  = $derived(theme.isDark ? '#555' : '#bbb');
 const LEFT_COLUMN_SHADOW    = $derived(theme.isDark ? '#eeea' : '#333a');
 const LEFT_COLUMN_OUTLINE   = $derived(theme.isDark ? '#555' : '#888');
 const LEFT_COLUMN_SEPARATOR = $derived(theme.isDark ? '#444' : '#aaa');
 const LEFT_COLUMN_TEXT      = $derived(theme.isDark ? '#fff' : '#000');
-const SELECTED_TRACK_BACK   = $derived(theme.isDark ? '#aaa5' : '#fff5');
+const SELECTED_TRACK_BACK   = $derived(theme.isDark ? '#aaa5' : '#ddd5');
 
 const ENTRY_WIDTH = 1;
 const ENTRY_WIDTH_FOCUS = 2;

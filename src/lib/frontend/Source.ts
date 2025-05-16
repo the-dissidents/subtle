@@ -99,20 +99,28 @@ export const Source = {
     canRedo() {return this.redoStack.length > 0;},
 
     undo() {
-        if (!this.canUndo()) return false;
+        if (!this.canUndo()) {
+            Interface.setStatus($_('msg.nothing-to-undo'), 'info');
+            return false;
+        }
         this.redoStack.push(this.undoStack.pop()!);
         let snap = this.undoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();
+        Interface.setStatus($_('msg.undone'), 'info');
         return true;
     },
 
     redo() {
-        if (!this.canRedo()) return false;
+        if (!this.canRedo()) {
+            Interface.setStatus($_('msg.nothing-to-redo'), 'info');
+            return false;
+        }
         this.undoStack.push(this.redoStack.pop()!);
         let snap = this.undoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();
+        Interface.setStatus($_('msg.redone'), 'info');
         return true;
     },
 

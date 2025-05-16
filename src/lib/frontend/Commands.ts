@@ -18,6 +18,7 @@ import { InputConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { Format } from "../core/Formats";
+import { Toolboxes } from "./Toolboxes";
 const $_ = unwrapFunctionStore(_);
 
 const toJSON = (useEntries: SubtitleEntry[]) => 
@@ -97,7 +98,7 @@ function doubleForEachStyle(
 }
 
 export const Commands = {
-    undo: new UICommand(
+    undo: new UICommand(() => $_('category.document'),
         [ binding(['CmdOrCtrl+Z'], ['Table', 'Timeline']),
           binding(['CmdOrCtrl+Alt+Z']) ],
     {
@@ -105,7 +106,7 @@ export const Commands = {
         isApplicable: () => Source.canUndo(),
         call: () => { Source.undo() }
     }),
-    redo: new UICommand(
+    redo: new UICommand(() => $_('category.document'),
         [ binding(['CmdOrCtrl+Shift+Z'], ['Table', 'Timeline']),
           binding(['CmdOrCtrl+Alt+Shift+Z']) ],
     {
@@ -113,7 +114,7 @@ export const Commands = {
         isApplicable: () => Source.canRedo(),
         call: () => { Source.redo() }
     }),
-    newFile: new UICommand(
+    newFile: new UICommand(() => $_('category.document'),
         [ binding(['CmdOrCtrl+N']) ],
     {
         name: () => $_('menu.new-file'),
@@ -122,7 +123,7 @@ export const Commands = {
                 Interface.newFile();
         }
     }),
-    openMenu: new UICommand(
+    openMenu: new UICommand(() => $_('category.document'),
         [ binding(['CmdOrCtrl+O']), ],
     {
         name: () => $_('menu.open'),
@@ -155,35 +156,35 @@ export const Commands = {
             ]
         }
     }),
-    openVideo: new UICommand(
+    openVideo: new UICommand(() => $_('category.document'),
         [ binding(['CmdOrCtrl+Shift+O']), ],
     {
         name: () => $_('menu.open-video'),
         isDialog: true,
         call: () => Interface.askOpenVideo()
     }),
-    closeVideo: new UICommand(
+    closeVideo: new UICommand(() => $_('category.document'),
         [ ],
     {
         name: () => $_('menu.close-video'),
         isApplicable: () => get(Playback.isLoaded),
         call: () => Playback.close()
     }),
-    import: new UICommand(
+    import: new UICommand(() => $_('category.document'),
         [ binding(['CmdOrCtrl+I']), ],
     {
         name: () => $_('menu.import'),
         isDialog: true,
         call: () => Interface.askImportFile()
     }),
-    exportASS: new UICommand(
+    exportASS: new UICommand(() => $_('category.document'),
         [ ],
     {
         name: () => $_('menu.export-ass'),
         isDialog: true,
         call: () => Interface.askExportFile('ass', (x) => Format.ASS.write(x))
     }),
-    exportSRTPlaintext: new UICommand(
+    exportSRTPlaintext: new UICommand(() => $_('category.document'),
         [ ],
     {
         name: () => $_('menu.export-srt-plaintext'),
@@ -194,7 +195,7 @@ export const Commands = {
             Interface.askExportFile(result.ext, () => result.content);
         }
     }),
-    exportMenu: new UICommand(
+    exportMenu: new UICommand(() => $_('category.document'),
         [ ],
     {
         name: () => $_('menu.export'),
@@ -209,34 +210,34 @@ export const Commands = {
             }
         ]
     }),
-    save: new UICommand(
+    save: new UICommand(() => $_('category.document'),
         [ binding(['CmdOrCtrl+S']), ],
     {
         name: () => $_('action.save'),
         call: () => Interface.askSaveFile()
     }),
-    saveAs: new UICommand(
+    saveAs: new UICommand(() => $_('category.document'),
         [ binding(['CmdOrCtrl+Shift+S']), ],
     {
         name: () => $_('menu.save-as'),
         isDialog: true,
         call: () => Interface.askSaveFile(true)
     }),
-    openConfiguration: new UICommand(
+    openConfiguration: new UICommand(() => $_('category.system'),
         [ ],
     {
         name: () => $_('menu.configuration'),
         isDialog: true,
         call: () => Dialogs.configuration.showModal!()
     }),
-    openKeybinding: new UICommand(
+    openKeybinding: new UICommand(() => $_('category.system'),
         [ ],
     {
         name: () => $_('menu.keybinding'),
         isDialog: true,
         call: () => Dialogs.keybinding.showModal!()
     }),
-    previousEntrySingle: new UICommand(
+    previousEntrySingle: new UICommand(() => $_('category.table'),
         [ binding(['ArrowUp'], ['Table']),
           binding(['Alt+ArrowUp']), ],
     {
@@ -246,7 +247,7 @@ export const Commands = {
             ? KeepInViewMode.SamePosition 
             : KeepInViewMode.KeepInSight)
     }),
-    previousEntrySequence: new UICommand(
+    previousEntrySequence: new UICommand(() => $_('category.table'),
         [ binding(['Shift+ArrowUp'], ['Table']),
           binding(['Alt+Shift+ArrowUp']), ],
     {
@@ -256,7 +257,7 @@ export const Commands = {
             ? KeepInViewMode.SamePosition 
             : KeepInViewMode.KeepInSight)
     }),
-    nextEntrySingle: new UICommand(
+    nextEntrySingle: new UICommand(() => $_('category.table'),
         [ binding(['ArrowDown'], ['Table']),
           binding(['Alt+ArrowDown']), ],
     {
@@ -266,7 +267,7 @@ export const Commands = {
             ? KeepInViewMode.SamePosition 
             : KeepInViewMode.KeepInSight)
     }),
-    nextEntrySequence: new UICommand(
+    nextEntrySequence: new UICommand(() => $_('category.table'),
         [ binding(['Shift+ArrowDown'], ['Table']),
           binding(['Alt+Shift+ArrowDown']), ],
     {
@@ -276,11 +277,11 @@ export const Commands = {
             ? KeepInViewMode.SamePosition 
             : KeepInViewMode.KeepInSight)
     }),
-    editThisEntry:new UICommand(
+    editThisEntry:new UICommand(() => $_('category.editing'),
         [ binding(['Enter'], ['Table']), ],
     {
         name: () => $_('action.edit-this-entry'),
-        isApplicable: hasFocus,
+        isApplicable: () => Editing.getFocusedEntry() !== null,
         call() {
             const focusedEntry = Editing.getFocusedEntry();
             if (focusedEntry == 'virtual')
@@ -289,7 +290,7 @@ export const Commands = {
                 Editing.startEditingFocusedEntry();
         }
     }),
-    editNextEntry: new UICommand(
+    editNextEntry: new UICommand(() => $_('category.editing'),
         [ binding(['Enter'], ['EditingField']), ],
     {
         name: () => $_('action.edit-next-entry'),
@@ -308,7 +309,7 @@ export const Commands = {
                     : KeepInViewMode.KeepInSight);
         }
     }),
-    focusOnTable: new UICommand(
+    focusOnTable: new UICommand(() => $_('category.editing'),
         [ binding(['Escape'], ['EditingField']), ],
     {
         name: () => $_('action.focus-on-table'),
@@ -319,14 +320,48 @@ export const Commands = {
             }
         }
     }),
-    togglePlay: new UICommand(
+
+    openSearch: new UICommand(() => $_('category.search'),
+        [ binding(['CmdOrCtrl+F']), ],
+    {
+        name: () => $_('action.open-search'),
+        call() {
+            Toolboxes.search!.focus();
+        }
+    }),
+    findNext: new UICommand(() => $_('category.search'),
+        [ binding(['CmdOrCtrl+G']), ],
+    {
+        name: () => $_('action.find-next'),
+        call: () => Toolboxes.search!.execute('select', 'next')
+    }),
+    findPrevious: new UICommand(() => $_('category.search'),
+        [ binding(['CmdOrCtrl+Shift+G']), ],
+    {
+        name: () => $_('action.find-previous'),
+        call: () => Toolboxes.search!.execute('select', 'previous')
+    }),
+    replaceNext: new UICommand(() => $_('category.search'),
+        [ binding(['CmdOrCtrl+H']), ],
+    {
+        name: () => $_('action.replace-next'),
+        call: () => Toolboxes.search!.execute('replace', 'next')
+    }),
+    replacePrevious: new UICommand(() => $_('category.search'),
+        [ binding(['CmdOrCtrl+Shift+H']), ],
+    {
+        name: () => $_('action.replace-previous'),
+        call: () => Toolboxes.search!.execute('replace', 'previous')
+    }),
+
+    togglePlay: new UICommand(() => $_('category.media'),
         [ binding(['Space'], ['Table', 'Timeline']),
           binding(['Alt+Space']), ],
     {
         name: () => $_('action.toggle-play'),
         call: () => Playback.toggle()
     }),
-    toggleInPoint: new UICommand(
+    toggleInPoint: new UICommand(() => $_('category.media'),
         [ binding(['I'], ['Table', 'Timeline']),
           binding(['Alt+I']), ],
     {
@@ -341,7 +376,7 @@ export const Commands = {
             });
         }
     }),
-    toggleOutPoint: new UICommand(
+    toggleOutPoint: new UICommand(() => $_('category.media'),
         [ binding(['O'], ['Table', 'Timeline']),
           binding(['Alt+O']), ],
     {
@@ -356,7 +391,7 @@ export const Commands = {
             });
         }
     }),
-    playEntry: new UICommand(
+    playEntry: new UICommand(() => $_('category.media'),
         [ binding(['P'], ['Table', 'Timeline']),
           binding(['Alt+P']), ],
     {
@@ -375,28 +410,28 @@ export const Commands = {
             await Playback.play(true);
         }
     }),
-    previousFrame: new UICommand(
+    previousFrame: new UICommand(() => $_('category.media'),
         [ binding(['CmdOrCtrl+ArrowLeft'], ['Timeline']),
           binding(['Alt+CmdOrCtrl+ArrowLeft']), ],
     {
         name: () => $_('action.previous-frame'),
         call: () => Playback.video?.requestPreviousFrame()
     }),
-    nextFrame: new UICommand(
+    nextFrame: new UICommand(() => $_('category.media'),
         [ binding(['CmdOrCtrl+ArrowRight'], ['Timeline']),
           binding(['Alt+CmdOrCtrl+ArrowRight']), ],
     {
         name: () => $_('action.next-frame'),
         call: () => Playback.video?.requestNextFrame()
     }),
-    jumpBackward: new UICommand(
+    jumpBackward: new UICommand(() => $_('category.media'),
         [ binding(['ArrowLeft'], ['Timeline']),
           binding(['Alt+ArrowLeft']), ],
     {
         name: () => $_('action.jump-backward'),
         call: () => Playback.setPosition(Playback.position - InputConfig.data.skipDuration)
     }),
-    jumpForward: new UICommand(
+    jumpForward: new UICommand(() => $_('category.media'),
         [ binding(['ArrowRight'], ['Timeline']),
           binding(['Alt+ArrowRight']), ],
     {
@@ -404,7 +439,7 @@ export const Commands = {
         call: () => Playback.setPosition(Playback.position + InputConfig.data.skipDuration)
     }),
 
-    holdToCreateEntry1: new UICommand(
+    holdToCreateEntry1: new UICommand(() => $_('category.timeline'),
         [ binding(['J'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-1'),
@@ -426,7 +461,7 @@ export const Commands = {
         }
     }),
 
-    holdToCreateEntry2: new UICommand(
+    holdToCreateEntry2: new UICommand(() => $_('category.timeline'),
         [ binding(['K'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-2'),
@@ -448,35 +483,35 @@ export const Commands = {
         }
     }),
 
-    copyJSON: new UICommand(
+    copyJSON: new UICommand(() => $_('category.editing'),
         [ binding(['CmdOrCtrl+C'], ['Table', 'Timeline']) ],
     {
         name: () => $_('action.copy-json'),
         isApplicable: hasSelection,
         call: () => copySelection(toJSON)
     }),
-    copySRT: new UICommand(
+    copySRT: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.copy-srt'),
         isApplicable: hasSelection,
         call: () => copySelection(toSRT)
     }),
-    copyASS: new UICommand(
+    copyASS: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.copy-ass'),
         isApplicable: hasSelection,
         call: () => copySelection(toASS)
     }),
-    copyPlaintext: new UICommand(
+    copyPlaintext: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.copy-plaintext'),
         isApplicable: hasSelection,
         call: () => copySelection(toPlaintext)
     }),
-    copyMenu: new UICommand(
+    copyMenu: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.copy'),
@@ -497,7 +532,7 @@ export const Commands = {
             }
         ]
     }),
-    copyChannelText: new UICommand(
+    copyChannelText: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.copy-text'),
@@ -514,7 +549,7 @@ export const Commands = {
             Interface.setStatus($_('msg.copied'));
         }, selectionDistinctStyles())
     }),
-    cut: new UICommand(
+    cut: new UICommand(() => $_('category.editing'),
         [ binding(['CmdOrCtrl+X'], ['Table']) ],
     {
         name: () => $_('action.cut'),
@@ -524,7 +559,7 @@ export const Commands = {
             Editing.deleteSelection();
         }
     }),
-    paste: new UICommand(
+    paste: new UICommand(() => $_('category.editing'),
         [ binding(['CmdOrCtrl+V'], ['Table']) ],
     {
         name: () => $_('action.paste'),
@@ -559,7 +594,7 @@ export const Commands = {
             }
         },
     }),
-    deleteSelection: new UICommand(
+    deleteSelection: new UICommand(() => $_('category.editing'),
         [ binding(['Delete'], ['Table', 'Timeline']),
           binding(['CmdOrCtrl+Backspace'], ['Table', 'Timeline']),
           binding(['Alt+Delete']),
@@ -569,7 +604,7 @@ export const Commands = {
         isApplicable: hasSelection,
         call: () => Editing.deleteSelection(),
     }),
-    selectAll: new UICommand(
+    selectAll: new UICommand(() => $_('category.editing'),
         [ binding(['CmdOrCtrl+A'], ['Table']) ],
     {
         name: () => $_('action.select-all'),
@@ -581,7 +616,7 @@ export const Commands = {
             Editing.onSelectionChanged.dispatch(ChangeCause.Action);
         },
     }),
-    selectByChannel: new UICommand(
+    selectByChannel: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.select-all-by-channel'),
@@ -594,7 +629,7 @@ export const Commands = {
             Editing.onSelectionChanged.dispatch(ChangeCause.Action);
         }, selectionDistinctStyles())
     }),
-    invertSelection: new UICommand(
+    invertSelection: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.invert-selection'),
@@ -611,7 +646,7 @@ export const Commands = {
             Editing.onSelectionChanged.dispatch(ChangeCause.Action);
         },
     }),
-    insertBeforeFocus: new UICommand(
+    insertBeforeFocus: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.insert-before'),
@@ -646,7 +681,7 @@ export const Commands = {
             Source.markChanged(ChangeType.Times);
         },
     }),
-    insertAfterFocus: new UICommand(
+    insertAfterFocus: new UICommand(() => $_('category.editing'),
         [ binding(['CmdOrCtrl+Enter'], ['Table', 'EditingField']), ],
     {
         name: () => $_('action.insert-after'),
@@ -677,35 +712,35 @@ export const Commands = {
             Source.markChanged(ChangeType.Times);
         },
     }),
-    moveUp: new UICommand(
+    moveUp: new UICommand(() => $_('category.editing'),
         [ binding(['CmdOrCtrl+ArrowUp'], ['EditingField', 'Table']) ],
     {
         name: () => $_('action.move-up'),
         isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
         call: () => Utils.moveSelectionContinuous(-1),
     }),
-    moveDown: new UICommand(
+    moveDown: new UICommand(() => $_('category.editing'),
         [ binding(['CmdOrCtrl+ArrowDown'], ['EditingField', 'Table']) ],
     {
         name: () => $_('action.move-down'),
         isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
         call: () => Utils.moveSelectionContinuous(1),
     }),
-    moveToBeginning: new UICommand(
+    moveToBeginning: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.move-to-beginning'),
         isApplicable: () => hasSelection(),
         call: () => Utils.moveSelectionTo('beginning'),
     }),
-    moveToEnd: new UICommand(
+    moveToEnd: new UICommand(() => $_('category.editing'),
         [ ],
     {
         name: () => $_('action.move-to-end'),
         isApplicable: () => hasSelection(),
         call: () => Utils.moveSelectionTo('end'),
     }),
-    moveMenu: new UICommand(
+    moveMenu: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.move'),
@@ -729,7 +764,7 @@ export const Commands = {
             }
         ]
     }),
-    combineIntoOneEntry: new UICommand(
+    combineIntoOneEntry: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.combine'),
@@ -747,7 +782,7 @@ export const Commands = {
             Source.markChanged(ChangeType.Times);
         },
     }),
-    splitChannels: new UICommand(
+    splitChannels: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.split-simultaneous'),
@@ -778,21 +813,21 @@ export const Commands = {
             }
         },
     }),
-    connectAll: new UICommand(
+    connectAll: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.connect-all'),
         isApplicable: () => hasSelection(1),
         call: () => Utils.mergeEntries(Editing.getSelection(), true),
     }),
-    connectKeepingFirstOnly: new UICommand(
+    connectKeepingFirstOnly: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.connect-keeping-first-only'),
         isApplicable: () => hasSelection(1),
         call: () => Utils.mergeEntries(Editing.getSelection(), false),
     }),
-    connectMenu: new UICommand(
+    connectMenu: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.merge-entries'),
@@ -808,7 +843,7 @@ export const Commands = {
             }
         ]
     }),
-    label: new UICommand(
+    label: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.label'),
@@ -822,7 +857,7 @@ export const Commands = {
             },
         }))
     }),
-    transformTimes: new UICommand(
+    transformTimes: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.transform-times'),
@@ -833,7 +868,7 @@ export const Commands = {
                 Source.markChanged(ChangeType.Times);
         },
     }),
-    sortSelectionByTime: new UICommand(
+    sortSelectionByTime: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.sort-by-time'),
@@ -851,7 +886,7 @@ export const Commands = {
             Source.markChanged(ChangeType.Order);
         },
     }),
-    createChannel: new UICommand(
+    createChannel: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.create-channel'),
@@ -867,7 +902,7 @@ export const Commands = {
             if (done) Source.markChanged(ChangeType.InPlace);
         }, notSelectionCommonStyles())
     }),
-    removeChannel: new UICommand(
+    removeChannel: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.remove-channel'),
@@ -876,7 +911,7 @@ export const Commands = {
             (x) => Utils.removeStyle(Editing.getSelection(), x), 
             selectionDistinctStyles())
     }),
-    removeNewlines: new UICommand(
+    removeNewlines: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.remove-newlines'),
@@ -885,7 +920,7 @@ export const Commands = {
             (x) => Utils.removeNewlines(Editing.getSelection(), x), 
             selectionDistinctStyles())
     }),
-    removeBlankChannels: new UICommand(
+    removeBlankChannels: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.remove-empty'),
@@ -909,7 +944,7 @@ export const Commands = {
             if (done) Source.markChanged(ChangeType.Times);
         },
     }),
-    replaceChannel: new UICommand(
+    replaceChannel: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.replace-channel'),
@@ -920,7 +955,7 @@ export const Commands = {
             (x, y) => Utils.replaceStyle(Editing.getSelection(), x, y)
         )
     }),
-    exchangeChannel: new UICommand(
+    exchangeChannel: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.exchange-channel'),
@@ -931,7 +966,7 @@ export const Commands = {
             (x, y) => Utils.exchangeStyle(Editing.getSelection(), x, y)
         )
     }),
-    mergeChannel: new UICommand(
+    mergeChannel: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.merge-channel'),
@@ -942,21 +977,21 @@ export const Commands = {
             (x, y) => Utils.mergeStyle(Editing.getSelection(), x, y)
         )
     }),
-    mergeDuplicates: new UICommand(
+    mergeDuplicates: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.merge-overlapping-duplicates'),
         isApplicable: () => hasSelection(1),
         call: () => Utils.mergeDuplicate(Editing.getSelection())
     }),
-    fixOverlap: new UICommand(
+    fixOverlap: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.fix-erroneous-overlapping'),
         isApplicable: () => hasSelection(1),
         call: () => Utils.fixOverlap(Editing.getSelection())
     }),
-    combineDialog: new UICommand(
+    combineDialog: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.combine-by-matching-time'),
@@ -964,7 +999,7 @@ export const Commands = {
         isApplicable: () => hasSelection(),
         call: () => Dialogs.combine.showModal!()
     }),
-    splitDialog: new UICommand(
+    splitDialog: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.split-by-line'),

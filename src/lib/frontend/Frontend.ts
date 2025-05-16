@@ -47,7 +47,7 @@ export class EventHost<T extends unknown[] = []> {
 
     static unbind(obj: object) {
         for (const host of EventHost.globalEventHosts) {
-            console.log(`unbind`, host.#listeners.get(obj), this);
+            // console.log(`unbind`, host.#listeners.get(obj), this);
             host.#listeners.delete(obj);
         }
     }

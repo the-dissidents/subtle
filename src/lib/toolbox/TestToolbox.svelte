@@ -31,7 +31,7 @@ let list = $state([
   {text: 'abdfcc'}
 ]);
 
-const command = new UICommand([], {
+const command = new UICommand(() => '', [], {
   name: 'name', 
   menuName: 'primary',
   items: ['one', 'two', 'three', 'four'].map((x) => ({
