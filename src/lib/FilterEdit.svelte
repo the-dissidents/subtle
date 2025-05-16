@@ -1,5 +1,5 @@
 <script lang="ts">
-import { newMetricFilter, Metric, MetricFilterMethods, Metrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod, TextMetricFilterDefaultMethods, type MetricName, type MetricTypeName, type MetricContext, MetricContextList } from "./core/Filter";
+import { newMetricFilter, Metric, MetricFilterMethods, Metrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod, TextMetricFilterDefaultMethods, type MetricName, type MetricTypeName, type MetricContext, MetricContextList, type MetricFilterMethodName } from "./core/Filter";
 import { _, locale } from 'svelte-i18n';
 import { Debug } from "./Debug";
 import type { Action } from "svelte/action";
@@ -10,6 +10,7 @@ import { type SubtitleStyle } from "./core/Subtitles.svelte";
 import TimestampInput from "./TimestampInput.svelte";
 import { Source } from "./frontend/Source";
     import LabelSelect from "./LabelSelect.svelte";
+    import Tooltip from "./ui/Tooltip.svelte";
 
 interface Props {
   filter: MetricFilter | null;
@@ -169,7 +170,8 @@ function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter
       </ul>
     </fieldset>
   {:else}
-    <div class="hlayout flexgrow">
+  {@const metric = Metrics[f.metric]}
+    <div class="hlayout flexgrow line">
       {#if f.negated}
         <label>
           <input type='checkbox' class="button"
@@ -179,6 +181,9 @@ function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter
             }}/>
           {$_('filteredit.not')}
         </label>
+      {/if}
+      {#if metric.description}
+        <Tooltip text={metric.description()} />
       {/if}
       <select value={f.metric}
         use:autoWidth
@@ -205,10 +210,9 @@ function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter
       <select value={f.method}
         use:autoWidth
         onchange={(ev) => {
-          const name = <keyof typeof MetricFilterMethods>ev.currentTarget.value;
+          const name = <MetricFilterMethodName>ev.currentTarget.value;
           Debug.assert(name in MetricFilterMethods);
-          const newMethod = MetricFilterMethods
-            [name as keyof typeof MetricFilterMethods];
+          const newMethod = MetricFilterMethods[name];
           f.method = name;
           // fill parameters
           const params = <any[]>f.parameters;
@@ -303,6 +307,13 @@ function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter
     margin: 3px;
     padding: 3px;
   }
+  
+  .line {
+    /* margin: 0;
+    padding: 0; */
+    line-height: normal;
+  }
+
   div.combinator {
     text-align: start;
     padding-left: 20px;

@@ -17,6 +17,7 @@ import { flip } from 'svelte/animate';
 import { SubtitleTools } from '../core/SubtitleUtil.svelte';
 import { Debug } from '../Debug';
     import NumberInput from '../ui/NumberInput.svelte';
+    import Tooltip from '../ui/Tooltip.svelte';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
@@ -114,6 +115,7 @@ function changeResolution() {
           <NumberInput class='res' bind:value={metadata.scalingFactor} 
             step='any' min={0.01}
             onchange={changeResolution}/>
+          <Tooltip text={$_('ppty.scaling-d')} />
         </td>
       </tr>
     </tbody>

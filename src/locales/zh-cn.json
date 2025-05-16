@@ -338,12 +338,14 @@
     "number-of-lines-short": "行数",
     "number-of-readable-characters": "可读字符数",
     "number-of-readable-characters-short": "可读字符数",
+    "readable-characters-d": "一个西文字母或一个中日韩文字符算作一个“可读字符”；空白字符和标点符号等不算",
     "readable-characters-per-second": "每秒可读字符数",
     "readable-characters-per-second-short": "每秒可读",
     "selected": "被选中",
     "start-time": "起始时间",
     "start-time-short": "起始",
     "style": "样式",
+    "width-d": "全角字符算作2宽度，半角字符1宽度。在为字幕机等老式等宽字体设备制作字幕时，是一个有用的指标",
     "width-of-longest-line": "最长行宽度",
     "width-of-longest-line-short": "宽度"
   },
@@ -399,6 +401,7 @@
     "remove-all-unused": "删除所有未使用的样式",
     "resolution": "分辨率",
     "scaling": "缩放",
+    "scaling-d": "字幕中的字号和坐标是相对于分辨率（上面的设置值，和媒体真实值无关）计算的。因此，为了便于保持观感一致，可以用这个缩放值来进行整体调整。一般制作字幕时，直接将分辨率设为视频分辨率，然后调整缩放到舒适的大小即可",
     "styles": "样式",
     "title": "标题"
   },
@@ -406,6 +409,7 @@
     "advanced": "高级",
     "all": "全部",
     "case-sensitive": "区分大小写",
+    "escape-sequence-help": "可用的转义字符：\n\\n\t= 换行\n\\t\t= 制表符\n\\v\t= 纵向制表符\n\\\\\t= 字符\\\n$&\t= 匹配内容\n$`\t= 匹配内容之前的内容\n$'\t= 匹配内容之后的内容\n$$\t= 字符$\n如果使用正则表达式：\n$N\t= 第N个匹配组，N为自然数",
     "expression": "表达式",
     "find": "查找",
     "found-n-lines": "找到 {n} 行",
@@ -413,8 +417,12 @@
     "next": "下一个",
     "only-styles": "仅样式",
     "options": "选项",
+    "pattern": {
+      "newline": "换行"
+    },
     "previous": "上一个",
     "range": "范围",
+    "regex-help": "正则表达式是一种特殊记法，可以表达复杂的文本匹配条件；网上有许多资源可供参考学习",
     "replace": "替换",
     "replace-by-style": "替换为样式",
     "replace-term": "替换项",

@@ -108,7 +108,8 @@ handler.isOpen = () => isOpen;
   }
 
   .tooltip {
-    text-align: center;
+    text-align: start;
+    white-space: pre-wrap;
     font-size: 0.85rem;
     line-height: 1.25;
   }

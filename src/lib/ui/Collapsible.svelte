@@ -32,13 +32,7 @@ let {
   <span class='caret flexgrow'>{header}</span>
 
   {#if helpText != ""}
-  <Tooltip position='left' text={helpText}>
-    <span class='info'>
-      <svg class="feather">
-        <use href="/feather-sprite.svg#info" />
-      </svg>
-    </span>
-  </Tooltip>
+  <Tooltip position='left' text={helpText} />
   {/if}
   
   <span class='check' class:hidden={!showCheck}>
@@ -75,15 +69,6 @@ let {
   }
 }
 
-.info {
-  /* font-family: 'Webdings';
-  font-size: 120%; */
-  color: gray;
-  margin-right: 5px;
-}
-.info svg {
-  stroke-width: 2;
-}
 .check {
   display: inline-block;
   text-align: right;

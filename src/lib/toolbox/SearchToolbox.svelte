@@ -35,6 +35,8 @@ import Collapsible from '../ui/Collapsible.svelte';
 import FilterEdit from '../FilterEdit.svelte';
 import { evaluateFilter, type MetricFilter } from '../core/Filter';
 import { Toolboxes } from '../frontend/Toolboxes';
+import Tooltip from '../ui/Tooltip.svelte';
+// import { Menu } from '@tauri-apps/api/menu';
 
 const handler: SearchHandler = $state({
   term: '',
@@ -334,58 +336,81 @@ async function execute(type: SearchAction, option: SearchOption) {
 }
 </script>
 
-<input class='wfill' type="text" bind:value={handler.term}
+<input class='wfill' type="text"
+  spellcheck="false" autocomplete="off"
+  bind:value={handler.term}
   bind:this={termInput}
   id='expr' placeholder={$_('search.expression')}/>
-<input class='wfill' type="text" bind:value={handler.replaceTerm}
-  id='repl' placeholder={$_('search.replace-term')}/>
-  <table class="wfill">
-    <tbody>
-      <tr>
-        <td>
-          <button class="left wfill" disabled>{$_('search.find')}</button>
-        </td>
-        <td class="hlayout">
-          <button class="middle"
-            onclick={() => execute("select", "next")}
-          >{$_('search.next')}</button>
-          <button class="middle"
-            onclick={() => execute("select", "previous")}
-          >{$_('search.previous')}</button>
-          <button class="right flexgrow"
-            onclick={() => execute("select", "all")}
-          >{$_('search.all')}</button>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          <button class="left wfill" disabled>{$_('search.replace')}</button>
-        </td>
-        <td class="hlayout">
-          <button class="middle"
-            onclick={() => execute("replace", "next")}
-          >{$_('search.next')}</button>
-          <button class="middle"
-            onclick={() => execute("replace", "previous")}
-          >{$_('search.previous')}</button>
-          <button class="middle"
-            onclick={() => execute("replace", "all")}
-          >{$_('search.all')}</button>
-          <button class="right flexgrow"
-            onclick={() => execute("replaceStyles", "all")}
-          >{$_('search.only-styles')}</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+<div class="hlayout">
+  <input class='wfill' type="text"
+    spellcheck="false" autocomplete="off"
+    bind:value={handler.replaceTerm}
+    id='repl' placeholder={$_('search.replace-term')}/>
+  <!-- TODO: make a menu for inserting common escape sequences,
+    but problem is that text inputs lose cursor once unfocused
+    -->
+  <!-- <button onclick={() => {
+    Menu.new({items: [
+      {
+        text: $_('search.pattern.newline'),
+        action() {
+            
+        },
+      }
+    ]}).then((x) => x.popup());
+  }}>...</button> -->
+</div>
+<table class="wfill">
+  <tbody>
+    <tr>
+      <td>
+        <button class="left wfill" disabled>{$_('search.find')}</button>
+      </td>
+      <td class="hlayout">
+        <button class="middle"
+          onclick={() => execute("select", "next")}
+        >{$_('search.next')}</button>
+        <button class="middle"
+          onclick={() => execute("select", "previous")}
+        >{$_('search.previous')}</button>
+        <button class="right flexgrow"
+          onclick={() => execute("select", "all")}
+        >{$_('search.all')}</button>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <button class="left wfill" disabled>{$_('search.replace')}</button>
+      </td>
+      <td class="hlayout">
+        <button class="middle"
+          onclick={() => execute("replace", "next")}
+        >{$_('search.next')}</button>
+        <button class="middle"
+          onclick={() => execute("replace", "previous")}
+        >{$_('search.previous')}</button>
+        <button class="middle"
+          onclick={() => execute("replace", "all")}
+        >{$_('search.all')}</button>
+        <button class="right flexgrow"
+          onclick={() => execute("replaceStyles", "all")}
+        >{$_('search.only-styles')}</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 <div class='form vlayout'>
   <h5>{$_('search.options')}</h5>
-  <label><input type='checkbox' bind:checked={handler.useRegex}/>
+  <label>
+    <input type='checkbox' bind:checked={handler.useRegex}/>
     {$_('search.use-regular-expressions')}
+    <Tooltip text={$_('search.regex-help')} />
   </label>
-  <label><input type='checkbox' bind:checked={handler.useEscapeSequenceInReplacement}/>
+  <label>
+    <input type='checkbox' bind:checked={handler.useEscapeSequenceInReplacement}/>
     {$_('search.use-escape-sequences-in-replacement')}
+    <Tooltip text={$_('search.escape-sequence-help')} />
   </label>
   <label><input type='checkbox' bind:checked={handler.caseSensitive}/>
     {$_('search.case-sensitive')}

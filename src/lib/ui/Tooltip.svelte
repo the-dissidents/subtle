@@ -55,6 +55,7 @@ function findBoundingRect(element: HTMLElement): DOMRect {
 </script>
 
 <div bind:this={container}
+  class="tooltip-container"
   role="group"
   onmouseenter={() => {
     Debug.assert(container !== undefined);
@@ -64,8 +65,34 @@ function findBoundingRect(element: HTMLElement): DOMRect {
   onmouseleave={() => handler.close!()}
   style="display: contents;"
 >
-  {@render children?.()}
+  {#if children}
+    {@render children?.()}
+  {:else}
+    <span>
+      <svg class="feather">
+        <use href="/feather-sprite.svg#info" />
+      </svg>
+    </span>
+  {/if}
 </div>
 <Popup style="tooltip" bind:handler={handler} {position}>
   {text}
 </Popup>
+
+<style>
+  .feather {
+    display: inline;
+    stroke-width: 2; 
+    margin: 0 3px 0 3px;
+    max-height: 16px;
+    color: gray;
+    vertical-align: middle;
+  }
+
+  .tooltip-container:first-child > span > .feather {
+    margin: 0 3px 0 0;
+  }
+  .tooltip-container:last-child > span > .feather {
+    margin: 0 0 0 3px;
+  }
+</style>

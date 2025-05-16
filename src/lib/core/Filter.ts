@@ -36,7 +36,7 @@ export class Metric<TypeName extends MetricTypeName> {
             (entry: SubtitleEntry, style: SubtitleStyle) => MetricType<TypeName>,
         opts?: {
             description?: () => string,
-            integer: boolean
+            integer?: boolean
         }
     ) {
         // TODO: is this awkward? it only applies to numbers
@@ -192,7 +192,10 @@ export const Metrics = {
         () => $_('metrics.number-of-readable-characters'), 
         () => $_('metrics.number-of-readable-characters-short'), 
         (e, s) => getTextLength(e.texts.get(s)!),
-        { integer: true }),
+        {
+            integer: true,
+            description: () => $_('metrics.readable-characters-d')
+        }),
     charsInLongestLine: new Metric('number', 'channel',
         () => $_('metrics.number-of-characters-in-longest-line'), 
         () => $_('metrics.number-of-characters-in-longest-line-short'), 
@@ -202,12 +205,18 @@ export const Metrics = {
         () => $_('metrics.number-of-letters-in-longest-line'), 
         () => $_('metrics.number-of-letters-in-longest-line-short'), 
         (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(getTextLength)),
-        { integer: true }),
+        {
+            integer: true,
+            description: () => $_('metrics.readable-characters-d')
+        }),
     widthOfLongestLine: new Metric('number', 'channel',
         () => $_('metrics.width-of-longest-line'), 
         () => $_('metrics.width-of-longest-line-short'), 
         (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(wcwidth)),
-        { integer: true }),
+        {
+            integer: true,
+            description: () => $_('metrics.width-d')
+        }),
     lettersPerSecond: new Metric('number', 'channel',
         () => $_('metrics.readable-characters-per-second'), 
         () => $_('metrics.readable-characters-per-second-short'), 
@@ -215,6 +224,9 @@ export const Metrics = {
             const value = getTextLength(e.texts.get(s)!) / (e.end - e.start);
             // TODO: is it ok to return 0 for NaN?
             return isNaN(value) ? 0 : value;
+        },
+        {
+            description: () => $_('metrics.readable-characters-d')
         }),
 } as const;
 

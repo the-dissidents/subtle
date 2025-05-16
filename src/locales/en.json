@@ -181,6 +181,12 @@
     "show-config-file-advanced": "Show config files (advanced)",
     "show-log-path": "Show log folder"
   },
+  "context": {
+    "EditingField": "editing fields",
+    "Other": "other",
+    "Table": "table",
+    "Timeline": "timeline"
+  },
   "cxtmenu": {
     "and": "and:",
     "ass-fragment": "ASS fragment",
@@ -330,12 +336,14 @@
     "number-of-lines-short": "#lines",
     "number-of-readable-characters": "#letters",
     "number-of-readable-characters-short": "#ltrs",
+    "readable-characters-d": "One single letter or single CJK glyph counts as one \"readable character\". Other characters like whitespaces and punctuations are not counted.",
     "readable-characters-per-second": "letters per second",
     "readable-characters-per-second-short": "#ltrs/sec",
     "selected": "selected",
     "start-time": "start time",
     "start-time-short": "start",
     "style": "style",
+    "width-d": "Each double-width character counts as two, while single-width count as one. Useful when working for traditional monospace displays.",
     "width-of-longest-line": "width of longest line",
     "width-of-longest-line-short": "width"
   },
@@ -391,6 +399,7 @@
     "remove-all-unused": "remove all unused",
     "resolution": "resolution",
     "scaling": "scaling",
+    "scaling-d": "Because font sizes and coordinates are relative to the resolution – the property value, unrelated to the actual media resolution – you may need to adjust the scaling factor when adapting a style or a subtitle file to a different resolution.",
     "styles": "styles",
     "title": "title"
   },
@@ -398,6 +407,7 @@
     "advanced": "advanced",
     "all": "all",
     "case-sensitive": "case sensitive",
+    "escape-sequence-help": "Available escape sequences:\n\\n\t= newline\n\\t\t= tab\n\\v\t= vertical tab\n\\\\\t= the character '\\'\n$&\t= the matched content\n$`\t= content before the match\n$'\t= content after the match\n$$\t= the character '$'\nWhen using regular expressions:\n$N\t= the N-th capture group",
     "expression": "expression",
     "find": "find",
     "found-n-lines": "found {n} {n,plural,one{line} other{lines}}",
@@ -405,8 +415,12 @@
     "next": "next",
     "only-styles": "only styles",
     "options": "options",
+    "pattern": {
+      "newline": "newline"
+    },
     "previous": "previous",
     "range": "range",
+    "regex-help": "Regular expressions use a specialized, versatile notation to express search patterns. You can learn more about it in various online sources.",
     "replace": "replace",
     "replace-by-style": "replace by style",
     "replace-term": "replace term",
