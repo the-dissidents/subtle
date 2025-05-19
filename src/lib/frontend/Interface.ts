@@ -150,6 +150,8 @@ export const Interface = {
     },
 
     async openVideo(path: string) {
+        if (get(Playback.isLoaded))
+            await Playback.close();
         guardAsync(async () => await Playback.load(path), 
             $_('msg.error-opening-video-path', {values: {path}}));
         
