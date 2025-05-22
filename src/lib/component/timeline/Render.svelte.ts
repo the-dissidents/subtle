@@ -6,7 +6,7 @@ import { TimelineLayout } from "./Layout";
 import { InterfaceConfig, MainConfig } from "../../config/Groups";
 import { Basic } from "../../Basic";
 import { TimelineConfig } from "./Config";
-import type { TimelineInput } from "./Input";
+import type { TimelineInput } from "./Input.svelte";
 import { Editing } from "../../frontend/Editing";
 
 const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(0deg 0% 75%/50%)');

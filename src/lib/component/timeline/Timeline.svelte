@@ -5,8 +5,9 @@ import { ChangeType, Source } from "../../frontend/Source";
 import { Interface } from '../../frontend/Interface';
 import Popup, { type PopupHandler } from '../../ui/Popup.svelte';
 import { TimelineLayout } from "./Layout";
-import { TimelineInput } from "./Input";
+import { TimelineInput } from "./Input.svelte";
 import { TimelineRenderer } from "./Render.svelte";
+    import Tooltip from '../../ui/Tooltip.svelte';
 
 let rowPopup: PopupHandler = $state({});
 let styleRefreshCounter = $state(0);
@@ -15,7 +16,7 @@ let buttonPosY = $state(0);
 let uiFocus = Interface.uiFocus;
 
 let layout = $state<TimelineLayout>();
-let input: TimelineInput;
+let input = $state<TimelineInput>();
 let renderer: TimelineRenderer;
 
 // Setup function for the canvas
@@ -33,28 +34,61 @@ function setup(canvas: HTMLCanvasElement) {
 }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="container"
-     onclick={() => $uiFocus = 'Timeline'}>
-  <div class="button-container"
-       style:width="{buttonPosX}px">
-    <button aria-label='edit'
-      style:top="{buttonPosY}px"
-      onclick={(ev) => {
-        const rect = ev.currentTarget.getBoundingClientRect();
-        rowPopup.open!(rect);
-      }}
-    >
-      <svg class="feather">
-        <use href={`/feather-sprite.svg#edit-3`} />
-      </svg>
-    </button>
+<div class={["hlayout", "container", {timelinefocused: $uiFocus === 'Timeline'}]}>
+  <div class="vlayout toolbox">
+    <Tooltip text={$_('timeline.select-tool')} position="right">
+      <label>
+        <input type="checkbox" class="button"
+          checked={input?.currentMode == 'select'}
+          onclick={() => input!.currentMode = 'select'} />
+        <svg class="feather">
+          <use href={`/feather-sprite.svg#mouse-pointer`} />
+        </svg>
+      </label>
+    </Tooltip>
+    <Tooltip text={$_('timeline.create-tool')} position="right">
+      <label>
+        <input type="checkbox" class="button"
+          checked={input?.currentMode == 'create'}
+          onclick={() => input!.currentMode = 'create'} />
+        <svg class="feather">
+          <use href={`/feather-sprite.svg#plus-square`} />
+        </svg>
+      </label>
+    </Tooltip>
+    <Tooltip text={$_('timeline.split-tool')} position="right">
+      <label>
+        <input type="checkbox" class="button"
+          checked={input?.currentMode == 'cut'}
+          onclick={() => input!.currentMode = 'cut'} />
+        <svg class="feather">
+          <use href={`/feather-sprite.svg#scissors`} />
+        </svg>
+      </label>
+    </Tooltip>
   </div>
-  <canvas class="timeline fill"
-    use:setup
-    class:timelinefocused={$uiFocus === 'Timeline'}>
-  </canvas>
+
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="overlay-container"
+      onclick={() => $uiFocus = 'Timeline'}>
+    <div class="button-container"
+        style:width="{buttonPosX}px">
+      <button aria-label='edit'
+        style:top="{buttonPosY}px"
+        onclick={(ev) => {
+          const rect = ev.currentTarget.getBoundingClientRect();
+          rowPopup.open!(rect);
+        }}
+      >
+        <svg class="feather">
+          <use href={`/feather-sprite.svg#edit-3`} />
+        </svg>
+      </button>
+    </div>
+    <canvas class="timeline fill" use:setup>
+    </canvas>
+  </div>
 </div>
 
 <Popup bind:handler={rowPopup} position="right">
@@ -108,9 +142,7 @@ h5 {
 }
 
 .timeline {
-  border-radius: 4px;
   display: block;
-  background-color: gray;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
 }
@@ -133,9 +165,20 @@ h5 {
   pointer-events: auto;
 }
 
+.toolbox {
+  padding: 0 3px 0 3px;
+  justify-items: end;
+}
+
 .container {
-  position: relative;
   width: 100%;
   height: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  /* background-color: gray; */
+}
+
+.overlay-container {
+  position: relative;
 }
 </style>

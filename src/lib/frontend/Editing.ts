@@ -191,7 +191,6 @@ export const Editing = {
         if (trySubmit && focused instanceof SubtitleEntry)
             this.submitFocusedEntry();
         this.focused.entry.set(null);
-        this.focused.style = null;
     },
 
     setSelection(entries: SubtitleEntry[]) {

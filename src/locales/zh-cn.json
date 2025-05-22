@@ -498,7 +498,10 @@
     "text": "文本"
   },
   "timeline": {
-    "filter-styles": "选择要显示的样式"
+    "create-tool": "创建工具",
+    "filter-styles": "选择要显示的样式",
+    "select-tool": "选择工具",
+    "split-tool": "切割工具"
   },
   "transformdialog": {
     "backward": "向后",

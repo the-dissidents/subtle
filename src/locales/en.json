@@ -496,7 +496,10 @@
     "text": "text"
   },
   "timeline": {
-    "filter-styles": "filter styles"
+    "create-tool": "create tool",
+    "filter-styles": "filter styles",
+    "select-tool": "select tool",
+    "split-tool": "split tool"
   },
   "transformdialog": {
     "backward": "backward",

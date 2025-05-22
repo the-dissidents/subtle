@@ -278,7 +278,7 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     editThisEntry:new UICommand(() => $_('category.editing'),
-        [ binding(['Enter'], ['Table']), ],
+        [ binding(['Enter'], ['Table', 'Timeline']), ],
     {
         name: () => $_('action.edit-this-entry'),
         isApplicable: () => Editing.getFocusedEntry() !== null,
