@@ -10,6 +10,7 @@ import { Playback } from "../../frontend/Playback";
 import type { TranslatedWheelEvent } from "../../frontend/Frontend";
 import { TimelineConfig } from "./Config";
 import { Interface } from "../../frontend/Interface";
+import { Overridable } from "../../details/Overridable.svelte";
 
 abstract class TimelineAction {
   readonly origPos: number;
@@ -192,7 +193,7 @@ class DragMove extends MoveResizeBase {
     let dval = this.self.convertX(offsetX) - this.origPos;
 
     // TODO: maybe make it a command ('toggle snap') instead?
-    if (ev.altKey !== TimelineConfig.data.enableSnap)
+    if (this.self.useSnap.value)
       dval = this.self.snapVisible(this.points, this.start + dval) - this.start;
     this.changed = dval != 0;
     for (const [ent, pos] of this.origPositions.entries()) {
@@ -222,7 +223,7 @@ class DragResize extends MoveResizeBase {
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
     let val = this.origVal + this.self.convertX(offsetX) - this.origPos;
-    if (ev.altKey !== TimelineConfig.data.enableSnap)
+    if (this.self.useSnap.value)
       val = this.self.snapVisible([val]);
     let newStart: number, newEnd: number;
     if (this.where == 'start') {
@@ -293,6 +294,7 @@ export class TimelineInput {
     current: SubtitleStyle 
   } = null;
 
+  useSnap = new Overridable(true);
   currentMode: 'select' | 'create' | 'cut' = $state('select');
   currentAction: TimelineAction | undefined;
 
@@ -391,6 +393,7 @@ export class TimelineInput {
   }
 
   selectionFirstLast() {
+    Debug.assert(this.selection.size > 0);
     const sels = [...this.selection];
     return sels.reduce<[SubtitleEntry, SubtitleEntry]>(
       ([pf, pl], current) => [
@@ -448,13 +451,13 @@ export class TimelineInput {
     const under = this.layout.findEntriesByPosition(
       e.offsetX + this.manager.scroll[0], e.offsetY);
     if (under.length == 0) {
-      if (this.currentMode == 'create') {
+      if (this.currentMode == 'create' && this.useSnap.value) {
         let old = this.alignmentLine?.x;
         this.snapVisible([this.convertX(e.offsetX)]);
         if (this.alignmentLine?.x !== old)
           this.manager.requestRender();
-        return;
       }
+      return;
     }
     canvas.style.cursor = 'move';
     this.alignmentLine = null;

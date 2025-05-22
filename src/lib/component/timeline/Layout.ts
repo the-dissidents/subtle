@@ -8,7 +8,7 @@ import { Playback } from "../../frontend/Playback";
 import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { get } from "svelte/store";
 import { TimelineConfig } from "./Config";
-import { EventHost } from "../../frontend/Frontend";
+import { EventHost } from "../../details/EventHost";
 import { Editing } from "../../frontend/Editing";
 
 const PRELOAD_MARGIN = 3;

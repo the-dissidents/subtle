@@ -64,7 +64,7 @@ import { PublicConfigGroup } from "./config/PublicConfig.svelte";
 
 import { Actions } from "./frontend/Actions";
 import { Editing, getSelectMode, SelectMode } from "./frontend/Editing";
-import { EventHost } from "./frontend/Frontend";
+import { EventHost } from "./details/EventHost";
 import { Interface } from "./frontend/Interface";
 import { Playback } from "./frontend/Playback";
 import { ChangeCause, ChangeType, Source } from "./frontend/Source";
@@ -75,7 +75,6 @@ import { get } from 'svelte/store';
 import Popup, { type PopupHandler } from "./ui/Popup.svelte";
 import OrderableList from "./ui/OrderableList.svelte";
 import { Menu } from "@tauri-apps/api/menu";
-import { PrivateConfig } from "./config/PrivateConfig";
 
 const MetricsList = Object.entries(Metrics) as [keyof typeof Metrics, Metric<any>][];
 

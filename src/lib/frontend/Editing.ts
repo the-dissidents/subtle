@@ -5,7 +5,7 @@ import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Basic } from "../Basic";
 import { Interface } from "./Interface";
 import { ChangeCause, ChangeType, Source } from "./Source";
-import { EventHost } from "./Frontend";
+import { EventHost } from "../details/EventHost";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";

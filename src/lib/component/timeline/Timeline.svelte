@@ -7,7 +7,7 @@ import Popup, { type PopupHandler } from '../../ui/Popup.svelte';
 import { TimelineLayout } from "./Layout";
 import { TimelineInput } from "./Input.svelte";
 import { TimelineRenderer } from "./Render.svelte";
-    import Tooltip from '../../ui/Tooltip.svelte';
+import Tooltip from '../../ui/Tooltip.svelte';
 
 let rowPopup: PopupHandler = $state({});
 let styleRefreshCounter = $state(0);
@@ -31,8 +31,26 @@ function setup(canvas: HTMLCanvasElement) {
   layout.manager.onUserScroll.bind(layout, () => {
     buttonPosY = -layout!.manager.scroll[1];
   });
+
+  uiFocus.subscribe((x) => {
+    if (x != 'Timeline')
+      input!.useSnap.override = null;
+  });
+}
+
+function updateSnapOverride(ev: KeyboardEvent) {
+  if ($uiFocus !== 'Timeline') return;
+  if (ev.altKey)
+    input!.useSnap.override = !input!.useSnap.setting;
+  else
+    input!.useSnap.override = null;
+  console.log(input!.useSnap.value);
 }
 </script>
+
+<svelte:document
+  on:keydown={updateSnapOverride}
+  on:keyup={updateSnapOverride}/>
 
 <div class={["hlayout", "container", {timelinefocused: $uiFocus === 'Timeline'}]}>
   <div class="vlayout toolbox">
@@ -63,6 +81,19 @@ function setup(canvas: HTMLCanvasElement) {
           onclick={() => input!.currentMode = 'cut'} />
         <svg class="feather">
           <use href={`/feather-sprite.svg#scissors`} />
+        </svg>
+      </label>
+    </Tooltip>
+
+    <hr/>
+
+    <Tooltip text={$_('timeline.enable-snap')} position="right">
+      <label>
+        <input type="checkbox" class="button"
+          checked={input?.useSnap.value}
+          onclick={() => input!.useSnap.setting = !input?.useSnap.setting} />
+        <svg class="feather">
+          <use href={`/feather-sprite.svg#anchor`} />
         </svg>
       </label>
     </Tooltip>

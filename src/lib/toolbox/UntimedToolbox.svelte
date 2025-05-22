@@ -10,15 +10,15 @@ import * as fuzzyAlgorithm from "../details/Fuzzy";
 
 import StyleSelect from "../StyleSelect.svelte";
 import Collapsible from "../ui/Collapsible.svelte";
+import NumberInput from "../ui/NumberInput.svelte";
 
 import { Dialogs } from "../frontend/Dialogs";
 import { Editing } from "../frontend/Editing";
-import { EventHost } from "../frontend/Frontend";
 import { Interface } from "../frontend/Interface";
 import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 
 import { _ } from 'svelte-i18n';
-import NumberInput from "../ui/NumberInput.svelte";
+import { EventHost } from "../details/EventHost";
 
 let locked = $state(false);
 let textsize = $state(14);

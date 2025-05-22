@@ -8,7 +8,7 @@ import { Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte';
 import StyleEdit from '../StyleEdit.svelte';
 import Collapsible from '../ui/Collapsible.svelte';
 
-import { EventHost } from '../frontend/Frontend';
+import { EventHost } from '../details/EventHost';
 import { Playback } from '../frontend/Playback';
 import { ChangeType, Source } from '../frontend/Source';
 

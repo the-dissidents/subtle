@@ -497,6 +497,7 @@
   },
   "timeline": {
     "create-tool": "create tool",
+    "enable-snap": "enable snap",
     "filter-styles": "filter styles",
     "select-tool": "select tool",
     "split-tool": "split tool"

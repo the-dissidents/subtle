@@ -10,7 +10,7 @@ import { guardAsync, Interface } from "./Interface";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { InterfaceConfig } from "../config/Groups";
 import { Editing } from "./Editing";
-import { EventHost } from "./Frontend";
+import { EventHost } from "../details/EventHost";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";

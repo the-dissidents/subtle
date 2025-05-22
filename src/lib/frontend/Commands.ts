@@ -8,7 +8,8 @@ import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Editing, KeepInViewMode, SelectMode } from "./Editing";
-import { EventHost, parseSubtitleSource } from "./Frontend";
+import { parseSubtitleSource } from "./Frontend";
+import { EventHost } from "../details/EventHost";
 import { Source, ChangeType, ChangeCause } from "./Source";
 import { Labels, SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Playback } from "./Playback";
@@ -460,7 +461,6 @@ export const Commands = {
             Source.markChanged(ChangeType.Times);
         }
     }),
-
     holdToCreateEntry2: new UICommand(() => $_('category.timeline'),
         [ binding(['K'], ['Timeline']) ],
     {

@@ -5,7 +5,7 @@ import { get, writable, type Readable } from "svelte/store";
 import { Debug } from "../Debug";
 import { VideoPlayer, type SetPositionOptions } from "../VideoPlayer";
 import { ChangeType, Source } from "./Source";
-import { EventHost } from "./Frontend";
+import { EventHost } from "../details/EventHost";
 
 export type PlayArea = {
     start: number | undefined,

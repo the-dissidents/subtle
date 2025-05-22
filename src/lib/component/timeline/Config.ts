@@ -27,12 +27,12 @@ export const TimelineConfig = new PublicConfigGroup(
     bounds: [1, 10],
     default: 5
   },
-  enableSnap: {
-    localizedName: () => get(_)('config.snapping'),
-    type: 'boolean',
-    description: () => get(_)('config.snapping-d'),
-    default: true
-  },
+  // enableSnap: {
+  //   localizedName: () => get(_)('config.snapping'),
+  //   type: 'boolean',
+  //   description: () => get(_)('config.snapping-d'),
+  //   default: true
+  // },
   snapDistance: {
     localizedName: () => get(_)('config.snap-distance'),
     type: 'number',

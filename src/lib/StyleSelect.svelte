@@ -2,7 +2,7 @@
 import { onDestroy } from "svelte";
 import type { SubtitleStyle } from "./core/Subtitles.svelte";
 import { ChangeType, Source } from "./frontend/Source";
-import { EventHost } from "./frontend/Frontend";
+import { EventHost } from "./details/EventHost";
 
 interface Props {
   disabled?: boolean,

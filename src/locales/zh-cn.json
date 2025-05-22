@@ -499,6 +499,7 @@
   },
   "timeline": {
     "create-tool": "创建工具",
+    "enable-snap": "启用吸附",
     "filter-styles": "选择要显示的样式",
     "select-tool": "选择工具",
     "split-tool": "切割工具"
