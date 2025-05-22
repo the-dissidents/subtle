@@ -1,3 +1,4 @@
+/** Note: `T` should **not** extend `null` */
 export class Overridable<T> {
     setting = $state() as T;
     override = $state<T | null>(null);

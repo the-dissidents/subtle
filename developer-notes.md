@@ -11,7 +11,7 @@
 - 标识符起名要使用尽可能正确的英语。
 - 注释可选择使用尽可能正确的英语或者中文。注释有两种不同的用途：1. 让过于庞大的函数变得清晰；2. 解释比较难懂的算法或反直觉的逻辑。
 - 每一个语句后面都要加分号（除了控制流语句如`if (...) {}`之外）。
-  - 我们建议在`type ... = {...};`里面加分号
+  - 我们建议在`type ... = {...};`最后加分号
   - 但是`interface ... {...}`和`class ... {...}`里面不需要
 - 如果你想要写一个TypeScript枚举，首先想想能不能用literal union解决。后者基本上能覆盖前者的所有使用场合，在性能上几乎没有差异，并且在调试和序列化上有优势。
 - 使用switch讨论枚举或union取值情况的时候一定加上`default`块，并在其中使用`Debug.never`。
@@ -181,6 +181,29 @@ hook<T>(track: () => T, action: (value: T) => void) {
 ```
 
 As of writing (2025.4.23), there is a [pull request](https://github.com/sveltejs/svelte/pull/15069) to add a `$state.onchange` rune which removes this issue, and it looks like it will replace virtually all use cases of `$effect` in this project. I think it will be merged relatively soon.
+
+## Terribly Unintuitive Aspects of `$state`s inside Objects
+
+Consider:
+
+```svelte
+<script>
+	let state = $state({o: 1})
+	let obj = {x: state};
+	$inspect(obj.x);
+	$effect(() => {
+		obj.x;
+		console.log('obj.x changed');
+	});
+</script>
+<button onclick={() => obj.x.o = 2}>test</button>
+```
+
+Clicking the button will **not** trigger the `$effect`. However, it **will** trigger `$inspect`!
+
+If you want `$effect` to work correctly here, refer to the field as `$state.snapshot(obj.x)` instead;
+
+I don't know the explanation for this yet.
 
 ## Template for Dialogs
 

@@ -369,12 +369,10 @@ export const Commands = {
         name: () => $_('action.toggle-in-point'),
         call() {
             const pos = Playback.position;
-            Playback.playArea.update((area) => {
-                area.start = 
-                    (area.start == pos || (area.end !== undefined && area.end <= pos)) 
-                    ? undefined : pos;
-                return area;
-            });
+            const area = Playback.playArea.setting;
+            Playback.playArea.setting.start = 
+                (area.start == pos || (area.end !== undefined && area.end <= pos)) 
+                ? undefined : pos;
         }
     }),
     toggleOutPoint: new UICommand(() => $_('category.media'),
@@ -384,12 +382,10 @@ export const Commands = {
         name: () => $_('action.toggle-out-point'),
         call() {
             const pos = Playback.position;
-            Playback.playArea.update((area) => {
-                area.end =
-                    (area.end == pos || (area.start !== undefined && area.start >= pos)) 
-                    ? undefined : pos;
-                return area;
-            });
+            const area = Playback.playArea.setting;
+            Playback.playArea.setting.end =
+                (area.end == pos || (area.start !== undefined && area.start >= pos)) 
+                ? undefined : pos;
         }
     }),
     playEntry: new UICommand(() => $_('category.media'),
@@ -401,7 +397,7 @@ export const Commands = {
             if (Playback.video === null) return;
             const current = Editing.selection.focused;
             if (current === null) return;
-            Playback.playAreaOverride = {
+            Playback.playArea.override = {
                 start: current.start,
                 end: current.end,
                 loop: false

@@ -50,7 +50,7 @@ export class UICommand<TState = void> {
 
     public readonly defaultBindings: readonly CommandBinding[];
     
-    #state: TState | undefined;
+    #state: { value: TState } | undefined;
 
     get activated() {
         return UICommand.#activated.has(this);
@@ -118,7 +118,7 @@ export class UICommand<TState = void> {
             if (n < 0) return;
             await this.#runCommand(items[n]);
         } else {
-            this.#state = await item.call();
+            this.#state = { value: await item.call() };
         }
     }
 
@@ -144,7 +144,7 @@ export class UICommand<TState = void> {
         Debug.assert(this.activated && this.#state !== undefined);
         if (this.options.onDeactivate) {
             Debug.debug('executing onDeactivate', this.name);
-            await this.options.onDeactivate(this.#state);
+            await this.options.onDeactivate(this.#state.value);
         }
         UICommand.#activated.delete(this);
     }

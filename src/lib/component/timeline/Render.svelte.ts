@@ -8,6 +8,7 @@ import { Basic } from "../../Basic";
 import { TimelineConfig } from "./Config";
 import type { TimelineInput } from "./Input.svelte";
 import { Editing } from "../../frontend/Editing";
+import { hook } from "../../details/Hook.svelte";
 
 const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(0deg 0% 75%/50%)');
 const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
@@ -104,7 +105,11 @@ export class TimelineRenderer {
     MainConfig.hook(
       () => theme.isDark, 
       () => this.manager.requestRender());
-    Playback.playArea.subscribe(() => this.manager.requestRender());
+
+    hook(() => Playback.playArea.setting, 
+      () => {
+        this.manager.requestRender();
+      });
   }
 
   #render(ctx: CanvasRenderingContext2D) {
@@ -118,18 +123,6 @@ export class TimelineRenderer {
     this.#renderTracks(ctx);
     this.#renderCursor(ctx);
     this.#renderLeftColumn(ctx);
-  
-    ctx.font = 'bold ' + font(TimelineConfig.data.fontSize);
-    ctx.fillStyle = INOUT_TEXT;
-    ctx.textBaseline = 'top';
-    const area = get(Playback.playArea);
-    const status = (area.start === undefined ? '' : 'IN ')
-                 + (area.end === undefined ? '' : 'OUT ')
-                 + (area.loop ? 'LOOP ' : '');
-    const statusWidth = ctx.measureText(status).width;
-    ctx.fillText(status, 
-      this.layout.width - statusWidth - 5 + this.manager.scroll[0], 
-      TimelineLayout.HEADER_HEIGHT + 5);
     
     if (!TimelineConfig.data.showDebug) return;
     ctx.translate(this.manager.scroll[0], 0);
@@ -317,24 +310,48 @@ export class TimelineRenderer {
 
     const alignmentLine = this.input.alignmentLine;
     if (alignmentLine) {
+      const x = alignmentLine.pos * this.layout.scale + this.layout.leftColumnWidth;
       ctx.strokeStyle = ALIGNLINE_COLOR;
       ctx.lineWidth = ALIGNLINE_WIDTH;
       ctx.beginPath();
-      ctx.moveTo(alignmentLine.x - 5, alignmentLine.y1 - 5);
-      ctx.lineTo(alignmentLine.x, alignmentLine.y1);
-      ctx.lineTo(alignmentLine.x + 5, alignmentLine.y1 - 5);
+
+      for (const row of alignmentLine.rows) {
+        const y1 = TimelineLayout.HEADER_HEIGHT 
+          + TimelineLayout.TRACKS_PADDING + this.layout.entryHeight * row;
+        const y2 = y1 + this.layout.entryHeight;
+
+        if (!alignmentLine.rows.has(row - 1)) {
+          ctx.moveTo(x - 5, y1 - 5);
+          ctx.lineTo(x, y1);
+          ctx.lineTo(x + 5, y1 - 5);
+        }
+        if (!alignmentLine.rows.has(row + 1)) {
+          ctx.moveTo(x - 5, y2 + 5);
+          ctx.lineTo(x, y2);
+          ctx.lineTo(x + 5, y2 + 5);
+        }
+      }
   
-      ctx.moveTo(alignmentLine.x - 5, alignmentLine.y2 + 5);
-      ctx.lineTo(alignmentLine.x, alignmentLine.y2);
-      ctx.lineTo(alignmentLine.x + 5, alignmentLine.y2 + 5);
-  
-      ctx.moveTo(alignmentLine.x, TimelineLayout.HEADER_HEIGHT);
-      ctx.lineTo(alignmentLine.x, this.layout.height);
+      ctx.moveTo(x, TimelineLayout.HEADER_HEIGHT);
+      ctx.lineTo(x, this.layout.height);
       ctx.stroke();
     }
   
-    // In-out area
-    const area = get(Playback.playArea);
+    const x = Playback.position * this.layout.scale + this.layout.leftColumnWidth;
+    const y = this.manager.scroll[1];
+    ctx.fillStyle = CURSOR_COLOR;
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y);
+    ctx.lineTo(x - 4, y);
+    ctx.lineTo(x - 1, y + 10);
+    ctx.lineTo(x - 1, y + this.layout.height);
+    ctx.lineTo(x + 1, y + this.layout.height);
+    ctx.lineTo(x + 1, y + 10);
+    ctx.lineTo(x + 4, y);
+    ctx.fill();
+  
+    // In-out area. Only display the setting, not override value
+    const area = Playback.playArea.setting;
     const scrollX = this.manager.scroll[0];
     if (area.start !== undefined) {
       const start = area.start * this.layout.scale;
@@ -350,19 +367,17 @@ export class TimelineRenderer {
         this.layout.width + scrollX - end, 
         this.layout.height);
     }
-  
-    const x = Playback.position * this.layout.scale + this.layout.leftColumnWidth;
-    const y = this.manager.scroll[1];
-    ctx.fillStyle = CURSOR_COLOR;
-    ctx.beginPath();
-    ctx.moveTo(x + 4, y);
-    ctx.lineTo(x - 4, y);
-    ctx.lineTo(x - 1, y + 10);
-    ctx.lineTo(x - 1, y + this.layout.height);
-    ctx.lineTo(x + 1, y + this.layout.height);
-    ctx.lineTo(x + 1, y + 10);
-    ctx.lineTo(x + 4, y);
-    ctx.fill();
+
+    ctx.font = 'bold ' + font(TimelineConfig.data.fontSize);
+    ctx.fillStyle = INOUT_TEXT;
+    ctx.textBaseline = 'top';
+    const status = (area.start === undefined ? '' : 'IN ')
+                 + (area.end === undefined ? '' : 'OUT ')
+                 + (area.loop ? 'LOOP ' : '');
+    const statusWidth = ctx.measureText(status).width;
+    ctx.fillText(status, 
+      this.layout.width - statusWidth - 5 + this.manager.scroll[0], 
+      TimelineLayout.HEADER_HEIGHT + 5);
   }
 
   #renderLeftColumn(ctx: CanvasRenderingContext2D) {
@@ -388,6 +403,7 @@ export class TimelineRenderer {
     
     let y1 = TimelineLayout.HEADER_HEIGHT 
            + TimelineLayout.TRACKS_PADDING;
+    ctx.font = font(TimelineConfig.data.fontSize);
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'end';
     for (const s of this.layout.shownStyles) {

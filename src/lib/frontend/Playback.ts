@@ -6,6 +6,7 @@ import { Debug } from "../Debug";
 import { VideoPlayer, type SetPositionOptions } from "../VideoPlayer";
 import { ChangeType, Source } from "./Source";
 import { EventHost } from "../details/EventHost";
+import { Overridable } from "../details/Overridable.svelte";
 
 export type PlayArea = {
     start: number | undefined,
@@ -39,7 +40,7 @@ function updateProgress(pos: number) {
 };
 
 async function handlePlayArea() {
-    const playArea = Playback.playAreaOverride ?? get(Playback.playArea);
+    const playArea = Playback.playArea.value;
     // if (playArea.start !== undefined && position < playArea.start) {
     //     Debug.debug('jumping to in point from before', playArea, position);
     //     // await this.play(false);
@@ -48,7 +49,7 @@ async function handlePlayArea() {
     // }
     if (playArea.end !== undefined && position > playArea.end) {
         Debug.debug('jumping to in point from after out point', playArea, position);
-        Playback.playAreaOverride = undefined;
+        Playback.playArea.override = null;
         if (!playArea.loop) await Playback.play(false);
         await Playback.forceSetPosition(playArea.start ?? 0);
         return;
@@ -63,13 +64,11 @@ export const Playback = {
 
     video: null as VideoPlayer | null,
 
-    playArea: writable<PlayArea>({
+    playArea: new Overridable<PlayArea>({
         start: undefined,
         end: undefined,
         loop: false
     }),
-
-    playAreaOverride: undefined as PlayArea | undefined,
 
     onLoad: new EventHost<[rawurl: string]>(),
     onClose: new EventHost<[]>(),

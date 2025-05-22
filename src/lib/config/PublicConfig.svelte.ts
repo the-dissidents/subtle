@@ -6,7 +6,8 @@ import * as fs from "@tauri-apps/plugin-fs";
 import Ajv, { type JSONSchemaType, type ValidateFunction } from "ajv";
 import { Debug } from "../Debug";
 import { Basic } from "../Basic";
-import { tick, untrack } from "svelte";
+import { tick } from "svelte";
+import { hook } from "../details/Hook.svelte";
 
 const ajv = new Ajv({
     removeAdditional: true,
@@ -182,13 +183,12 @@ export class PublicConfig {
         } else callback();
     }
 
-    hook<T>(track: () => T, action: (value: T) => void) {
-        this.onInitialized(() => action(track()));
-
-        $effect(() => {
-            const value = track();
+    hook<T>(track: () => T, action: (value: $state.Snapshot<T>) => void) {
+        this.onInitialized(() => action($state.snapshot(track())));
+        
+        hook(track, (value) => {
             if (!this.#initialized) return;
-            untrack(() => action(value));
+            action(value);
         });
     }
 }

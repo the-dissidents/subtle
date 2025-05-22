@@ -8,6 +8,8 @@ import { TimelineLayout } from "./Layout";
 import { TimelineInput } from "./Input.svelte";
 import { TimelineRenderer } from "./Render.svelte";
 import Tooltip from '../../ui/Tooltip.svelte';
+import { Playback } from '../../frontend/Playback';
+import { hook } from '../../details/Hook.svelte';
 
 let rowPopup: PopupHandler = $state({});
 let styleRefreshCounter = $state(0);
@@ -36,6 +38,9 @@ function setup(canvas: HTMLCanvasElement) {
     if (x != 'Timeline')
       input!.useSnap.override = null;
   });
+
+  hook(() => Playback.playArea.setting, 
+       () => layout!.manager.requestRender());
 }
 
 function updateSnapOverride(ev: KeyboardEvent) {
@@ -44,7 +49,6 @@ function updateSnapOverride(ev: KeyboardEvent) {
     input!.useSnap.override = !input!.useSnap.setting;
   else
     input!.useSnap.override = null;
-  console.log(input!.useSnap.value);
 }
 </script>
 
