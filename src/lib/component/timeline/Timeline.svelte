@@ -10,6 +10,7 @@ import { TimelineRenderer } from "./Render.svelte";
 import Tooltip from '../../ui/Tooltip.svelte';
 import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
+import { PrivateConfig } from '../../config/PrivateConfig';
 
 let rowPopup: PopupHandler = $state({});
 let styleRefreshCounter = $state(0);
@@ -41,6 +42,9 @@ function setup(canvas: HTMLCanvasElement) {
 
   hook(() => Playback.playArea.setting, 
        () => layout!.manager.requestRender());
+  
+  PrivateConfig.onInitialized(
+    () => input!.useSnap.setting = PrivateConfig.get('enableSnap'));
 }
 
 function updateSnapOverride(ev: KeyboardEvent) {
@@ -95,7 +99,10 @@ function updateSnapOverride(ev: KeyboardEvent) {
       <label>
         <input type="checkbox" class="button"
           checked={input?.useSnap.value}
-          onclick={() => input!.useSnap.setting = !input?.useSnap.setting} />
+          onclick={() => {
+            input!.useSnap.setting = !input?.useSnap.setting;
+            PrivateConfig.set('enableSnap', input!.useSnap.setting);
+          }} />
         <svg class="feather">
           <use href={`/feather-sprite.svg#anchor`} />
         </svg>

@@ -371,6 +371,7 @@ export class TimelineInput {
       snapped = this.trySnap(data, points, e.end, e) ?? snapped;
     }
     if (this.alignmentLine) {
+      // TypeScript mistakenly thinks `alignmentLine` is `never`
       const line = this.alignmentLine as { rows: Set<number> };
       const set = new Set<SubtitleStyle>();
       for (const e of this.layout.getVisibleEntries()) {
