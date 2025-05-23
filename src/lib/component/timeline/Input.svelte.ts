@@ -298,8 +298,9 @@ export class TimelineInput {
   } = null;
 
   useSnap = new Overridable(true);
-  currentMode: 'select' | 'create' | 'cut' = $state('select');
+  currentMode: 'select' | 'create' | 'split' = $state('select');
   currentAction: TimelineAction | undefined;
+  activeChannel: SubtitleStyle | undefined;
 
   constructor(private layout: TimelineLayout) {
     this.manager = layout.manager;
@@ -325,6 +326,11 @@ export class TimelineInput {
           this.layout.keepEntryInView(focused);
         this.manager.requestRender();
       }
+    });
+
+    this.layout.onLayout.bind(this, () => {
+      if (this.activeChannel && !this.layout.shownStyles.includes(this.activeChannel))
+          this.activeChannel = undefined;
     });
   }
 
@@ -433,10 +439,10 @@ export class TimelineInput {
     if (e.offsetX < this.layout.leftColumnWidth) {
       const style = this.layout.getChannelFromY(e.offsetY);
       if (style) {
-        if (Editing.activeChannel == style)
-          Editing.activeChannel = null;
+        if (this.activeChannel == style)
+          this.activeChannel = undefined;
         else 
-          Editing.activeChannel = style;
+          this.activeChannel = style;
         this.manager.requestRender();
       }
     }

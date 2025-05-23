@@ -244,7 +244,7 @@ export class TimelineRenderer {
   #renderTracks(ctx: CanvasRenderingContext2D) {
     let y = TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
     for (const s of this.layout.shownStyles) {
-      if (Editing.activeChannel == s) {
+      if (this.input.activeChannel == s) {
         ctx.fillStyle = SELECTED_TRACK_BACK;
         ctx.fillRect(this.manager.scroll[0], y, 
           this.layout.width, 
@@ -406,7 +406,7 @@ export class TimelineRenderer {
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'end';
     for (const s of this.layout.shownStyles) {
-      if (Editing.activeChannel == s) {
+      if (this.input.activeChannel == s) {
         ctx.fillStyle = LEFT_COLUMN_SELECTED;
         ctx.fillRect(x, y1, 
           this.layout.leftColumnWidth, 

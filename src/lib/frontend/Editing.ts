@@ -54,8 +54,6 @@ export const Editing = {
         style: null
     } as FocusState,
 
-    activeChannel: null as SubtitleStyle | null,
-
     editChanged: false,
     isEditingVirtualEntry: writable(false),
     styleToEditor: new WeakMap<SubtitleStyle, HTMLTextAreaElement>(),

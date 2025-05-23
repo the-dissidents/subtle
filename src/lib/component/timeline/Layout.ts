@@ -9,7 +9,6 @@ import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { get } from "svelte/store";
 import { TimelineConfig } from "./Config";
 import { EventHost } from "../../details/EventHost";
-import { Editing } from "../../frontend/Editing";
 
 const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
@@ -225,9 +224,6 @@ export class TimelineLayout {
     this.#shownStyles = subs.styles.filter((x) => !exclude.has(x));
     this.entryHeight = TimelineConfig.data.fontSize + 15;
     this.#stylesMap = new Map(this.#shownStyles.map((x, i) => [x, i]));
-
-    if (Editing.activeChannel && !this.#shownStyles.includes(Editing.activeChannel))
-        Editing.activeChannel = null;
 
     ctx.font = `${TimelineConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`;
     this.leftColumnWidth =

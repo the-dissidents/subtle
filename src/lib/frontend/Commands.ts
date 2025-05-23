@@ -1,5 +1,4 @@
 import { Interface } from "./Interface";
-import { binding } from "./Keybinding";
 import { UICommand } from "./CommandBase";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
@@ -20,6 +19,8 @@ import { Basic } from "../Basic";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { Format } from "../core/Formats";
 import { Toolboxes } from "./Toolboxes";
+import { TimelineParams } from "../component/timeline/Timeline.svelte";
+import { CommandBinding } from "./Keybinding";
 const $_ = unwrapFunctionStore(_);
 
 const toJSON = (useEntries: SubtitleEntry[]) => 
@@ -100,23 +101,23 @@ function doubleForEachStyle(
 
 export const Commands = {
     undo: new UICommand(() => $_('category.document'),
-        [ binding(['CmdOrCtrl+Z'], ['Table', 'Timeline']),
-          binding(['CmdOrCtrl+Alt+Z']) ],
+        [ CommandBinding.from(['CmdOrCtrl+Z'], ['Table', 'Timeline']),
+          CommandBinding.from(['CmdOrCtrl+Alt+Z']) ],
     {
         name: () => $_('menu.undo'),
         isApplicable: () => Source.canUndo(),
         call: () => { Source.undo() }
     }),
     redo: new UICommand(() => $_('category.document'),
-        [ binding(['CmdOrCtrl+Shift+Z'], ['Table', 'Timeline']),
-          binding(['CmdOrCtrl+Alt+Shift+Z']) ],
+        [ CommandBinding.from(['CmdOrCtrl+Shift+Z'], ['Table', 'Timeline']),
+          CommandBinding.from(['CmdOrCtrl+Alt+Shift+Z']) ],
     {
         name: () => $_('menu.redo'),
         isApplicable: () => Source.canRedo(),
         call: () => { Source.redo() }
     }),
     newFile: new UICommand(() => $_('category.document'),
-        [ binding(['CmdOrCtrl+N']) ],
+        [ CommandBinding.from(['CmdOrCtrl+N']) ],
     {
         name: () => $_('menu.new-file'),
         call: async () => { 
@@ -125,7 +126,7 @@ export const Commands = {
         }
     }),
     openMenu: new UICommand(() => $_('category.document'),
-        [ binding(['CmdOrCtrl+O']), ],
+        [ CommandBinding.from(['CmdOrCtrl+O']), ],
     {
         name: () => $_('menu.open'),
         items: () => {
@@ -158,7 +159,7 @@ export const Commands = {
         }
     }),
     openVideo: new UICommand(() => $_('category.document'),
-        [ binding(['CmdOrCtrl+Shift+O']), ],
+        [ CommandBinding.from(['CmdOrCtrl+Shift+O']), ],
     {
         name: () => $_('menu.open-video'),
         isDialog: true,
@@ -172,7 +173,7 @@ export const Commands = {
         call: () => Playback.close()
     }),
     import: new UICommand(() => $_('category.document'),
-        [ binding(['CmdOrCtrl+I']), ],
+        [ CommandBinding.from(['CmdOrCtrl+I']), ],
     {
         name: () => $_('menu.import'),
         isDialog: true,
@@ -212,13 +213,13 @@ export const Commands = {
         ]
     }),
     save: new UICommand(() => $_('category.document'),
-        [ binding(['CmdOrCtrl+S']), ],
+        [ CommandBinding.from(['CmdOrCtrl+S']), ],
     {
         name: () => $_('action.save'),
         call: () => Interface.askSaveFile()
     }),
     saveAs: new UICommand(() => $_('category.document'),
-        [ binding(['CmdOrCtrl+Shift+S']), ],
+        [ CommandBinding.from(['CmdOrCtrl+Shift+S']), ],
     {
         name: () => $_('menu.save-as'),
         isDialog: true,
@@ -239,8 +240,8 @@ export const Commands = {
         call: () => Dialogs.keybinding.showModal!()
     }),
     previousEntrySingle: new UICommand(() => $_('category.table'),
-        [ binding(['ArrowUp'], ['Table']),
-          binding(['Alt+ArrowUp']), ],
+        [ CommandBinding.from(['ArrowUp'], ['Table']),
+          CommandBinding.from(['Alt+ArrowUp']), ],
     {
         name: () => $_('action.previous-entry-single'),
         call: () => Editing.offsetFocus(-1, SelectMode.Single, 
@@ -249,8 +250,8 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     previousEntrySequence: new UICommand(() => $_('category.table'),
-        [ binding(['Shift+ArrowUp'], ['Table']),
-          binding(['Alt+Shift+ArrowUp']), ],
+        [ CommandBinding.from(['Shift+ArrowUp'], ['Table']),
+          CommandBinding.from(['Alt+Shift+ArrowUp']), ],
     {
         name: () => $_('action.previous-entry-sequence'),
         call: () => Editing.offsetFocus(-1, SelectMode.Sequence, 
@@ -259,8 +260,8 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     nextEntrySingle: new UICommand(() => $_('category.table'),
-        [ binding(['ArrowDown'], ['Table']),
-          binding(['Alt+ArrowDown']), ],
+        [ CommandBinding.from(['ArrowDown'], ['Table']),
+          CommandBinding.from(['Alt+ArrowDown']), ],
     {
         name: () => $_('action.next-entry-single'),
         call: () => Editing.offsetFocus(1, SelectMode.Single, 
@@ -269,8 +270,8 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     nextEntrySequence: new UICommand(() => $_('category.table'),
-        [ binding(['Shift+ArrowDown'], ['Table']),
-          binding(['Alt+Shift+ArrowDown']), ],
+        [ CommandBinding.from(['Shift+ArrowDown'], ['Table']),
+          CommandBinding.from(['Alt+Shift+ArrowDown']), ],
     {
         name: () => $_('action.next-entry-sequence'),
         call: () => Editing.offsetFocus(1, SelectMode.Sequence, 
@@ -279,7 +280,7 @@ export const Commands = {
             : KeepInViewMode.KeepInSight)
     }),
     editThisEntry:new UICommand(() => $_('category.editing'),
-        [ binding(['Enter'], ['Table', 'Timeline']), ],
+        [ CommandBinding.from(['Enter'], ['Table', 'Timeline']), ],
     {
         name: () => $_('action.edit-this-entry'),
         isApplicable: () => Editing.getFocusedEntry() !== null,
@@ -292,7 +293,7 @@ export const Commands = {
         }
     }),
     editNextEntry: new UICommand(() => $_('category.editing'),
-        [ binding(['Enter'], ['EditingField']), ],
+        [ CommandBinding.from(['Enter'], ['EditingField']), ],
     {
         name: () => $_('action.edit-next-entry'),
         isApplicable: hasFocus,
@@ -311,7 +312,7 @@ export const Commands = {
         }
     }),
     focusOnTable: new UICommand(() => $_('category.editing'),
-        [ binding(['Escape'], ['EditingField']), ],
+        [ CommandBinding.from(['Escape'], ['EditingField']), ],
     {
         name: () => $_('action.focus-on-table'),
         call() {
@@ -323,7 +324,7 @@ export const Commands = {
     }),
 
     openSearch: new UICommand(() => $_('category.search'),
-        [ binding(['CmdOrCtrl+F']), ],
+        [ CommandBinding.from(['CmdOrCtrl+F']), ],
     {
         name: () => $_('action.open-search'),
         call() {
@@ -331,40 +332,40 @@ export const Commands = {
         }
     }),
     findNext: new UICommand(() => $_('category.search'),
-        [ binding(['CmdOrCtrl+G']), ],
+        [ CommandBinding.from(['CmdOrCtrl+G']), ],
     {
         name: () => $_('action.find-next'),
         call: () => Toolboxes.search!.execute('select', 'next')
     }),
     findPrevious: new UICommand(() => $_('category.search'),
-        [ binding(['CmdOrCtrl+Shift+G']), ],
+        [ CommandBinding.from(['CmdOrCtrl+Shift+G']), ],
     {
         name: () => $_('action.find-previous'),
         call: () => Toolboxes.search!.execute('select', 'previous')
     }),
     replaceNext: new UICommand(() => $_('category.search'),
-        [ binding(['CmdOrCtrl+H']), ],
+        [ CommandBinding.from(['CmdOrCtrl+H']), ],
     {
         name: () => $_('action.replace-next'),
         call: () => Toolboxes.search!.execute('replace', 'next')
     }),
     replacePrevious: new UICommand(() => $_('category.search'),
-        [ binding(['CmdOrCtrl+Shift+H']), ],
+        [ CommandBinding.from(['CmdOrCtrl+Shift+H']), ],
     {
         name: () => $_('action.replace-previous'),
         call: () => Toolboxes.search!.execute('replace', 'previous')
     }),
 
     togglePlay: new UICommand(() => $_('category.media'),
-        [ binding(['Space'], ['Table', 'Timeline']),
-          binding(['Alt+Space']), ],
+        [ CommandBinding.from(['Space'], ['Table', 'Timeline']),
+          CommandBinding.from(['Alt+Space']), ],
     {
         name: () => $_('action.toggle-play'),
         call: () => Playback.toggle()
     }),
     toggleInPoint: new UICommand(() => $_('category.media'),
-        [ binding(['I'], ['Table', 'Timeline']),
-          binding(['Alt+I']), ],
+        [ CommandBinding.from(['I'], ['Table', 'Timeline']),
+          CommandBinding.from(['Alt+I']), ],
     {
         name: () => $_('action.toggle-in-point'),
         call() {
@@ -376,8 +377,8 @@ export const Commands = {
         }
     }),
     toggleOutPoint: new UICommand(() => $_('category.media'),
-        [ binding(['O'], ['Table', 'Timeline']),
-          binding(['Alt+O']), ],
+        [ CommandBinding.from(['O'], ['Table', 'Timeline']),
+          CommandBinding.from(['Alt+O']), ],
     {
         name: () => $_('action.toggle-out-point'),
         call() {
@@ -389,8 +390,8 @@ export const Commands = {
         }
     }),
     playEntry: new UICommand(() => $_('category.media'),
-        [ binding(['P'], ['Table', 'Timeline']),
-          binding(['Alt+P']), ],
+        [ CommandBinding.from(['P'], ['Table', 'Timeline']),
+          CommandBinding.from(['Alt+P']), ],
     {
         name: () => $_('action.play-entry'),
         async call() {
@@ -408,46 +409,46 @@ export const Commands = {
         }
     }),
     previousFrame: new UICommand(() => $_('category.media'),
-        [ binding(['CmdOrCtrl+ArrowLeft'], ['Timeline']),
-          binding(['Alt+CmdOrCtrl+ArrowLeft']), ],
+        [ CommandBinding.from(['CmdOrCtrl+ArrowLeft'], ['Timeline']),
+          CommandBinding.from(['Alt+CmdOrCtrl+ArrowLeft']), ],
     {
         name: () => $_('action.previous-frame'),
         call: () => Playback.video?.requestPreviousFrame()
     }),
     nextFrame: new UICommand(() => $_('category.media'),
-        [ binding(['CmdOrCtrl+ArrowRight'], ['Timeline']),
-          binding(['Alt+CmdOrCtrl+ArrowRight']), ],
+        [ CommandBinding.from(['CmdOrCtrl+ArrowRight'], ['Timeline']),
+          CommandBinding.from(['Alt+CmdOrCtrl+ArrowRight']), ],
     {
         name: () => $_('action.next-frame'),
         call: () => Playback.video?.requestNextFrame()
     }),
     jumpBackward: new UICommand(() => $_('category.media'),
-        [ binding(['ArrowLeft'], ['Timeline']),
-          binding(['Alt+ArrowLeft']), ],
+        [ CommandBinding.from(['ArrowLeft'], ['Timeline']),
+          CommandBinding.from(['Alt+ArrowLeft']), ],
     {
         name: () => $_('action.jump-backward'),
         call: () => Playback.setPosition(Playback.position - InputConfig.data.skipDuration)
     }),
     jumpForward: new UICommand(() => $_('category.media'),
-        [ binding(['ArrowRight'], ['Timeline']),
-          binding(['Alt+ArrowRight']), ],
+        [ CommandBinding.from(['ArrowRight'], ['Timeline']),
+          CommandBinding.from(['Alt+ArrowRight']), ],
     {
         name: () => $_('action.jump-forward'),
         call: () => Playback.setPosition(Playback.position + InputConfig.data.skipDuration)
     }),
 
     holdToCreateEntry1: new UICommand(() => $_('category.timeline'),
-        [ binding(['J'], ['Timeline']) ],
+        [ CommandBinding.from(['J'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-1'),
-        isApplicable: () => Playback.isPlaying && Editing.activeChannel !== null,
+        isApplicable: () => Playback.isPlaying && TimelineParams.activeChannel !== null,
         call: async () => {
             if (Commands.holdToCreateEntry2.activated)
                 await Commands.holdToCreateEntry2.end();
 
-            Debug.assert(Editing.activeChannel !== null);
+            Debug.assert(TimelineParams.activeChannel !== undefined);
             const pos = Playback.position;
-            const entry = Editing.insertAtTime(pos, pos, Editing.activeChannel);
+            const entry = Editing.insertAtTime(pos, pos, TimelineParams.activeChannel);
             Playback.onPositionChanged.bind(entry, 
                 (newpos) => { entry.end = Math.max(entry.end, newpos) });
             return entry;
@@ -458,17 +459,17 @@ export const Commands = {
         }
     }),
     holdToCreateEntry2: new UICommand(() => $_('category.timeline'),
-        [ binding(['K'], ['Timeline']) ],
+        [ CommandBinding.from(['K'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-2'),
-        isApplicable: () => Playback.isPlaying && Editing.activeChannel !== null,
+        isApplicable: () => Playback.isPlaying && TimelineParams.activeChannel !== null,
         call: async () => {
             if (Commands.holdToCreateEntry1.activated)
                 await Commands.holdToCreateEntry1.end();
             
-            Debug.assert(Editing.activeChannel !== null);
+            Debug.assert(TimelineParams.activeChannel !== undefined);
             const pos = Playback.position;
-            const entry = Editing.insertAtTime(pos, pos, Editing.activeChannel);
+            const entry = Editing.insertAtTime(pos, pos, TimelineParams.activeChannel);
             Playback.onPositionChanged.bind(entry, 
                 (newpos) => { entry.end = Math.max(entry.end, newpos) });
             return entry;
@@ -478,9 +479,27 @@ export const Commands = {
             Source.markChanged(ChangeType.Times);
         }
     }),
+    selectMode: new UICommand(() => $_('category.timeline'),
+        [ CommandBinding.from(['A'], ['Timeline']) ],
+    {
+        name: () => $_('action.open-select-tool'),
+        call: () => TimelineParams.currentMode = 'select'
+    }),
+    createMode: new UICommand(() => $_('category.timeline'),
+        [ CommandBinding.from(['D'], ['Timeline']) ],
+    {
+        name: () => $_('action.open-create-tool'),
+        call: () => TimelineParams.currentMode = 'create'
+    }),
+    splitMode: new UICommand(() => $_('category.timeline'),
+        [ CommandBinding.from(['C'], ['Timeline']) ],
+    {
+        name: () => $_('action.open-split-tool'),
+        call: () => TimelineParams.currentMode = 'split'
+    }),
 
     copyJSON: new UICommand(() => $_('category.editing'),
-        [ binding(['CmdOrCtrl+C'], ['Table', 'Timeline']) ],
+        [ CommandBinding.from(['CmdOrCtrl+C'], ['Table', 'Timeline']) ],
     {
         name: () => $_('action.copy-json'),
         isApplicable: hasSelection,
@@ -546,7 +565,7 @@ export const Commands = {
         }, selectionDistinctStyles())
     }),
     cut: new UICommand(() => $_('category.editing'),
-        [ binding(['CmdOrCtrl+X'], ['Table']) ],
+        [ CommandBinding.from(['CmdOrCtrl+X'], ['Table']) ],
     {
         name: () => $_('action.cut'),
         isApplicable: hasSelection,
@@ -556,7 +575,7 @@ export const Commands = {
         }
     }),
     paste: new UICommand(() => $_('category.editing'),
-        [ binding(['CmdOrCtrl+V'], ['Table']) ],
+        [ CommandBinding.from(['CmdOrCtrl+V'], ['Table']) ],
     {
         name: () => $_('action.paste'),
         async call() {
@@ -591,17 +610,17 @@ export const Commands = {
         },
     }),
     deleteSelection: new UICommand(() => $_('category.editing'),
-        [ binding(['Delete'], ['Table', 'Timeline']),
-          binding(['CmdOrCtrl+Backspace'], ['Table', 'Timeline']),
-          binding(['Alt+Delete']),
-          binding(['CmdOrCtrl+Alt+Backspace']), ],
+        [ CommandBinding.from(['Delete'], ['Table', 'Timeline']),
+          CommandBinding.from(['CmdOrCtrl+Backspace'], ['Table', 'Timeline']),
+          CommandBinding.from(['Alt+Delete']),
+          CommandBinding.from(['CmdOrCtrl+Alt+Backspace']), ],
     {
         name: () => $_('action.delete'),
         isApplicable: hasSelection,
         call: () => Editing.deleteSelection(),
     }),
     selectAll: new UICommand(() => $_('category.editing'),
-        [ binding(['CmdOrCtrl+A'], ['Table']) ],
+        [ CommandBinding.from(['CmdOrCtrl+A'], ['Table', 'Timeline']) ],
     {
         name: () => $_('action.select-all'),
         call() {
@@ -678,7 +697,7 @@ export const Commands = {
         },
     }),
     insertAfterFocus: new UICommand(() => $_('category.editing'),
-        [ binding(['CmdOrCtrl+Enter'], ['Table', 'EditingField']), ],
+        [ CommandBinding.from(['CmdOrCtrl+Enter'], ['Table', 'EditingField']), ],
     {
         name: () => $_('action.insert-after'),
         call() {
@@ -709,14 +728,14 @@ export const Commands = {
         },
     }),
     moveUp: new UICommand(() => $_('category.editing'),
-        [ binding(['CmdOrCtrl+ArrowUp'], ['EditingField', 'Table']) ],
+        [ CommandBinding.from(['CmdOrCtrl+ArrowUp'], ['EditingField', 'Table']) ],
     {
         name: () => $_('action.move-up'),
         isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
         call: () => Utils.moveSelectionContinuous(-1),
     }),
     moveDown: new UICommand(() => $_('category.editing'),
-        [ binding(['CmdOrCtrl+ArrowDown'], ['EditingField', 'Table']) ],
+        [ CommandBinding.from(['CmdOrCtrl+ArrowDown'], ['EditingField', 'Table']) ],
     {
         name: () => $_('action.move-down'),
         isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),

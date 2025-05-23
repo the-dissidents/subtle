@@ -6,60 +6,82 @@ import { UIFocusList, type UIFocus } from "./Frontend";
 import { UICommand } from "./CommandBase";
 
 import { Dialogs } from "./Dialogs";
-import type { JSONSchemaType, JTDSchemaType } from "ajv/dist/core";
+import type { JSONSchemaType } from "ajv/dist/core";
 import Ajv from "ajv";
 import * as fs from "@tauri-apps/plugin-fs";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
-export type KeyBinding = {
-    /** key code, as used by Tauri menus */
-    key: KeyCode,
-    /** modifers, as used by `getModifierState` */
-    modifiers: Set<ModifierKey>,
+export class KeyBinding {
+    constructor(
+        /** key code, as used by Tauri menus */
+        public key: KeyCode,
+        /** modifers, as used by `getModifierState` */
+        public modifiers: Set<ModifierKey>,
+    ) {}
+
+    clone() {
+        return new KeyBinding(this.key, new Set(this.modifiers));
+    }
+
+    toString(): string {
+        return [
+            ...ModifierKeys.filter((x) => this.modifiers.has(x)), 
+            this.key[0].toUpperCase() + this.key.slice(1)
+        ].join('+')
+         .replace('Meta', 'Cmd')
+         .replace(' ', 'Space');
+    }
 };
 
-export type CommandBinding = {
-    sequence: KeyBinding[],
-    contexts?: Set<UIFocus>,
+export class CommandBinding {
+    constructor(
+        public sequence: KeyBinding[],
+        public contexts?: Set<UIFocus>
+    ) {}
+
+    static from(exprs: string[], ctxs?: UIFocus[]) {
+        const sequence = exprs.map((expr) => {
+            if (expr.includes('CmdOrCtrl'))
+                expr = expr.replace('CmdOrCtrl', Basic.ctrlKey);
+            const split = expr.split('+');
+            Debug.assert(split.length >= 1);
+            let key = split.pop()!;
+            Debug.assert(isKeyCode(key));
+            let modifiers = new Set<ModifierKey>();
+            for (const mod of split) {
+                Debug.assert(ModifierKeys.includes(mod as ModifierKey));
+                modifiers.add(mod as ModifierKey);
+            }
+            return new KeyBinding(key, modifiers);
+        });
+        const contexts = ctxs?.length ? new Set(ctxs) : undefined;
+        return new CommandBinding(sequence, contexts);
+    }
+
+    clone() {
+        return new CommandBinding(
+            this.sequence.map((x) => x.clone()),
+            this.contexts ? new Set(this.contexts) : undefined
+        );
+    }
+
+    toSerializable(): KeybindingSerialization {
+        return {
+            sequence: this.sequence.map((y) => ({
+                key: y.key,
+                modifiers: [...y.modifiers].toSorted()
+            })),
+            contexts: this.contexts ? [...this.contexts].toSorted() : undefined
+        };
+    }
 };
 
 export const ModifierKeys = 
     ['CapsLock', 'Control', 'Alt', 'Shift', 'Meta'] as const;
 
 export type ModifierKey = (typeof ModifierKeys)[number];
-
-function shortcut(expr: string): KeyBinding {
-    if (expr.includes('CmdOrCtrl'))
-        expr = expr.replace('CmdOrCtrl', Basic.ctrlKey);
-    const split = expr.split('+');
-    Debug.assert(split.length >= 1);
-    let key = split.pop()!;
-    Debug.assert(isKeyCode(key));
-    let modifiers = new Set<ModifierKey>();
-    for (const mod of split) {
-        Debug.assert(ModifierKeys.includes(mod as ModifierKey));
-        modifiers.add(mod as ModifierKey);
-    }
-    return { key, modifiers };
-}
-
-export function bindingToString(binding: KeyBinding) {
-    return [
-        ...ModifierKeys.filter((x) => binding.modifiers.has(x)), 
-        binding.key[0].toUpperCase() + binding.key.slice(1)
-    ].join('+')
-     .replace('Meta', 'Cmd')
-     .replace(' ', 'Space');
-}
-
-export function binding(exprs: string[], ctxs?: UIFocus[]): CommandBinding {
-    return {
-        sequence: exprs.map(shortcut),
-        contexts: ctxs?.length ? new Set(ctxs) : undefined
-    }
-}
 
 // Written by Gemini-2.5-Pro-Exp
 // Derived by cross-referencing KeyboardEvent.code values with the Tauri parser code
@@ -258,15 +280,17 @@ export type AcceptKeyUpResult = {
     type: 'notFound'
 };
 
-type KeybindingSerialization = Record<string, {
+type KeybindingSerialization = {
     sequence: {
         key: KeyCode,
         modifiers: ModifierKey[]
     }[],
     contexts?: UIFocus[]
-}[]>;
+}
 
-const KeybindingSchema: JSONSchemaType<KeybindingSerialization> = {
+type KeymapSerialization = Record<string, KeybindingSerialization[]>;
+
+const KeybindingSchema: JSONSchemaType<KeymapSerialization> = {
     type: "object",
     additionalProperties: {
         type: "array",
@@ -328,7 +352,7 @@ export const KeybindingManager = {
                     if (result.sequence.length > 1) {
                         Interface.setStatus($_('msg.hotkey-not-found', 
                             { values: { key: 
-                                result.sequence.map(bindingToString).join(' ')
+                                result.sequence.map((x) => x.toString()).join(' ')
                             } }), 'error');
                     }
                     break;
@@ -340,7 +364,7 @@ export const KeybindingManager = {
                     ev.preventDefault();
                     Interface.setStatus($_('msg.waiting-for-chord-after-pressing', 
                         { values: { key: 
-                            result.currentSequence.map(bindingToString).join(' ')
+                            result.currentSequence.map((x) => x.toString()).join(' ')
                         } }));
                     break;
                 default:
@@ -373,13 +397,12 @@ export const KeybindingManager = {
             return;
         }
         for (const name in obj) {
-            this.commands.get(name)!.bindings = obj[name].map((x) => ({
-                sequence: x.sequence.map((y) => ({
-                    key: y.key,
-                    modifiers: new Set(y.modifiers)
-                })),
-                contexts: x.contexts ? new Set(x.contexts) : undefined
-            }));
+            let cmd = this.commands.get(name);
+            if (!cmd) continue;
+            cmd.bindings = obj[name].map((x) => new CommandBinding(
+                x.sequence.map((y) => new KeyBinding(y.key, new Set(y.modifiers))),
+                x.contexts ? new Set(x.contexts) : undefined
+            ));
         }
         await Debug.debug('reading keybinding config');
     },
@@ -387,16 +410,9 @@ export const KeybindingManager = {
     async save() {
         await Basic.ensureConfigDirectoryExists();
 
-        let serializable: KeybindingSerialization = {};
-        for (const [name, cmd] of this.commands) {
-            serializable[name] = cmd.bindings.map((x) => ({
-                sequence: x.sequence.map((y) => ({
-                    key: y.key,
-                    modifiers: [...y.modifiers]
-                })),
-                contexts: x.contexts ? [...x.contexts] : undefined
-            }));
-        }
+        let serializable: KeymapSerialization = {};
+        for (const [name, cmd] of this.commands)
+            serializable[name] = cmd.bindings.map((x) => x.toSerializable());
 
         await guardAsync(async () => {
             await fs.writeTextFile(ConfigFile, 
@@ -410,10 +426,8 @@ export const KeybindingManager = {
             return null;
         let key = fromDOM(ev.code);
         if (!key) return null;
-        return {
-            key,
-            modifiers: new Set(ModifierKeys.filter((x) => ev.getModifierState(x)))
-        };
+        return new KeyBinding(key, 
+            new Set(ModifierKeys.filter((x) => ev.getModifierState(x))));
     },
 
     processKeydown(ev: KeyboardEvent): AcceptKeyDownResult {

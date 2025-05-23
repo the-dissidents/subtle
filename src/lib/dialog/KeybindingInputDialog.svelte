@@ -7,7 +7,7 @@ import { Debug } from '../Debug';
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
 import { _ } from 'svelte-i18n';
-import { bindingToString, KeybindingManager, type CommandBinding, type KeyBinding } from '../frontend/Keybinding';
+import { CommandBinding, KeybindingManager, type KeyBinding } from '../frontend/Keybinding';
 import { UIFocusList, type UIFocus } from '../frontend/Frontend';
 import type { UICommand } from '../frontend/CommandBase';
 
@@ -32,12 +32,8 @@ handler.showModal = async ([cmd, bind]) => {
   }
   check();
   let result = await inner.showModal!();
-  if (result == 'ok' && binding !== null) {
-    return {
-      sequence: [binding],
-      contexts: contexts
-    }
-  }
+  if (result == 'ok' && binding !== null)
+    return cmdBinding();
   return null;
 };
 
@@ -50,10 +46,7 @@ let error = $state('');
 
 function cmdBinding(): CommandBinding {
   Debug.assert(binding !== null);
-  return {
-    sequence: [binding],
-    contexts: anyContext ? undefined : contexts
-  };
+  return new CommandBinding([binding], anyContext ? undefined : contexts);
 }
 
 function check() {
@@ -91,7 +84,7 @@ function check() {
     <input type='text'
       class={{keybinding: true, flexgrow: true, error}}
       placeholder={$_('keyinput.press-a-key')} 
-      value={binding ? bindingToString(binding) : ''}
+      value={binding?.toString() ?? ''}
       onkeydown={(ev) => {
         ev.preventDefault();
         const key = KeybindingManager.parseKey(ev);

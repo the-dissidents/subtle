@@ -1,3 +1,27 @@
+<script lang='ts' module>
+let rowPopup: PopupHandler = $state({});
+let styleRefreshCounter = $state(0);
+let buttonPosX = $state(0);
+let buttonPosY = $state(0);
+let uiFocus = Interface.uiFocus;
+
+let layout = $state<TimelineLayout>();
+let input = $state<TimelineInput>();
+let renderer: TimelineRenderer;
+
+export const TimelineParams = {
+  get activeChannel() {
+    return input!.activeChannel;
+  },
+  get currentMode() {
+    return input!.currentMode;
+  },
+  set currentMode(x) {
+    input!.currentMode = x;
+  }
+}
+</script>
+
 <script lang="ts">
 import { _ } from 'svelte-i18n';
 
@@ -12,16 +36,6 @@ import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
 import { PrivateConfig } from '../../config/PrivateConfig';
 import { MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
-
-let rowPopup: PopupHandler = $state({});
-let styleRefreshCounter = $state(0);
-let buttonPosX = $state(0);
-let buttonPosY = $state(0);
-let uiFocus = Interface.uiFocus;
-
-let layout = $state<TimelineLayout>();
-let input = $state<TimelineInput>();
-let renderer: TimelineRenderer;
 
 // Setup function for the canvas
 function setup(canvas: HTMLCanvasElement) {
@@ -82,8 +96,8 @@ function updateSnapOverride(ev: KeyboardEvent) {
     <Tooltip text={$_('timeline.split-tool')} position="right">
       <label>
         <input type="checkbox" class="button"
-          checked={input?.currentMode == 'cut'}
-          onclick={() => input!.currentMode = 'cut'} />
+          checked={input?.currentMode == 'split'}
+          onclick={() => input!.currentMode = 'split'} />
         <ScissorsIcon />
       </label>
     </Tooltip>

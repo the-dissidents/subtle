@@ -4,7 +4,7 @@ import DialogBase from '../DialogBase.svelte';
 import { Commands } from '../frontend/Commands';
 import { Dialogs, type DialogHandler } from '../frontend/Dialogs';
 import { _, locale } from 'svelte-i18n';
-import { bindingToString, KeybindingManager, type CommandBinding, type KeyBinding } from '../frontend/Keybinding';
+import { KeybindingManager, type CommandBinding } from '../frontend/Keybinding';
 import type { UICommand } from '../frontend/CommandBase';
 import { CreditCardIcon, MenuIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from '@lucide/svelte';
 
@@ -23,9 +23,8 @@ handler.showModal = async () => {
 };
 
 let inner: DialogHandler<void> = {};
-let filter = $state('');
+// let filter = $state('');
 let refresh = $state(false);
-
 
 function groupedCommands() {
   const result = new Map<string, UICommand<any>[]>();
@@ -36,6 +35,12 @@ function groupedCommands() {
     result.get(category)!.push(cmd);
   });
   return result;
+}
+
+function isDefault(cmd: UICommand<any>) {
+  const a = JSON.stringify(cmd.bindings.map((x) => x.toSerializable()));
+  const b = JSON.stringify(cmd.defaultBindings.map((x) => x.toSerializable()));
+  return a == b;
 }
 
 locale.subscribe(() => refresh = !refresh);
@@ -77,7 +82,7 @@ locale.subscribe(() => refresh = !refresh);
                 KeybindingManager.update();
               }
             }} class={{key: true, error}}>
-              <kbd>{binding.sequence.map(bindingToString).join(' ')}</kbd>
+              <kbd>{binding.sequence.map((x) => x.toString()).join(' ')}</kbd>
             </button>
           </td>
           <!-- contexts -->
@@ -98,11 +103,11 @@ locale.subscribe(() => refresh = !refresh);
           <!-- delete -->
           <td>
             <button aria-label='delete' onclick={() => {
-                const i = cmd.bindings.indexOf(binding);
-                Debug.assert(i >= 0);
-                cmd.bindings.splice(i, 1);
-                refresh = !refresh;
-                KeybindingManager.update();
+              const i = cmd.bindings.indexOf(binding);
+              Debug.assert(i >= 0);
+              cmd.bindings.splice(i, 1);
+              refresh = !refresh;
+              KeybindingManager.update();
             }}>
               <Trash2Icon />
             </button>
@@ -128,13 +133,15 @@ locale.subscribe(() => refresh = !refresh);
 
         <tr class="rowhead">
           <td rowspan={lines+1}>
-            <button aria-label="reset" onclick={() => {
-              cmd.bindings = structuredClone(cmd.defaultBindings) as CommandBinding[];
-              refresh = !refresh;
-              KeybindingManager.update();
-            }}>
-              <RefreshCwIcon />
-            </button>
+            <!-- refresh -->
+            <button aria-label="reset"
+              disabled={isDefault(cmd)}
+              onclick={() => {
+                cmd.bindings = structuredClone(cmd.defaultBindings) as CommandBinding[];
+                refresh = !refresh;
+                KeybindingManager.update();
+              }}
+            ><RefreshCwIcon /></button>
           </td>
           <td rowspan={lines+1}>{cmd.name}</td>
           <td rowspan={lines+1}>
