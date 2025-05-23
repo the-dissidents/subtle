@@ -11,6 +11,7 @@ import Tooltip from '../../ui/Tooltip.svelte';
 import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
 import { PrivateConfig } from '../../config/PrivateConfig';
+import { MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
 
 let rowPopup: PopupHandler = $state({});
 let styleRefreshCounter = $state(0);
@@ -67,9 +68,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
         <input type="checkbox" class="button"
           checked={input?.currentMode == 'select'}
           onclick={() => input!.currentMode = 'select'} />
-        <svg class="feather">
-          <use href={`/feather-sprite.svg#mouse-pointer`} />
-        </svg>
+        <MousePointerIcon />
       </label>
     </Tooltip>
     <Tooltip text={$_('timeline.create-tool')} position="right">
@@ -77,9 +76,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
         <input type="checkbox" class="button"
           checked={input?.currentMode == 'create'}
           onclick={() => input!.currentMode = 'create'} />
-        <svg class="feather">
-          <use href={`/feather-sprite.svg#plus-square`} />
-        </svg>
+        <PlusSquareIcon />
       </label>
     </Tooltip>
     <Tooltip text={$_('timeline.split-tool')} position="right">
@@ -87,9 +84,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
         <input type="checkbox" class="button"
           checked={input?.currentMode == 'cut'}
           onclick={() => input!.currentMode = 'cut'} />
-        <svg class="feather">
-          <use href={`/feather-sprite.svg#scissors`} />
-        </svg>
+        <ScissorsIcon />
       </label>
     </Tooltip>
 
@@ -103,9 +98,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
             input!.useSnap.setting = !input?.useSnap.setting;
             PrivateConfig.set('enableSnap', input!.useSnap.setting);
           }} />
-        <svg class="feather">
-          <use href={`/feather-sprite.svg#anchor`} />
-        </svg>
+        <MagnetIcon />
       </label>
     </Tooltip>
   </div>
@@ -123,9 +116,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
           rowPopup.open!(rect);
         }}
       >
-        <svg class="feather">
-          <use href={`/feather-sprite.svg#edit-3`} />
-        </svg>
+        <PenLineIcon />
       </button>
     </div>
     <canvas class="timeline fill" use:setup>

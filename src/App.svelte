@@ -49,13 +49,15 @@ import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
 
 import { Dialogs } from './lib/frontend/Dialogs';
-import { guard, Interface } from './lib/frontend/Interface';
+import { Interface } from './lib/frontend/Interface';
 import { Playback } from './lib/frontend/Playback';
 import { Source } from './lib/frontend/Source';
 import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
+import { CommandIcon, FilmIcon, PauseIcon, PlayIcon, SettingsIcon } from '@lucide/svelte';
+
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow();
@@ -255,9 +257,7 @@ appWindow.onDragDropEvent(async (ev) => {
       {/key}
       <li class='separator'></li>
       <li><button onclick={() => Commands.openVideo.call()}>
-        <svg class="feather">
-          <use href="/feather-sprite.svg#film" />
-        </svg>
+        <FilmIcon />
         &nbsp;{$_('menu.open-video')}
       </button></li>
       <li><button disabled={!$isMediaLoaded} onclick={() => Commands.closeVideo.call()}>
@@ -269,9 +269,7 @@ appWindow.onDragDropEvent(async (ev) => {
         <Tooltip text={$_('menu.keybinding')} position="bottom">
           <button aria-label={$_('menu.keybinding')}
                   onclick={() => Commands.openKeybinding.call()}>
-            <svg class="feather">
-              <use href="/feather-sprite.svg#command" />
-            </svg>
+            <CommandIcon />
           </button>
         </Tooltip>
       </li>
@@ -279,9 +277,7 @@ appWindow.onDragDropEvent(async (ev) => {
         <Tooltip text={$_('menu.configuration')} position="bottom">
           <button aria-label={$_('menu.configuration')}
                   onclick={() => Commands.openConfiguration.call()}>
-            <svg class="feather">
-              <use href="/feather-sprite.svg#settings" />
-            </svg>
+            <SettingsIcon />
           </button>
         </Tooltip>
       </li>
@@ -299,11 +295,11 @@ appWindow.onDragDropEvent(async (ev) => {
       <div class='hlayout'>
         <button aria-label="play/pause"
           onclick={() => Playback.toggle()}>
-          <svg class="feather">
-            <use href={isPlaying 
-              ? "/feather-sprite.svg#pause" 
-              : "/feather-sprite.svg#play"} />
-          </svg>
+          {#if isPlaying}
+            <PauseIcon />
+          {:else}
+            <PlayIcon />
+          {/if}
         </button>
         <input type='range' class='play-pointer flexgrow'
           step="any" max="1" min="0"

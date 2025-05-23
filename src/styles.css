@@ -13,10 +13,11 @@
   -webkit-text-size-adjust: 100%;
 }
 
-.feather {
+.lucide {
   display: block;
+  width: 1lh;
   height: 1lh;
-  aspect-ratio: 1 / 1;
+  /* aspect-ratio: 1 / 1; */
   margin: auto;
   stroke: currentColor;
   stroke-width: 1;

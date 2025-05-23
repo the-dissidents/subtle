@@ -13,6 +13,7 @@ import { Debug } from "./Debug";
 import { Utils } from "./frontend/Utils";
 import FilterEdit from "./FilterEdit.svelte";
 import NumberInput from "./ui/NumberInput.svelte";
+import { ArrowDown, ArrowUp, MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
 
 interface Props {
   style: SubtitleStyle;
@@ -111,7 +112,9 @@ async function contextMenu() {
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
-      }}>+</button><br/>
+      }}
+      aria-label='add'
+    ><PlusIcon /></button><br/>
     <!-- move up -->
     <button disabled={$style === subtitles.styles[0]}
       onclick={() => {
@@ -125,7 +128,9 @@ async function contextMenu() {
         ];
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
-      }}>↑</button><br/>
+      }}
+      aria-label='move up'
+    ><ArrowUp /></button><br/>
     <!-- move down -->
     <button disabled={$style === subtitles.styles.at(-1)}
       onclick={() => {
@@ -139,8 +144,12 @@ async function contextMenu() {
         ];
         Source.markChanged(ChangeType.StyleDefinitions);
         onsubmit?.();
-      }}>↓</button><br/>
-    <button bind:this={button} onclick={() => contextMenu()}>...</button>
+      }}
+      aria-label='move down'
+    ><ArrowDown /></button><br/>
+    <button bind:this={button} onclick={() => contextMenu()}
+      aria-label='more'
+    ><MoreHorizontalIcon /></button><br/>
   </div>
   <!-- properties -->
   <div class="flexgrow vlayout">

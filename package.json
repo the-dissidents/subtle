@@ -11,6 +11,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@lucide/svelte": "^0.511.0",
     "@tauri-apps/api": "^2.0.1",
     "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
@@ -18,7 +19,6 @@
     "@tauri-apps/plugin-log": "^2.3.1",
     "@tauri-apps/plugin-opener": "^2.2.6",
     "@tauri-apps/plugin-os": "^2.0.0",
-    "@types/wcwidth": "^1.0.2",
     "ajv": "^8.17.1",
     "chardet": "^2.1.0",
     "iconv-lite": "^0.6.3",
@@ -32,6 +32,7 @@
     "@tauri-apps/cli": "^2.0.1",
     "@tsconfig/svelte": "^5.0.2",
     "@types/object-inspect": "^1.13.0",
+    "@types/wcwidth": "^1.0.2",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "tslib": "^2.6.0",

@@ -9,8 +9,9 @@ import StyleSelect from "./StyleSelect.svelte";
 import { type SubtitleStyle } from "./core/Subtitles.svelte";
 import TimestampInput from "./TimestampInput.svelte";
 import { Source } from "./frontend/Source";
-    import LabelSelect from "./LabelSelect.svelte";
-    import Tooltip from "./ui/Tooltip.svelte";
+import LabelSelect from "./LabelSelect.svelte";
+import Tooltip from "./ui/Tooltip.svelte";
+import { MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
 
 interface Props {
   filter: MetricFilter | null;
@@ -273,9 +274,7 @@ function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter
         ]});
         menu.popup();
       }}>
-        <svg class="feather">
-          <use href={`/feather-sprite.svg#more-horizontal`} />
-        </svg>
+        <MoreHorizontalIcon />
       </button>
     </div>
   {/if}
@@ -287,9 +286,7 @@ function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter
       filter = createDefaultFilter();
       onchange?.();
     }}>
-      <svg class="feather">
-        <use href={`/feather-sprite.svg#plus`} />
-      </svg>
+      <PlusIcon />
       {$_('filteredit.add-condition')}
     </button>
   {:else}

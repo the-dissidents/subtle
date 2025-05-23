@@ -1,7 +1,8 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+import type { Snippet } from 'svelte';
 import { Debug } from '../Debug';
 import Popup, { type PopupHandler } from './Popup.svelte';
+import { CircleHelpIcon } from '@lucide/svelte';
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 interface Props {
@@ -69,9 +70,7 @@ function findBoundingRect(element: HTMLElement): DOMRect {
     {@render children?.()}
   {:else}
     <span>
-      <svg class="feather">
-        <use href="/feather-sprite.svg#info" />
-      </svg>
+      <CircleHelpIcon />
     </span>
   {/if}
 </div>
@@ -80,19 +79,19 @@ function findBoundingRect(element: HTMLElement): DOMRect {
 </Popup>
 
 <style>
-  .feather {
+  :global(.tooltip-container > span > .lucide) {
     display: inline;
-    stroke-width: 2; 
-    margin: 0 3px 0 3px;
+    stroke-width: 1.5px; 
+    /* margin: 0 3px 0 3px; */
     max-height: 16px;
     color: gray;
     vertical-align: middle;
   }
 
-  .tooltip-container:first-child > span > .feather {
+  /* :global(.tooltip-container:first-child > span > .lucide) {
     margin: 0 3px 0 0;
   }
-  .tooltip-container:last-child > span > .feather {
+  :global(.tooltip-container:last-child > span > .lucide) {
     margin: 0 0 0 3px;
-  }
+  } */
 </style>

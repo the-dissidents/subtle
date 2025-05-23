@@ -75,6 +75,7 @@ import { get } from 'svelte/store';
 import Popup, { type PopupHandler } from "./ui/Popup.svelte";
 import OrderableList from "./ui/OrderableList.svelte";
 import { Menu } from "@tauri-apps/api/menu";
+import { DeleteIcon, PenLineIcon, PlusIcon } from "@lucide/svelte";
 
 const MetricsList = Object.entries(Metrics) as [keyof typeof Metrics, Metric<any>][];
 
@@ -606,9 +607,7 @@ function onDrag(_: number, offsetY: number) {
     const rect = ev.currentTarget.getBoundingClientRect();
     columnPopup.open!(rect);
   }} aria-label='edit'>
-    <svg class="feather">
-      <use href={`/feather-sprite.svg#edit-3`} />
-    </svg>
+    <PenLineIcon />
   </button>
   <canvas bind:this={canvas}
     class:subsfocused={$uiFocus === 'Table'}
@@ -659,9 +658,7 @@ function onDrag(_: number, offsetY: number) {
         opt.list.splice(i, 1);
         changeColumns();
       }} aria-label='delete'>
-        <svg class="feather">
-          <use href={`/feather-sprite.svg#delete`} />
-        </svg>
+        <DeleteIcon />
       </button>
     {/snippet}
     {#snippet footer()}
@@ -678,9 +675,7 @@ function onDrag(_: number, offsetY: number) {
             }
           }))})).popup()}
       >
-        <svg class="feather">
-          <use href={`/feather-sprite.svg#plus`} />
-        </svg>
+        <PlusIcon />
         {$_('table.add-column')}
       </button>
     {/snippet}

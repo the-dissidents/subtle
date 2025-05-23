@@ -5,7 +5,8 @@ import { Commands } from '../frontend/Commands';
 import { Dialogs, type DialogHandler } from '../frontend/Dialogs';
 import { _, locale } from 'svelte-i18n';
 import { bindingToString, KeybindingManager, type CommandBinding, type KeyBinding } from '../frontend/Keybinding';
-    import type { UICommand } from '../frontend/CommandBase';
+import type { UICommand } from '../frontend/CommandBase';
+import { CreditCardIcon, MenuIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from '@lucide/svelte';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -37,18 +38,8 @@ function groupedCommands() {
   return result;
 }
 
-
 locale.subscribe(() => refresh = !refresh);
-
 </script>
-
-{#snippet icon(name: string)}
-{#if name}
-  <svg class="feather" style="padding: 2px;">
-    <use href={`/feather-sprite.svg#${name}`} />
-  </svg>
-{/if}
-{/snippet}
 
 <DialogBase handler={inner} maxWidth="60em" buttons={[{
   name: 'ok',
@@ -113,9 +104,7 @@ locale.subscribe(() => refresh = !refresh);
                 refresh = !refresh;
                 KeybindingManager.update();
             }}>
-              <svg class="feather">
-                <use href={`/feather-sprite.svg#trash-2`} />
-              </svg>
+              <Trash2Icon />
             </button>
           </td>
         {/snippet}
@@ -131,9 +120,7 @@ locale.subscribe(() => refresh = !refresh);
                 KeybindingManager.update();
               }
             }}>
-              <svg class="feather">
-                <use href={`/feather-sprite.svg#plus`} />
-              </svg>
+              <PlusIcon />
             </button>
           </td>
           <td colspan="2"></td>
@@ -146,17 +133,16 @@ locale.subscribe(() => refresh = !refresh);
               refresh = !refresh;
               KeybindingManager.update();
             }}>
-              <svg class="feather">
-                <use href={`/feather-sprite.svg#refresh-cw`} />
-              </svg>
+              <RefreshCwIcon />
             </button>
           </td>
           <td rowspan={lines+1}>{cmd.name}</td>
           <td rowspan={lines+1}>
-            {@render icon(
-                cmd.type == 'menu' ? 'menu' 
-              : cmd.type == 'dialog' ? 'credit-card'
-              : '')}
+            {#if cmd.type == 'menu'}
+              <MenuIcon />
+            {:else}
+              <CreditCardIcon />
+            {/if}
           </td>
           {#if lines == 0}
             {@render addrow()}

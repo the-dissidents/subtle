@@ -106,10 +106,9 @@ export class TimelineRenderer {
       () => theme.isDark, 
       () => this.manager.requestRender());
 
-    hook(() => Playback.playArea.setting, 
-      () => {
-        this.manager.requestRender();
-      });
+    hook(
+      () => Playback.playArea.setting, 
+      () => this.manager.requestRender());
   }
 
   #render(ctx: CanvasRenderingContext2D) {

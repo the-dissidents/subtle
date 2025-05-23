@@ -10,6 +10,7 @@ import { appLocalDataDir, appLogDir } from "@tauri-apps/api/path";
 import { _, locale } from 'svelte-i18n';
 import { Interface } from '../frontend/Interface';
 import NumberInput from '../ui/NumberInput.svelte';
+import { RefreshCcwIcon } from '@lucide/svelte';
 
 interface Props {
   handler: DialogHandler<void, void>;
@@ -141,9 +142,7 @@ locale.subscribe(() => refresh++);
             disabled={group.data[key] === group.defaults[key]}
             onclick={() => group.data[key] = group.defaults[key]}
           >
-            <svg class="feather">
-              <use href="/feather-sprite.svg#refresh-ccw" />
-            </svg>
+            <RefreshCcwIcon />
           </button></td>
       </tr>
 
