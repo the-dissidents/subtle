@@ -15,11 +15,11 @@ abstract class TimelineAction {
   readonly origPos: number;
   
   constructor(public self: TimelineInput, public layout: TimelineLayout, public e0: MouseEvent) {
-    this.origPos = this.layout.offset + 
-      (e0.offsetX - this.layout.leftColumnWidth) / this.layout.scale;
+    this.origPos = this.self.convertX(e0.offsetX);
   }
 
-  onMouseMove(e: MouseEvent) {}
+  onMouseMove(e: MouseEvent): boolean { return false; }
+  onMouseDown(e: MouseEvent): boolean { return false; }
 
   canBeginDrag(e0: MouseEvent): boolean {
     return false;
@@ -27,7 +27,7 @@ abstract class TimelineAction {
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent) {}
 
-  onDragEnd() {
+  onDragEnd(offsetX: number, offsetY: number, ev: MouseEvent) {
     this.self.currentAction = undefined;
   }
   onDragInterrupted() {
@@ -254,10 +254,7 @@ class CreateEntry extends TimelineAction {
   }
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
-    let curPos = this.self.convertX(offsetX);
-
-    if (this.self.useSnap.value)
-      curPos = this.self.snapVisible([curPos]);
+    const curPos = this.self.makeAlignmentLine(offsetX, true);
     if (curPos >= this.entry.start)
       this.entry.end = curPos;
     this.layout.manager.requestRender();
@@ -282,7 +279,84 @@ class CreateEntry extends TimelineAction {
 }
 
 class SplitEntry extends TimelineAction {
+  styles: SubtitleStyle[];
+  baseProportion: number;
 
+  constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, target: SubtitleEntry) {
+    super(self, layout, e0);
+
+    const pos = self.alignmentLine?.pos ?? this.origPos;
+    Debug.assert(target.end > target.start);
+    this.baseProportion = (pos - target.start) / (target.end - target.start);
+    Debug.assert(this.baseProportion > 0 && this.baseProportion < 1);
+    this.styles = Source.subs.styles.filter((x) => target.texts.has(x));
+    self.splitting = {
+      target, 
+      breakPosition: pos,
+      positions: new Map(),
+      current: this.styles[0]
+    };
+    this.onDrag(e0.offsetX);
+  }
+
+  override onMouseMove(e: MouseEvent): boolean {
+    // keep alignment line at same position
+    return true;
+  }
+
+  override canBeginDrag(e0: MouseEvent): boolean {
+    this.onDrag(e0.offsetX);
+    return true;
+  }
+  
+  override onDrag(offsetX: number) {
+    const split = this.self.splitting!;
+    const target = split.target;
+    const currentPos = this.self.convertX(offsetX);
+    const x = (split.breakPosition - currentPos) / (target.end - target.start) 
+      + this.baseProportion;
+    const style = this.styles[0];
+    const text = target.texts.get(style)!;
+    const pos = Math.max(1, Math.min(text.length - 1, Math.floor(x * text.length)));
+    split.positions.set(style, pos);
+    this.layout.manager.requestRender();
+    return true;
+  }
+
+  override onDragInterrupted(): void {
+    this.self.splitting = null;
+    this.self.currentAction = undefined;
+    this.layout.manager.requestRender();
+  }
+
+  override onDragEnd(offsetX: number) {
+    this.styles.shift();
+
+    if (this.styles.length == 0) {
+      // all done, do split
+      const target = this.self.splitting!.target;
+      const index = Source.subs.entries.indexOf(target);
+      Debug.assert(index >= 0);
+
+      const newEntry = new SubtitleEntry(target.start, this.origPos);
+      Source.subs.entries.splice(index, 0, newEntry);
+      newEntry.label = target.label;
+      target.start = this.origPos;
+      for (const [style, text] of [...target.texts]) {
+        const pos = this.self.splitting!.positions.get(style)!;
+        newEntry.texts.set(style, text.substring(0, pos));
+        target.texts.set(style, text.substring(pos));
+      }
+      Source.markChanged(ChangeType.Times);
+
+      this.self.splitting = null;
+      this.self.currentAction = undefined;
+    } else {
+      this.self.splitting!.current = this.styles[0];
+      this.onDrag(offsetX);
+    }
+    this.layout.manager.requestRender();
+  }
 }
 
 export class TimelineInput {
@@ -293,6 +367,7 @@ export class TimelineInput {
   alignmentLine: { pos: number, rows: Set<number> } | null = null;
   splitting: null | { 
     target: SubtitleEntry, 
+    breakPosition: number,
     positions: Map<SubtitleStyle, number>, 
     current: SubtitleStyle 
   } = null;
@@ -342,12 +417,9 @@ export class TimelineInput {
    * modified reference point and the minimal distance required to move it.
    */
   trySnap(
-    data: {minDist: number, reference: number, oldReference?: number}, points: number[], 
-    target: number, entry?: SubtitleEntry
+    data: {minDist: number, reference: number, oldReference?: number}, 
+    points: number[], target: number
   ) {
-    const positions = entry ? this.layout.getEntryPositions(entry) : null;
-    const y1 = positions ? Math.min(...positions.map((x) => x.y)) : 0;
-    const y2 = positions ? Math.max(...positions.map((x) => x.y + x.h)) : this.layout.height;
     const old = data.oldReference ?? data.reference;
     let result = undefined;
     for (const point of points) {
@@ -373,8 +445,8 @@ export class TimelineInput {
     snapped = this.trySnap(data, points, Playback.position) ?? snapped;
     for (const e of this.layout.getVisibleEntries()) {
       if (this.selection.has(e)) continue;
-      snapped = this.trySnap(data, points, e.start, e) ?? snapped;
-      snapped = this.trySnap(data, points, e.end, e) ?? snapped;
+      snapped = this.trySnap(data, points, e.start) ?? snapped;
+      snapped = this.trySnap(data, points, e.end) ?? snapped;
     }
     if (this.alignmentLine) {
       // TypeScript mistakenly thinks `alignmentLine` is `never`
@@ -425,8 +497,8 @@ export class TimelineInput {
     if (tr.isZoom) {
       const origPos = this.convertX(e.offsetX);
       this.layout.setScale(this.layout.scale / Math.pow(1.03, tr.amount));
-      this.layout.setOffset(origPos 
-        - (e.offsetX - this.layout.leftColumnWidth) / this.layout.scale);
+      this.layout.setOffset(
+        origPos - (e.offsetX - this.layout.leftColumnWidth) / this.layout.scale);
     } else {
       const amount = 
         tr.isTrackpad ? tr.amountX :
@@ -446,6 +518,9 @@ export class TimelineInput {
         this.manager.requestRender();
       }
     }
+
+    if (this.currentAction?.onMouseDown(e))
+      return;
   }
 
   #onDoubleClick() {
@@ -456,10 +531,27 @@ export class TimelineInput {
     }
   }
 
+  makeAlignmentLine(x: number, always = false) {
+    const pos = this.convertX(x);
+    const old = this.alignmentLine?.pos;
+    const snap = this.useSnap.value;
+    if (snap)
+      this.snapVisible([pos]);
+    if (!snap || (always && this.alignmentLine === null))
+      this.alignmentLine = { pos, rows: new Set() };
+    if (this.alignmentLine?.pos !== old)
+      this.manager.requestRender();
+    return this.alignmentLine?.pos ?? pos;
+  }
+
   #onMouseMove(e: MouseEvent) {
     const canvas = this.manager.canvas;
     canvas.style.cursor = 'default';
+
     if (e.offsetX < this.layout.leftColumnWidth)
+      return;
+
+    if (this.currentAction?.onMouseMove(e))
       return;
 
     if (e.offsetY < TimelineLayout.HEADER_HEIGHT) {
@@ -469,15 +561,18 @@ export class TimelineInput {
   
     const under = this.layout.findEntriesByPosition(
       e.offsetX + this.manager.scroll[0], e.offsetY);
-    if (under.length == 0) {
-      if (this.currentMode == 'create' && this.useSnap.value) {
-        let old = this.alignmentLine?.pos;
-        this.snapVisible([this.convertX(e.offsetX)]);
-        if (this.alignmentLine?.pos !== old)
-          this.manager.requestRender();
-      }
+
+    if (this.currentMode == 'split') {
+      this.makeAlignmentLine(e.offsetX, true);
       return;
     }
+    if (this.currentMode == 'create' && under.length == 0) {
+      this.makeAlignmentLine(e.offsetX, true);
+      return;
+    }
+    if (under.length == 0)
+      return;
+    
     canvas.style.cursor = 'move';
     if (this.alignmentLine !== null) {
       this.alignmentLine = null;
@@ -538,6 +633,10 @@ export class TimelineInput {
   #canBeginDrag(e0: MouseEvent): boolean {
     if (e0.offsetX < this.layout.leftColumnWidth)
       return false;
+
+    if (this.currentAction !== undefined)
+      return this.currentAction.canBeginDrag(e0);
+
     this.#registerInterruptKey();
 
     // select
@@ -552,8 +651,7 @@ export class TimelineInput {
       if (e0.button == 1) {
         this.currentAction = new Scale(this, this.layout, e0);
         return true;
-      }
-      else if (e0.button == 2) {
+      } else if (e0.button == 2) {
         // right-clicked on something
         // clear selection and re-select only if it's not selected
         if (!underMouse.some((x) => this.selection.has(x))) {
@@ -563,8 +661,7 @@ export class TimelineInput {
         }
         // TODO: context menu?
         return false;
-      }
-      else if (e0.button == 0) {
+      } else if (e0.button == 0) {
         // left-clicked on nothing
         if (underMouse.length == 0) {
           if (!e0.getModifierState(Basic.ctrlKey())) {
@@ -574,6 +671,7 @@ export class TimelineInput {
             this.manager.requestRender();
           }
           if (this.currentMode == 'create') {
+            // create entry
             const style = this.layout.getChannelFromY(e0.offsetY);
             if (!style) return false;
             this.currentAction = new CreateEntry(this, this.layout, e0, style);
@@ -602,23 +700,29 @@ export class TimelineInput {
           return false;
         } else {
           // single select
+          let selected = underMouse[0];
           if (this.selection.size > 1) {
             afterEnd = () => {
               this.selection.clear();
-              this.selection.add(underMouse[0]);
-              Editing.selectEntry(underMouse[0], 
+              this.selection.add(selected);
+              Editing.selectEntry(selected, 
                 SelectMode.Single, ChangeCause.Timeline);
             };
           } else {
             // cycle through the overlapping entries under the cursor
             let one = [...this.selection][0];
-            let index = (underMouse.indexOf(one) + 1) % underMouse.length;
+            selected = underMouse[(underMouse.indexOf(one) + 1) % underMouse.length];
             this.selection.clear();
-            this.selection.add(underMouse[index]);
-            Editing.selectEntry(underMouse[index], 
+            this.selection.add(selected);
+            Editing.selectEntry(selected, 
               SelectMode.Single, ChangeCause.Timeline);
           }
           this.manager.requestRender();
+
+          if (this.currentMode == 'split') {
+            this.currentAction = new SplitEntry(this, this.layout, e0, selected);
+            return true;
+          }
           return this.#initializeDrag(e0, afterEnd, underMouse);
         }
       }
@@ -648,9 +752,9 @@ export class TimelineInput {
     document.addEventListener('keydown', f);
   };
 
-  #onDragEnd() {
+  #onDragEnd(offsetX: number, offsetY: number, ev: MouseEvent) {
     if (!this.currentAction) return Debug.early('no action for onDragEnd');
-    this.currentAction.onDragEnd();
+    this.currentAction.onDragEnd(offsetX, offsetX, ev);
   }
 
   #onDragInterrupted() {

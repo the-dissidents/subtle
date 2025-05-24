@@ -158,14 +158,14 @@ export class TimelineLayout {
     ];
   }
 
-  getEntryPositions(ent: SubtitleEntry): (Box & {text: string})[] {
+  getEntryPositions(ent: SubtitleEntry): (Box & {text: string, style: SubtitleStyle})[] {
     const [w, x] = this.getHorizontalPos(ent);
     return [...ent.texts.entries()].flatMap(([style, text]) => {
       if (Source.subs.view.timelineExcludeStyles.has(style)) return [];
       const i = this.#stylesMap.get(style) ?? 0;
       const y = this.entryHeight * i 
         + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
-      return [{x: x, y: y, w: w, h: this.entryHeight, text}];
+      return [{x: x, y: y, w: w, h: this.entryHeight, text, style}];
     });
   }
 

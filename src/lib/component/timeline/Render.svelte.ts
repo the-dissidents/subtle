@@ -30,10 +30,11 @@ const ENTRY_WIDTH_FOCUS = 2;
 const ENTRY_BACK_OPACITY = 0.45;
 const ENTRY_BACK = 
   $derived(theme.isDark ? 'hsl(0deg 0% 20%/45%)' : 'hsl(0deg 0% 85%/45%)');
-const ENTRY_BORDER       = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 80%)');
-const ENTRY_BORDER_FOCUS = $derived(theme.isDark ? 'goldenrod' : 'oklch(70.94% 0.136 258.06)');
-const ENTRY_TEXT         = $derived(theme.isDark ? 'hsl(0deg 0% 90%)' : 'hsl(0deg 0% 20%)');
-const INOUT_TEXT         = $derived(theme.isDark ? 'lightgreen' : 'oklch(52.77% 0.138 145.41)');
+const ENTRY_BORDER          = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(0deg 0% 80%)');
+const ENTRY_BORDER_FOCUS    = $derived(theme.isDark ? 'goldenrod' : 'oklch(70.94% 0.136 258.06)');
+const ENTRY_TEXT            = $derived(theme.isDark ? 'hsl(0deg 0% 90%)' : 'hsl(0deg 0% 20%)');
+const ENTRY_TEXT_SPLITTING  = $derived(theme.isDark ? 'goldenrod' : 'tomato');
+const INOUT_TEXT            = $derived(theme.isDark ? 'lightgreen' : 'oklch(52.77% 0.138 145.41)');
 
 const CURSOR_COLOR = 
   $derived(theme.isDark ? 'pink' : 'oklch(62.73% 0.209 12.37)');
@@ -67,9 +68,14 @@ function getTick(scale: number): [small: number, nMed: number, nBig: number] {
   return [60, 10, 60];
 }
 
-let ellipsisWidth = -1;
-function ellipsisText(cxt: CanvasRenderingContext2D, str: string, max: number) {
+function ellipsisText(
+  cxt: CanvasRenderingContext2D, str: string, max: number, 
+  where: 'end' | 'start' = 'end'
+) {
   const ellipsis = '…';
+  const substring = where == 'end' 
+    ? (x: string, g: number) => x.substring(0, g) + ellipsis
+    : (x: string, g: number) => ellipsis + x.substring(str.length + 1 - g);
   const binarySearch = 
     (max: number, match: number, getValue: (guess: number) => number) => 
   {
@@ -85,14 +91,14 @@ function ellipsisText(cxt: CanvasRenderingContext2D, str: string, max: number) {
   };
 
   const width = cxt.measureText(str).width;
-  if (ellipsisWidth < 0) ellipsisWidth = cxt.measureText(ellipsis).width;
-  if (width <= max || width <= ellipsisWidth) return str;
+  const ellipsisWidth = cxt.measureText(ellipsis).width;
+  if (max <= ellipsisWidth) return '';
+  if (width <= max) return str;
   
   const index = binarySearch(
-    str.length,
-    max - ellipsisWidth,
-    guess => cxt.measureText(str.substring(0, guess)).width);
-  return str.substring(0, index) + ellipsis;
+    str.length, max,
+    guess => cxt.measureText(substring(str, guess)).width);
+  return substring(str, index);
 }
 
 export class TimelineRenderer {
@@ -263,12 +269,12 @@ export class TimelineRenderer {
     }
     ctx.stroke();
 
-    ellipsisWidth = -1;
     ctx.textAlign = 'start';
     ctx.textBaseline = 'top';
     ctx.font = font(TimelineConfig.data.fontSize);
     for (const ent of this.layout.getVisibleEntries()) {
-      this.layout.getEntryPositions(ent).forEach((b) => {
+      const boxes = this.layout.getEntryPositions(ent);
+      for (const b of boxes) {
         ctx.fillStyle = ent.label === 'none' 
           ? ENTRY_BACK 
           : LabelColor(ent.label, ENTRY_BACK_OPACITY);
@@ -283,13 +289,41 @@ export class TimelineRenderer {
         ctx.roundRect(b.x, b.y, b.w, b.h, 4);
         ctx.fill();
         ctx.stroke();
+
+        ctx.strokeStyle = ALIGNLINE_COLOR;
+        ctx.lineWidth = 2;
+        const split = this.input.splitting;
+        if (split?.target == ent) {
+          const pos = split.positions.get(b.style);
+          if (pos !== undefined) {
+            const separator = (split.breakPosition - ent.start) / (ent.end - ent.start) * b.w;
+            const text1 = b.text.substring(0, pos);
+            const text2 = b.text.substring(pos);
+            ctx.fillStyle = split.current == b.style ? ENTRY_TEXT_SPLITTING : ENTRY_TEXT;
+            ctx.textAlign = 'end';
+            ctx.fillText(
+              ellipsisText(ctx, text1, separator - 4, 'start'),
+              b.x + separator - 2, b.y + 4);
+            ctx.textAlign = 'start';
+            ctx.fillText(
+              ellipsisText(ctx, text2, b.w - 8 - separator - 4, 'end'),
+              b.x + separator + 2, b.y + 4);
+            
+            ctx.beginPath();
+            ctx.moveTo(b.x + separator, b.y + 4);
+            ctx.lineTo(b.x + separator, b.y + this.layout.entryHeight - 4);
+            ctx.stroke();
+            continue;
+          }
+        }
+
         if (b.w > 50) {
           ctx.fillStyle = ENTRY_TEXT;
           ctx.fillText(
             ellipsisText(ctx, b.text, b.w - 8), 
             b.x + 4, b.y + 4);
         }
-      });
+      };
     }
   }
 

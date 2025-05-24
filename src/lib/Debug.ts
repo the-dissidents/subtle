@@ -84,7 +84,7 @@ export const Debug: {
     info(...data: any[]): Promise<void>,
     warn(...data: any[]): Promise<void>,
     error(...data: any[]): Promise<void>,
-    assert(cond: boolean): asserts cond,
+    assert(cond: boolean, what?: string): asserts cond,
     early(reason?: string): void,
     never(value?: never): never
 } = {
@@ -171,14 +171,15 @@ export const Debug: {
         callLog(LogLevel.Error, formatData(data), file);
         callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
-    assert(cond: boolean): asserts cond {
+    assert(cond: boolean, what?: string): asserts cond {
         if (!!!cond) {
+            const msg = 'assertion failed' + (what ? `: ${what}` : '');
             (async () => {
                 const { file, trace } = await stacktrace();
-                callLog(LogLevel.Error, 'Assertion failed', file);
+                callLog(LogLevel.Error, msg, file);
                 callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
             })();
-            const error = new Error('assertion failed');
+            const error = new Error(msg);
             HasStacktrace.add(error);
             throw error;
         }
