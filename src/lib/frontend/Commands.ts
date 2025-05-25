@@ -63,17 +63,13 @@ function selectionCanCombine() {
 
 function selectionCommonStyles() {
     const selection = Editing.getSelection();
-    const styles = selection.map((x) => [...x.texts.keys()]).flat();
-    const distinctStyles = Source.subs.styles.filter((x) => styles.includes(x));
-    const commonStyles = distinctStyles
+    return Source.subs.styles
         .filter((x) => selection.every((y) => y.texts.has(x)));
-    return Source.subs.styles.filter((x) => !commonStyles.includes(x));
 }
 
 function notSelectionCommonStyles() {
     const common = selectionCommonStyles();
-    const notCommon = Source.subs.styles.filter((x) => !common.includes(x));
-    return notCommon;
+    return Source.subs.styles.filter((x) => !common.includes(x));
 }
 
 function forEachStyle(h: (style: SubtitleStyle) => void, styles = Source.subs.styles) {
