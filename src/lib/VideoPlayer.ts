@@ -53,11 +53,6 @@ export class VideoPlayer {
     #ctxbuf: OffscreenCanvasRenderingContext2D;
     #playing = false;
 
-    #outOffsetX = 0;
-    #outOffsetY = 0;
-    #outW = 0;
-    #outH = 0;
-
     #opened?: {
         url: string | undefined;
         framerate: number;
@@ -67,6 +62,11 @@ export class VideoPlayer {
 
         streams: readonly StreamInfo[];
         currentAudioStream: number;
+
+        outOffsetX: number;
+        outOffsetY: number;
+        outW: number;
+        outH: number;
 
         // manages audio cache and is used as the position reference
         worklet: AudioWorkletNode;
@@ -179,13 +179,14 @@ export class VideoPlayer {
             [ow, oh] = [w, w / ratio];
         else
             [ow, oh] = [h * ratio, h];
-        this.#outOffsetX = (w - ow) / 2;
-        this.#outOffsetY = (h - oh) / 2;
-        if (ow == this.#outW && oh == this.#outH) return;
+        this.#opened.outOffsetX = (w - ow) / 2;
+        this.#opened.outOffsetY = (h - oh) / 2;
+        if (ow == this.#opened.outW && oh == this.#opened.outH) return;
 
-        [this.#outW, this.#outH] = [ow, oh];
+        [this.#opened.outW, this.#opened.outH] = [ow, oh];
         await this.#opened.media.waitUntilAvailable();
         await this.#opened.media.setVideoSize(ow, oh);
+        Debug.trace('video size ->', ow, oh);
 
         const pos = this.currentPosition;
         await this.#clearCache();
@@ -256,6 +257,10 @@ export class VideoPlayer {
             currentAudioStream: status.audioIndex,
             streams: media.streams,
 
+            outOffsetX: 0,
+            outOffsetY: 0,
+            outH: 0, outW: 0,
+
             preloadEOF: false,
             playEOF: false,
             audioBufferLength: 0,
@@ -263,6 +268,9 @@ export class VideoPlayer {
             videoCache: [],
             discardBeforeVideoPosition: -1,
         };
+        this.#populatingInProgress = false;
+        this.#requestedSetPositionTarget = -1;
+        this.#setPositionInProgress = false;
 
         await this.#updateOutputSize();
         this.#requestPreload();
@@ -447,6 +455,7 @@ export class VideoPlayer {
     }
 
     requestSetPositionFrame(position: number, opt?: SetPositionOptions) {
+        Debug.trace('requestSetPositionFrame', position);
         const first = this.#requestedSetPositionTarget < 0;
         this.#requestedSetPositionTarget = position;
         if (first) {
@@ -461,7 +470,8 @@ export class VideoPlayer {
                         && !this.#setPositionInProgress) break;
                     pos = this.#requestedSetPositionTarget;
                     Debug.assert(pos >= 0);
-                    Debug.trace('delaying forceSetPositionFrame');
+                    Debug.trace('delaying forceSetPositionFrame;', 
+                        this.#setPositionInProgress, pos);
                     await Basic.wait(10);
                 }
 
@@ -488,6 +498,7 @@ export class VideoPlayer {
 
     #setPositionInProgress = false;
     async forceSetPositionFrame(position: number, opt?: SetPositionOptions) {
+        Debug.trace('forceSetPositionFrame', position);
         if (position < 0) position = 0;
 
         Debug.assert(this.#opened !== undefined);
@@ -508,7 +519,7 @@ export class VideoPlayer {
         // check if target position is within cache
         if (video.length > 0) {
             if (position >= video[0].position && position <= video.at(-1)!.position) {
-                Debug.trace('setPositionFrame: shifting', 
+                Debug.trace('forceSetPositionFrame: shifting', 
                     position, video[0].position, video.at(-1)!.position);
                 while (position > video[0].position)
                     video.shift();
@@ -568,7 +579,7 @@ export class VideoPlayer {
         let [w, h] = this.#manager.physicalSize;
         this.#ctxbuf.clearRect(0, 0, w, h);
         this.#ctxbuf.putImageData(imgData, 
-            this.#outOffsetX, this.#outOffsetY, 0, 0, nw, nh);
+            this.#opened.outOffsetX, this.#opened.outOffsetY, 0, 0, nw, nh);
 
         if (!MediaConfig.data.showDebug) return;
         
@@ -585,22 +596,23 @@ export class VideoPlayer {
         this.#ctxbuf.font = `${window.devicePixelRatio * 10}px Courier`;
         this.#ctxbuf.textBaseline = 'top';
 
+        const x = this.#opened.outOffsetX;
         this.#ctxbuf.fillText(
-            `fr: ${this.#opened.framerate}; sp: ${this.#opened.sampleRate}`, this.#outOffsetX, 0);
+            `fr: ${this.#opened.framerate}; sp: ${this.#opened.sampleRate}`, x, 0);
         this.#ctxbuf.fillText(
-            `at: ${audioTime}`, this.#outOffsetX, 20);
+            `at: ${audioTime}`, x, 20);
         this.#ctxbuf.fillText(
-            `vt: ${frame.time.toFixed(3)}`, this.#outOffsetX, 40);
+            `vt: ${frame.time.toFixed(3)}`, x, 40);
         this.#ctxbuf.fillText(
-            `la:${latency}`, this.#outOffsetX, 60);
+            `la:${latency}`, x, 60);
         this.#ctxbuf.fillText(
-            `ps: ${frame.position}`, this.#outOffsetX, 80);
+            `ps: ${frame.position}`, x, 80);
         this.#ctxbuf.fillText(
             `vb: ${this.#opened.videoCache.length}`.padEnd(10)
-            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, this.#outOffsetX, 100);
+            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 100);
         this.#ctxbuf.fillText(
             `ab: ${this.#opened.audioBufferLength}`.padEnd(10) 
-            + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, this.#outOffsetX, 120);
+            + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, x, 120);
     }
 
     async #renderSimple(cxt: CanvasRenderingContext2D) {
