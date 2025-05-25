@@ -227,5 +227,6 @@ h5 {
 
 .overlay-container {
   position: relative;
+  width: 100%;
 }
 </style>

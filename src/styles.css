@@ -11,6 +11,8 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  /* scrollbar-width: thin; */
 }
 
 .lucide {
@@ -32,6 +34,7 @@
   :root {
     color: var(--uchu-yin);
     background-color: #fafafa;
+    scrollbar-color: gray transparent;
   }
   input[type=range] {
     &::-webkit-slider-thumb {
@@ -110,6 +113,7 @@
   :root {
     color: var(--uchu-yang);
     background-color: var(--uchu-yin-9);
+    scrollbar-color: gray transparent;
   }
   input[type=range] {
     &::-webkit-slider-thumb {

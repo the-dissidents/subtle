@@ -570,14 +570,15 @@ export class TimelineInput {
       this.makeAlignmentLine(e.offsetX, true);
       return;
     }
-    if (under.length == 0)
-      return;
-    
-    canvas.style.cursor = 'move';
+
     if (this.alignmentLine !== null) {
       this.alignmentLine = null;
       this.manager.requestRender();
     }
+
+    if (under.length == 0)
+      return;
+    canvas.style.cursor = 'move';
   
     const ctrlKey = Basic.ctrlKey() == 'Meta' ? e.metaKey : e.ctrlKey;
     const resizeArea = TimelineConfig.data.dragResizeArea;
