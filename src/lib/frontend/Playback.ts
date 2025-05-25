@@ -70,7 +70,8 @@ export const Playback = {
         loop: false
     }),
 
-    onLoad: new EventHost<[rawurl: string]>(),
+    onLoad: new EventHost<[rawurl: string, id: number]>(),
+    onSetAudioStream: new EventHost<[id: number]>(),
     onClose: new EventHost<[]>(),
     
     onPositionChanged: new EventHost<[pos: number]>(),
@@ -91,15 +92,23 @@ export const Playback = {
         return this.video;
     },
 
-    async load(rawurl: string) {
+    async load(rawurl: string, audio: number) {
         Debug.assert(this.video !== null);
         await Promise.all([
-            this.video.load(rawurl),
-            this.onLoad.dispatchAndAwaitAll(rawurl)
+            this.video.load(rawurl, audio),
+            this.onLoad.dispatchAndAwaitAll(rawurl, audio)
         ]);
         isLoaded.set(true);
         duration = this.video.duration!;
         Playback.onRefreshPlaybackControl.dispatch();
+    },
+
+    async setAudioStream(id: number) {
+        Debug.assert(this.video !== null);
+        await Promise.all([
+            this.video.setAudioStream(id),
+            this.onSetAudioStream.dispatchAndAwaitAll(id)
+        ]);
     },
 
     async close() {

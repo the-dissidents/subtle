@@ -9,15 +9,18 @@ import { Debug } from "../Debug";
 import { Basic } from "../Basic";
 const $_ = unwrapFunctionStore(_);
 
+export type FileSaveState = {
+    name: string, 
+    video?: string,
+    audioStream?: number,
+    scroll?: number,
+    focus?: number
+}
+
 const configPath = 'config.json';
 let configData = {
     maxRecent: 10,
-    paths: [] as {
-        name: string, 
-        video?: string,
-        scroll?: number,
-        focus?: number
-    }[],
+    paths: [] as FileSaveState[],
 
     windowW: 1000,
     windowH: 800,
@@ -91,14 +94,14 @@ export const PrivateConfig = {
             configData.paths.pop();
         await saveConfig();
     },
-    getVideo(file: string): string | undefined {
+    getFileData(file: string) {
         Debug.assert(initialized);
-        return configData.paths.find((x) => x.name == file)?.video;
+        return configData.paths.find((x) => x.name == file);
     },
-    async setVideo(file: string, video: string | undefined) {
+    async setFileData(file: string, v: Omit<FileSaveState, 'name'> | undefined) {
         Debug.assert(initialized);
         Debug.assert(configData.paths.length > 0 && configData.paths[0].name == file);
-        configData.paths[0].video = video;
+        Object.assign(configData.paths[0], v);
         await saveConfig();
     },
 }

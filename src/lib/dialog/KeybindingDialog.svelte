@@ -147,7 +147,7 @@ locale.subscribe(() => refresh = !refresh);
           <td rowspan={lines+1}>
             {#if cmd.type == 'menu'}
               <MenuIcon />
-            {:else}
+            {:else if cmd.type == 'dialog'}
               <CreditCardIcon />
             {/if}
           </td>
@@ -177,7 +177,7 @@ locale.subscribe(() => refresh = !refresh);
       background-color: lightcoral;
     }
     .rowhead {
-      border-top: 1px solid var(--uchu-yin-5);
+      border-top: 1px solid var(--uchu-yin-3);
     }
     span.separator {
       color: var(--uchu-yin-5);

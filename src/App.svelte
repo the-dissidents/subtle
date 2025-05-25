@@ -260,6 +260,9 @@ appWindow.onDragDropEvent(async (ev) => {
         <FilmIcon />
         &nbsp;{$_('menu.open-video')}
       </button></li>
+      <li><button disabled={!$isMediaLoaded} onclick={() => Commands.selectAudioStream.call()}>
+        {$_('menu.select-audio-stream')}
+      </button></li>
       <li><button disabled={!$isMediaLoaded} onclick={() => Commands.closeVideo.call()}>
         {$_('menu.close-video')}
       </button></li>

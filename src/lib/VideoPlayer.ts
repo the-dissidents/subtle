@@ -65,6 +65,9 @@ export class VideoPlayer {
         media: MMedia;
         audioCxt: AudioContext;
 
+        streams: readonly string[];
+        currentAudioStream: number;
+
         // manages audio cache and is used as the position reference
         worklet: AudioWorkletNode;
         onAudioFeedback?: (data: AudioFeedbackData) => void;
@@ -103,6 +106,13 @@ export class VideoPlayer {
     get isPlaying() { return this.#playing; }
     get isPreloading() { return this.#requestedPreload; }
     get source() { return this.#opened?.url; }
+
+    get streams() {
+        return this.#opened?.streams ?? [];
+    }
+    get currentAudioStream() {
+        return this.#opened?.currentAudioStream;
+    }
 
     #subRenderer?: SubtitleRenderer;
     #manager: CanvasManager;
@@ -207,17 +217,19 @@ export class VideoPlayer {
         await Debug.info('closed video');
     }
     
-    async load(rawurl: string) {
+    async load(rawurl: string, audio: number) {
         if (this.#opened) await this.close();
         if (DebugConfig.data.disableVideo) return;
         
         let media = await MMedia.open(rawurl);
+        
         await media.openVideo(-1);
-        await media.openAudio(-1);
+        await media.openAudio(audio);
         await Debug.debug('VideoPlayer: opened media');
 
         const audioStatus = await media.audioStatus();
         const videoStatus = await media.videoStatus();
+        const status = await media.status();
         Debug.assert(audioStatus !== null);
         Debug.assert(videoStatus !== null);
 
@@ -241,6 +253,9 @@ export class VideoPlayer {
             media, audioCxt, worklet,
             framerate: videoStatus.framerate,
             sampleRate: audioStatus.sampleRate,
+            currentAudioStream: status.audioIndex,
+            streams: media.streams,
+
             preloadEOF: false,
             playEOF: false,
             audioBufferLength: 0,
@@ -252,6 +267,19 @@ export class VideoPlayer {
         await this.#updateOutputSize();
         this.#requestPreload();
         await Debug.debug('VideoPlayer: loaded media');
+    }
+
+    async setAudioStream(id: number) {
+        Debug.assert(this.#opened !== undefined);
+        if (id == this.#opened.currentAudioStream) return Debug.early('setAudioStream');
+
+        if (this.#playing) await this.stop();
+        const pos = this.currentPosition ?? 0;
+        await this.#opened.media.openAudio(id);
+        const status = await this.#opened.media.status();
+        this.#opened.currentAudioStream = status.audioIndex;
+        await this.#clearCache();
+        this.requestSetPositionFrame(pos);
     }
 
     #waitingWorklet = false;

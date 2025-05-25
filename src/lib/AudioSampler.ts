@@ -42,8 +42,8 @@ export class AudioSampler {
         this.detail = new Float32Array(this.#size);
     }
 
-    static async open(media: MMedia, resolution: number) {
-        await media.openAudio(-1);
+    static async open(media: MMedia, audio: number, resolution: number) {
+        await media.openAudio(audio);
         let info = await media.audioStatus();
         if (info == null)
             throw Error("Unable to open audio");

@@ -309,6 +309,7 @@
     "yellow": "yellow"
   },
   "menu": {
+    "audio-stream-current": "(current)",
     "close-video": "close",
     "configuration": "configuration",
     "export": "export",
@@ -321,6 +322,7 @@
     "open-video": "open video",
     "redo": "redo",
     "save-as": "save as",
+    "select-audio-stream": "select audio",
     "undo": "undo"
   },
   "metrics": {
@@ -367,6 +369,7 @@
     "exported-to-file": "exported to {file}",
     "failed-to-parse-as-subtitles-path": "failed to parse as subtitles: {path}",
     "failed-to-parse-clipboard-data-as-subtitles": "failed to parse clipboard data as subtitles",
+    "failed-to-set-audio-stream": "failed to set audio stream",
     "filter-is-empty": "filter is empty!",
     "hotkey-not-found": "hotkey not found: {key}",
     "imported": "file imported",

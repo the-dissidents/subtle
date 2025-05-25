@@ -311,6 +311,7 @@
     "yellow": "黄色"
   },
   "menu": {
+    "audio-stream-current": "（当前音频）",
     "close-video": "关闭",
     "configuration": "配置",
     "export": "导出",
@@ -323,6 +324,7 @@
     "open-video": "打开视频",
     "redo": "重做",
     "save-as": "另存为",
+    "select-audio-stream": "选择音轨",
     "undo": "撤消"
   },
   "metrics": {
@@ -369,6 +371,7 @@
     "exported-to-file": "已导出：{file}",
     "failed-to-parse-as-subtitles-path": "无法解析字幕：{path}",
     "failed-to-parse-clipboard-data-as-subtitles": "无法将剪贴板数据解析为字幕",
+    "failed-to-set-audio-stream": "设置音频轨道失败",
     "filter-is-empty": "查找条件为空",
     "hotkey-not-found": "未定义快捷键：{key}",
     "imported": "成功导入文件",

@@ -1,4 +1,4 @@
-import { Interface } from "./Interface";
+import { guardAsync, Interface } from "./Interface";
 import { UICommand } from "./CommandBase";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
@@ -356,6 +356,23 @@ export const Commands = {
         call: () => Toolboxes.search!.execute('replace', 'previous')
     }),
 
+
+    selectAudioStream: new UICommand(() => $_('category.media'),
+        [ ],
+    {
+        name: () => $_('menu.select-audio-stream'),
+        isApplicable: () => get(Playback.isLoaded),
+        items: () => Playback.video!.streams.map((x, i) => ({
+            name: x + (i == Playback.video?.currentAudioStream 
+                ? ' ' + $_('menu.audio-stream-current')
+                : ''),
+            isApplicable: () => i != Playback.video?.currentAudioStream,
+            async call() {
+                await guardAsync(() => Playback.setAudioStream(i),
+                    $_('msg.failed-to-set-audio-stream'))
+            }
+        }))
+    }),
     togglePlay: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['Space'], ['Table', 'Timeline']),
           CommandBinding.from(['Alt+Space']), ],

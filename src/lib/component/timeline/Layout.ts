@@ -42,6 +42,17 @@ export class TimelineLayout {
   #shownStyles: SubtitleStyle[] = [];
   #stylesMap = new Map<SubtitleStyle, number>();
 
+  async #makeSampler(audio: number) {
+    Debug.assert(this.#samplerMedia !== undefined);
+    const sampler = await AudioSampler.open(
+      this.#samplerMedia, audio, 
+      TimelineConfig.data.waveformResolution);
+    sampler.onProgress = () => this.manager.requestRender();
+    this.requestedSampler = true;
+    this.manager.requestRender();
+    return sampler;
+  }
+
   constructor(
     public readonly canvas: HTMLCanvasElement
   ) {
@@ -50,14 +61,14 @@ export class TimelineLayout {
       (w, h) => this.#processDisplaySizeChanged(w, h));
     this.setScale(10);
 
-    Playback.onLoad.bind(this, async (rawurl) => {
+    Playback.onLoad.bind(this, async (rawurl, audio) => {
       Debug.assert(this.#samplerMedia === undefined || this.#samplerMedia.isClosed)
       if (DebugConfig.data.disableWaveform) return;
     
       this.#samplerMedia = await MMedia.open(rawurl);
-      this.sampler = await AudioSampler.open(
-        this.#samplerMedia, TimelineConfig.data.waveformResolution);
-      this.sampler.onProgress = () => this.manager.requestRender();
+      this.sampler = await this.#makeSampler(audio);
+      if (!this.sampler) return;
+
       this.setScale(Math.max(this.width / this.sampler.duration, 10));
       this.setOffset(0);
       Playback.setPosition(0);
@@ -90,6 +101,11 @@ export class TimelineLayout {
       }
       this.keepPosInSafeArea(pos);
       this.manager.requestRender();
+    });
+
+    Playback.onSetAudioStream.bind(this, async (id) => {
+      const sampler = await this.#makeSampler(id);
+      this.sampler = sampler;
     });
 
     Source.onSubtitlesChanged.bind(this, (type) => {

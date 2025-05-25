@@ -143,21 +143,24 @@ export const Interface = {
         if (newSubs.migrated == 'newerVersion') 
             await dialog.message(
                 $_('msg.note-file-is-from-newer-version-path', {values: {path}}));
-        const video = PrivateConfig.getVideo(path);
-        if (video) await this.openVideo(video);
-        else if (get(Playback.isLoaded)) await Playback.close();
+        const data = PrivateConfig.getFileData(path);
+        if (data?.video) {
+            await this.openVideo(data.video, data.audioStream);
+        } else if (get(Playback.isLoaded))
+            await Playback.close();
         Interface.setStatus($_('msg.opened-path', {values: {path}}));
     },
 
-    async openVideo(path: string) {
+    async openVideo(path: string, audio?: number) {
         if (get(Playback.isLoaded))
             await Playback.close();
-        guardAsync(async () => await Playback.load(path), 
+        await guardAsync(() => Playback.load(path, audio ?? -1), 
             $_('msg.error-opening-video-path', {values: {path}}));
+        if (!Playback.video?.isLoaded) return;
         
         let source = get(Source.currentFile);
         if (source != '')
-            await PrivateConfig.setVideo(source, path);
+            await this.saveFileData();
     },
 
     async warnIfNotSaved() {
@@ -249,7 +252,7 @@ export const Interface = {
         }
         const text = Format.JSON.write(Source.subs);
         if (await Source.saveTo(file, text)) {
-            await PrivateConfig.setVideo(file, Playback.video?.source);
+            await this.saveFileData();
             Source.subs.migrated = 'none';
         }
         Source.startAutoSave();
@@ -262,6 +265,15 @@ export const Interface = {
     async closeVideo() {
         let file = get(Source.currentFile);
         await Playback.close();
-        await PrivateConfig.setVideo(file, undefined);
+        await PrivateConfig.setFileData(file, undefined);
+    },
+
+    async saveFileData() {
+        const file = get(Source.currentFile);
+        Debug.assert(file !== '');
+        await PrivateConfig.setFileData(file, {
+            video: Playback.video?.source,
+            audioStream: Playback.video?.currentAudioStream
+        });
     }
 }
