@@ -50,6 +50,14 @@ function setup(canvas: HTMLCanvasElement) {
     buttonPosY = -layout!.manager.scroll[1];
   });
 
+  Source.onSubtitleObjectReload.bind(layout, () => {
+    styleRefreshCounter++;
+  });
+  Source.onSubtitlesChanged.bind(layout, (type) => {
+    if (type == ChangeType.StyleDefinitions || type == ChangeType.General)
+      styleRefreshCounter++;
+  });
+
   uiFocus.subscribe((x) => {
     if (x != 'Timeline')
       input!.useSnap.override = null;
