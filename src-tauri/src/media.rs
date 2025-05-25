@@ -1,6 +1,6 @@
 extern crate ffmpeg_next as ffmpeg;
 
-use internal::DecodedFrame;
+use internal::{DecodedFrame, StreamInfo};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -42,7 +42,7 @@ pub enum MediaEvent<'a> {
         audio_index: i32,
         video_index: i32,
         duration: f64,
-        streams: Vec<String>,
+        streams: Vec<StreamInfo>,
     },
     #[serde(rename_all = "camelCase")]
     AudioStatus { length: i64, sample_rate: u32 },
@@ -179,9 +179,7 @@ pub fn video_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Cha
 
 #[tauri::command]
 pub fn video_set_size(
-    id: i32,
-    width: u32,
-    height: u32,
+    id: i32, width: u32, height: u32,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {

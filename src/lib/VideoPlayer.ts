@@ -1,6 +1,6 @@
 console.info('VideoPlayer loading');
 
-import { MMedia, type AudioFrameData, type VideoFrameData } from "./API";
+import { MMedia, type AudioFrameData, type StreamInfo, type VideoFrameData } from "./API";
 import { Basic } from "./Basic";
 import { CanvasManager } from "./CanvasManager";
 import { SubtitleRenderer } from "./SubtitleRenderer";
@@ -65,7 +65,7 @@ export class VideoPlayer {
         media: MMedia;
         audioCxt: AudioContext;
 
-        streams: readonly string[];
+        streams: readonly StreamInfo[];
         currentAudioStream: number;
 
         // manages audio cache and is used as the position reference

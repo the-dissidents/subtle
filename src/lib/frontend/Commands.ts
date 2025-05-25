@@ -362,16 +362,18 @@ export const Commands = {
     {
         name: () => $_('menu.select-audio-stream'),
         isApplicable: () => get(Playback.isLoaded),
-        items: () => Playback.video!.streams.map((x, i) => ({
-            name: x + (i == Playback.video?.currentAudioStream 
-                ? ' ' + $_('menu.audio-stream-current')
-                : ''),
-            isApplicable: () => i != Playback.video?.currentAudioStream,
-            async call() {
-                await guardAsync(() => Playback.setAudioStream(i),
-                    $_('msg.failed-to-set-audio-stream'))
-            }
-        }))
+        items: () => Playback.video!.streams
+            .filter((x) => x.type == 'audio')
+            .map((x) => ({
+                name: x.description + (
+                    x.index == Playback.video?.currentAudioStream 
+                    ? ' ' + $_('menu.audio-stream-current') : ''),
+                isApplicable: () => x.index != Playback.video?.currentAudioStream,
+                async call() {
+                    await guardAsync(() => Playback.setAudioStream(x.index),
+                        $_('msg.failed-to-set-audio-stream'))
+                }
+            }))
     }),
     togglePlay: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['Space'], ['Table', 'Timeline']),

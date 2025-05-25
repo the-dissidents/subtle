@@ -1,7 +1,13 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
 import { Debug } from './Debug';
 
-type MediaEvent = {
+export type StreamInfo = {
+    type: 'audio' | 'video' | 'subtitle' | 'unknown',
+    index: number,
+    description: string
+};
+
+export type MediaEvent = {
     event: 'done'
     data: {}
 } | {
@@ -18,7 +24,7 @@ type MediaEvent = {
         audioIndex: number,
         videoIndex: number,
         duration: number,
-        streams: string[]
+        streams: StreamInfo[]
     }
 } | {
     event: 'audioStatus',
@@ -140,7 +146,7 @@ export class MMedia {
     //     Debug.debug('finalizing:', x);
     // });
 
-    get streams(): readonly string[] {
+    get streams(): readonly StreamInfo[] {
         return this._streams;
     }
 
@@ -168,7 +174,7 @@ export class MMedia {
     private constructor(
         private id: number,
         private _duration: number,
-        private _streams: string[]
+        private _streams: StreamInfo[]
     ) {
         Debug.info(`media ${id} opened`);
     }
@@ -205,7 +211,7 @@ export class MMedia {
             audioIndex: number,
             videoIndex: number,
             duration: number,
-            streams: string[]
+            streams: StreamInfo[]
         }>((resolve, reject) => {
             let channel = createChannel('open/status', {
                 mediaStatus: (data) => resolve(data)

@@ -1,6 +1,7 @@
 extern crate ffmpeg_next as ffmpeg;
 
 use core::fmt;
+use serde::Serialize;
 
 use ffmpeg::error::EAGAIN;
 use ffmpeg::software::resampling;
@@ -23,10 +24,28 @@ pub enum MediaError {
 impl fmt::Display for MediaError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MediaError::FFMpegError { func, e, line } => write!(f, "at {}: {}: {}", line, func, e),
-            MediaError::InternalError(msg) => write!(f, "internal error: {}", msg),
+            MediaError::FFMpegError { func, e, line } 
+                => write!(f, "at {}: {}: {}", line, func, e),
+            MediaError::InternalError(msg) 
+                => write!(f, "internal error: {}", msg),
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StreamType {
+    Audio,
+    Video,
+    Subtitle,
+    Unknown,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct StreamInfo {
+    r#type: StreamType,
+    index: usize,
+    description: String,
 }
 
 pub struct AudioContext {
@@ -117,14 +136,27 @@ impl MediaPlayback {
         })
     }
 
-    pub fn describe_streams(&self) -> Vec<String> {
-        let mut streams = Vec::<String>::new();
+    pub fn describe_streams(&self) -> Vec<StreamInfo> {
+        let mut streams = Vec::<StreamInfo>::new();
         for stream in self.input.streams() {
-            streams.push(format!(
-                "{:?}:rate~{}",
-                stream.parameters().medium(),
-                stream.rate()
-            ));
+            let metadata = stream.metadata();
+            let lang = metadata
+                .get("language")
+                .unwrap_or("--");
+            streams.push(StreamInfo {
+                r#type: match stream.parameters().medium() {
+                    media::Type::Video => StreamType::Video,
+                    media::Type::Audio => StreamType::Audio,
+                    media::Type::Subtitle => StreamType::Subtitle,
+                    media::Type::Data => StreamType::Unknown,
+                    media::Type::Unknown => StreamType::Unknown,
+                    media::Type::Attachment => StreamType::Unknown,
+                },
+                index: stream.index(),
+                description: format!(
+                    "[{}] {}", stream.index(), lang
+                )
+            });
         }
         streams
     }
