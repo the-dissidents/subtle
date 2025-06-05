@@ -1,4 +1,3 @@
-import { get } from "svelte/store";
 import type { CanvasManager } from "../../CanvasManager";
 import { Playback } from "../../frontend/Playback";
 import { LabelColor, theme } from "../../Theming.svelte";
@@ -7,7 +6,6 @@ import { InterfaceConfig, MainConfig } from "../../config/Groups";
 import { Basic } from "../../Basic";
 import { TimelineConfig } from "./Config";
 import type { TimelineInput } from "./Input.svelte";
-import { Editing } from "../../frontend/Editing";
 import { hook } from "../../details/Hook.svelte";
 
 const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(0deg 0% 75%/50%)');
@@ -34,6 +32,7 @@ const ENTRY_BORDER          = $derived(theme.isDark ? 'hsl(0deg 0% 60%)' : 'hsl(
 const ENTRY_BORDER_FOCUS    = $derived(theme.isDark ? 'goldenrod' : 'oklch(70.94% 0.136 258.06)');
 const ENTRY_TEXT            = $derived(theme.isDark ? 'hsl(0deg 0% 90%)' : 'hsl(0deg 0% 20%)');
 const ENTRY_TEXT_SPLITTING  = $derived(theme.isDark ? 'goldenrod' : 'tomato');
+const ENTRY_TEXT_FADE       = $derived(theme.isDark ? '#0000' : '#FFF0');
 const INOUT_TEXT            = $derived(theme.isDark ? 'lightgreen' : 'oklch(52.77% 0.138 145.41)');
 
 const CURSOR_COLOR = 
@@ -66,39 +65,6 @@ function getTick(scale: number): [small: number, nMed: number, nBig: number] {
       UNITS[i+1] / UNITS[i], 
       UNITS[i+2] / UNITS[i]];
   return [60, 10, 60];
-}
-
-function ellipsisText(
-  cxt: CanvasRenderingContext2D, str: string, max: number, 
-  where: 'end' | 'start' = 'end'
-) {
-  const ellipsis = '…';
-  const substring = where == 'end' 
-    ? (x: string, g: number) => x.substring(0, g) + ellipsis
-    : (x: string, g: number) => ellipsis + x.substring(str.length + 1 - g);
-  const binarySearch = 
-    (max: number, match: number, getValue: (guess: number) => number) => 
-  {
-    let min = 0;
-    while (min <= max) {
-      let guess = Math.floor((min + max) / 2);
-      const compareVal = getValue(guess);
-      if (compareVal === match) return guess;
-      if (compareVal < match) min = guess + 1;
-      else max = guess - 1;
-    }
-    return max;
-  };
-
-  const width = cxt.measureText(str).width;
-  const ellipsisWidth = cxt.measureText(ellipsis).width;
-  if (max <= ellipsisWidth) return '';
-  if (width <= max) return str;
-  
-  const index = binarySearch(
-    str.length, max,
-    guess => cxt.measureText(substring(str, guess)).width);
-  return substring(str, index);
 }
 
 export class TimelineRenderer {
@@ -271,9 +237,15 @@ export class TimelineRenderer {
 
     ctx.textAlign = 'start';
     ctx.textBaseline = 'top';
-    ctx.font = font(TimelineConfig.data.fontSize);
+    const ctxfont = font(TimelineConfig.data.fontSize);
+    ctx.font = ctxfont;
     for (const ent of this.layout.getVisibleEntries()) {
       const boxes = this.layout.getEntryPositions(ent);
+      if (boxes.length == 0) continue;
+      const grad = ctx.createLinearGradient(
+        boxes[0].x + boxes[0].w - 15, boxes[0].y, boxes[0].x + boxes[0].w, boxes[0].y);
+      grad.addColorStop(0, ENTRY_TEXT);
+      grad.addColorStop(1, ENTRY_TEXT_FADE);
       for (const b of boxes) {
         ctx.fillStyle = ent.label === 'none' 
           ? ENTRY_BACK 
@@ -285,44 +257,44 @@ export class TimelineRenderer {
           ctx.strokeStyle = ENTRY_BORDER;
           ctx.lineWidth = ENTRY_WIDTH;
         }
-        ctx.beginPath();
-        ctx.roundRect(b.x, b.y, b.w, b.h, 4);
-        ctx.fill();
-        ctx.stroke();
+        const path = new Path2D();
+        path.roundRect(b.x, b.y, b.w, b.h, 4);
+        ctx.fill(path);
+        ctx.stroke(path);
+
+        if (b.w < 15)
+          continue;
+        ctx.save();
+        ctx.clip(path);
 
         ctx.strokeStyle = ALIGNLINE_COLOR;
         ctx.lineWidth = 2;
         const split = this.input.splitting;
-        if (split?.target == ent) {
+        if (split?.target == ent && split.positions.has(b.style)) {
           const pos = split.positions.get(b.style);
-          if (pos !== undefined) {
-            const separator = (split.breakPosition - ent.start) / (ent.end - ent.start) * b.w;
-            const text1 = b.text.substring(0, pos);
-            const text2 = b.text.substring(pos);
-            ctx.fillStyle = split.current == b.style ? ENTRY_TEXT_SPLITTING : ENTRY_TEXT;
-            ctx.textAlign = 'end';
-            ctx.fillText(
-              ellipsisText(ctx, text1, separator - 4, 'start'),
-              b.x + separator - 2, b.y + 4);
-            ctx.textAlign = 'start';
-            ctx.fillText(
-              ellipsisText(ctx, text2, b.w - 8 - separator - 4, 'end'),
-              b.x + separator + 2, b.y + 4);
-            
-            ctx.beginPath();
-            ctx.moveTo(b.x + separator, b.y + 4);
-            ctx.lineTo(b.x + separator, b.y + this.layout.entryHeight - 4);
-            ctx.stroke();
-            continue;
-          }
+          const separator = (split.breakPosition - ent.start) / (ent.end - ent.start) * b.w;
+          const text1 = b.text.substring(0, pos);
+          const text2 = b.text.substring(pos!);
+          const color = split.current == b.style ? ENTRY_TEXT_SPLITTING : ENTRY_TEXT;
+          const grad = ctx.createLinearGradient(b.x, b.y, b.x + b.w, b.y);
+          grad.addColorStop(0, ENTRY_TEXT_FADE);
+          grad.addColorStop(Math.min(1, 15 / b.w), color);
+          grad.addColorStop(Math.max(0, 1 - 15 / b.w), color);
+          grad.addColorStop(1, ENTRY_TEXT_FADE);
+          ctx.fillStyle = grad;
+          ctx.textAlign = 'end';
+          ctx.fillText(text1, b.x + separator - 2, b.y + 4);
+          ctx.textAlign = 'start';
+          ctx.fillText(text2, b.x + separator + 2, b.y + 4);
+          ctx.beginPath();
+          ctx.moveTo(b.x + separator, b.y + 4);
+          ctx.lineTo(b.x + separator, b.y + this.layout.entryHeight - 4);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = grad;
+          ctx.fillText(b.text, b.x + 4, b.y + 4);
         }
-
-        if (b.w > 50) {
-          ctx.fillStyle = ENTRY_TEXT;
-          ctx.fillText(
-            ellipsisText(ctx, b.text, b.w - 8), 
-            b.x + 4, b.y + 4);
-        }
+        ctx.restore();
       };
     }
   }

@@ -500,6 +500,8 @@ function getLineFromOffset(y: number) {
 let currentFails: SimpleMetricFilter[] = [];
 
 function onMouseMove(ev: MouseEvent) {
+  if (ev.offsetY < headerHeight / manager.scale) return;
+  
   const [cx, cy] = manager.convertPosition('offset', 'canvas', ev.offsetX, ev.offsetY);
   const currentLine = Math.floor((cy - headerHeight) / lineHeight);
 
