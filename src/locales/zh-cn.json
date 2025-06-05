@@ -390,6 +390,8 @@
     "saved-to-file": "已保存：{file}",
     "search-expression-is-empty": "查找表达式为空",
     "search-failed": "查找失败：",
+    "seeked-to-frame": "已定位到 {time}（{pos}），跳过了 {naudio} 音频帧和 {nvideo} 视频帧",
+    "seeked-to-frame-cached": "已定位到 {time}（{pos}，缓存）",
     "subtitle-is-empty": "字幕文件为空",
     "unable-to-read-file-path": "无法读取文件：{path}",
     "undone": "已撤销",

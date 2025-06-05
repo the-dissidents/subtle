@@ -13,6 +13,7 @@ import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Debug } from "./Debug";
+import { Interface } from "./frontend/Interface";
 const $_ = unwrapFunctionStore(_);
 
 export const MediaConfig = new PublicConfigGroup(
@@ -80,7 +81,11 @@ export class VideoPlayer {
         playEOF: boolean;
         videoCache: VideoFrameData[];
         lastFrame?: VideoFrameData;
-        discardBeforeVideoPosition: number;
+        seeking?: {
+            target: number,
+            nSkippedAudio: number,
+            nSkippedVideo: number
+        }
     };
 
     // position used when no media opened
@@ -265,8 +270,7 @@ export class VideoPlayer {
             playEOF: false,
             audioBufferLength: 0,
             audioSize: 0,
-            videoCache: [],
-            discardBeforeVideoPosition: -1,
+            videoCache: []
         };
         this.#populatingInProgress = false;
         this.#requestedSetPositionTarget = -1;
@@ -370,7 +374,7 @@ export class VideoPlayer {
     async #receiveFrame(frame: VideoFrameData | AudioFrameData | null) {
         if (!this.#opened) return false;
         if (this.#opened.preloadEOF) {
-            await Debug.debug('preloadeof');
+            Debug.debug('preloadeof');
             return false;
         }
         if (!frame) {
@@ -385,41 +389,57 @@ export class VideoPlayer {
         const video = this.#opened.videoCache;
         if (frame.type == 'audio') {
             if (this.#opened.audioTail !== undefined && frame.time < this.#opened.audioTail) {
-                await Debug.warn('receiveFrame: abnormal audio frame ordering', 
+                Debug.warn('receiveFrame: abnormal audio frame ordering', 
                     frame.time, this.#opened.audioTail);
                 await this.#clearCache();
                 return true;
             }
             if (this.#opened.audioBufferLength == 0) {
-                if (frame.time < this.#opened.discardBeforeVideoPosition / this.#opened.framerate 
-                || (video.length > 0 && video[0].time > frame.time))
-                {
-                    // skip audio before current video position or before seek target
+                if (video.length > 0 && video[0].time > frame.time) {
+                    // skip audio before current video position
                     return true;
                 }
-                await Debug.trace('receiveFrame: first audio at', frame.position, frame.time);
+                if (this.#opened.seeking 
+                 && frame.time < this.#opened.seeking.target / this.#opened.framerate)
+                {
+                    // skip audio before seek target
+                    this.#opened.seeking.nSkippedAudio++;
+                    return true;
+                }
+                Debug.trace('receiveFrame: first audio at', frame.position, frame.time);
             }
             await this.#postAudioMessage({ type: 'frame', frame });
             await this.#tryStartPlaying();
         } else {
             if (video.length > 0 && frame.position < video.at(-1)!.position) {
-                await Debug.warn('receiveFrame: abnormal video frame ordering',
+                Debug.warn('receiveFrame: abnormal video frame ordering',
                     frame.position, video.at(-1)!.position);
                 await this.#clearCache();
                 return true;
             }
             this.#opened.lastFrame = frame;
-            if (video.length == 0 && frame.position < this.#opened.discardBeforeVideoPosition) {
+            if (video.length == 0 && this.#opened.seeking 
+             && frame.position < this.#opened.seeking.target) {
                 // skip frames before seek target
+                this.#opened.seeking.nSkippedVideo++;
                 return true;
             }
             video.push(frame);
             if (video.length == 1) {
-                await Debug.trace('receiveFrame: first video at', frame.position, frame.time);
+                Debug.trace('receiveFrame: first video at', frame.position, frame.time);
                 if (this.#opened.audioHead !== undefined && this.#opened.audioHead < frame.time) {
                     // shift audio buffer until current video position
                     await this.#postAudioMessage(
                         { type: 'shiftUntil', position: frame.time * this.#opened.sampleRate });
+                }
+                if (this.#opened.seeking) {
+                    Interface.setStatus($_('msg.seeked-to-frame', { values: {
+                        time: frame.time.toFixed(3), 
+                        pos: frame.position, 
+                        naudio: this.#opened.seeking.nSkippedAudio, 
+                        nvideo: this.#opened.seeking.nSkippedVideo
+                    } }));
+                    this.#opened.seeking = undefined;
                 }
                 this.onVideoPositionChange();
                 this.subRenderer?.setTime(frame.time);
@@ -447,6 +467,7 @@ export class VideoPlayer {
     }
 
     #requestedSetPositionTarget = -1;
+    
     requestSetPosition(t: number, opt?: SetPositionOptions) {
         if (!this.#opened) this.forceSetPosition(t);
         else this.requestSetPositionFrame(
@@ -512,40 +533,49 @@ export class VideoPlayer {
         this.#fallbackTime = position / this.#opened.framerate;
         this.#opened.preloadEOF = false;
         this.#opened.playEOF = false;
-        this.#opened.discardBeforeVideoPosition = (opt?.imprecise) ? -1 : position;
+        if (opt?.imprecise)
+            this.#opened.seeking = undefined;
+        else
+            this.#opened.seeking = { target: position, nSkippedAudio: 0, nSkippedVideo: 0 };
         if (this.#playing) await this.stop();
 
         const video = this.#opened.videoCache;
+
         // check if target position is within cache
-        if (video.length > 0) {
-            if (position >= video[0].position && position <= video.at(-1)!.position) {
-                Debug.trace('forceSetPositionFrame: shifting', 
-                    position, video[0].position, video.at(-1)!.position);
-                while (position > video[0].position)
-                    video.shift();
-                await this.#postAudioMessage({ type: 'shiftUntil', 
-                    position: position / this.#opened.framerate * this.#opened.sampleRate });
-                this.#subRenderer?.setTime(video[0].time);
-                this.onVideoPositionChange();
-                this.requestRender();
-                this.#requestPreload();
-                this.#setPositionInProgress = false;
-                return;
-            }
+        if (video.length > 0 
+         && position >= video[0].position && position <= video.at(-1)!.position
+        ) {
+            if (position == video[0].position) return;
+            Debug.trace('forceSetPositionFrame: shifting', 
+                position, video[0].position, video.at(-1)!.position);
+            while (position > video[0].position)
+                video.shift();
+            await this.#postAudioMessage({ type: 'shiftUntil', 
+                position: position / this.#opened.framerate * this.#opened.sampleRate });
+            this.#subRenderer?.setTime(video[0].time);
+            this.onVideoPositionChange();
+            this.requestRender();
+            this.#requestPreload();
+            this.#setPositionInProgress = false;
+            Interface.setStatus($_('msg.seeked-to-frame-cached', { values: {
+                time: video[0].time.toFixed(3), 
+                pos: video[0].position
+            } }));
+        } else {
+            // else, do the seeking and rebuild cache
+            await this.#opened.media.waitUntilAvailable();
+            await this.#opened.media.seekVideo(position);
+            Debug.trace(`setPositionFrame: seeking [${position}]`);
+            await this.#clearCache();
+            this.#requestPreload();
+            // const frame = await this.#opened.media.seekVideoPrecise(position);
+            // console.info(`setPositionFrame: seeking [${position}], got frame`, 
+            //     frame?.position, frame?.time);
+            // await this.#clearCache();
+            // if (await this.#receiveFrame(frame))
+            //     this.#requestPreload();
+            this.#setPositionInProgress = false;
         }
-        // else, do the seeking and rebuild cache
-        await this.#opened.media.waitUntilAvailable();
-        await this.#opened.media.seekVideo(position);
-        Debug.trace(`setPositionFrame: seeking [${position}]`);
-        await this.#clearCache();
-        this.#requestPreload();
-        // const frame = await this.#opened.media.seekVideoPrecise(position);
-        // console.info(`setPositionFrame: seeking [${position}], got frame`, 
-        //     frame?.position, frame?.time);
-        // await this.#clearCache();
-        // if (await this.#receiveFrame(frame))
-        //     this.#requestPreload();
-        this.#setPositionInProgress = false;
     }
 
     async requestNextFrame() {

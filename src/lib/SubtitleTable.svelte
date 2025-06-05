@@ -380,9 +380,11 @@ function render(cxt: CanvasRenderingContext2D) {
   cols.slice(1).map((x) => drawLine(x.position, sy, x.position, bottom));
 
   if (TableConfig.data.showDebug) {
+    cxt.resetTransform();
+    cxt.scale(devicePixelRatio, devicePixelRatio);
     cxt.fillStyle = debugBlinker ? 'red' : 'blue';
     cxt.beginPath();
-    cxt.arc(width - 15, height - 15 + manager.scroll[1], 5, 0, 2 * Math.PI);
+    cxt.arc(width - 15, height - 15, 5, 0, 2 * Math.PI);
     cxt.fill();
     debugBlinker = !debugBlinker;
   }

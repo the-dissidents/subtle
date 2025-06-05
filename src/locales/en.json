@@ -388,6 +388,8 @@
     "saved-to-file": "saved to {file}",
     "search-expression-is-empty": "search expression is empty",
     "search-failed": "search failed:",
+    "seeked-to-frame": "Seeked to {time} ({pos}) after skipping {naudio} audio frames and {nvideo} video frames",
+    "seeked-to-frame-cached": "Seeked to {time} ({pos}, cached)",
     "subtitle-is-empty": "subtitle file is empty",
     "unable-to-read-file-path": "unable to read file {path}",
     "undone": "operation undone",
