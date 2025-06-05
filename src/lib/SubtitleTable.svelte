@@ -44,7 +44,12 @@ export const TableConfig = new PublicConfigGroup(
       }
     },
     default: 'seek'
-  }
+  },
+  showDebug: {
+    localizedName: () => get(_)('config.show-debug-info'),
+    type: 'boolean',
+    default: false
+  },
 });
 </script>
 
@@ -120,6 +125,7 @@ let lines: {
 let lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
 let totalLines = 0;
 let requestedLayout = true;
+let debugBlinker = true;
 
 const linePadding   = $derived(InterfaceConfig.data.fontSize * 0.35);
 const lineHeight    = $derived(InterfaceConfig.data.fontSize + linePadding * 2);
@@ -216,7 +222,7 @@ function layout(cxt: CanvasRenderingContext2D) {
     b: (totalLines + 1) * lineHeight + headerHeight + manager.scrollerSize
     // add 1 for virtual entry
   });
-  Debug.trace(`layout done in ${performance.now() - startTime}ms`);
+  Debug.debug(`layout took ${performance.now() - startTime}ms`);
 }
 
 function render(cxt: CanvasRenderingContext2D) {
@@ -372,6 +378,14 @@ function render(cxt: CanvasRenderingContext2D) {
 
   const bottom = Math.min(sy + height, maxY - lineHeight - manager.scrollerSize);
   cols.slice(1).map((x) => drawLine(x.position, sy, x.position, bottom));
+
+  if (TableConfig.data.showDebug) {
+    cxt.fillStyle = debugBlinker ? 'red' : 'blue';
+    cxt.beginPath();
+    cxt.arc(width - 15, height - 15 + manager.scroll[1], 5, 0, 2 * Math.PI);
+    cxt.fill();
+    debugBlinker = !debugBlinker;
+  }
 }
 
 const me = {};
