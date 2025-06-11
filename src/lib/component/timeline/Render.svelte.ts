@@ -7,6 +7,7 @@ import { Basic } from "../../Basic";
 import { TimelineConfig } from "./Config";
 import type { TimelineInput } from "./Input.svelte";
 import { hook } from "../../details/Hook.svelte";
+import type { AggregationTree } from "../../details/AggregationTree";
 
 const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(0deg 0% 75%/50%)');
 const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
@@ -38,7 +39,7 @@ const INOUT_TEXT            = $derived(theme.isDark ? 'lightgreen' : 'oklch(52.7
 const CURSOR_COLOR = 
   $derived(theme.isDark ? 'pink' : 'oklch(62.73% 0.209 12.37)');
 const PENDING_WAVEFORM_COLOR = 
-  $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 40%)`);
+  $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 100% 40% / 40%)`);
 const WAVEFORM_COLOR = 
   $derived(theme.isDark ? `#5bb` : 'oklch(76.37% 0.101 355.37)');
 const INOUT_AREA_OUTSIDE = 
@@ -110,58 +111,98 @@ export class TimelineRenderer {
     ctx.fillText(`lcw=${this.layout.leftColumnWidth.toFixed(2).padEnd(6)}`, x, y - 20);
   }
 
-  #renderWaveform(ctx: CanvasRenderingContext2D) {
-    if (!this.layout.sampler) return;
-  
-    const resolution = this.layout.sampler.resolution;
+  #drawAggregation<T extends Float32Array | Uint8Array>(
+    resolution: number,
+    tree: (level: number, from: number, to: number) => T,
+    handler: (x: number, width: number, value: number) => void
+  ) {
     const pointsPerPixel = Math.max(1, 
       Math.floor(resolution / this.layout.scale / devicePixelRatio));
     const step = 2 ** Math.floor(Math.log2(pointsPerPixel));
-    const data = this.layout.sampler.data.getLevel(step);
     
     const start = Math.max(0, Math.floor(this.layout.offset * resolution / step));
-    const end = Math.min(
-      Math.ceil((this.layout.offset + this.layout.width / this.layout.scale) * resolution / step),
-      data.length - 1);
+    const end = Math.ceil(
+      (this.layout.offset + this.layout.width / this.layout.scale) * resolution / step);
+    const data = tree(step, start, end);
+
     const width_v = 1 / resolution * this.layout.scale * step;
     const drawWidth = Math.max(1 / devicePixelRatio, width_v);
-  
-    let points: {x: number, y: number}[] = [];
-    ctx.fillStyle = PENDING_WAVEFORM_COLOR;
-    for (let i = start; i < end; i++) {
-      const detail = this.layout.sampler.detail[i * step];
-      const x = i * width_v + this.layout.leftColumnWidth;
-  
-      if (detail == 0) {
-        ctx.fillRect(x, 0, drawWidth, this.layout.height);
-        this.layout.requestedSampler = true;
-      }
-  
-      const value = detail == 0 
-        ? 0 
-        : data[i] * (this.layout.height - TimelineLayout.HEADER_HEIGHT);
-      const point = {x, y: value / 2};
-      points.push(point);
+
+    for (let i = 0; i < data.length; i++) {
+      const x = (i + start) * width_v + this.layout.leftColumnWidth;
+      handler(x, drawWidth, data[i]);
     }
+    return { 
+      drawStart: start * width_v + this.layout.leftColumnWidth, 
+      drawEnd: (start + data.length - 1) * width_v + this.layout.leftColumnWidth, 
+      step
+    };
+  }
+
+  #renderWaveform(ctx: CanvasRenderingContext2D) {
+    if (!this.layout.sampler) return;
+
+    let points: {x: number, y: number}[] = [];
+    let lastGap = -1;
+    let {drawStart, drawEnd} = this.#drawAggregation(
+      this.layout.sampler.intensityResolution, 
+      (a, b, c) => this.layout.sampler!.intensity.get(a, b, c),
+      (x, _, value) => {
+        if (isNaN(value)) {
+          if (lastGap < 0) lastGap = x;
+          this.layout.requestedSampler = true;
+          points.push({x, y: 0});
+        } else {
+          if (lastGap >= 0) {
+            ctx.fillStyle = PENDING_WAVEFORM_COLOR;
+            ctx.fillRect(lastGap, 0, x - lastGap, this.layout.height);
+            lastGap = -1;
+          }
+          points.push({x, y: 
+            value * (this.layout.height - TimelineLayout.HEADER_HEIGHT) / 2});
+        }
+      });
+    ctx.fillStyle = PENDING_WAVEFORM_COLOR;
+    if (lastGap >= 0)
+      ctx.fillRect(lastGap, 0, drawEnd - lastGap, this.layout.height);
+
     const baseline = 
       (this.layout.height - TimelineLayout.HEADER_HEIGHT) / 2 + TimelineLayout.HEADER_HEIGHT;
     ctx.beginPath();
-    ctx.moveTo(start * width_v + this.layout.leftColumnWidth, baseline);
+    ctx.moveTo(drawStart, baseline);
     points.forEach(
       ({x, y}) => ctx.lineTo(x, baseline + 0.5 / devicePixelRatio + y));
-    ctx.lineTo(end * width_v + this.layout.leftColumnWidth, baseline);
+    ctx.lineTo(drawEnd, baseline);
     points.reverse().forEach(
       ({x, y}) => ctx.lineTo(x, baseline - 0.5 / devicePixelRatio - y));
     ctx.closePath();
     ctx.fillStyle = WAVEFORM_COLOR;
     ctx.fill();
+
+    lastGap = -1;
+    this.#drawAggregation(
+      this.layout.sampler.videoFramerate,
+      (a, b, c) => this.layout.sampler!.keyframes.get(a, b, c),
+      (x, width, value) => {
+        if (value == 0) {
+          if (lastGap < 0) lastGap = x;
+          // this.layout.requestedSampler = true;
+        } else {
+          if (lastGap >= 0) {
+            ctx.fillStyle = "#6D66";
+            ctx.fillRect(lastGap, 0, x - lastGap, this.layout.height);
+            lastGap = -1;
+          }
+          if (value == 2) {
+            ctx.fillStyle = "#66E6";
+            ctx.fillRect(x, 0, width, this.layout.height);
+          }
+        }
+      }
+    );
   
-    if (TimelineConfig.data.showDebug) {
-      ctx.font = `8px Courier, monospace`;
-      ctx.fillText(`using step=${step}`, this.manager.scroll[0] + 120, 35);
-    }
-  
-    if (this.layout.requestedSampler) this.layout.processSampler();
+    if (this.layout.requestedSampler)
+      this.layout.processSampler();
   }
 
   #renderRuler(ctx: CanvasRenderingContext2D) {

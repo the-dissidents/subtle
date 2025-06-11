@@ -123,6 +123,14 @@ function updateSnapOverride(ev: KeyboardEvent) {
         <MagnetIcon />
       </label>
     </Tooltip>
+
+
+    <label>
+      <input type="checkbox" class="button"
+        checked={layout?.useSampler}
+        onclick={() => layout!.useSampler = !layout!.useSampler} />
+      S
+    </label>
   </div>
 
   <!-- svelte-ignore a11y_click_events_have_key_events -->

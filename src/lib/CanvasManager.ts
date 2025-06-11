@@ -3,6 +3,7 @@ import { Debug } from "./Debug";
 import { translateWheelEvent, type TranslatedWheelEvent } from "./frontend/Frontend";
 import { EventHost } from "./details/EventHost";
 import { theme } from "./Theming.svelte";
+import { Basic } from "./Basic";
 
 const scrollerColorRgb = () => theme.isDark ? '255 255 255' : '0 0 0';
 
@@ -28,6 +29,8 @@ export type ReadonlyRect = {
 export class CanvasManager {
     #cxt: CanvasRenderingContext2D;
     #requestedRender = false;
+    #isRendering = false;
+
     #width = 0; #height = 0;
 
     #scale = 1;
@@ -66,7 +69,7 @@ export class CanvasManager {
 
     canBeginDrag: (ev: MouseEvent) => boolean = () => false;
 
-    renderer?: (ctx: CanvasRenderingContext2D) => void;
+    renderer?: (ctx: CanvasRenderingContext2D) => void | Promise<void>;
     doNotPrescaleHighDPI = false;
     showScrollers = true;
 
@@ -179,6 +182,7 @@ export class CanvasManager {
     requestRender() {
         if (this.#requestedRender) return;
         this.#requestedRender = true;
+        if (this.#isRendering) return;
         requestAnimationFrame(() => this.#render());
     }
 
@@ -347,6 +351,8 @@ export class CanvasManager {
     #render() {
         this.#requestedRender = false;
         if (!this.renderer) return Debug.early('no renderer');
+        if (this.#isRendering) return Debug.early('already rendering');
+        this.#isRendering = true;
 
         this.#cxt.resetTransform();
         if (this.doNotPrescaleHighDPI) {
@@ -403,6 +409,9 @@ export class CanvasManager {
         } else if (now - this.#scrollerFadeStartTime < scrollerFade) {
             this.requestRender();
         }
+        this.#isRendering = false;
+        if (this.#requestedRender)
+            requestAnimationFrame(() => this.#render());
     }
 
     #update() {

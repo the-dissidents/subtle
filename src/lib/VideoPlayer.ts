@@ -1,6 +1,6 @@
 console.info('VideoPlayer loading');
 
-import { MMedia, type AudioFrameData, type StreamInfo, type VideoFrameData } from "./API";
+import { MMedia, type AudioFrameData, type AudioStatus, type StreamInfo, type VideoFrameData, type VideoStatus } from "./API";
 import { Basic } from "./Basic";
 import { CanvasManager } from "./CanvasManager";
 import { SubtitleRenderer } from "./SubtitleRenderer";
@@ -92,8 +92,8 @@ export class VideoPlayer {
     #fallbackTime: number = 0;
 
     get duration() { return this.#opened?.media.duration; }
-    get videoSize() { return this.#opened?.media.videoSize; }
-    get sampleAspectRatio() { return this.#opened?.media.sampleAspectRatio; }
+    get videoSize() { return this.#opened?.media.videoStatus?.size; }
+    get sampleAspectRatio() { return this.#opened?.media.videoStatus?.sampleAspectRatio; }
 
     get currentPosition() {
         if (!this.#opened) return null;
@@ -174,9 +174,11 @@ export class VideoPlayer {
 
     async #updateOutputSize() {
         Debug.assert(this.#opened !== undefined);
+        const media = this.#opened.media;
+        Debug.assert(media.videoStatus !== undefined);
         const [w, h] = this.#manager.physicalSize;
-        const width = this.#opened.media.videoSize[0] * this.#opened.media.sampleAspectRatio;
-        const height = this.#opened.media.videoSize[1];
+        const width = media.videoStatus.size[0] * media.videoStatus.sampleAspectRatio;
+        const height = media.videoStatus.size[1];
         const ratio = width / height;
 
         let oh: number, ow: number;
@@ -189,8 +191,8 @@ export class VideoPlayer {
         if (ow == this.#opened.outW && oh == this.#opened.outH) return;
 
         [this.#opened.outW, this.#opened.outH] = [ow, oh];
-        await this.#opened.media.waitUntilAvailable();
-        await this.#opened.media.setVideoSize(ow, oh);
+        await media.waitUntilAvailable();
+        await media.setVideoSize(ow, oh);
         Debug.trace('video size ->', ow, oh);
 
         const pos = this.currentPosition;
@@ -226,19 +228,19 @@ export class VideoPlayer {
     async load(rawurl: string, audio: number) {
         if (this.#opened) await this.close();
         if (DebugConfig.data.disableVideo) return;
-        
+
         let media = await MMedia.open(rawurl);
-        
-        await media.openVideo(-1);
-        await media.openAudio(audio);
-        await Debug.debug('VideoPlayer: opened media');
-
-        const audioStatus = await media.audioStatus();
-        const videoStatus = await media.videoStatus();
+        let videoStatus: VideoStatus;
+        let audioStatus: AudioStatus;
+        try {
+            videoStatus = await media.openVideo(-1);
+            audioStatus = await media.openAudio(audio);
+            await Debug.debug('VideoPlayer: opened media');
+        } catch (e) {
+            media.close();
+            throw e;
+        }
         const status = await media.status();
-        Debug.assert(audioStatus !== null);
-        Debug.assert(videoStatus !== null);
-
         let audioCxt = new AudioContext({ sampleRate: audioStatus.sampleRate });
         await audioCxt.audioWorklet.addModule(decodedAudioLoaderUrl);
         const worklet = new AudioWorkletNode(audioCxt, "decoded-audio-loader");
@@ -601,9 +603,10 @@ export class VideoPlayer {
 
     #drawFrame(frame: VideoFrameData) {
         Debug.assert(this.#opened !== undefined);
+        Debug.assert(this.#opened.media.videoStatus !== undefined);
         this.subRenderer?.setTime(frame.time);
 
-        let [nw, nh] = this.#opened.media.videoOutputSize;
+        let [nw, nh] = this.#opened.media.outputSize;
         let imgData = new ImageData(frame.content, frame.stride);
 
         let [w, h] = this.#manager.physicalSize;

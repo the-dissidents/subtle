@@ -29,6 +29,7 @@ export class TimelineLayout {
   requestedSampler = false;
   requestedLayout = false;
   sampler: AudioSampler | null = null;
+  useSampler = true;
   #samplerMedia: MMedia | undefined;
 
   onLayout = new EventHost();
@@ -66,9 +67,13 @@ export class TimelineLayout {
       if (DebugConfig.data.disableWaveform) return;
     
       this.#samplerMedia = await MMedia.open(rawurl);
-      this.sampler = await this.#makeSampler(audio);
-      if (!this.sampler) return;
-
+      try {
+        this.sampler = await this.#makeSampler(audio);
+      } catch (e) {
+        await this.#samplerMedia.close();
+        this.#samplerMedia = undefined;
+        return;
+      }
       this.setScale(Math.max(this.width / this.sampler.duration, 10));
       this.setOffset(0);
       Playback.setPosition(0);
@@ -276,8 +281,8 @@ export class TimelineLayout {
     this.requestedSampler = true;
   }
 
-  processSampler() {
-    if (!this.sampler) return;
+  async processSampler() {
+    if (!this.sampler || !this.useSampler) return;
   
     let start = this.offset;
     let end = this.offset + this.width / this.scale;
@@ -286,30 +291,30 @@ export class TimelineLayout {
       if (this.sampler.sampleProgress + preload < this.offset 
        || this.sampler.sampleProgress > end + preload) 
         this.sampler.tryCancelSampling();
-      else if (this.sampler.sampleEnd < end + preload) {
-        this.sampler.extendSampling(end + preload);
-      }
+      // else if (this.sampler.sampleEnd < end + preload) {
+      //   this.sampler.extendSampling(end + preload);
+      // }
     }
     if (this.sampler.isSampling)
       return;
   
-    const resolution = this.sampler.resolution;
+    const resolution = this.sampler.intensityResolution;
     const i = Math.floor(this.offset * resolution),
           i_end = Math.ceil(end * resolution);
-    const subarray = this.sampler.detail.subarray(i, i_end);
-    const first0 = subarray.findIndex((x) => x == 0);
+    const subarray = await this.sampler.intensityData(1, i, i_end);
+    const gapStart = subarray.findIndex((x) => isNaN(x));
     if (Playback.isPlaying) {
-      if (first0 < 0) {
+      if (gapStart < 0) {
         this.requestedSampler = false;
         return;
       }
     } else {
       this.requestedSampler = false;
-      if (first0 < 0) return;
+      if (gapStart < 0) return;
     }
-    start = (first0 + i) / resolution;
-    let end0 = subarray.findIndex((x, i) => i > first0 && x > 0);
-    if (end0 > 0) end = (end0 + i) / resolution;
+    start = (gapStart + i) / resolution;
+    const gapEnd = subarray.findIndex((x, i) => i > gapStart && !isNaN(x));
+    if (gapEnd > 0) end = (gapEnd + i) / resolution;
   
     end += preload;
     if (start < 0) start = 0;

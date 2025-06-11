@@ -7,6 +7,18 @@ export type StreamInfo = {
     description: string
 };
 
+export type AudioStatus = {
+    length: number,
+    sampleRate: number
+}
+
+export type VideoStatus = {
+    length: number,
+    framerate: number,
+    sampleAspectRatio: number,
+    size: [width: number, height: number],
+}
+
 export type MediaEvent = {
     event: 'done'
     data: {}
@@ -15,9 +27,7 @@ export type MediaEvent = {
     data: {}
 } | {
     event: 'opened'
-    data: {
-        id: number
-    }
+    data: { id: number }
 } | {
     event: 'mediaStatus',
     data: {
@@ -28,41 +38,16 @@ export type MediaEvent = {
     }
 } | {
     event: 'audioStatus',
-    data: {
-        length: number,
-        sampleRate: number
-    }
+    data: AudioStatus
 } | {
     event: 'videoStatus',
-    data: {
-        length: number,
-        framerate: number,
-        sampleAspectRatio: number,
-        width: number, height: number,
-        outWidth: number, outHeight: number
-    }
-} | {
-    event: 'intensityList',
-    data: {
-        start: number,
-        end: number,
-        data: number[]
-    }
+    data: VideoStatus
 } | {
     event: 'debug',
-    data: {
-        message: string
-    }
+    data: { message: string }
 } | {
     event: 'runtimeError',
-    data: {
-        what: string
-    }
-} | {
-    event: 'position',
-    data: {
-        value: number
-    }
+    data: { what: string }
 } | {
     event: 'noStream',
     data: {}
@@ -71,9 +56,10 @@ export type MediaEvent = {
     data: {}
 } | {
     event: 'ffmpegVersion',
-    data: {
-        value: string
-    }
+    data: { value: string }
+} | {
+    event: 'keyframeData',
+    data: { pos: number | null }
 };
 
 class MediaError extends Error {
@@ -136,15 +122,23 @@ export type AudioFrameData = {
 
 export class MMedia {
     #destroyed = false;
-    #width: number = -1;
-    #height: number = -1;
-    #outWidth: number = -1;
-    #outHeight: number = -1;
-    #SAR: number = 1;
     #currentJobs = 0;
-    // #_finalizationReg = new FinalizationRegistry((x) => {
-    //     Debug.debug('finalizing:', x);
-    // });
+    #video: VideoStatus | undefined;
+    #audio: AudioStatus | undefined;
+    #outSize: [number, number] = [-1, -1];
+    #eof = false;
+
+    get videoStatus(): Readonly<VideoStatus> | undefined {
+        return this.#video;
+    }
+
+    get audioStatus(): Readonly<AudioStatus> | undefined {
+        return this.#audio;
+    }
+
+    get outputSize(): readonly [number, number] {
+        return this.#outSize;
+    }
 
     get streams(): readonly StreamInfo[] {
         return this._streams;
@@ -154,21 +148,13 @@ export class MMedia {
         return this._duration;
     }
 
-    get videoSize(): [number, number] {
-        return [this.#width, this.#height];
-    }
-
-    get videoOutputSize() {
-        return [this.#outWidth, this.#outHeight];
-    }
-
-    get sampleAspectRatio() {
-        return this.#SAR;
-    }
-
     get hasJob() {
         Debug.assert(this.#currentJobs >= 0);
         return this.#currentJobs != 0;
+    }
+
+    get isEOF() {
+        return this.#eof;
     }
 
     private constructor(
@@ -179,7 +165,7 @@ export class MMedia {
         Debug.info(`media ${id} opened`);
     }
 
-    #readData(data: ArrayBuffer): AudioFrameData | VideoFrameData {
+    #readFrameData(data: ArrayBuffer): AudioFrameData | VideoFrameData {
         const view = new DataView(data);
         const type = view.getUint32(0, true) == 0 ? 'audio' : 'video';
         const position = view.getInt32(4, true);
@@ -198,6 +184,20 @@ export class MMedia {
             // this.#_finalizationReg.register(data, `video @${position}(${time})`);
             return { type, position, time, stride, content } satisfies VideoFrameData;
         }
+    }
+
+    #readFloatArrayData(data: ArrayBuffer) {
+        const view = new DataView(data);
+        const length = view.getUint32(0, true);
+        const content = new Float32Array(data, 4, length);
+        return content;
+    }
+
+    #readByteArrayData(data: ArrayBuffer) {
+        const view = new DataView(data);
+        const length = view.getUint32(0, true);
+        const content = new Uint8Array(data, 4, length);
+        return content;
     }
 
     static async open(path: string) {
@@ -253,24 +253,47 @@ export class MMedia {
 
     async openAudio(audioId: number) {
         Debug.assert(!this.#destroyed);
-        await new Promise<void>((resolve, reject) => {
+        this.#audio = await new Promise<AudioStatus>((resolve, reject) => {
             let channel = createChannel('openAudio', {
-                done: () => resolve()
+                audioStatus: (data) => resolve(data)
             }, reject);
             invoke('open_audio', {id: this.id, audioId, channel});
         });
+        return this.#audio;
+    }
+
+    async openAudioSampler(audioId: number, step: number) {
+        Debug.assert(!this.#destroyed);
+        this.#audio = await new Promise<AudioStatus>((resolve, reject) => {
+            let channel = createChannel('openAudioSampler', {
+                audioStatus: (data) => resolve(data)
+            }, reject);
+            invoke('open_audio_sampler', {id: this.id, audioId, step, channel});
+        });
+        return this.#audio;
     }
 
     async openVideo(videoId: number) {
         Debug.assert(!this.#destroyed);
-        await new Promise<void>((resolve, reject) => {
+        this.#video = await new Promise<VideoStatus>((resolve, reject) => {
             let channel = createChannel('openVideo', {
-                done: () => resolve()
+                videoStatus: (data) => resolve(data)
             }, reject);
             invoke('open_video', {id: this.id, videoId, channel});
         });
-        let status = await this.videoStatus();
-        Debug.assert(status !== null);
+        this.#outSize = [...this.#video.size];
+        return this.#video;
+    }
+
+    async openVideoSampler(videoId: number) {
+        Debug.assert(!this.#destroyed);
+        this.#video = await new Promise<VideoStatus>((resolve, reject) => {
+            let channel = createChannel('openVideoSampler', {
+                videoStatus: (data) => resolve(data)
+            }, reject);
+            invoke('open_video_sampler', {id: this.id, videoId, channel});
+        });
+        return this.#video;
     }
 
     async status() {
@@ -286,47 +309,9 @@ export class MMedia {
         });
     }
 
-    async audioStatus() {
-        Debug.assert(!this.#destroyed);
-        return await new Promise<{
-            sampleRate: number,
-            length: number
-        } | null>((resolve, reject) => {
-            let channel = createChannel('audioStatus', {
-                audioStatus: (data) => resolve(data),
-                noStream: () => resolve(null)
-            }, reject);
-            invoke('audio_status', {id: this.id, channel});
-        });
-    }
-
-    async videoStatus() {
-        Debug.assert(!this.#destroyed);
-        let status = await new Promise<{
-            length: number,
-            framerate: number,
-            sampleAspectRatio: number,
-            width: number, height: number,
-            outWidth: number, outHeight: number
-        } | null>((resolve, reject) => {
-            let channel = createChannel('videoStatus', {
-                videoStatus: (data) => resolve(data),
-                noStream: () => resolve(null)
-            }, reject);
-            invoke('video_status', {id: this.id, channel});
-        });
-        if (status) {
-            this.#width = status.width;
-            this.#outWidth = status.outWidth;
-            this.#height = status.height;
-            this.#outHeight = status.outHeight;
-            this.#SAR = status.sampleAspectRatio;
-        }
-        return status;
-    }
-
     async setVideoSize(width: number, height: number) {
         Debug.assert(!this.#destroyed);
+        Debug.assert(this.#video !== undefined);
         width = Math.max(1, Math.floor(width));
         height = Math.max(1, Math.floor(height));
         await new Promise<void>((resolve, reject) => {
@@ -335,26 +320,52 @@ export class MMedia {
             }, reject);
             invoke('video_set_size', {id: this.id, channel, width, height});
         });
-        this.#outWidth = width;
-        this.#outHeight = height;
+        this.#outSize = [width, height];
     }
 
+    /** returns null on EOF */
     async readNextFrame() {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
         try {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
-                this.#currentJobs += 1;
-                channel = createChannel('readNextFrame', { 'EOF': () => {
-                    Debug.debug('at eof');
-                    resolve(null);
-                }}, reject);
+                channel = createChannel('readNextFrame', { 
+                    'EOF': () => {
+                        Debug.debug('at eof');
+                        this.#eof = true;
+                        resolve(null);
+                    }
+                }, reject);
                 invoke<ArrayBuffer>('get_next_frame_data', { id: this.id, channel })
                     .then((x) => {
                         if (x.byteLength > 0)
-                            resolve(this.#readData(x))
+                            resolve(this.#readFrameData(x))
                     });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
+    /** returns false on EOF */
+    async sampleUntil(when: number) {
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
+        try {
+            return await new Promise<boolean>((resolve, reject) => {
+                channel = createChannel('sampleUntil', {
+                    'EOF': () => {
+                        Debug.debug('at eof');
+                        this.#eof = true;
+                        resolve(false);
+                    },
+                    done: () => resolve(true)
+                }, reject);
+                invoke('sample_until', { id: this.id, when, channel });
             });
         } finally {
             this.#currentJobs -= 1;
@@ -365,9 +376,9 @@ export class MMedia {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
         try {
             return await new Promise<void>((resolve, reject) => {
-                this.#currentJobs += 1;
                 channel = createChannel('seekAudio', {
                     done: () => resolve()
                 }, reject);
@@ -382,9 +393,9 @@ export class MMedia {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
         try {
             return await new Promise<void>((resolve, reject) => {
-                this.#currentJobs += 1;
                 channel = createChannel('seekVideo', {
                     done: () => resolve()
                 }, reject);
@@ -395,40 +406,38 @@ export class MMedia {
         }
     }
 
-    async seekVideoPrecise(position: number) {
+    async getKeyframeBefore(position: number) {
         Debug.assert(!this.#destroyed);
-        Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
-        try {
-            return await new Promise<AudioFrameData | VideoFrameData | null>((resolve, reject) => {
-                this.#currentJobs += 1;
-                channel = createChannel('seekVideoPrecise', {
-                    'EOF': () => resolve(null),
-                }, reject);
-                invoke<ArrayBuffer>('seek_precise_and_get_frame', 
-                        { id: this.id, channel, position })
-                    .then((x) => {
-                        if (x.byteLength > 0)
-                            resolve(this.#readData(x))
-                    });
-            });
-        } finally {
-            this.#currentJobs -= 1;
-        }
+        return await new Promise<number | null>((resolve, reject) => {
+            channel = createChannel('getKeyframeBefore', {
+                keyframeData: (data) => resolve(data.pos)
+            }, reject);
+            invoke('get_keyframe_before', { id: this.id, channel, position });
+        });
     }
 
-    async getIntensities(until: number, step: number) {
+    async getAudioSamplerData(level: number, from: number, to: number) {
         Debug.assert(!this.#destroyed);
-        Debug.assert(this.#currentJobs == 0);
-        return await new Promise<{
-            start: number,
-            end: number,
-            data: number[]
-        }>((resolve, reject) => {
-            let channel = createChannel('getIntensities', {
-                intensityList: (data) => resolve(data),
-            }, reject);
-            invoke('get_intensities', {id: this.id, channel, until, step});
+        return await new Promise<Float32Array>((resolve, reject) => {
+            let channel = createChannel('getAudioSamplerData', {}, reject);
+            invoke<ArrayBuffer>('get_audio_sampler_data', {id: this.id, channel, level, from, to})
+                .then((x) => {
+                    if (x.byteLength > 0)
+                        resolve(this.#readFloatArrayData(x))
+                });
+        });
+    }
+
+    async getVideoSamplerData(level: number, from: number, to: number) {
+        Debug.assert(!this.#destroyed);
+        return await new Promise<Uint8Array>((resolve, reject) => {
+            let channel = createChannel('getVideoSamplerData', {}, reject);
+            invoke<ArrayBuffer>('get_video_sampler_data', {id: this.id, channel, level, from, to})
+                .then((x) => {
+                    if (x.byteLength > 0)
+                        resolve(this.#readByteArrayData(x))
+                });
         });
     }
 }

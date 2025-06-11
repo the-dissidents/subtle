@@ -2,6 +2,7 @@ extern crate ffmpeg_next as ffmpeg;
 
 use core::fmt;
 use serde::Serialize;
+use std::cmp;
 
 use ffmpeg::error::EAGAIN;
 use ffmpeg::software::resampling;
@@ -10,6 +11,10 @@ use ffmpeg::{codec, format, frame, media, rescale, software, ChannelLayout, Rati
 use log::debug;
 use log::trace;
 use log::warn;
+
+use crate::media::aggregation_tree::AggregationTree;
+
+const AUDIO_SAMPLER_RATE: u32 = 48000;
 
 #[derive(Debug)]
 pub enum MediaError {
@@ -24,10 +29,8 @@ pub enum MediaError {
 impl fmt::Display for MediaError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MediaError::FFMpegError { func, e, line } 
-                => write!(f, "at {}: {}: {}", line, func, e),
-            MediaError::InternalError(msg) 
-                => write!(f, "internal error: {}", msg),
+            MediaError::FFMpegError { func, e, line } => write!(f, "at {}: {}: {}", line, func, e),
+            MediaError::InternalError(msg) => write!(f, "internal error: {}", msg),
         }
     }
 }
@@ -48,16 +51,6 @@ pub struct StreamInfo {
     description: String,
 }
 
-pub struct AudioContext {
-    stream_i: usize,
-    decoder: codec::decoder::Audio,
-    resampler: resampling::Context,
-
-    stream_timebase: Rational,
-    pos_timebase: Rational, // = rate ^ -1
-    length: i64,
-}
-
 pub struct DecodedVideoFrame {
     pub position: i64,
     pub time: f64,
@@ -70,25 +63,71 @@ pub struct DecodedAudioFrame {
     pub decoded: frame::Audio,
 }
 
-pub enum DecodedFrame {
+pub struct AudioBase {
+    stream_i: usize,
+    stream_timebase: Rational,
+    pos_timebase: Rational, // = rate ^ -1
+    length: usize,
+    decoder: codec::decoder::Audio,
+}
+
+pub struct AudioPlayerFront {
+    resampler: resampling::Context,
+}
+
+pub struct AudioSamplerFront {
+    resampler: resampling::Context,
+    step: usize, scale: f64,
+    intensities: AggregationTree<f32, fn(f32, f32) -> f32>,
+}
+
+pub enum AudioFront {
+    Player(AudioPlayerFront),
+    Sampler(AudioSamplerFront),
+}
+
+pub struct AudioContext {
+    base: AudioBase,
+    front: AudioFront,
+}
+
+pub enum Frame {
     Audio(DecodedAudioFrame),
     Video(DecodedVideoFrame),
 }
 
-pub struct VideoContext {
+pub struct VideoBase {
     stream_i: usize,
-    decoder: codec::decoder::Video,
-    scaler: scaling::Context,
-
     stream_timebase: Rational,
     pos_timebase: Rational, // = framerate ^ -1
-
     framerate: Rational,
-    output_size: (u32, u32),
     sample_aspect_ratio: Rational,
     original_size: (u32, u32),
-    length: i64,
+    length: usize,
+    decoder: codec::decoder::Video,
 }
+
+pub struct VideoPlayerFront {
+    original_format: format::Pixel,
+    original_size: (u32, u32),
+    output_size: (u32, u32),
+    scaler: scaling::Context,
+}
+
+pub struct VideoSamplerFront {
+    keyframes: AggregationTree<u8, fn(u8, u8) -> u8>,
+}
+
+pub enum VideoFront {
+    Player(VideoPlayerFront),
+    Sampler(VideoSamplerFront),
+}
+
+pub struct VideoContext {
+    base: VideoBase,
+    front: VideoFront,
+}
+
 pub struct MediaPlayback {
     input: Box<format::context::Input>,
     audio: Option<AudioContext>,
@@ -113,10 +152,9 @@ impl MediaPlayback {
         self.audio.as_ref()
     }
 
-    // currently nothing requires a mutable audio context
-    // pub fn audio_mut(&mut self) -> Option<&mut AudioContext> {
-    //     self.audio.as_mut()
-    // }
+    pub fn audio_mut(&mut self) -> Option<&mut AudioContext> {
+        self.audio.as_mut()
+    }
 
     pub fn video(&self) -> Option<&VideoContext> {
         self.video.as_ref()
@@ -140,9 +178,7 @@ impl MediaPlayback {
         let mut streams = Vec::<StreamInfo>::new();
         for stream in self.input.streams() {
             let metadata = stream.metadata();
-            let lang = metadata
-                .get("language")
-                .unwrap_or("--");
+            let lang = metadata.get("language").unwrap_or("--");
             streams.push(StreamInfo {
                 r#type: match stream.parameters().medium() {
                     media::Type::Video => StreamType::Video,
@@ -153,9 +189,7 @@ impl MediaPlayback {
                     media::Type::Attachment => StreamType::Unknown,
                 },
                 index: stream.index(),
-                description: format!(
-                    "[{}] {}", stream.index(), lang
-                )
+                description: format!("[{}] {}", stream.index(), lang),
             });
         }
         streams
@@ -165,7 +199,7 @@ impl MediaPlayback {
         self.input.duration() as f64 * f64::from(rescale::TIME_BASE)
     }
 
-    pub fn open_video(&mut self, index: Option<usize>) -> Result<(), MediaError> {
+    fn create_video_base(&self, index: Option<usize>) -> Result<VideoBase, MediaError> {
         let index = match index {
             Some(x) => x,
             None => self
@@ -195,47 +229,79 @@ impl MediaPlayback {
 
         let sample_aspect_ratio = match decoder.aspect_ratio() {
             Rational(0, _) => Rational(1, 1),
-            x => if f64::from(x) <= 0.0 { Rational(1, 1) } else { x }
+            x => {
+                if f64::from(x) <= 0.0 {
+                    Rational(1, 1)
+                } else {
+                    x
+                }
+            }
         };
 
         if sample_aspect_ratio != Rational(1, 1) {
             debug!("note: SAR is {:?}", sample_aspect_ratio);
         }
 
-        let scaler = check!(scaling::Context::get(
-            decoder.format(),
-            decoder.width(),
-            decoder.height(),
-            format::Pixel::RGBA,
-            decoder.width().rescale(Rational(1, 1), sample_aspect_ratio).try_into().unwrap(),
-            decoder.height(),
-            scaling::Flags::BILINEAR,
-        ))?;
-
-        let length = match stream.duration() {
+        let length: usize = match stream.duration() {
             x if x > 0 => x,
             _ => self
                 .input
                 .duration()
                 .rescale(rescale::TIME_BASE, stream_rfr.invert()),
-        };
+        }
+        .try_into()
+        .unwrap();
 
-        self.video = Some(VideoContext {
+        Ok(VideoBase {
             stream_i: index,
             stream_timebase: stream.time_base(),
             pos_timebase: stream_rfr.invert(),
-            output_size: (decoder.width(), decoder.height()),
             original_size: (decoder.width(), decoder.height()),
             framerate: stream_rfr,
             sample_aspect_ratio,
             length,
             decoder,
-            scaler,
+        })
+    }
+
+    pub fn open_video(&mut self, index: Option<usize>) -> Result<(), MediaError> {
+        let base = self.create_video_base(index)?;
+
+        let front = VideoFront::Player(VideoPlayerFront {
+            original_format: base.decoder.format(),
+            original_size: (base.decoder.width(), base.decoder.height()),
+            output_size: (base.decoder.width(), base.decoder.height()),
+            scaler: check!(scaling::Context::get(
+                base.decoder.format(),
+                base.decoder.width(),
+                base.decoder.height(),
+                format::Pixel::RGBA,
+                base.decoder
+                    .width()
+                    .rescale(Rational(1, 1), base.sample_aspect_ratio)
+                    .try_into()
+                    .unwrap(),
+                base.decoder.height(),
+                scaling::Flags::BILINEAR,
+            ))?,
         });
+
+        self.video = Some(VideoContext { base, front });
         Ok(())
     }
 
-    pub fn open_audio(&mut self, index: Option<usize>) -> Result<(), MediaError> {
+    pub fn open_video_sampler(&mut self, index: Option<usize>) -> Result<(), MediaError> {
+        let base = self.create_video_base(index)?;
+
+        let front = VideoFront::Sampler(VideoSamplerFront {
+            keyframes: AggregationTree::new(base.length, |a, b| cmp::max(a, b), 0),
+        });
+
+        self.video = Some(VideoContext { base, front });
+        Ok(())
+    }
+
+    fn create_audio_base(&self, index: Option<usize>) -> Result<AudioBase, MediaError> {
         let index = match index {
             Some(x) => x,
             None => self
@@ -255,21 +321,12 @@ impl MediaPlayback {
         check!(decoder.set_parameters(stream.parameters()))?;
         decoder.set_packet_time_base(stream.time_base());
 
-        // resampler
-        // TODO: support more than mono
-        let resampler = check!(software::resampler(
-            (decoder.format(), decoder.channel_layout(), decoder.rate()),
-            (
-                format::Sample::F32(format::sample::Type::Packed),
-                ChannelLayout::MONO,
-                decoder.rate(),
-            ),
-        ))?;
-
-        let length = self
+        let length: usize = self
             .input
             .duration()
-            .rescale(rescale::TIME_BASE, decoder.time_base());
+            .rescale(rescale::TIME_BASE, decoder.time_base())
+            .try_into()
+            .unwrap();
 
         debug!(
             "audio {}:len={};stream_tb={};decoder_tb={};rate={};format={};layout=0x{:x}",
@@ -282,42 +339,127 @@ impl MediaPlayback {
             decoder.channel_layout().bits()
         );
 
-        self.audio = Some(AudioContext {
+        Ok(AudioBase {
             stream_i: index,
             stream_timebase: stream.time_base(),
             pos_timebase: decoder.time_base(),
             length,
             decoder,
-            resampler,
+        })
+    }
+
+    pub fn open_audio(&mut self, index: Option<usize>) -> Result<(), MediaError> {
+        let base = self.create_audio_base(index)?;
+
+        let front = AudioFront::Player(AudioPlayerFront {
+            resampler: check!(software::resampler(
+                (
+                    base.decoder.format(),
+                    base.decoder.channel_layout(),
+                    base.decoder.rate()
+                ),
+                (
+                    format::Sample::F32(format::sample::Type::Packed),
+                    ChannelLayout::MONO,
+                    base.decoder.rate(),
+                ),
+            ))?,
         });
+
+        self.audio = Some(AudioContext { base, front });
+        Ok(())
+    }
+
+    pub fn open_audio_sampler(
+        &mut self,
+        index: Option<usize>,
+        step: usize,
+    ) -> Result<(), MediaError> {
+        let base = self.create_audio_base(index)?;
+
+        let scale = AUDIO_SAMPLER_RATE as f64 / base.decoder.rate() as f64 / step as f64;
+        log::debug!("opening audio sampler: {} -> {} at {}; scale {}", 
+            base.decoder.rate(), AUDIO_SAMPLER_RATE, step, scale);
+        let front = AudioFront::Sampler(AudioSamplerFront {
+            resampler: check!(software::resampler(
+                (
+                    base.decoder.format(),
+                    base.decoder.channel_layout(),
+                    base.decoder.rate()
+                ),
+                (
+                    format::Sample::F32(format::sample::Type::Packed),
+                    ChannelLayout::MONO,
+                    AUDIO_SAMPLER_RATE,
+                ),
+            ))?,
+            intensities: AggregationTree::new(
+                (base.length as f64 / scale).ceil() as usize,
+                |a, b| a.max(b),
+                f32::NAN,
+            ),
+            step, scale
+        });
+
+        self.audio = Some(AudioContext { base, front });
         Ok(())
     }
 
     /// Returns Ok(None) at EOF
-    pub fn get_next(&mut self) -> Result<Option<DecodedFrame>, MediaError> {
+    pub fn get_next(&mut self) -> Result<Option<Frame>, MediaError> {
         assert!(self.audio.is_some() || self.video.is_some());
 
         for (stream, packet) in self.input.packets() {
             if let Some(c) = self.audio.as_mut() {
-                if c.stream_i == stream.index() {
+                if c.base.stream_i == stream.index() {
                     // decode audio packet
                     c.feed(&packet)?;
                     if let Some(f) = c.decode()? {
-                        return Ok(Some(DecodedFrame::Audio(c.process(f)?)));
+                        return Ok(Some(Frame::Audio(f)));
                     }
                 }
             }
             if let Some(c) = self.video.as_mut() {
-                if c.stream_i == stream.index() {
+                if c.base.stream_i == stream.index() {
                     // decode video packet
                     c.feed(&packet)?;
                     if let Some(f) = c.decode()? {
-                        return Ok(Some(DecodedFrame::Video(c.process(f)?)));
+                        return Ok(Some(Frame::Video(f)));
                     }
                 }
             }
         }
         Ok(None)
+    }
+
+    // returns false at eof
+    pub fn sample_next(&mut self) -> Result<Option<Frame>, MediaError> {
+        assert!(self.audio.is_some() || self.video.is_some());
+        match self.get_next()? {
+            Some(Frame::Audio(f)) => match self.audio_mut().unwrap().front_mut() {
+                AudioFront::Sampler(s) => {
+                    s.process(&f)?;
+                    Ok(Some(Frame::Audio(f)))
+                }
+                _ => {
+                    return Err(MediaError::InternalError(
+                        "audio not opened as sampler".to_string(),
+                    ))
+                }
+            },
+            Some(Frame::Video(f)) => match self.video_mut().unwrap().front_mut() {
+                VideoFront::Sampler(s) => {
+                    s.process(&f)?;
+                    Ok(Some(Frame::Video(f)))
+                }
+                _ => {
+                    return Err(MediaError::InternalError(
+                        "video not opened as sampler".to_string(),
+                    ))
+                }
+            },
+            None => Ok(None),
+        }
     }
 
     pub fn seek_video(&mut self, position: i64) -> Result<(), MediaError> {
@@ -327,13 +469,13 @@ impl MediaPlayback {
             .ok_or(MediaError::InternalError("no video".to_string()))?;
         cxt.flush();
 
-        let rescaled = position.rescale(cxt.pos_timebase, cxt.stream_timebase);
+        let rescaled = position.rescale(cxt.base.pos_timebase, cxt.base.stream_timebase);
         trace!("seek video: pos={}, rescaled={}", position, rescaled);
 
         unsafe {
             match ffmpeg_sys_next::avformat_seek_file(
                 self.input.as_mut_ptr(),
-                cxt.stream_i as i32,
+                cxt.base.stream_i as i32,
                 0,
                 rescaled,
                 rescaled,
@@ -355,13 +497,13 @@ impl MediaPlayback {
             .ok_or(MediaError::InternalError("no audio".to_string()))?;
         cxt.flush();
 
-        let rescaled = position.rescale(cxt.pos_timebase, cxt.stream_timebase);
+        let rescaled = position.rescale(cxt.base.pos_timebase, cxt.base.stream_timebase);
         trace!("seek audio: pos={}, rescaled={}", position, rescaled);
 
         unsafe {
             match ffmpeg_sys_next::avformat_seek_file(
                 self.input.as_mut_ptr(),
-                cxt.stream_i as i32,
+                cxt.base.stream_i as i32,
                 0,
                 rescaled,
                 rescaled,
@@ -375,75 +517,67 @@ impl MediaPlayback {
             }
         }
     }
+}
 
-    pub fn seek_precise(
+impl AudioPlayerFront {
+    pub fn process(
         &mut self,
-        video_position: i64,
-    ) -> Result<Option<DecodedFrame>, MediaError> {
-        self.seek_video(video_position)?;
+        mut frame: DecodedAudioFrame,
+    ) -> Result<DecodedAudioFrame, MediaError> {
+        let mut processed = frame::Audio::empty();
+        check!(self.resampler.run(&frame.decoded, &mut processed))?;
+        frame.decoded = processed;
+        Ok(frame)
+    }
+}
 
-        let video = self
-            .video
-            .as_mut()
-            .ok_or(MediaError::InternalError("no video".to_string()))?;
-        let time = (video_position as f64) / f64::from(video.framerate());
-        for (stream, packet) in self.input.packets() {
-            if let Some(c) = self.audio.as_mut() {
-                if c.stream_i == stream.index() {
-                    // decode audio packet
-                    c.feed(&packet)?;
-                    if let Some(f) = c.decode()? {
-                        if f.time < time {
-                            trace!(
-                                "seek_precise: skipping audio #{}, t={:.3} (target {:.3})",
-                                f.position,
-                                f.time,
-                                time
-                            );
-                            continue;
-                        }
-                        debug!(
-                            "seek_precise: -> audio #{}, t={:.3} (target {:.3})",
-                            f.position, f.time, time
-                        );
-                        return Ok(Some(DecodedFrame::Audio(c.process(f)?)));
-                    }
+impl AudioSamplerFront {
+    pub fn process(&mut self, frame: &DecodedAudioFrame) -> Result<(), MediaError> {
+        let mut processed = frame::Audio::empty();
+        check!(self.resampler.run(&frame.decoded, &mut processed))?;
+
+        let index = (frame.position as f64 * self.scale).floor();
+        let mut index: usize = match index {
+            y if y >= 0.0 => y as usize,
+            _ => return Ok(())
+        };
+        if index >= self.intensities.length {
+            return Ok(());
+        }
+
+        let data: &[f32] = frame.decoded.plane(0);
+        let mut counter = 0;
+        let mut sum: f32 = self.intensities.at(index);
+        for sample in data {
+            sum = sum.max(sample.abs());
+            counter += 1;
+            if counter == self.step {
+                self.intensities.set(&[sum], index);
+                counter = 0;
+                index += 1;
+                if index >= self.intensities.length {
+                    return Ok(());
                 }
-            }
-            if video.stream_i == stream.index() {
-                // decode video packet
-                video.feed(&packet)?;
-                if let Some(f) = video.decode()? {
-                    if f.position < video_position {
-                        trace!(
-                            "seek_precise: skipping video #{} (target {}), t={:.3}",
-                            f.position,
-                            video_position,
-                            f.time
-                        );
-                        continue;
-                    }
-                    debug!(
-                        "seek_precise: -> video #{} (target {}), t={:.3}",
-                        f.position, video_position, f.time
-                    );
-                    return Ok(Some(DecodedFrame::Video(video.process(f)?)));
-                }
+                sum = self.intensities.at(index);
             }
         }
-        debug!("seek_precise: -> EOF");
-        Ok(None)
+        self.intensities.set(&[sum], index);
+        Ok(())
+    }
+
+    pub fn data_view(&self, level: usize) -> &[f32] {
+        self.intensities.get_level(level)
     }
 }
 
 impl AudioContext {
     fn feed(&mut self, packet: &codec::packet::Packet) -> Result<(), MediaError> {
-        match self.decoder.send_packet(packet) {
+        match self.base.decoder.send_packet(packet) {
             Ok(_) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 // discard buffer
                 warn!("fill: EAGAIN met in sending audio pkt, flushing");
-                self.decoder.flush();
+                self.base.decoder.flush();
                 Ok(())
             }
             send_packet_error => check!(send_packet_error),
@@ -451,12 +585,12 @@ impl AudioContext {
     }
 
     fn flush(&mut self) {
-        self.decoder.flush();
+        self.base.decoder.flush();
     }
 
     pub fn decode(&mut self) -> Result<Option<DecodedAudioFrame>, MediaError> {
         let mut decoded = frame::Audio::empty();
-        match self.decoder.receive_frame(&mut decoded) {
+        match self.base.decoder.receive_frame(&mut decoded) {
             Ok(_) => (),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 return Ok(None);
@@ -469,8 +603,8 @@ impl AudioContext {
             .ok_or(MediaError::InternalError(
                 "decoded frame has no pts".to_owned(),
             ))?
-            .rescale(self.stream_timebase, self.pos_timebase);
-        let time = f64::from(self.pos_timebase) * position as f64;
+            .rescale(self.base.stream_timebase, self.base.pos_timebase);
+        let time = f64::from(self.base.pos_timebase) * position as f64;
 
         Ok(Some(DecodedAudioFrame {
             position,
@@ -479,73 +613,28 @@ impl AudioContext {
         }))
     }
 
-    pub fn process(
-        &mut self,
-        mut frame: DecodedAudioFrame,
-    ) -> Result<DecodedAudioFrame, MediaError> {
-        let mut processed = frame::Audio::empty();
-        check!(self.resampler.run(&frame.decoded, &mut processed))?;
-        frame.decoded = processed;
-        Ok(frame)
-    }
-
     pub fn stream_index(&self) -> usize {
-        self.stream_i
+        self.base.stream_i
     }
 
-    pub fn length(&self) -> i64 {
-        self.length
+    pub fn length(&self) -> usize {
+        self.base.length
     }
 
     pub fn sample_rate(&self) -> u32 {
-        self.decoder.rate()
+        self.base.decoder.rate()
+    }
+
+    pub fn front(&self) -> &AudioFront {
+        &self.front
+    }
+
+    pub fn front_mut(&mut self) -> &mut AudioFront {
+        &mut self.front
     }
 }
 
-impl VideoContext {
-    fn feed(&mut self, packet: &codec::packet::Packet) -> Result<(), MediaError> {
-        match self.decoder.send_packet(packet) {
-            Ok(_) => Ok(()),
-            Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
-                // discard buffer
-                warn!("fill: EAGAIN met in sending video pkt, flushing");
-                self.decoder.flush();
-                Ok(())
-            }
-            send_packet_error => check!(send_packet_error),
-        }
-    }
-
-    fn flush(&mut self) {
-        self.decoder.flush();
-    }
-
-    fn decode(&mut self) -> Result<Option<DecodedVideoFrame>, MediaError> {
-        let mut decoded = frame::Video::empty();
-        match self.decoder.receive_frame(&mut decoded) {
-            Ok(()) => {}
-            Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
-                trace!("receive: EAGAIN");
-                return Ok(None);
-            }
-            receive_frame_error => check!(receive_frame_error)?,
-        }
-
-        let position = decoded
-            .pts()
-            // fall back to packet's DTS if no pts available (as in AVI)
-            .unwrap_or(decoded.packet().dts)
-            .rescale(self.stream_timebase, self.pos_timebase);
-        let time = f64::from(self.pos_timebase) * position as f64;
-        trace!("receive: got frame {}", position);
-
-        Ok(Some(DecodedVideoFrame {
-            position,
-            time,
-            decoded,
-        }))
-    }
-
+impl VideoPlayerFront {
     pub fn process(
         &mut self,
         mut frame: DecodedVideoFrame,
@@ -563,9 +652,9 @@ impl VideoContext {
 
         let (width, height) = size;
         self.scaler = scaling::Context::get(
-            self.decoder.format(),
-            self.decoder.width(),
-            self.decoder.height(),
+            self.original_format,
+            self.original_size.0,
+            self.original_size.1,
             format::Pixel::RGBA,
             width,
             height,
@@ -577,32 +666,116 @@ impl VideoContext {
         trace!("set output size: {:?}", size);
         Ok(())
     }
+}
 
-    pub fn stream_index(&self) -> usize {
-        self.stream_i
+impl VideoSamplerFront {
+    pub fn process(&mut self, frame: &DecodedVideoFrame) -> Result<(), MediaError> {
+        let index: usize = match frame.position {
+            x if x >= 0 => x.try_into().unwrap(),
+            _ => return Ok(()),
+        };
+        if index >= self.keyframes.length {
+            return Ok(());
+        }
+        self.keyframes
+            .set(&[if frame.decoded.is_key() { 2 } else { 1 }], index);
+        Ok(())
     }
 
-    pub fn length(&self) -> i64 {
-        self.length
+    pub fn data_view(&self, level: usize) -> &[u8] {
+        self.keyframes.get_level(level)
     }
 
-    pub fn output_size(&self) -> (u32, u32) {
-        self.output_size
+    pub fn get_keyframe_before(&self, pos: usize) -> Option<usize> {
+        let view = self.keyframes.get_leaf_level();
+        let mut i = pos;
+        loop {
+            match view[i] {
+                2 => return Some(i),
+                1 => {}
+                _ => return None,
+            }
+            if i == 0 {
+                return None;
+            }
+            i -= 1;
+        }
+    }
+}
+
+impl VideoContext {
+    fn feed(&mut self, packet: &codec::packet::Packet) -> Result<(), MediaError> {
+        match self.base.decoder.send_packet(packet) {
+            Ok(_) => Ok(()),
+            Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
+                // discard buffer
+                warn!("fill: EAGAIN met in sending video pkt, flushing");
+                self.base.decoder.flush();
+                Ok(())
+            }
+            send_packet_error => check!(send_packet_error),
+        }
+    }
+
+    fn flush(&mut self) {
+        self.base.decoder.flush();
+    }
+
+    fn decode(&mut self) -> Result<Option<DecodedVideoFrame>, MediaError> {
+        let mut decoded = frame::Video::empty();
+        match self.base.decoder.receive_frame(&mut decoded) {
+            Ok(()) => {}
+            Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
+                trace!("receive: EAGAIN");
+                return Ok(None);
+            }
+            receive_frame_error => check!(receive_frame_error)?,
+        }
+
+        let position = decoded
+            .pts()
+            // fall back to packet's DTS if no pts available (as in AVI)
+            .unwrap_or(decoded.packet().dts)
+            .rescale(self.base.stream_timebase, self.base.pos_timebase);
+        let time = f64::from(self.base.pos_timebase) * position as f64;
+        trace!("receive: got frame {}", position);
+
+        Ok(Some(DecodedVideoFrame {
+            position,
+            time,
+            decoded,
+        }))
+    }
+
+    // pub fn stream_index(&self) -> usize {
+    //     self.base.stream_i
+    // }
+
+    pub fn length(&self) -> usize {
+        self.base.length
     }
 
     pub fn original_size(&self) -> (u32, u32) {
-        self.original_size
+        self.base.original_size
     }
 
     pub fn sample_aspect_ratio(&self) -> Rational {
-        self.sample_aspect_ratio
+        self.base.sample_aspect_ratio
     }
 
     pub fn framerate(&self) -> Rational {
-        self.framerate
+        self.base.framerate
     }
 
-    pub fn pixel_format(&self) -> format::Pixel {
-        self.decoder.format()
+    // pub fn pixel_format(&self) -> format::Pixel {
+    //     self.base.decoder.format()
+    // }
+
+    pub fn front(&self) -> &VideoFront {
+        &self.front
+    }
+
+    pub fn front_mut(&mut self) -> &mut VideoFront {
+        &mut self.front
     }
 }
