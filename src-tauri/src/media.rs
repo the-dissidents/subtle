@@ -608,3 +608,54 @@ pub fn get_keyframe_before(
     };
     send(&channel, MediaEvent::KeyframeData { pos: front.get_keyframe_before(pos) });
 }
+
+#[tauri::command]
+pub fn test_performance(path: &str, channel: Channel<MediaEvent>) {
+    log::info!("starting performance test");
+    let mut playback = match MediaPlayback::from_file(path) {
+        Ok(x) => x,
+        Err(e) => return send_error!(&channel, e.to_string()),
+    };
+    log::info!("MediaPlayback created");
+    let _video = match playback.open_video(None) {
+        Ok(_) => playback.video().unwrap(),
+        Err(e) => return send_error!(&channel, e.to_string()),
+    };
+    log::info!("video opened");
+    let _audio = match playback.open_audio(None) {
+        Ok(_) => playback.audio().unwrap(),
+        Err(e) => return send_error!(&channel, e.to_string()),
+    };
+    log::info!("audio opened");
+
+    #[cfg(not(windows))]
+    let guard = pprof::ProfilerGuardBuilder::default().frequency(2000).blocklist(&["libc", "libgcc", "pthread", "vdso"]).build().unwrap();
+
+    log::info!("reading frames");
+    let mut i = 0;
+    let mut iv = 0;
+    let mut ia = 0;
+    while i < 10000 {
+        match playback.get_next() {
+            Ok(Some(Frame::Video(_f))) => {
+                iv += 1;
+            }
+            Ok(Some(Frame::Audio(_f))) => {
+                ia += 1;
+            }
+            Ok(None) => break,
+            Err(e) => return send_error!(&channel, e.to_string())
+        }
+        i += 1;
+    }
+    log::info!("read {i} frames ({iv} video, {ia} audio)");
+
+    #[cfg(not(windows))]
+    if let Ok(report) = guard.report().build() {
+        let file = std::fs::File::create("flamegraph.svg").unwrap();
+        report.flamegraph(file).unwrap();
+        log::info!("flamegraph generated");
+    };
+
+    send_done(&channel);
+}

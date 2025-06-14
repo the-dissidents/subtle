@@ -80,9 +80,10 @@ type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) 
 
 function createChannel(
     from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
-    reject: (e: any) => void
+    reject: (e: any) => void, timeout = 1000
 ) {
-    setTimeout(() => reject(new MediaError('timed out', from)), 1000);
+    if (timeout > 0) setTimeout(
+        () => reject(new MediaError('timed out', from)), timeout);
     
     const channel = new Channel<MediaEvent>;
     channel.onmessage = (msg) => {
@@ -458,6 +459,15 @@ export const MAPI = {
             invoke('media_version', {channel});
         });
     },
+
+    async testMediaPerformance(path: string) {
+        return await new Promise<void>((resolve, reject) => {
+            let channel = createChannel('test_performance', {
+                done: () => resolve()
+            }, reject, -1);
+            invoke('test_performance', { path, channel });
+        });
+    }
 }
 
 

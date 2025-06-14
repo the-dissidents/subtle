@@ -81,6 +81,7 @@ fn main() {
             media::get_video_sampler_data,
             media::video_set_size,
             media::get_keyframe_before,
+            media::test_performance,
             redirect_log::set_log_filter_level,
         ])
         .run(ctx)

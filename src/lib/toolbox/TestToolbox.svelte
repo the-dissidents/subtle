@@ -14,6 +14,7 @@ import { Source } from '../frontend/Source';
 import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
 import { Interface } from '../frontend/Interface';
+    import { AppleIcon } from '@lucide/svelte';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -52,25 +53,9 @@ const command = new UICommand(() => '', [], {
   onclick={async () => {
     let path = await dialog.open();
     if (!path) return;
-    media = await MMedia.open(path);
-    console.log('media opened');
-    await media.openVideo(-1);
-    console.log('video opened');
-    await media.openAudio(-1);
-    console.log('audio opened');
-    result = media.streams.join(';');
+    await MAPI.testMediaPerformance(path);
   }}>
-  open media
-</button>
-
-<button
-  onclick={async () => {
-    if (!media) return;
-    let f = await media.readNextFrame();
-    if (!f) result = "EOF!";
-    else result = `${f.type} @${f.position}, time=${f.time}, length ${f.content.length}`
-  }}>
-  read frame
+  test media performance
 </button>
 
 <button
