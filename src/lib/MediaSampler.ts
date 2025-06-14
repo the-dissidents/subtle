@@ -212,23 +212,28 @@ export class MediaSampler {
         if (to > this.media.duration)
             to = this.media.duration;
         Debug.assert(to > from);
+
+        Debug.assert(!this.media.isClosed);
+        const framerate = this.media.video!.framerate;
+        const videoPos = Math.floor(from * framerate);
+        const prevKeyframe = await this.media.getKeyframeBefore(videoPos);
+        await this.media.waitUntilAvailable();
+        if (this.isClosing) return;
+        if (prevKeyframe === null) {
+            await Debug.debug(`startSampling: seeking to [${videoPos}]`);
+            await this.media.seekVideo(videoPos);
+        } else if (this.#sampleProgress > videoPos / framerate
+                || this.#sampleProgress < prevKeyframe / framerate)
+        {
+            await Debug.debug(`startSampling: seeking to [${videoPos}, using ${prevKeyframe}]`);
+            await this.media.seekVideo(prevKeyframe);
+        }
         
         this.#isSampling = true;
         this.#cancelling = false;
         this.#sampleProgress = from;
         this.#sampleEnd = to;
         Debug.debug('start sampling', from, to);
-
-        await this.media.waitUntilAvailable();
-        Debug.assert(!this.media.isClosed);
-
-        const videoPos = Math.floor(from * this.media.video!.framerate);
-        const prevKeyframe = await this.media.getKeyframeBefore(videoPos);
-        if (this.isClosing) return;
-        if (prevKeyframe === null)
-            await this.media.seekVideo(videoPos);
-        else if (this.#sampleProgress > videoPos || this.#sampleProgress < prevKeyframe)
-            await this.media.seekVideo(prevKeyframe);
         
         let doSampling = async () => {
             await this.media.waitUntilAvailable();
