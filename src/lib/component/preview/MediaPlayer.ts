@@ -185,7 +185,6 @@ export class MediaPlayer {
         await this.media.waitUntilAvailable();
         await this.media.close();
         await this.audioCxt.close();
-        await this.forceSetPosition(0);
         this.manager.requestRender();
         await Debug.info('closed video');
     }
@@ -375,6 +374,10 @@ export class MediaPlayer {
     }
 
     requestSetPositionFrame(position: number, opt?: SetPositionOptions) {
+        const video = this.#videoCache;
+        if (video.length > 0 && video[0].position == position)
+            return;
+            
         Debug.trace('requestSetPositionFrame', position);
         const first = this.#requestedSetPositionTarget < 0;
         this.#requestedSetPositionTarget = position;
@@ -416,8 +419,7 @@ export class MediaPlayer {
         await Debug.trace('forceSetPositionFrame', position);
         if (position < 0) position = 0;
         if (video.length > 0 && video[0].position == position) {
-            // await Debug.trace('forceSetPositionFrame: no need to seek or shift');
-            return;
+            return Debug.early('forceSetPositionFrame');
         }
 
         if (this.#setPositionInProgress) {

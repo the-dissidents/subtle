@@ -39,7 +39,10 @@ export class PreviewLayout {
         Playback.onLoad.bind(this, async (rawurl, id) => {
             Playback.player = await MediaPlayer.create(this.#manager, rawurl, id);
         });
-        
+        Playback.onClose.bind(this, async () => {
+            await Playback.player!.close();
+            Playback.player = null;
+        });
         Playback.onPositionChanged.bind(this, (pos) => {
             this.#subsRenderer.setTime(pos);
             this.#manager.requestRender();

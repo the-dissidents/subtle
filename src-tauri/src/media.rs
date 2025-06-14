@@ -4,6 +4,7 @@ use internal::{Frame, StreamInfo};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::ipc::{self, Channel, InvokeResponseBody, Response};
 use tauri::State;
 
@@ -70,6 +71,8 @@ pub enum MediaEvent<'a> {
     FfmpegVersion { value: String },
     #[serde(rename_all = "camelCase")]
     KeyframeData { pos: Option<usize> },
+    #[serde(rename_all = "camelCase")]
+    SampleDone { pos: f64 },
 }
 
 fn send(channel: &Channel<MediaEvent>, what: MediaEvent) {
@@ -487,10 +490,19 @@ pub fn sample_until(
         Some(x) => x,
         None => return send_invalid_id(&channel),
     };
+    let start_time = Instant::now();
+    let target_working_time = Duration::from_millis(20);
+    let mut last_time: f64;
     loop {
         match playback.sample_next() {
-            Ok(Some(Frame::Audio(f))) => if f.time > when { break; },
-            Ok(Some(Frame::Video(f))) => if f.time > when { break; },
+            Ok(Some(Frame::Audio(f))) => {
+                last_time = f.time;
+                if when >= 0.0 && f.time > when { break; }
+            }
+            Ok(Some(Frame::Video(f))) => {
+                last_time = f.time;
+                if when >= 0.0 && f.time > when { break; }
+            }
             Ok(None) => {
                 send(&channel, MediaEvent::EOF {});
                 return;
@@ -500,8 +512,11 @@ pub fn sample_until(
                 return;
             }
         }
+        if when < 0.0 && start_time.elapsed() > target_working_time {
+            break;
+        }
     }
-    send_done(&channel);
+    send(&channel, MediaEvent::SampleDone { pos: last_time });
 }
 
 #[tauri::command]

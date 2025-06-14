@@ -86,12 +86,9 @@ export const Playback = {
         if (!get(isLoaded)) return Debug.early('not loaded');
         
         isLoaded.set(false);
-        await Promise.all([
-            this.player?.close(),
-            this.sampler?.close(),
-            this.onClose.dispatchAndAwaitAll()
-        ]);
+        await this.onClose.dispatchAndAwaitAll()
         duration = 0;
+        // this.forceSetPosition(0);
         Playback.onRefreshPlaybackControl.dispatch();
     },
 

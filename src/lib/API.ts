@@ -62,6 +62,9 @@ export type MediaEvent = {
 } | {
     event: 'keyframeData',
     data: { pos: number | null }
+} | {
+    event: 'sampleDone',
+    data: { pos: number }
 };
 
 class MediaError extends Error {
@@ -351,21 +354,21 @@ export class MMedia {
         }
     }
 
-    /** returns false on EOF */
+    /** returns null on EOF */
     async sampleUntil(when: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
         this.#currentJobs += 1;
         try {
-            return await new Promise<boolean>((resolve, reject) => {
+            return await new Promise<number | null>((resolve, reject) => {
                 channel = createChannel('sampleUntil', {
                     'EOF': () => {
                         Debug.debug('at eof');
                         this.#eof = true;
-                        resolve(false);
+                        resolve(null);
                     },
-                    done: () => resolve(true)
+                    sampleDone: (data) => resolve(data.pos)
                 }, reject);
                 invoke('sample_until', { id: this.id, when, channel });
             });
@@ -408,14 +411,14 @@ export class MMedia {
         }
     }
 
-    async getKeyframeBefore(position: number) {
+    async getKeyframeBefore(pos: number) {
         Debug.assert(!this.#destroyed);
         let channel: Channel<MediaEvent> | undefined;
         return await new Promise<number | null>((resolve, reject) => {
             channel = createChannel('getKeyframeBefore', {
                 keyframeData: (data) => resolve(data.pos)
             }, reject);
-            invoke('get_keyframe_before', { id: this.id, channel, position });
+            invoke('get_keyframe_before', { id: this.id, channel, pos });
         });
     }
 

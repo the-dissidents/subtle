@@ -204,8 +204,6 @@ export class AudioSampler {
 
     async startSampling(from: number, to: number): Promise<void> {
         Debug.assert(!this.#isSampling && !this.media.isClosed);
-        if (this.isClosing) return;
-
         if (to > this.media.duration)
             to = this.media.duration;
         Debug.assert(to > from);
@@ -219,20 +217,32 @@ export class AudioSampler {
         await this.media.waitUntilAvailable();
         Debug.assert(!this.media.isClosed);
 
-        await this.media.seekVideo(Math.floor(from * this.media.video!.framerate));
+        const videoPos = Math.floor(from * this.media.video!.framerate);
+        const prevKeyframe = await this.media.getKeyframeBefore(videoPos);
+        if (this.isClosing) return;
+        if (prevKeyframe === null)
+            await this.media.seekVideo(videoPos);
+        else if (this.#sampleProgress > videoPos || this.#sampleProgress < prevKeyframe)
+            await this.media.seekVideo(prevKeyframe);
         
         let doSampling = async () => {
-            let next = this.#sampleProgress 
-                + this.#sampleLength! / this.media.audio!.sampleRate * 100;
-            if (next > this.#sampleEnd) next = this.#sampleEnd;
             await this.media.waitUntilAvailable();
-            await this.media.sampleUntil(next);
-            this.#sampleProgress = next;
+            if (this.isClosing) return;
+            // const next = this.#sampleProgress 
+            //     + this.#sampleLength! / this.media.audio!.sampleRate * 200;
+            const next = -1;
+            const result = await this.media.sampleUntil(next);
             this.intensity!.markDirty();
             this.keyframes!.markDirty();
             this.onProgress?.();
-            if (next == this.#sampleEnd) {
-                Debug.debug(`sampling done: ${from}~${this.#sampleEnd}`);
+            if (result === null) {
+                Debug.debug(`sampling done: EOF`);
+                this.#isSampling = false;
+                return;
+            } 
+            this.#sampleProgress = result;
+            if (result > this.#sampleEnd) {
+                Debug.debug(`sampling done: ${from}~${result}`);
                 this.#isSampling = false;
                 return;
             }
