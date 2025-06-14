@@ -21,6 +21,7 @@ import { Format } from "../core/Formats";
 import { Toolboxes } from "./Toolboxes";
 import { TimelineParams } from "../component/timeline/Timeline.svelte";
 import { CommandBinding } from "./Keybinding";
+import { MediaPlayerInterface } from "../component/preview/MediaPlayer";
 const $_ = unwrapFunctionStore(_);
 
 const toJSON = (useEntries: SubtitleEntry[]) => 
@@ -358,13 +359,13 @@ export const Commands = {
     {
         name: () => $_('menu.select-audio-stream'),
         isApplicable: () => get(Playback.isLoaded),
-        items: () => Playback.video!.streams
+        items: () => Playback.player!.streams
             .filter((x) => x.type == 'audio')
             .map((x) => ({
                 name: x.description + (
-                    x.index == Playback.video?.currentAudioStream 
+                    x.index == Playback.player?.currentAudioStream 
                     ? ' ' + $_('menu.audio-stream-current') : ''),
-                isApplicable: () => x.index != Playback.video?.currentAudioStream,
+                isApplicable: () => x.index != Playback.player?.currentAudioStream,
                 async call() {
                     await guardAsync(() => Playback.setAudioStream(x.index),
                         $_('msg.failed-to-set-audio-stream'))
@@ -410,7 +411,7 @@ export const Commands = {
     {
         name: () => $_('action.play-entry'),
         async call() {
-            if (Playback.video === null) return;
+            if (Playback.player === null) return;
             const current = Editing.selection.focused;
             if (current === null) return;
             Playback.playArea.override = {
@@ -419,7 +420,7 @@ export const Commands = {
                 loop: false
             };
             await Playback.forceSetPosition(current.start);
-            await Basic.waitUntil(() => !Playback.video!.isPreloading);
+            await Basic.waitUntil(() => !Playback.player!.isPreloading);
             await Playback.play(true);
         }
     }),
@@ -428,14 +429,14 @@ export const Commands = {
           CommandBinding.from(['Alt+CmdOrCtrl+ArrowLeft']), ],
     {
         name: () => $_('action.previous-frame'),
-        call: () => Playback.video?.requestPreviousFrame()
+        call: () => Playback.player?.requestPreviousFrame()
     }),
     nextFrame: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['CmdOrCtrl+ArrowRight'], ['Timeline']),
           CommandBinding.from(['Alt+CmdOrCtrl+ArrowRight']), ],
     {
         name: () => $_('action.next-frame'),
-        call: () => Playback.video?.requestNextFrame()
+        call: () => Playback.player?.requestNextFrame()
     }),
     jumpBackward: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['ArrowLeft'], ['Timeline']),
@@ -464,7 +465,7 @@ export const Commands = {
             Debug.assert(TimelineParams.activeChannel !== undefined);
             const pos = Playback.position;
             const entry = Editing.insertAtTime(pos, pos, TimelineParams.activeChannel);
-            Playback.onPositionChanged.bind(entry, 
+            MediaPlayerInterface.onPlayback.bind(entry, 
                 (newpos) => { entry.end = Math.max(entry.end, newpos) });
             return entry;
         },
@@ -485,7 +486,7 @@ export const Commands = {
             Debug.assert(TimelineParams.activeChannel !== undefined);
             const pos = Playback.position;
             const entry = Editing.insertAtTime(pos, pos, TimelineParams.activeChannel);
-            Playback.onPositionChanged.bind(entry, 
+            MediaPlayerInterface.onPlayback.bind(entry, 
                 (newpos) => { entry.end = Math.max(entry.end, newpos) });
             return entry;
         },

@@ -156,7 +156,7 @@ export const Interface = {
             await Playback.close();
         await guardAsync(() => Playback.load(path, audio ?? -1), 
             $_('msg.error-opening-video-path', {values: {path}}));
-        if (!Playback.video?.isLoaded) return;
+        if (!Playback.player?.isLoaded) return;
         
         let source = get(Source.currentFile);
         if (source != '')
@@ -272,8 +272,8 @@ export const Interface = {
         const file = get(Source.currentFile);
         Debug.assert(file !== '');
         await PrivateConfig.setFileData(file, {
-            video: Playback.video?.source,
-            audioStream: Playback.video?.currentAudioStream
+            video: Playback.player?.source,
+            audioStream: Playback.player?.currentAudioStream
         });
     }
 }

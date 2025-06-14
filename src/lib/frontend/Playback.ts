@@ -3,10 +3,10 @@ console.info('Playback loading');
 import { tick } from "svelte";
 import { get, writable, type Readable } from "svelte/store";
 import { Debug } from "../Debug";
-import { VideoPlayer, type SetPositionOptions } from "../VideoPlayer";
-import { ChangeType, Source } from "./Source";
+import { MediaPlayerInterface, MediaPlayer, type SetPositionOptions } from "../component/preview/MediaPlayer";
 import { EventHost } from "../details/EventHost";
 import { Overridable } from "../details/Overridable.svelte";
+import type { AudioSampler } from "../AudioSampler";
 
 export type PlayArea = {
     start: number | undefined,
@@ -19,50 +19,39 @@ let isLoaded = writable(false),
     duration = 0;
 
 const me = {};
-
 tick().then(() => {
-    Source.onSubtitlesChanged.bind(me, (type) => {
-        if (!Playback.video?.subRenderer) return Debug.early('no subRenderer');
-        if (type == ChangeType.Times || type == ChangeType.General)
-            Playback.video.subRenderer.updateTimes();
-        Playback.video.requestRender();
-    });
-    
-    Source.onSubtitleObjectReload.bind(me, () => {
-        Playback.video?.setSubtitles(Source.subs);
-    });
+    MediaPlayerInterface.onPlayback.bind(me, async (pos) => {
+        position = pos;
+        Playback.onPositionChanged.dispatch(pos);
+        Playback.onRefreshPlaybackControl.dispatch();
+
+        if (Playback.isPlaying) {
+            const playArea = Playback.playArea.value;
+            // if (playArea.start !== undefined && position < playArea.start) {
+            //     Debug.debug('jumping to in point from before', playArea, position);
+            //     // await this.play(false);
+            //     await Playback.setPosition(playArea.start);
+            //     return;
+            // }
+            if (playArea.end !== undefined && position > playArea.end) {
+                Debug.debug('jumping to in point from after out point', playArea, position);
+                Playback.playArea.override = null;
+                if (!playArea.loop) await Playback.play(false);
+                await Playback.forceSetPosition(playArea.start ?? 0);
+                return;
+            }
+        }
+    })
 });
-
-function updateProgress(pos: number) {
-    position = pos;
-    Playback.onPositionChanged.dispatch(pos);
-    Playback.onRefreshPlaybackControl.dispatch();
-};
-
-async function handlePlayArea() {
-    const playArea = Playback.playArea.value;
-    // if (playArea.start !== undefined && position < playArea.start) {
-    //     Debug.debug('jumping to in point from before', playArea, position);
-    //     // await this.play(false);
-    //     await Playback.setPosition(playArea.start);
-    //     return;
-    // }
-    if (playArea.end !== undefined && position > playArea.end) {
-        Debug.debug('jumping to in point from after out point', playArea, position);
-        Playback.playArea.override = null;
-        if (!playArea.loop) await Playback.play(false);
-        await Playback.forceSetPosition(playArea.start ?? 0);
-        return;
-    }
-}
 
 export const Playback = {
     get position() { return position; },
     get duration() { return duration; },
     get isLoaded(): Readable<boolean> { return isLoaded; },
-    get isPlaying() { return this.video?.isPlaying ?? false; },
+    get isPlaying() { return this.player?.isPlaying ?? false; },
 
-    video: null as VideoPlayer | null,
+    player: null as MediaPlayer | null,
+    sampler: null as AudioSampler | null,
 
     playArea: new Overridable<PlayArea>({
         start: undefined,
@@ -77,47 +66,29 @@ export const Playback = {
     onPositionChanged: new EventHost<[pos: number]>(),
     onRefreshPlaybackControl: new EventHost<[]>(),
 
-    createVideo(canvas: HTMLCanvasElement) {
-        Debug.assert(this.video == null);
-        this.video = new VideoPlayer(canvas);
-        this.video.setSubtitles(Source.subs);
-        this.video.onVideoPositionChange = () => {
-            Debug.assert(this.video != null);
-            updateProgress(this.video.currentTimestamp);
-            handlePlayArea();
-        };
-        this.video.onPlayStateChange = () => {
-            Playback.onRefreshPlaybackControl.dispatch();
-        };
-        return this.video;
-    },
-
     async load(rawurl: string, audio: number) {
-        Debug.assert(this.video !== null);
-        await Promise.all([
-            this.video.load(rawurl, audio),
-            this.onLoad.dispatchAndAwaitAll(rawurl, audio)
-        ]);
+        await this.onLoad.dispatchAndAwaitAll(rawurl, audio);
         isLoaded.set(true);
-        duration = this.video.duration!;
+        Debug.assert(this.player !== null);
+        duration = this.player.duration!;
         Playback.onRefreshPlaybackControl.dispatch();
     },
 
     async setAudioStream(id: number) {
-        Debug.assert(this.video !== null);
+        Debug.assert(this.player !== null);
         await Promise.all([
-            this.video.setAudioStream(id),
-            this.onSetAudioStream.dispatchAndAwaitAll(id)
+            this.player.setAudioStream(id),
+            this.sampler?.setAudioStream(id),
         ]);
     },
 
     async close() {
         if (!get(isLoaded)) return Debug.early('not loaded');
         
-        Debug.assert(this.video !== null);
         isLoaded.set(false);
         await Promise.all([
-            this.video.close(),
+            this.player?.close(),
+            this.sampler?.close(),
             this.onClose.dispatchAndAwaitAll()
         ]);
         duration = 0;
@@ -125,22 +96,28 @@ export const Playback = {
     },
 
     setPosition(pos: number, opt?: SetPositionOptions) {
-        Debug.assert(this.video !== null);
-        this.video.requestSetPosition(pos, opt);
+        if (this.player === null)
+            this.forceSetPosition(pos);
+        else
+            this.player.requestSetPosition(pos, opt);
     },
 
     async forceSetPosition(pos: number) {
-        Debug.assert(this.video !== null);
-        await this.video.forceSetPosition(pos);
+        if (this.player === null) {
+            position = pos;
+            Playback.onPositionChanged.dispatch(pos);
+        } else {
+            await this.player.forceSetPosition(pos);
+        }
     },
 
     async play(state = true) {
-        Debug.assert(this.video !== null);
-        await (state ? this.video.requestStartPlay() : this.video.stop());
+        Debug.assert(this.player !== null);
+        await (state ? this.player.requestStartPlay() : this.player.stop());
     },
 
     async toggle() {
-        Debug.assert(this.video !== null);
-        await this.play(!this.video.isPlaying);
+        Debug.assert(this.player !== null);
+        await this.play(!this.player.isPlaying);
     }
 }

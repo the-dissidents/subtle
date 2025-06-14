@@ -5,7 +5,6 @@ import { Debug } from "./Debug";
 type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Uint8ClampedArray | Float32Array | Float64Array;
 
 const PRELOAD_MARGIN = 200;
-const AUDIO_SAMPLER_RATE = 48000;
 
 class DataRequest<T extends TypedArray>{
     #output: T;
@@ -13,6 +12,7 @@ class DataRequest<T extends TypedArray>{
     #start = 0;
     #end = 0;
     #currentLevel = -1;
+    #dirty = false;
 
     constructor(
         ctor: new (length: number) => T,
@@ -25,21 +25,26 @@ class DataRequest<T extends TypedArray>{
     }
 
     markDirty() {
-        this.#currentLevel = -1;
+        this.#dirty = true;
     }
 
     get(level: number, from: number, to: number): T {
         Debug.assert(to > from && from >= 0);
         Debug.assert(to - from + 1 < this.#buffer.length);
         this.#output.fill(this.defaultValue);
-        if (this.#currentLevel !== level || from > this.#end || to < this.#start) {
-            this.request(level, from, to);
-            return this.#output.subarray(0, to - from) as T;
-        }
-        if (from >= this.#start && to <= this.#end) {
+
+        if (this.#currentLevel == level && from >= this.#start && to <= this.#end) {
+            if (this.#dirty)
+                this.#scheduleRequest(level, from, to);
             this.#output.set(this.#buffer);
             return this.#output.subarray(from - this.#start, to - this.#start) as T;
         }
+
+        this.#scheduleRequest(level, from, to);
+
+        if (this.#currentLevel !== level || from > this.#end || to < this.#start)
+            return this.#output.subarray(0, to - from) as T;
+
         let offset = Math.max(0, this.#start - from);
         let clipStart = Math.max(0, from - this.#start);
         let clipLength = Math.min(
@@ -47,20 +52,32 @@ class DataRequest<T extends TypedArray>{
             this.#end - this.#start - clipStart);
         if (clipLength > 0)
             this.#output.set(this.#buffer.subarray(clipStart, clipStart + clipLength), offset);
-        this.request(level, from, to);
         return this.#output.subarray(0, to - from) as T;
     }
 
-    async request(level: number, from: number, to: number) {
+    #scheduledRequest: [level: number, from: number, to: number] | null = null;
+
+    #scheduleRequest(level: number, from: number, to: number) {
+        if (this.#scheduledRequest === null)
+            requestAnimationFrame(() => this.#request());
+        this.#scheduledRequest = [level, from, to];
+    }
+
+    async #request() {
+        if (!this.#scheduledRequest) return Debug.early('no schedule');
+        let [level, from, to] = this.#scheduledRequest;
+        this.#scheduledRequest = null;
+
         Debug.assert(to > from && from >= 0);
         Debug.assert(to - from + 1 < this.#buffer.length);
-        if (level !== this.#currentLevel || from > this.#end || to < this.#start) {
+        if (this.#dirty || level !== this.#currentLevel || from > this.#end || to < this.#start) {
             // clear
             const data = await this.retrieve(level, from, to);
             this.#buffer.set(data, 0);
             this.#start = from;
             this.#end = from + data.length;
             this.#currentLevel = level;
+            this.#dirty = false;
             return;
         }
         if (from >= this.#start && to <= this.#end) {
@@ -95,40 +112,58 @@ export class AudioSampler {
     #cancelling = false;
     #isSampling = false;
 
+    #sampleLength?: number;
+
     onProgress?: () => void;
 
-    get videoFramerate() {return this.media.videoStatus!.framerate;}
     /** points per second */
-    get intensityResolution() {return AUDIO_SAMPLER_RATE / this.sampleLength;}
-    get duration() {return this.media.duration;}
-    get isSampling() {return this.#isSampling;}
-    get sampleEnd() {return this.#sampleEnd;}
-    get sampleProgress() {return this.#sampleProgress;}
+    get keyframeResolution() { return this.media.video!.framerate; }
+    /** points per second */
+    get intensityResolution() { return this.media.audio!.sampleRate / this.#sampleLength!; }
+    get isSampling() { return this.#isSampling; }
+    get sampleEnd() { return this.#sampleEnd; }
+    get sampleProgress() { return this.#sampleProgress; }
 
-    readonly intensity: DataRequest<Float32Array>;
-    readonly keyframes: DataRequest<Uint8Array>;
+    #intensity?: DataRequest<Float32Array>;
+    #keyframes?: DataRequest<Uint8Array>;
+
+    get intensity() { return this.#intensity!; }
+    get keyframes() { return this.#keyframes!; }
 
     private constructor(
         private readonly media: MMedia, 
-        public readonly sampleLength: number
+        private readonly resolution: number,
     ) {
-        Debug.assert(media.audioStatus !== undefined);
-        Debug.assert(media.videoStatus !== undefined);
-
-        this.intensity = new DataRequest(Float32Array, 
-            Math.ceil(media.audioStatus.length / sampleLength), NaN, 
-            (l, f, t) => this.intensityData(l, f, t));
-        this.keyframes = new DataRequest(Uint8Array, 
-            media.videoStatus.length, 0, 
+        Debug.assert(media.video !== undefined);
+        this.#initAudioData();
+        this.#keyframes = new DataRequest(Uint8Array, 
+            media.video.length, 0, 
             (l, f, t) => this.keyframeData(l, f, t));
     }
 
     static async open(media: MMedia, audio: number, resolution: number) {
-        const sampleLength = Math.ceil(AUDIO_SAMPLER_RATE / resolution);
-        await media.openAudioSampler(audio, sampleLength);
+        await media.openAudioSampler(audio, resolution);
         await media.openVideoSampler(-1);
         
-        return new AudioSampler(media, sampleLength);
+        return new AudioSampler(media, resolution);
+    }
+
+    #initAudioData() {
+        Debug.assert(this.media.audio !== undefined);
+        this.#sampleLength = Math.ceil(this.media.audio.sampleRate / this.resolution);
+        this.#intensity = new DataRequest(Float32Array, 
+            Math.ceil(this.media.audio.length / this.#sampleLength), NaN, 
+            (l, f, t) => this.intensityData(l, f, t));
+    }
+
+    async setAudioStream(id: number) {
+        if (id == this.media.audio!.index) return;
+        if (this.#isSampling) {
+            this.tryCancelSampling();
+            await Basic.waitUntil(() => !this.#isSampling);
+        }
+        await this.media.openAudio(id);
+        this.#initAudioData();
     }
 
     isClosing = false;
@@ -151,7 +186,8 @@ export class AudioSampler {
 
     extendSampling(to: number) {
         Debug.assert(this.#isSampling);
-        if (to > this.duration) to = this.duration;
+        if (to > this.media.duration)
+            to = this.media.duration;
         if (this.#sampleEnd >= to) return;
         Debug.assert(this.#sampleProgress < to);
         Debug.debug('extending sampling to', to);
@@ -170,10 +206,9 @@ export class AudioSampler {
         Debug.assert(!this.#isSampling && !this.media.isClosed);
         if (this.isClosing) return;
 
-        if (to > this.duration) to = this.duration;
+        if (to > this.media.duration)
+            to = this.media.duration;
         Debug.assert(to > from);
-
-        // if (to < this.#sampleProgress) return;
         
         this.#isSampling = true;
         this.#cancelling = false;
@@ -184,16 +219,17 @@ export class AudioSampler {
         await this.media.waitUntilAvailable();
         Debug.assert(!this.media.isClosed);
 
-        await this.media.seekVideo(Math.floor(from * this.videoFramerate));
+        await this.media.seekVideo(Math.floor(from * this.media.video!.framerate));
         
         let doSampling = async () => {
-            let next = this.#sampleProgress + this.sampleLength / AUDIO_SAMPLER_RATE * 100;
+            let next = this.#sampleProgress 
+                + this.#sampleLength! / this.media.audio!.sampleRate * 100;
             if (next > this.#sampleEnd) next = this.#sampleEnd;
             await this.media.waitUntilAvailable();
             await this.media.sampleUntil(next);
             this.#sampleProgress = next;
-            this.intensity.markDirty();
-            this.keyframes.markDirty();
+            this.intensity!.markDirty();
+            this.keyframes!.markDirty();
             this.onProgress?.();
             if (next == this.#sampleEnd) {
                 Debug.debug(`sampling done: ${from}~${this.#sampleEnd}`);

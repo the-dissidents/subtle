@@ -7,7 +7,6 @@ import { Basic } from "../../Basic";
 import { TimelineConfig } from "./Config";
 import type { TimelineInput } from "./Input.svelte";
 import { hook } from "../../details/Hook.svelte";
-import type { AggregationTree } from "../../details/AggregationTree";
 
 const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(0deg 0% 75%/50%)');
 const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
@@ -39,7 +38,7 @@ const INOUT_TEXT            = $derived(theme.isDark ? 'lightgreen' : 'oklch(52.7
 const CURSOR_COLOR = 
   $derived(theme.isDark ? 'pink' : 'oklch(62.73% 0.209 12.37)');
 const PENDING_WAVEFORM_COLOR = 
-  $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 100% 40% / 40%)`);
+  $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 40%)`);
 const WAVEFORM_COLOR = 
   $derived(theme.isDark ? `#5bb` : 'oklch(76.37% 0.101 355.37)');
 const INOUT_AREA_OUTSIDE = 
@@ -140,13 +139,14 @@ export class TimelineRenderer {
   }
 
   #renderWaveform(ctx: CanvasRenderingContext2D) {
-    if (!this.layout.sampler) return;
+    if (!Playback.sampler) return;
 
     let points: {x: number, y: number}[] = [];
     let lastGap = -1;
+    ctx.fillStyle = PENDING_WAVEFORM_COLOR;
     let {drawStart, drawEnd} = this.#drawAggregation(
-      this.layout.sampler.intensityResolution, 
-      (a, b, c) => this.layout.sampler!.intensity.get(a, b, c),
+      Playback.sampler.intensityResolution, 
+      (a, b, c) => Playback.sampler!.intensity.get(a, b, c),
       (x, _, value) => {
         if (isNaN(value)) {
           if (lastGap < 0) lastGap = x;
@@ -154,7 +154,6 @@ export class TimelineRenderer {
           points.push({x, y: 0});
         } else {
           if (lastGap >= 0) {
-            ctx.fillStyle = PENDING_WAVEFORM_COLOR;
             ctx.fillRect(lastGap, 0, x - lastGap, this.layout.height);
             lastGap = -1;
           }
@@ -162,7 +161,6 @@ export class TimelineRenderer {
             value * (this.layout.height - TimelineLayout.HEADER_HEIGHT) / 2});
         }
       });
-    ctx.fillStyle = PENDING_WAVEFORM_COLOR;
     if (lastGap >= 0)
       ctx.fillRect(lastGap, 0, drawEnd - lastGap, this.layout.height);
 
@@ -181,8 +179,8 @@ export class TimelineRenderer {
 
     lastGap = -1;
     this.#drawAggregation(
-      this.layout.sampler.videoFramerate,
-      (a, b, c) => this.layout.sampler!.keyframes.get(a, b, c),
+      Playback.sampler.keyframeResolution,
+      (a, b, c) => Playback.sampler!.keyframes.get(a, b, c),
       (x, width, value) => {
         if (value == 0) {
           if (lastGap < 0) lastGap = x;

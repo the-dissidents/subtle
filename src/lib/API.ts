@@ -8,11 +8,13 @@ export type StreamInfo = {
 };
 
 export type AudioStatus = {
+    index: number,
     length: number,
     sampleRate: number
 }
 
 export type VideoStatus = {
+    index: number,
     length: number,
     framerate: number,
     sampleAspectRatio: number,
@@ -128,11 +130,11 @@ export class MMedia {
     #outSize: [number, number] = [-1, -1];
     #eof = false;
 
-    get videoStatus(): Readonly<VideoStatus> | undefined {
+    get video(): Readonly<VideoStatus> | undefined {
         return this.#video;
     }
 
-    get audioStatus(): Readonly<AudioStatus> | undefined {
+    get audio(): Readonly<AudioStatus> | undefined {
         return this.#audio;
     }
 
@@ -262,13 +264,13 @@ export class MMedia {
         return this.#audio;
     }
 
-    async openAudioSampler(audioId: number, step: number) {
+    async openAudioSampler(audioId: number, resolution: number) {
         Debug.assert(!this.#destroyed);
         this.#audio = await new Promise<AudioStatus>((resolve, reject) => {
             let channel = createChannel('openAudioSampler', {
                 audioStatus: (data) => resolve(data)
             }, reject);
-            invoke('open_audio_sampler', {id: this.id, audioId, step, channel});
+            invoke('open_audio_sampler', {id: this.id, audioId, resolution, channel});
         });
         return this.#audio;
     }
@@ -419,6 +421,7 @@ export class MMedia {
 
     async getAudioSamplerData(level: number, from: number, to: number) {
         Debug.assert(!this.#destroyed);
+        // await Debug.trace('getAudioSamplerData', level, from, to);
         return await new Promise<Float32Array>((resolve, reject) => {
             let channel = createChannel('getAudioSamplerData', {}, reject);
             invoke<ArrayBuffer>('get_audio_sampler_data', {id: this.id, channel, level, from, to})
@@ -431,6 +434,7 @@ export class MMedia {
 
     async getVideoSamplerData(level: number, from: number, to: number) {
         Debug.assert(!this.#destroyed);
+        // await Debug.trace('getVideoSamplerData', level, from, to);
         return await new Promise<Uint8Array>((resolve, reject) => {
             let channel = createChannel('getVideoSamplerData', {}, reject);
             invoke<ArrayBuffer>('get_video_sampler_data', {id: this.id, channel, level, from, to})

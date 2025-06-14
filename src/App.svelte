@@ -7,7 +7,7 @@ import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
 
 import { TableConfig } from "./lib/SubtitleTable.svelte";
-import { MediaConfig } from "./lib/VideoPlayer";
+import { MediaConfig } from "./lib/component/preview/Config";
 import { TimelineConfig } from './lib/component/timeline/Config';
 
 MainConfig.addGroup('timeline', TimelineConfig);
@@ -24,10 +24,10 @@ import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import KeybindingDialog from './lib/dialog/KeybindingDialog.svelte';
 import KeybindingInputDialog from './lib/dialog/KeybindingInputDialog.svelte';
 
-import TimestampInput from './lib/TimestampInput.svelte';
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/SubtitleTable.svelte';
 import Timeline from './lib/component/timeline/Timeline.svelte';
+import Preview from './lib/component/preview/Preview.svelte';
 
 import Resizer from './lib/ui/Resizer.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
@@ -56,7 +56,7 @@ import { Commands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
-import { CommandIcon, FilmIcon, PauseIcon, PlayIcon, SettingsIcon } from '@lucide/svelte';
+import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 
 Debug.init();
 
@@ -101,11 +101,6 @@ Playback.onRefreshPlaybackControl.bind(me, () => {
   isPlaying = Playback.isPlaying;
   playPosInput = Playback.position;
 });
-
-let setupVideoView: Action = () => {
-  Debug.assert(videoCanvasContainer !== undefined && videoCanvas !== undefined);
-  Playback.createVideo(videoCanvas);
-};
 
 PrivateConfig.init();
 PrivateConfig.onInitialized(() => {
@@ -290,34 +285,9 @@ appWindow.onDragDropEvent(async (ev) => {
   <!-- body -->
   <div class='hlayout flexgrow fixminheight'>
     <div bind:this={leftPane} style="width: 300px;" class="fixminheight vlayout isolated">
-      <!-- video player -->
-      <div class='player-container' bind:this={videoCanvasContainer} use:setupVideoView>
-        <canvas width="0" height="0" bind:this={videoCanvas}></canvas>
-      </div>
-      <!-- video playback controls -->
-      <div class='hlayout'>
-        <button aria-label="play/pause"
-          onclick={() => Playback.toggle()}>
-          {#if isPlaying}
-            <PauseIcon />
-          {:else}
-            <PlayIcon />
-          {/if}
-        </button>
-        <input type='range' class='play-pointer flexgrow'
-          step="any" max="1" min="0"
-          disabled={!$isMediaLoaded}
-          bind:value={playPos}
-          oninput={() => {
-            if (!$isMediaLoaded) {
-              playPos = 0;
-              return;
-            }
-            Playback.setPosition(playPos * Playback.duration, {imprecise: true});
-          }}/>
-        <TimestampInput bind:timestamp={playPosInput}
-          disabled={!$isMediaLoaded}
-          onchange={() => Playback.setPosition(playPosInput)}/>
+      <!-- video -->
+      <div bind:this={videoCanvasContainer} class="vlayout">
+        <Preview />
       </div>
       <!-- resizer -->
       <div>
@@ -326,7 +296,6 @@ appWindow.onDragDropEvent(async (ev) => {
       <!-- toolbox -->
       <div class="flexgrow fixminheight">
         <TabView bind:value={$toolboxFocus}>
-        {#snippet children()}
           <TabPage name={$_('tab.properties')} id='properties'>
             <PropertiesToolbox/>
           </TabPage>
@@ -339,7 +308,6 @@ appWindow.onDragDropEvent(async (ev) => {
           <TabPage name="Test" id='test'>
             <TestToolbox/>
           </TabPage>
-        {/snippet}
         </TabView>
       </div>
     </div>
@@ -349,13 +317,13 @@ appWindow.onDragDropEvent(async (ev) => {
     <div class="flexgrow fixminheight vlayout isolated">
       <!-- edit box -->
       <div bind:this={editTable} style="height: 125px; padding-top: 3px">
-        <EntryEdit/>
+        <EntryEdit />
       </div>
       <!-- resizer -->
       <div><Resizer control={editTable} minValue={125}/></div>
       <!-- table view -->
       <div class='flexgrow isolated' style="padding-bottom: 6px">
-        <SubtitleTable/>
+        <SubtitleTable />
       </div>
     </div>
   </div>
@@ -365,7 +333,7 @@ appWindow.onDragDropEvent(async (ev) => {
   </div>
   <!-- timeline -->
   <div bind:this={timelineCanvasContainer}>
-    <Timeline/>
+    <Timeline />
   </div>
 
   <!-- status bar -->
@@ -400,9 +368,6 @@ appWindow.onDragDropEvent(async (ev) => {
   ul.menu .separator {
     background-color: rgb(193, 193, 193);
   }
-  .player-container canvas {
-    background-color: lightgray;
-  }
   .twinkling.error {
     --twinkle-color: var(--uchu-red-3);
   }
@@ -431,9 +396,6 @@ appWindow.onDragDropEvent(async (ev) => {
   }
   ul.menu .separator {
     background-color: rgb(193, 193, 193);
-  }
-  .player-container canvas {
-    background-color: black;
   }
   .twinkling.error {
     --twinkle-color: var(--uchu-red-3);
@@ -521,18 +483,6 @@ ul.menu .separator {
   min-height: 30px;
   display: block;
   margin: 0 10px;
-}
-
-.player-container {
-  height: 200px;
-  padding: 3px;
-}
-
-.player-container canvas {
-  width: 100%;
-  height: 100%;
-  display: block; /* to get rid of extra spacing at the bottom */
-  box-sizing: border-box;
 }
 
 .status {

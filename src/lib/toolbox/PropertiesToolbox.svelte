@@ -64,7 +64,7 @@ function markMetadataChange() {
 }
 
 function changeResolution() {
-  Playback.video?.subRenderer?.changeResolution();
+  Playback.player?.subRenderer?.changeResolution();
   markMetadataChange();
 }
 </script>
@@ -97,10 +97,10 @@ function changeResolution() {
             min={1} max={10000}
             onchange={changeResolution}/>
           <button disabled={!$playbackLoaded} onclick={() => {
-            Debug.assert(Playback.video?.videoSize !== undefined);
-            Debug.assert(Playback.video?.sampleAspectRatio !== undefined);
-            const [w, h] = Playback.video.videoSize;
-            const sar = Playback.video.sampleAspectRatio;
+            Debug.assert(Playback.player?.videoSize !== undefined);
+            Debug.assert(Playback.player?.sampleAspectRatio !== undefined);
+            const [w, h] = Playback.player.videoSize;
+            const sar = Playback.player.sampleAspectRatio;
             metadata.width = Math.round(w * sar);
             metadata.height = Math.round(h);
             changeResolution();

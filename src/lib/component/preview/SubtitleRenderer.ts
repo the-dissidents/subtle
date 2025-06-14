@@ -1,6 +1,7 @@
-import { Basic } from "./Basic";
-import { SubtitleEntry, type SubtitleStyle, Subtitles, AlignMode } from "./core/Subtitles.svelte";
-import { Typography } from "./details/Typography";
+import { Basic } from "../../Basic";
+import type { CanvasManager } from "../../CanvasManager";
+import { SubtitleEntry, type SubtitleStyle, Subtitles, AlignMode } from "../../core/Subtitles.svelte";
+import { Typography } from "../../details/Typography";
 
 type WrappedEntry = {
     oldIndex: number,
@@ -73,8 +74,6 @@ export class SubtitleRenderer {
     #sortedEntries: WrappedEntry[] = [];
 
     #currentTime = 0;
-    // #nextUpdateEntry: WrappedEntry | null = null;
-    // #nextStopTime = Infinity;
     #hMargin = 0;
     #vMargin = 0;
     #scale = 1;
@@ -83,24 +82,25 @@ export class SubtitleRenderer {
     }
 
     constructor(
-        public width: number, 
-        public height: number, 
+        private readonly manager: CanvasManager,
         subtitles: Subtitles) 
     {
         this.#subs = subtitles;
-        this.changeResolution();
+        manager.onDisplaySizeChanged.bind(this, (_1, _2, rw, rh) => {
+            this.#changeResolution();
+        });
+        this.#changeResolution();
         this.updateTimes();
     }
 
     changeSubtitles(newSubs: Subtitles) {
         this.#subs = newSubs;
-        this.changeResolution();
+        this.#changeResolution();
         this.updateTimes();
     }
 
-    changeResolution(width: number = this.width, height: number = this.height) {
-        this.width = width;
-        this.height = height;
+    #changeResolution() {
+        const [width, height] = this.manager.physicalSize;
         let ratio = this.#subs.metadata.width / this.#subs.metadata.height;
         if (width / height < ratio) {
             [this.#hMargin, this.#vMargin] = [0, (height - width / ratio) / 2];
@@ -140,20 +140,21 @@ export class SubtitleRenderer {
     }
 
     #basePoint(style: SubtitleStyle): [number, number, number] {
+        const [width, height] = this.manager.physicalSize;
         let x = 0, y = 0, dy = 1;
         if (isLeft(style.alignment))
             x = style.margin.left * this.#scale + this.#hMargin;
         if (isCenterH(style.alignment))
-            x = this.width / 2;
+            x = width / 2;
         if (isRight(style.alignment))
-            x = this.width - (style.margin.right * this.#scale + this.#hMargin);
+            x = width - (style.margin.right * this.#scale + this.#hMargin);
 
         if (isTop(style.alignment))
             y = style.margin.top * this.#scale + this.#vMargin;
         if (isCenterV(style.alignment))
-            y = this.height / 2;
+            y = height / 2;
         if (isBottom(style.alignment)) {
-            y = this.height - (style.margin.bottom * this.#scale + this.#vMargin);
+            y = height - (style.margin.bottom * this.#scale + this.#vMargin);
             dy = -1;
         }
         return [x, y, dy];
@@ -181,13 +182,12 @@ export class SubtitleRenderer {
     }
 
     render(ctx: CanvasRenderingContext2D) {
-        let boxes: Box[] = [];
-        // ctx.clearRect(0, 0, this.width, this.height);
+        const [width, height] = this.manager.physicalSize;
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.rect(this.#hMargin, this.#vMargin, 
-            this.width - 2 * this.#hMargin, this.height - 2 * this.#vMargin);
+            width - 2 * this.#hMargin, height - 2 * this.#vMargin);
         ctx.stroke();
 
         const styleFonts = new Map(this.#subs.styles.map((style) => {
@@ -199,6 +199,7 @@ export class SubtitleRenderer {
             return [style, `${style.styles.bold ? 'bold ' : ''} ${style.styles.italic ? 'italic ' : ''} ${cssSize}px ${fontFamily}`];
         }));
 
+        const boxes: Box[] = [];
         const reverseStyles = this.#subs.styles.toReversed();
         for (const ent of this.#currentEntries)
         for (const style of reverseStyles) {
@@ -212,9 +213,9 @@ export class SubtitleRenderer {
             ctx.font = styleFonts.get(style)!;
             ctx.fillStyle = style.color || 'white';
 
-            const width = this.width - this.#hMargin * 2 - 
+            const textWidth = width - this.#hMargin * 2 - 
                 (style.margin.left + style.margin.right) * this.#scale;
-            const lines = this.#breakWords(text, width, ctx);
+            const lines = this.#breakWords(text, textWidth, ctx);
             
             // loop for each line, starting from the bottom
             const [bx, by, dy] = this.#basePoint(style);

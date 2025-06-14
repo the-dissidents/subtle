@@ -43,9 +43,14 @@ pub enum MediaEvent<'a> {
         streams: Vec<StreamInfo>,
     },
     #[serde(rename_all = "camelCase")]
-    AudioStatus { length: usize, sample_rate: u32 },
+    AudioStatus { 
+        index: usize,
+        length: usize, 
+        sample_rate: u32 
+    },
     #[serde(rename_all = "camelCase")]
     VideoStatus {
+        index: usize,
         length: usize,
         framerate: f64,
         sample_aspect_ratio: f64,
@@ -199,6 +204,7 @@ pub fn open_video(
     log::debug!("open_video: {} {}", id, video_id);
 
     send(&channel, MediaEvent::VideoStatus {
+        index: ctx.stream_index(),
         length: ctx.length(),
         framerate: ctx.framerate().into(),
         sample_aspect_ratio: ctx.sample_aspect_ratio().into(),
@@ -228,6 +234,7 @@ pub fn open_video_sampler(
     log::debug!("open_video_sampler: {} {}", id, video_id);
 
     send(&channel, MediaEvent::VideoStatus {
+        index: ctx.stream_index(),
         length: ctx.length(),
         framerate: ctx.framerate().into(),
         sample_aspect_ratio: ctx.sample_aspect_ratio().into(),
@@ -257,6 +264,7 @@ pub fn open_audio(
     log::debug!("open_audio: {} {}", id, audio_id);
 
     send(&channel, MediaEvent::AudioStatus {
+        index: ctx.stream_index(),
         length: ctx.length(),
         sample_rate: ctx.sample_rate(),
     });
@@ -265,7 +273,7 @@ pub fn open_audio(
 #[tauri::command]
 pub fn open_audio_sampler(
     id: i32, audio_id: i32,
-    step: usize,
+    resolution: usize,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
@@ -276,14 +284,15 @@ pub fn open_audio_sampler(
     };
 
     let index = (audio_id > 0).then(|| audio_id as usize);
-    let ctx = match playback.open_audio_sampler(index, step) {
+    let ctx = match playback.open_audio_sampler(index, resolution) {
         Ok(_) => playback.audio().unwrap(),
         Err(e) => return send_error!(&channel, e.to_string()),
     };
 
-    log::debug!("open_audio_sampler: {} {} {}", id, audio_id, step);
+    log::debug!("open_audio_sampler: {} {} {}", id, audio_id, resolution);
 
     send(&channel, MediaEvent::AudioStatus {
+        index: ctx.stream_index(),
         length: ctx.length(),
         sample_rate: ctx.sample_rate(),
     });

@@ -28,8 +28,6 @@ export class TimelineLayout {
 
   requestedSampler = false;
   requestedLayout = false;
-  sampler: AudioSampler | null = null;
-  useSampler = true;
   #samplerMedia: MMedia | undefined;
 
   onLayout = new EventHost();
@@ -54,9 +52,7 @@ export class TimelineLayout {
     return sampler;
   }
 
-  constructor(
-    public readonly canvas: HTMLCanvasElement
-  ) {
+  constructor(public readonly canvas: HTMLCanvasElement) {
     this.manager = new CanvasManager(canvas);
     this.manager.onDisplaySizeChanged.bind(this, 
       (w, h) => this.#processDisplaySizeChanged(w, h));
@@ -68,13 +64,13 @@ export class TimelineLayout {
     
       this.#samplerMedia = await MMedia.open(rawurl);
       try {
-        this.sampler = await this.#makeSampler(audio);
+        Playback.sampler = await this.#makeSampler(audio);
       } catch (e) {
         await this.#samplerMedia.close();
         this.#samplerMedia = undefined;
         return;
       }
-      this.setScale(Math.max(this.width / this.sampler.duration, 10));
+      this.setScale(Math.max(this.width / Playback.duration, 10));
       this.setOffset(0);
       Playback.setPosition(0);
       this.requestedSampler = true;
@@ -82,20 +78,20 @@ export class TimelineLayout {
     });
 
     Playback.onClose.bind(this, async () => {
-      if (this.sampler == undefined)
+      if (Playback.sampler == undefined)
         return Debug.early('already closed');
       Debug.assert(this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed);
       await Debug.info('closing timeline');
-      await this.sampler.close();
+      await Playback.sampler.close();
       this.#samplerMedia = undefined;
-      this.sampler = null;
+      Playback.sampler = null;
       Playback.setPosition(0);
       this.manager.requestRender();
       await Debug.info('closed timeline');
     });
 
     Playback.onPositionChanged.bind(this, (pos) => {
-      if (!get(Playback.isLoaded)) {
+      if (!Playback.player) {
         const originalPos = pos;
         if (pos < 0) pos = 0;
         pos = Math.min(pos, this.maxPosition);
@@ -110,7 +106,7 @@ export class TimelineLayout {
 
     Playback.onSetAudioStream.bind(this, async (id) => {
       const sampler = await this.#makeSampler(id);
-      this.sampler = sampler;
+      Playback.sampler = sampler;
     });
 
     Source.onSubtitlesChanged.bind(this, (type) => {
@@ -130,8 +126,8 @@ export class TimelineLayout {
 
   // TODO: cache it
   get maxPosition() {
-    return this.sampler 
-      ? this.sampler.duration 
+    return Playback.sampler 
+      ? Playback.duration 
       : Math.max(0, ...Source.subs.entries.map((x) => x.end)) + 20;
   }
 
@@ -282,26 +278,26 @@ export class TimelineLayout {
   }
 
   async processSampler() {
-    if (!this.sampler || !this.useSampler) return;
+    if (!Playback.sampler) return;
   
     let start = this.offset;
     let end = this.offset + this.width / this.scale;
     const preload = Math.min(PRELOAD_MARGIN, (end - start) * PRELOAD_MARGIN_FACTOR);
-    if (this.sampler.isSampling) {
-      if (this.sampler.sampleProgress + preload < this.offset 
-       || this.sampler.sampleProgress > end + preload) 
-        this.sampler.tryCancelSampling();
-      // else if (this.sampler.sampleEnd < end + preload) {
-      //   this.sampler.extendSampling(end + preload);
+    if (Playback.sampler.isSampling) {
+      if (Playback.sampler.sampleProgress + preload < this.offset 
+       || Playback.sampler.sampleProgress > end + preload) 
+        Playback.sampler.tryCancelSampling();
+      // else if (Playback.sampler.sampleEnd < end + preload) {
+      //   Playback.sampler.extendSampling(end + preload);
       // }
     }
-    if (this.sampler.isSampling)
+    if (Playback.sampler.isSampling)
       return;
   
-    const resolution = this.sampler.intensityResolution;
+    const resolution = Playback.sampler.intensityResolution;
     const i = Math.floor(this.offset * resolution),
           i_end = Math.ceil(end * resolution);
-    const subarray = await this.sampler.intensityData(1, i, i_end);
+    const subarray = await Playback.sampler.intensityData(1, i, i_end);
     const gapStart = subarray.findIndex((x) => isNaN(x));
     if (Playback.isPlaying) {
       if (gapStart < 0) {
@@ -318,13 +314,13 @@ export class TimelineLayout {
   
     end += preload;
     if (start < 0) start = 0;
-    if (end > this.sampler.duration) end = this.sampler.duration;
+    if (end > Playback.duration) end = Playback.duration;
     if (end <= start) {
       Debug.debug(start, '>=', end);
       return;
     }
   
-    this.sampler.startSampling(start, end);
+    Playback.sampler.startSampling(start, end);
     this.manager.requestRender();
   }
 }

@@ -14,8 +14,6 @@ use log::warn;
 
 use crate::media::aggregation_tree::AggregationTree;
 
-const AUDIO_SAMPLER_RATE: u32 = 48000;
-
 #[derive(Debug)]
 pub enum MediaError {
     FFMpegError {
@@ -77,7 +75,7 @@ pub struct AudioPlayerFront {
 
 pub struct AudioSamplerFront {
     resampler: resampling::Context,
-    step: usize, scale: f64,
+    step: u32,
     intensities: AggregationTree<f32, fn(f32, f32) -> f32>,
 }
 
@@ -373,13 +371,11 @@ impl MediaPlayback {
     pub fn open_audio_sampler(
         &mut self,
         index: Option<usize>,
-        step: usize,
+        resolution: usize,
     ) -> Result<(), MediaError> {
         let base = self.create_audio_base(index)?;
 
-        let scale = AUDIO_SAMPLER_RATE as f64 / base.decoder.rate() as f64 / step as f64;
-        log::debug!("opening audio sampler: {} -> {} at {}; scale {}", 
-            base.decoder.rate(), AUDIO_SAMPLER_RATE, step, scale);
+        let step = base.decoder.rate().div_ceil(resolution as u32);
         let front = AudioFront::Sampler(AudioSamplerFront {
             resampler: check!(software::resampler(
                 (
@@ -390,18 +386,19 @@ impl MediaPlayback {
                 (
                     format::Sample::F32(format::sample::Type::Packed),
                     ChannelLayout::MONO,
-                    AUDIO_SAMPLER_RATE,
+                    base.decoder.rate(),
                 ),
             ))?,
             intensities: AggregationTree::new(
-                (base.length as f64 / scale).ceil() as usize,
+                base.length.div_ceil(step as usize),
                 |a, b| a.max(b),
                 f32::NAN,
             ),
-            step, scale
+            step
         });
 
         self.audio = Some(AudioContext { base, front });
+        log::debug!("opening audio sampler: ok");
         Ok(())
     }
 
@@ -536,9 +533,9 @@ impl AudioSamplerFront {
         let mut processed = frame::Audio::empty();
         check!(self.resampler.run(&frame.decoded, &mut processed))?;
 
-        let index = (frame.position as f64 * self.scale).floor();
+        let index = frame.position / self.step as i64;
         let mut index: usize = match index {
-            y if y >= 0.0 => y as usize,
+            y if y >= 0 => y as usize,
             _ => return Ok(())
         };
         if index >= self.intensities.length {
@@ -546,7 +543,7 @@ impl AudioSamplerFront {
         }
 
         let data: &[f32] = frame.decoded.plane(0);
-        let mut counter = 0;
+        let mut counter = frame.position as u32 % self.step;
         let mut sum: f32 = self.intensities.at(index);
         for sample in data {
             sum = sum.max(sample.abs());
@@ -738,7 +735,7 @@ impl VideoContext {
             .unwrap_or(decoded.packet().dts)
             .rescale(self.base.stream_timebase, self.base.pos_timebase);
         let time = f64::from(self.base.pos_timebase) * position as f64;
-        trace!("receive: got frame {}", position);
+        // trace!("receive: video frame {}", position);
 
         Ok(Some(DecodedVideoFrame {
             position,
@@ -747,9 +744,9 @@ impl VideoContext {
         }))
     }
 
-    // pub fn stream_index(&self) -> usize {
-    //     self.base.stream_i
-    // }
+    pub fn stream_index(&self) -> usize {
+        self.base.stream_i
+    }
 
     pub fn length(&self) -> usize {
         self.base.length

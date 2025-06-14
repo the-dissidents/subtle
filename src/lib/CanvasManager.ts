@@ -3,7 +3,6 @@ import { Debug } from "./Debug";
 import { translateWheelEvent, type TranslatedWheelEvent } from "./frontend/Frontend";
 import { EventHost } from "./details/EventHost";
 import { theme } from "./Theming.svelte";
-import { Basic } from "./Basic";
 
 const scrollerColorRgb = () => theme.isDark ? '255 255 255' : '0 0 0';
 

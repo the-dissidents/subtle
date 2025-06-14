@@ -79,29 +79,29 @@ where
         self.data[idx]
     }
 
-    /// Fills a range of leaf nodes with a single value.
-    ///
-    /// # Arguments
-    ///
-    /// * `value`: The value to fill the range with.
-    /// * `start`: The starting leaf index (inclusive).
-    /// * `end`: The ending leaf index (exclusive).
-    pub fn fill(&mut self, value: N, start: usize, end: usize) {
-        assert!(end >= start, "End index must be greater than or equal to start index");
-        if start == end {
-            return;
-        }
+    // /// Fills a range of leaf nodes with a single value.
+    // ///
+    // /// # Arguments
+    // ///
+    // /// * `value`: The value to fill the range with.
+    // /// * `start`: The starting leaf index (inclusive).
+    // /// * `end`: The ending leaf index (exclusive).
+    // pub fn fill(&mut self, value: N, start: usize, end: usize) {
+    //     assert!(end >= start, "End index must be greater than or equal to start index");
+    //     if start == end {
+    //         return;
+    //     }
 
-        let first_leaf_idx = self.leaf_start + start;
-        let last_leaf_idx_exclusive = self.leaf_start + end;
-        debug_assert!(last_leaf_idx_exclusive <= self.data.len(), "Fill range is out of bounds");
+    //     let first_leaf_idx = self.leaf_start + start;
+    //     let last_leaf_idx_exclusive = self.leaf_start + end;
+    //     debug_assert!(last_leaf_idx_exclusive <= self.data.len(), "Fill range is out of bounds");
 
-        for i in first_leaf_idx..last_leaf_idx_exclusive {
-            self.data[i] = value;
-        }
+    //     for i in first_leaf_idx..last_leaf_idx_exclusive {
+    //         self.data[i] = value;
+    //     }
 
-        self.propagate_up(first_leaf_idx, last_leaf_idx_exclusive - 1);
-    }
+    //     self.propagate_up(first_leaf_idx, last_leaf_idx_exclusive - 1);
+    // }
 
     pub fn get_leaf_level(&self) -> &[N] {
         &self.data[self.leaf_start..]
