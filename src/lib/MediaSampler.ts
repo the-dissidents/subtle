@@ -106,12 +106,11 @@ class DataRequest<T extends TypedArray>{
     }
 }
 
-export class AudioSampler {
+export class MediaSampler {
     #sampleEnd = 0;
     #sampleProgress = 0;
     #cancelling = false;
     #isSampling = false;
-
     #sampleLength?: number;
 
     onProgress?: () => void;
@@ -145,7 +144,7 @@ export class AudioSampler {
         await media.openAudioSampler(audio, resolution);
         await media.openVideoSampler(-1);
         
-        return new AudioSampler(media, resolution);
+        return new MediaSampler(media, resolution);
     }
 
     #initAudioData() {
@@ -207,7 +206,9 @@ export class AudioSampler {
     }
 
     async startSampling(from: number, to: number): Promise<void> {
-        Debug.assert(!this.#isSampling && !this.media.isClosed);
+        Debug.assert(!this.media.isClosed);
+        if (this.isSampling) return Debug.early('already sampling');
+
         if (to > this.media.duration)
             to = this.media.duration;
         Debug.assert(to > from);

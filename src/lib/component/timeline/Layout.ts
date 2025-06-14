@@ -1,5 +1,5 @@
 import { MMedia } from "../../API";
-import { AudioSampler } from "../../AudioSampler";
+import { MediaSampler } from "../../MediaSampler";
 import { CanvasManager } from "../../CanvasManager";
 import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
 import { ChangeType, Source } from "../../frontend/Source";
@@ -43,7 +43,7 @@ export class TimelineLayout {
 
   async #makeSampler(audio: number) {
     Debug.assert(this.#samplerMedia !== undefined);
-    const sampler = await AudioSampler.open(
+    const sampler = await MediaSampler.open(
       this.#samplerMedia, audio, 
       TimelineConfig.data.waveformResolution);
     sampler.onProgress = () => this.manager.requestRender();
