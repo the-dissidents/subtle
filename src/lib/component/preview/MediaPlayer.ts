@@ -12,6 +12,7 @@ import { EventHost } from "../../details/EventHost";
 import { MediaConfig } from "./Config";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
+import { Playback } from "../../frontend/Playback";
 const $_ = unwrapFunctionStore(_);
 
 export const MediaPlayerInterface = {
@@ -354,12 +355,12 @@ export class MediaPlayer {
     #requestPreload() {
         if (this.#requestedPreload) return;
         this.#requestedPreload = true;
-        Debug.trace('preloading');
+        // Debug.trace('preloading');
         const load = async () => {
             if (await this.#populateCache())
                 setTimeout(load, 0);
             else {
-                Debug.trace('preloading ends');
+                // Debug.trace('preloading ends');
                 this.#requestedPreload = false;
             }
         }
@@ -469,8 +470,19 @@ export class MediaPlayer {
         } else {
             // else, do the seeking and rebuild cache
             await this.media.waitUntilAvailable();
-            await this.media.seekVideo(position);
-            await Debug.trace(`setPositionFrame: seeking [${position}]`);
+            const prevKeyframe = await Playback.sampler?.getKeyframeBefore(position) ?? null;
+            if (prevKeyframe !== null) {
+                // FIXME: this is buggy so commented out
+                // if (this.#lastFrame && prevKeyframe < this.#lastFrame.position) {
+                //     await Debug.trace(`setPositionFrame: ${prevKeyframe} < ${this.#lastFrame.position}, no seeking performed`);
+                // } else {
+                    await this.media.seekVideo(prevKeyframe);
+                    await Debug.trace(`setPositionFrame: seeking [${position}, using ${prevKeyframe}]`);
+                // }
+            } else {
+                await this.media.seekVideo(position);
+                await Debug.trace(`setPositionFrame: seeking [${position}]`);
+            }
             await this.#clearCache();
             this.#requestPreload();
             this.#setPositionInProgress = false;

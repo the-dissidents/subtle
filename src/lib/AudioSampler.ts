@@ -202,6 +202,10 @@ export class AudioSampler {
         return await this.media.getVideoSamplerData(level, from, to);
     }
 
+    async getKeyframeBefore(pos: number) {
+        return await this.media.getKeyframeBefore(pos);
+    }
+
     async startSampling(from: number, to: number): Promise<void> {
         Debug.assert(!this.#isSampling && !this.media.isClosed);
         if (to > this.media.duration)

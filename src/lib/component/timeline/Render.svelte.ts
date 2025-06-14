@@ -141,6 +141,7 @@ export class TimelineRenderer {
   #renderWaveform(ctx: CanvasRenderingContext2D) {
     if (!Playback.sampler) return;
 
+    const yscroll = this.manager.scroll[1];
     let points: {x: number, y: number}[] = [];
     let lastGap = -1;
     ctx.fillStyle = PENDING_WAVEFORM_COLOR;
@@ -154,7 +155,7 @@ export class TimelineRenderer {
           points.push({x, y: 0});
         } else {
           if (lastGap >= 0) {
-            ctx.fillRect(lastGap, 0, x - lastGap, this.layout.height);
+            ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
             lastGap = -1;
           }
           points.push({x, y: 
@@ -162,17 +163,17 @@ export class TimelineRenderer {
         }
       });
     if (lastGap >= 0)
-      ctx.fillRect(lastGap, 0, drawEnd - lastGap, this.layout.height);
+      ctx.fillRect(lastGap, yscroll, drawEnd - lastGap, this.layout.height);
 
     const baseline = 
       (this.layout.height - TimelineLayout.HEADER_HEIGHT) / 2 + TimelineLayout.HEADER_HEIGHT;
     ctx.beginPath();
     ctx.moveTo(drawStart, baseline);
     points.forEach(
-      ({x, y}) => ctx.lineTo(x, baseline + 0.5 / devicePixelRatio + y));
+      ({x, y}) => ctx.lineTo(x, baseline + 0.5 / devicePixelRatio + y + yscroll));
     ctx.lineTo(drawEnd, baseline);
     points.reverse().forEach(
-      ({x, y}) => ctx.lineTo(x, baseline - 0.5 / devicePixelRatio - y));
+      ({x, y}) => ctx.lineTo(x, baseline - 0.5 / devicePixelRatio - y + yscroll));
     ctx.closePath();
     ctx.fillStyle = WAVEFORM_COLOR;
     ctx.fill();
@@ -188,12 +189,12 @@ export class TimelineRenderer {
         } else {
           if (lastGap >= 0) {
             ctx.fillStyle = "#6D66";
-            ctx.fillRect(lastGap, 0, x - lastGap, this.layout.height);
+            ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
             lastGap = -1;
           }
           if (value == 2) {
             ctx.fillStyle = "#66E6";
-            ctx.fillRect(x, 0, width, this.layout.height);
+            ctx.fillRect(x, yscroll, width, this.layout.height);
           }
         }
       }
