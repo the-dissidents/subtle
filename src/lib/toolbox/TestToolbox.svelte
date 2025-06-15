@@ -46,17 +46,7 @@ const command = new UICommand(() => '', [], {
     }))
   }))
 });
-
 </script>
-
-<button
-  onclick={async () => {
-    let path = await dialog.open();
-    if (!path) return;
-    await MAPI.testMediaPerformance(path);
-  }}>
-  test media performance
-</button>
 
 <button
   onclick={async () => {

@@ -5,6 +5,9 @@ description = "Cross-platform subtitle editor"
 authors = ["the_dissidents"]
 edition = "2021"
 
+[profile.release]
+debug = true
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
@@ -28,6 +31,12 @@ lazy_static = "1.5.0"
 time = "0.3.41"
 deranged = "=0.3.11"
 vsprintf = "2.0.0"
+
+[target.'cfg(windows)'.dependencies]
+ffmpeg-sys-next = { version = "7.1.0", features = ["build-lib-d3d11va"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+ffmpeg-sys-next = { version = "7.1.0", features = ["build-videotoolbox"] }
 
 [target.'cfg(not(windows))'.dependencies]
 pprof = { version = "0.14.0", features = ["flamegraph", "frame-pointer"] }

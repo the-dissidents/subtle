@@ -12,6 +12,7 @@ use log::debug;
 use log::trace;
 use log::warn;
 
+use crate::media::accel;
 use crate::media::aggregation_tree::AggregationTree;
 
 #[derive(Debug)]
@@ -102,7 +103,9 @@ pub struct VideoBase {
     sample_aspect_ratio: Rational,
     original_size: (u32, u32),
     length: usize,
+
     decoder: codec::decoder::Video,
+    accelerator: Option<accel::HardwareDecoder>
 }
 
 pub struct VideoPlayerFront {
@@ -212,8 +215,23 @@ impl MediaPlayback {
         ))?;
 
         // create decoder
-        let codecxt = check!(codec::Context::from_parameters(stream.parameters()))?;
-        let mut decoder = check!(codecxt.decoder().video())?;
+        let mut decoder = 
+            check!(codec::Context::from_parameters(stream.parameters()))?.decoder();
+
+        let accelerator = 
+            if cfg!(any(windows, target_os = "macos")) {
+                match accel::HardwareDecoder::create(
+                        if cfg!(windows) {"d3d11va"} else {"videotoolbox"}, 
+                        &mut decoder) {
+                    Ok(x) => Some(x),
+                    Err(e) => {
+                        debug!("error creating accelerator: {e}");
+                        None
+                    }
+                }
+            } else { None };
+
+        let mut decoder = check!(decoder.video())?;
         check!(decoder.set_parameters(stream.parameters()))?;
 
         let stream_avgfr = stream.avg_frame_rate();
@@ -227,13 +245,7 @@ impl MediaPlayback {
 
         let sample_aspect_ratio = match decoder.aspect_ratio() {
             Rational(0, _) => Rational(1, 1),
-            x => {
-                if f64::from(x) <= 0.0 {
-                    Rational(1, 1)
-                } else {
-                    x
-                }
-            }
+            x => if f64::from(x) <= 0.0 { Rational(1, 1) } else { x  }
         };
 
         if sample_aspect_ratio != Rational(1, 1) {
@@ -258,13 +270,14 @@ impl MediaPlayback {
             framerate: stream_rfr,
             sample_aspect_ratio,
             length,
-            decoder,
+            decoder, accelerator
         })
     }
 
     pub fn open_video(&mut self, index: Option<usize>) -> Result<(), MediaError> {
         let base = self.create_video_base(index)?;
-
+        log::debug!("format: {:?}", base.decoder.format());
+        
         let front = VideoFront::Player(VideoPlayerFront {
             original_format: base.decoder.format(),
             original_size: (base.decoder.width(), base.decoder.height()),
@@ -729,6 +742,12 @@ impl VideoContext {
             receive_frame_error => check!(receive_frame_error)?,
         }
 
+        if let Some(accel) = &self.base.accelerator {
+            let mut sw_frame = frame::Video::empty();
+            check!(accel.transfer_frame(&decoded, &mut sw_frame))?;
+            decoded = sw_frame;
+        }
+
         let position = decoded
             .pts()
             // fall back to packet's DTS if no pts available (as in AVI)
@@ -774,5 +793,43 @@ impl VideoContext {
 
     pub fn front_mut(&mut self) -> &mut VideoFront {
         &mut self.front
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Instant;
+
+    use crate::media::{accel, internal::Frame, MediaPlayback};
+
+    #[test]
+    fn performance() {
+        println!("list of available accelerators:");
+        for t in accel::HardwareDecoder::available_types() {
+            println!("-- {t}");
+        }
+
+        let path = "/Users/emf/Downloads/Little Boy (James Benning, 2025).mkv";
+        let mut playback = MediaPlayback::from_file(path).unwrap();
+        playback.open_video(None).unwrap();
+        playback.open_audio(None).unwrap();
+        println!("reading frames");
+        let start = Instant::now();
+        let mut i = 0;
+        let mut iv = 0;
+        let mut ia = 0;
+        while i < 10000 {
+            match playback.get_next().unwrap() {
+                Some(Frame::Video(_f)) => {
+                    iv += 1;
+                }
+                Some(Frame::Audio(_f)) => {
+                    ia += 1;
+                }
+                None => break,
+            }
+            i += 1;
+        }
+        println!("read {i} frames ({iv} video, {ia} audio) in {}s", start.elapsed().as_secs_f32());
     }
 }
