@@ -173,6 +173,8 @@
     "ui-font-family": "UI字体",
     "ui-font-family-d": "用逗号分隔列表指定优先级。包含空格的字体名称需要放在直引号（\"\"）里",
     "ui-font-size": "UI字号",
+    "use-hardware-acceleration": "使用硬件解码",
+    "use-hardware-acceleration-d": "让FFmpeg尽可能使用硬件加速（Windows上是D3D11VA，macOS上是videotoolbox）。在多数情况下，这实际上并不会带来可见的性能提升，所以一般不需要启用。",
     "use-system-theme": "使用系统主题",
     "waveform-resolution": "波形分辨率",
     "waveform-resolution-d": "每秒用于波形显示的采样点的数量；分辨率越高，加载越慢",

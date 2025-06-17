@@ -1,6 +1,7 @@
 extern crate ffmpeg_next as ffmpeg;
 
 use core::fmt;
+use ffmpeg::threading::Type;
 use serde::Serialize;
 use std::cmp;
 
@@ -200,7 +201,9 @@ impl MediaPlayback {
         self.input.duration() as f64 * f64::from(rescale::TIME_BASE)
     }
 
-    fn create_video_base(&self, index: Option<usize>) -> Result<VideoBase, MediaError> {
+    fn create_video_base(
+        &self, index: Option<usize>, accel: bool
+    ) -> Result<VideoBase, MediaError> {
         let index = match index {
             Some(x) => x,
             None => self
@@ -218,14 +221,29 @@ impl MediaPlayback {
         let mut decoder = 
             check!(codec::Context::from_parameters(stream.parameters()))?.decoder();
 
+        decoder.set_threading(codec::threading::Config { 
+            kind: Type::Frame, 
+            count: num_cpus::get()
+        });
+        debug!("create_video_base: using {} threads", num_cpus::get());
+
+        let accelerator_name = 
+            if !accel { "" }
+            else if cfg!(windows) { "d3d11va"}
+            else if cfg!(target_os = "macos") { "videotoolbox" }
+            else { "" };
         let accelerator = 
-            if cfg!(any(windows, target_os = "macos")) {
+            if accel::HardwareDecoder::available_types()
+                .iter().any(|x| x == accelerator_name)
+            {
                 match accel::HardwareDecoder::create(
-                        if cfg!(windows) {"d3d11va"} else {"videotoolbox"}, 
-                        &mut decoder) {
-                    Ok(x) => Some(x),
+                        accelerator_name, &mut decoder) {
+                    Ok(x) => {
+                        debug!("create_video_base: using accelerator: {}", x.name());
+                        Some(x)
+                    },
                     Err(e) => {
-                        debug!("error creating accelerator: {e}");
+                        debug!("create_video_base: error creating accelerator: {e}");
                         None
                     }
                 }
@@ -238,8 +256,8 @@ impl MediaPlayback {
         let stream_rfr = stream.rate();
         let decoder_fr = decoder.frame_rate();
         debug!(
-            "video: avgfr={stream_avgfr}:rfr={stream_rfr}; decoder: fr={:?}",
-            decoder_fr
+            "create_video_base: {:?}; avgfr={stream_avgfr}:rfr={stream_rfr}; decoder: fr={:?}",
+            decoder.format(), decoder_fr
         );
         // we decide to use r_frame_rate
 
@@ -249,7 +267,7 @@ impl MediaPlayback {
         };
 
         if sample_aspect_ratio != Rational(1, 1) {
-            debug!("note: SAR is {:?}", sample_aspect_ratio);
+            debug!("create_video_base: note: SAR is {:?}", sample_aspect_ratio);
         }
 
         let length: usize = match stream.duration() {
@@ -274,9 +292,10 @@ impl MediaPlayback {
         })
     }
 
-    pub fn open_video(&mut self, index: Option<usize>) -> Result<(), MediaError> {
-        let base = self.create_video_base(index)?;
-        log::debug!("format: {:?}", base.decoder.format());
+    pub fn open_video(
+        &mut self, index: Option<usize>, accel: bool
+    ) -> Result<(), MediaError> {
+        let base = self.create_video_base(index, accel)?;
         
         let front = VideoFront::Player(VideoPlayerFront {
             original_format: base.decoder.format(),
@@ -301,8 +320,10 @@ impl MediaPlayback {
         Ok(())
     }
 
-    pub fn open_video_sampler(&mut self, index: Option<usize>) -> Result<(), MediaError> {
-        let base = self.create_video_base(index)?;
+    pub fn open_video_sampler(
+        &mut self, index: Option<usize>, accel: bool
+    ) -> Result<(), MediaError> {
+        let base = self.create_video_base(index, accel)?;
 
         let front = VideoFront::Sampler(VideoSamplerFront {
             keyframes: AggregationTree::new(base.length, |a, b| cmp::max(a, b), 0),
@@ -803,6 +824,12 @@ mod tests {
     use crate::media::{accel, internal::Frame, MediaPlayback};
 
     #[test]
+    fn configuration() {
+        ffmpeg::init().unwrap();
+        println!("{}", ffmpeg::util::configuration());
+    }
+
+    #[test]
     fn performance() {
         println!("list of available accelerators:");
         for t in accel::HardwareDecoder::available_types() {
@@ -811,7 +838,7 @@ mod tests {
 
         let path = "/Users/emf/Downloads/Little Boy (James Benning, 2025).mkv";
         let mut playback = MediaPlayback::from_file(path).unwrap();
-        playback.open_video(None).unwrap();
+        playback.open_video(None, true).unwrap();
         playback.open_audio(None).unwrap();
         println!("reading frames");
         let start = Instant::now();

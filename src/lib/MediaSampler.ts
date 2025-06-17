@@ -1,5 +1,6 @@
 import { MMedia } from "./API";
 import { Basic } from "./Basic";
+import { InterfaceConfig } from "./config/Groups";
 import { Debug } from "./Debug";
 
 type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Uint8ClampedArray | Float32Array | Float64Array;
@@ -142,7 +143,7 @@ export class MediaSampler {
 
     static async open(media: MMedia, audio: number, resolution: number) {
         await media.openAudioSampler(audio, resolution);
-        await media.openVideoSampler(-1);
+        await media.openVideoSampler(-1, InterfaceConfig.data.useHwaccel);
         
         return new MediaSampler(media, resolution);
     }

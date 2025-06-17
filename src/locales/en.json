@@ -173,6 +173,8 @@
     "ui-font-family": "UI font family",
     "ui-font-family-d": "Specify fallbacks with a comma-separated list, as in CSS. Font names containing spaces should be wrapped in straight quotes (\"\").",
     "ui-font-size": "UI font size",
+    "use-hardware-acceleration": "use hardware decoding",
+    "use-hardware-acceleration-d": "Tell FFmpeg to use hardware acceleration (D3D11VA on Windows, videotoolbox on macOS) for decoding when possible. In most cases this does NOT provide a visible speedup and you don't need to enable it.",
     "use-system-theme": "use system theme",
     "waveform-resolution": "waveform resolution",
     "waveform-resolution-d": "The number of sample point per second for the waveform display. Larger value results in slower loading.",

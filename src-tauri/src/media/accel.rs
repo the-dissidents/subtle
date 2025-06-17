@@ -6,7 +6,8 @@ use std::{ffi::{c_void, CStr, CString}, ptr::{null, null_mut}};
 use crate::media::internal::MediaError;
 
 pub struct HardwareDecoder {
-    device_ctx: *mut AVBufferRef
+    device_ctx: *mut AVBufferRef,
+    name: String
 }
 
 struct GetFormatCallbackContext {
@@ -46,12 +47,16 @@ impl HardwareDecoder {
 
     pub fn create(name: &str, cxt: &mut Context) -> Result<HardwareDecoder, MediaError> {
         unsafe {
-            let cname = CString::new(name).unwrap();
-            let hwtype = av_hwdevice_find_type_by_name(cname.as_ptr());
+            let hwtype = 
+                av_hwdevice_find_type_by_name(CString::new(name).unwrap().as_ptr());
             if hwtype == AVHWDeviceType::AV_HWDEVICE_TYPE_NONE {
                 return Err(MediaError::InternalError(
                     format!("device not supported: {}", name).to_owned()));
             }
+            let name = 
+                CStr::from_ptr(av_hwdevice_get_type_name(hwtype))
+                .to_str().unwrap().to_owned();
+
             let codec = cxt.codec()
                 .ok_or(MediaError::InternalError("no codec found".to_owned()))?;
             let pixel_format = {
@@ -84,7 +89,7 @@ impl HardwareDecoder {
             }
             (*cxt.as_mut_ptr()).hw_device_ctx = av_buffer_ref(device_ctx) ;
 
-            Ok(HardwareDecoder { device_ctx })
+            Ok(HardwareDecoder { device_ctx, name })
         }
     }
 
@@ -95,6 +100,10 @@ impl HardwareDecoder {
                 _ => Ok(())
             }
         }
+    }
+
+    pub fn name(&self) -> String {
+        return self.name.clone();
     }
 }
 

@@ -13,6 +13,7 @@ import { MediaConfig } from "./Config";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Playback } from "../../frontend/Playback";
+import { InterfaceConfig } from "../../config/Groups";
 const $_ = unwrapFunctionStore(_);
 
 export const MediaPlayerInterface = {
@@ -89,7 +90,7 @@ export class MediaPlayer {
         let videoStatus: VideoStatus;
         let audioStatus: AudioStatus;
         try {
-            videoStatus = await media.openVideo(-1);
+            videoStatus = await media.openVideo(-1, InterfaceConfig.data.useHwaccel);
             audioStatus = await media.openAudio(audio);
             await Debug.debug('VideoPlayer: opened media');
         } catch (e) {
@@ -240,8 +241,8 @@ export class MediaPlayer {
         this.#videoCache = [];
         this.#preloadEOF = false;
         this.#playEOF = false;
-        this.#audioHead = -1;
-        this.#audioTail = -1;
+        this.#audioHead = undefined;
+        this.#audioTail = undefined;
         await this.#postAudioMessage({ type: 'clearBuffer' });
     }
 
@@ -384,21 +385,10 @@ export class MediaPlayer {
         this.#requestedSetPositionTarget = position;
         if (first) {
             (async () => {
-                let pos = this.#requestedSetPositionTarget;
-                Debug.assert(pos >= 0);
                 if (this.#playing) await this.stop();
-
-                // wait until target stops changing
-                while (true) {
-                    if (this.#requestedSetPositionTarget == pos 
-                        && !this.#setPositionInProgress) break;
-                    pos = this.#requestedSetPositionTarget;
-                    Debug.assert(pos >= 0);
-                    Debug.trace('delaying forceSetPositionFrame;', 
-                        this.#setPositionInProgress, pos);
-                    await Basic.wait(10);
-                }
-
+                await Basic.waitUntil(() => !this.#setPositionInProgress);
+                const pos = this.#requestedSetPositionTarget;
+                if (pos < 0) return;
                 this.#requestedSetPositionTarget = -1;
                 await this.forceSetPositionFrame(pos, opt);
             })();
@@ -428,63 +418,64 @@ export class MediaPlayer {
             await Basic.waitUntil(() => !this.#setPositionInProgress);
         }
         this.#setPositionInProgress = true;
-        
         this.#requestedPreload = false;
-        if (this.#populatingInProgress) {
-            await Debug.trace('forceSetPositionFrame: waiting for cache population to finish');
-            await Basic.waitUntil(() => !this.#populatingInProgress);
-        }
-
-        position = Math.max(0, Math.floor(position));
-        const framerate = this.media.video!.framerate;
-        const samplerate = this.media.audio!.sampleRate;
-        this.#fallbackTime = position / framerate;
-        this.#preloadEOF = false;
-        this.#playEOF = false;
-        if (opt?.imprecise)
-            this.#seeking = undefined;
-        else
-            this.#seeking = { target: position, nSkippedAudio: 0, nSkippedVideo: 0 };
-        if (this.#playing) await this.stop();
-
-        // check if target position is within cache
-        if (video.length > 0 
-         && position >= video[0].position && position <= video.at(-1)!.position
-        ) {
-            if (position == video[0].position) return;
-            await Debug.trace('forceSetPositionFrame: shifting', 
-                position, video[0].position, video.at(-1)!.position);
-            while (position > video[0].position)
-                video.shift();
-            await this.#postAudioMessage({ type: 'shiftUntil', 
-                position: position / framerate * samplerate });
-
-            this.requestRender();
-            this.#requestPreload();
-            this.#setPositionInProgress = false;
-            MediaPlayerInterface.onPlayback.dispatch(video[0].time);
-            Interface.setStatus($_('msg.seeked-to-frame-cached', { values: {
-                time: video[0].time.toFixed(3), 
-                pos: video[0].position
-            } }));
-        } else {
-            // else, do the seeking and rebuild cache
-            await this.media.waitUntilAvailable();
-            const prevKeyframe = await Playback.sampler?.getKeyframeBefore(position) ?? null;
-            if (prevKeyframe !== null) {
-                // FIXME: this is buggy so commented out
-                // if (this.#lastFrame && prevKeyframe < this.#lastFrame.position) {
-                //     await Debug.trace(`setPositionFrame: ${prevKeyframe} < ${this.#lastFrame.position}, no seeking performed`);
-                // } else {
-                    await this.media.seekVideo(prevKeyframe);
-                    await Debug.trace(`setPositionFrame: seeking [${position}, using ${prevKeyframe}]`);
-                // }
-            } else {
-                await this.media.seekVideo(position);
-                await Debug.trace(`setPositionFrame: seeking [${position}]`);
+        
+        try {
+            if (this.#populatingInProgress) {
+                await Debug.trace('forceSetPositionFrame: waiting for cache population to finish');
+                await Basic.waitUntil(() => !this.#populatingInProgress);
             }
-            await this.#clearCache();
-            this.#requestPreload();
+
+            position = Math.max(0, Math.floor(position));
+            const framerate = this.media.video!.framerate;
+            const samplerate = this.media.audio!.sampleRate;
+            this.#fallbackTime = position / framerate;
+            this.#preloadEOF = false;
+            this.#playEOF = false;
+            if (opt?.imprecise)
+                this.#seeking = undefined;
+            else
+                this.#seeking = { target: position, nSkippedAudio: 0, nSkippedVideo: 0 };
+            if (this.#playing) await this.stop();
+
+            // check if target position is within cache
+            if (video.length > 0 
+             && position >= video[0].position && position <= video.at(-1)!.position
+            ) {
+                if (position == video[0].position) return;
+                await Debug.trace('forceSetPositionFrame: shifting', 
+                    position, video[0].position, video.at(-1)!.position);
+                while (position > video[0].position)
+                    video.shift();
+                await this.#postAudioMessage({ type: 'shiftUntil', 
+                    position: position / framerate * samplerate });
+
+                this.requestRender();
+                this.#requestPreload();
+                MediaPlayerInterface.onPlayback.dispatch(video[0].time);
+                Interface.setStatus($_('msg.seeked-to-frame-cached', { values: {
+                    time: video[0].time.toFixed(3), 
+                    pos: video[0].position
+                } }));
+            } else {
+                // else, do the seeking and rebuild cache
+                const prevKeyframe = await Playback.sampler?.getKeyframeBefore(position) ?? null;
+                await this.media.waitUntilAvailable();
+                if (prevKeyframe !== null) {
+                    await this.media.seekVideo(prevKeyframe);
+                    await Debug.debug(`setPositionFrame: seeking [${position}, using ${prevKeyframe}]`);
+                } else {
+                    await this.media.seekVideo(position);
+                    await Debug.debug(`setPositionFrame: seeking [${position}]`);
+                }
+                await this.#clearCache();
+                await this.media.waitUntilAvailable();
+                const frame = await this.media.skipUntil(
+                    position, Math.floor(position / framerate * samplerate));
+                this.#receiveFrame(frame);
+                this.#requestPreload();
+            }
+        } finally {
             this.#setPositionInProgress = false;
         }
     }
@@ -576,7 +567,7 @@ export class MediaPlayer {
 
         const video = this.#videoCache;
         // should make more sense once we implement a better scheduling
-        const tolerance = 1 / this.media.video!.framerate;
+        const tolerance = 2 / this.media.video!.framerate;
 
         const position = this.#audioHead;
         while (position !== undefined) {

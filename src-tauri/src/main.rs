@@ -75,6 +75,7 @@ fn main() {
             media::open_video_sampler,
             media::seek_audio,
             media::seek_video,
+            media::skip_until,
             media::sample_until,
             media::get_next_frame_data,
             media::get_audio_sampler_data,

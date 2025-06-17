@@ -279,25 +279,25 @@ export class MMedia {
         return this.#audio;
     }
 
-    async openVideo(videoId: number) {
+    async openVideo(videoId: number, accel: boolean) {
         Debug.assert(!this.#destroyed);
         this.#video = await new Promise<VideoStatus>((resolve, reject) => {
             let channel = createChannel('openVideo', {
                 videoStatus: (data) => resolve(data)
             }, reject);
-            invoke('open_video', {id: this.id, videoId, channel});
+            invoke('open_video', {id: this.id, videoId, accel, channel});
         });
         this.#outSize = [...this.#video.size];
         return this.#video;
     }
 
-    async openVideoSampler(videoId: number) {
+    async openVideoSampler(videoId: number, accel: boolean) {
         Debug.assert(!this.#destroyed);
         this.#video = await new Promise<VideoStatus>((resolve, reject) => {
             let channel = createChannel('openVideoSampler', {
                 videoStatus: (data) => resolve(data)
             }, reject);
-            invoke('open_video_sampler', {id: this.id, videoId, channel});
+            invoke('open_video_sampler', {id: this.id, videoId, accel, channel});
         });
         return this.#video;
     }
@@ -411,6 +411,33 @@ export class MMedia {
             this.#currentJobs -= 1;
         }
     }
+
+    async skipUntil(videoPosition: number, audioPosition: number) {
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
+        try {
+            return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
+                channel = createChannel('skipUntilVideoFrame', { 
+                    'EOF': () => {
+                        Debug.debug('at eof');
+                        this.#eof = true;
+                        resolve(null);
+                    }
+                }, reject);
+                invoke<ArrayBuffer>('skip_until', { 
+                    id: this.id, videoPosition, audioPosition, channel 
+                }).then((x) => {
+                    if (x.byteLength > 0)
+                        resolve(this.#readFrameData(x))
+                });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
 
     async getKeyframeBefore(pos: number) {
         Debug.assert(!this.#destroyed);

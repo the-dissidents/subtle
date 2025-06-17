@@ -83,7 +83,13 @@ export const InterfaceConfig = new PublicConfigGroup(
             type: 'boolean',
             description: () => $_('config.twinkle-status-bar-d'),
             default: true
-        }
+        },
+        useHwaccel: {
+            localizedName: () => $_('config.use-hardware-acceleration'),
+            description: () => $_('config.use-hardware-acceleration-d'),
+            type: 'boolean',
+            default: false
+        },
     });
 MainConfig.addGroup('interface', InterfaceConfig);
 

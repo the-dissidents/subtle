@@ -3,6 +3,7 @@ extern crate ffmpeg_next as ffmpeg;
 use internal::{Frame, StreamInfo};
 use serde::Serialize;
 use std::collections::HashMap;
+use std::i64;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::ipc::{self, Channel, InvokeResponseBody, Response};
@@ -189,7 +190,7 @@ pub fn open_media(state: State<Mutex<PlaybackRegistry>>, path: &str, channel: Ch
 
 #[tauri::command]
 pub fn open_video(
-    id: i32, video_id: i32,
+    id: i32, video_id: i32, accel: bool,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
@@ -200,7 +201,7 @@ pub fn open_video(
     };
 
     let index = (video_id > 0).then(|| video_id as usize);
-    let ctx = match playback.open_video(index) {
+    let ctx = match playback.open_video(index, accel) {
         Ok(_) => playback.video().unwrap(),
         Err(e) => return send_error!(&channel, e.to_string()),
     };
@@ -219,7 +220,7 @@ pub fn open_video(
 
 #[tauri::command]
 pub fn open_video_sampler(
-    id: i32, video_id: i32,
+    id: i32, video_id: i32, accel: bool,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
@@ -230,7 +231,7 @@ pub fn open_video_sampler(
     };
 
     let index = (video_id > 0).then(|| video_id as usize);
-    let ctx = match playback.open_video_sampler(index) {
+    let ctx = match playback.open_video_sampler(index, accel) {
         Ok(_) => playback.video().unwrap(),
         Err(e) => return send_error!(&channel, e.to_string()),
     };
@@ -345,6 +346,31 @@ pub fn seek_video(
 }
 
 #[tauri::command]
+pub fn skip_until(
+    id: i32,
+    video_position: i64,
+    audio_position: i64,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) -> Result<ipc::Response, ()> {
+    let mut ap = state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => {
+            send_invalid_id(&channel);
+            return Err(());
+        }
+    };
+    loop {
+        if let Some(data) = 
+            send_next_frame_data(playback, video_position, audio_position, &channel)
+        {
+            return data;
+        }
+    }
+}
+
+#[tauri::command]
 pub fn get_next_frame_data(
     id: i32,
     state: State<Mutex<PlaybackRegistry>>,
@@ -358,48 +384,65 @@ pub fn get_next_frame_data(
             return Err(());
         }
     };
+    send_next_frame_data(playback, -1, -1, &channel).unwrap()
+}
 
+fn send_next_frame_data(
+    playback: &mut MediaPlayback,
+    video_position: i64,
+    audio_position: i64,
+    channel: &Channel<MediaEvent>
+) -> Option<Result<ipc::Response, ()>> {
     match playback.get_next() {
         Ok(Some(Frame::Video(f))) => {
+            if f.position < video_position {
+                return None;
+            }
+
             match playback.video_mut().unwrap().front_mut() {
                 VideoFront::Player(p) => 
                     match p.process(f) {
-                        Ok(f) => return send_video_frame(f),
+                        Ok(f) => return Some(send_video_frame(f)),
                         Err(e) => {
                             send_error!(&channel, e.to_string());
-                            return Err(());
+                            return Some(Err(()));
                         }
                     }
                 VideoFront::Sampler(_) => {
                     send_error!(&channel, "video opened as sampler");
-                    return Err(());
+                    return Some(Err(()));
                 }
             }
         },
         Ok(Some(Frame::Audio(f))) => {
+            if f.position < audio_position {
+                return None;
+            }
+
             match playback.audio_mut().unwrap().front_mut() {
                 AudioFront::Player(p) => 
                     match p.process(f) {
-                        Ok(f) => return send_audio_frame(f),
+                        Ok(f) => return Some(send_audio_frame(f)),
                         Err(e) => {
                             send_error!(&channel, e.to_string());
-                            return Err(());
+                            return Some(Err(()));
                         }
                     }
                 AudioFront::Sampler(_) => {
                     send_error!(&channel, "audio opened as sampler");
-                    return Err(());
+                    return Some(Err(()));
                 }
             }
         },
         Ok(None) => {
             send(&channel, MediaEvent::EOF);
+            return Some(Err(()));
         }
         Err(e) => {
             send_error!(&channel, e.to_string());
+            return Some(Err(()));
         }
-    };
-    Ok(Response::new(InvokeResponseBody::Raw(vec![])))
+    }
 }
 
 /**

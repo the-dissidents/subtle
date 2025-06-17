@@ -1,7 +1,7 @@
 // @ts-check
 /// <reference types="./AudioWorklet.d.ts" />
 
-import type { AudioFrameData } from "../API";
+import type { AudioFrameData } from "../../../API";
 
 export type AudioInputData = {
     type: 'clearBuffer' | 'suspend' | 'play'
