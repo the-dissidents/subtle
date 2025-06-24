@@ -589,7 +589,7 @@ impl AudioSamplerFront {
         if let Some(sd) = sampler_data.as_mut() {
             match sd.start + sd.intensity.len() {
                 0 => sd.start = index_start,
-                x if x == index_start - 1 => drop(sd.intensity.pop()),
+                x if x == index_start + 1 => drop(sd.intensity.pop()),
                 x if x == index_start => (),
                 x => return Err(MediaError::InternalError(format!(
                     "unexpected {x}, expecting {index_start}")))

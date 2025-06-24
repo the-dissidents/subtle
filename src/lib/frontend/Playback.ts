@@ -7,6 +7,7 @@ import { MediaPlayerInterface, MediaPlayer, type SetPositionOptions } from "../c
 import { EventHost } from "../details/EventHost";
 import { Overridable } from "../details/Overridable.svelte";
 import type { MediaSampler } from "../MediaSampler";
+import type { MediaSampler2 } from "../component/timeline/MediaSampler2";
 
 export type PlayArea = {
     start: number | undefined,
@@ -51,7 +52,7 @@ export const Playback = {
     get isPlaying() { return this.player?.isPlaying ?? false; },
 
     player: null as MediaPlayer | null,
-    sampler: null as MediaSampler | null,
+    sampler: null as MediaSampler2 | null,
 
     playArea: new Overridable<PlayArea>({
         start: undefined,

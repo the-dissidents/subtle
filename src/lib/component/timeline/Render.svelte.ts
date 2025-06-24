@@ -147,7 +147,7 @@ export class TimelineRenderer {
     ctx.fillStyle = PENDING_WAVEFORM_COLOR;
     let {drawStart, drawEnd} = this.#drawAggregation(
       Playback.sampler.intensityResolution, 
-      (a, b, c) => Playback.sampler!.intensity.get(a, b, c),
+      (a, b, c) => Playback.sampler!.intensityData(a, b, c),
       (x, _, value) => {
         if (isNaN(value)) {
           if (lastGap < 0) lastGap = x;
@@ -181,7 +181,7 @@ export class TimelineRenderer {
     lastGap = -1;
     this.#drawAggregation(
       Playback.sampler.keyframeResolution,
-      (a, b, c) => Playback.sampler!.keyframes.get(a, b, c),
+      (a, b, c) => Playback.sampler!.keyframeData(a, b, c),
       (x, width, value) => {
         if (value == 0) {
           if (lastGap < 0) lastGap = x;

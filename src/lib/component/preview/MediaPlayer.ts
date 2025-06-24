@@ -459,15 +459,16 @@ export class MediaPlayer {
                 } }));
             } else {
                 // else, do the seeking and rebuild cache
-                const prevKeyframe = await Playback.sampler?.getKeyframeBefore(position) ?? null;
+                // const prevKeyframe = await Playback.sampler?.getKeyframeBefore(position) ?? null;
                 await this.media.waitUntilAvailable();
-                if (prevKeyframe !== null) {
-                    await this.media.seekVideo(prevKeyframe);
-                    await Debug.debug(`setPositionFrame: seeking [${position}, using ${prevKeyframe}]`);
-                } else {
-                    await this.media.seekVideo(position);
-                    await Debug.debug(`setPositionFrame: seeking [${position}]`);
-                }
+                // if (prevKeyframe !== null) {
+                //     await this.media.seekVideo(prevKeyframe);
+                //     await Debug.debug(`setPositionFrame: seeking [${position}, using ${prevKeyframe}]`);
+                // } else {
+                //     await this.media.seekVideo(position);
+                //     await Debug.debug(`setPositionFrame: seeking [${position}]`);
+                // }
+                await this.media.seekVideo(position);
                 await this.#clearCache();
                 await this.media.waitUntilAvailable();
                 const frame = await this.media.skipUntil(
@@ -485,7 +486,7 @@ export class MediaPlayer {
         if (this.#playEOF) return;
         const pos = this.currentPosition;
         if (pos === null) {
-            await Debug.warn('requestNextFrame: invalid position');
+            await Debug.warn('requestNextFrame: currentPosition is null');
             return;
         }
         this.requestSetPositionFrame(pos + 1);
@@ -495,7 +496,7 @@ export class MediaPlayer {
         Debug.assert(!this.media.isClosed);
         const pos = this.currentPosition;
         if (pos === null) {
-            await Debug.warn('requestPreviousFrame: invalid position');
+            await Debug.warn('requestPreviousFrame: currentPosition is null');
             return;
         }
         this.requestSetPositionFrame(pos - 1);

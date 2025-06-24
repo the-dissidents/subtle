@@ -8,6 +8,7 @@ import { Playback } from "../../frontend/Playback";
 import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { TimelineConfig } from "./Config";
 import { EventHost } from "../../details/EventHost";
+import { MediaSampler2 } from "./MediaSampler2";
 
 const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
@@ -42,7 +43,7 @@ export class TimelineLayout {
 
   async #makeSampler(audio: number) {
     Debug.assert(this.#samplerMedia !== undefined);
-    const sampler = await MediaSampler.open(
+    const sampler = await MediaSampler2.open(
       this.#samplerMedia, audio, 
       TimelineConfig.data.waveformResolution);
     sampler.onProgress = () => this.manager.requestRender();
@@ -286,17 +287,16 @@ export class TimelineLayout {
       if (Playback.sampler.sampleProgress + preload < this.offset 
        || Playback.sampler.sampleProgress > end + preload) 
         Playback.sampler.tryCancelSampling();
-      // else if (Playback.sampler.sampleEnd < end + preload) {
-      //   Playback.sampler.extendSampling(end + preload);
-      // }
-    }
-    if (Playback.sampler.isSampling)
+      else if (Playback.sampler.sampleEnd < end + preload) {
+        Playback.sampler.extendSampling(end + preload);
+      }
       return;
+    }
   
     const resolution = Playback.sampler.intensityResolution;
     const i = Math.floor(this.offset * resolution),
           i_end = Math.ceil(end * resolution);
-    const subarray = await Playback.sampler.intensityData(1, i, i_end);
+    const subarray = Playback.sampler.intensityData(1, i, i_end);
     const gapStart = subarray.findIndex(
       // FIXME: the following is a desperate but seeming effective hack to get the sampler working 
       // despite those one-frame gaps popping up; it's definitely not serious

@@ -4,7 +4,7 @@ import { InterfaceConfig } from "../../config/Groups";
 import { Debug } from "../../Debug";
 import { AggregationTree } from "../../details/AggregationTree";
 
-export class Sampler {
+export class MediaSampler2 {
     #sampleLength: number;
 
     #sampleEnd = 0;
@@ -22,8 +22,8 @@ export class Sampler {
     /** points per second */
     get intensityResolution() { return this.media.audio!.sampleRate / this.#sampleLength; }
     get isSampling() { return this.#isSampling; }
-    get sampleEnd() { return this.#sampleEnd; }
-    get sampleProgress() { return this.#sampleProgress; }
+    get sampleEnd() { return this.#sampleEnd / this.media.audio!.sampleRate; }
+    get sampleProgress() { return this.#sampleProgress / this.media.audio!.sampleRate; }
 
     intensityData(level: number, from: number, to: number) {
         return this.#intensity.getLevel(level).subarray(from, to);
@@ -53,7 +53,7 @@ export class Sampler {
         await media.openAudioSampler(audio, resolution);
         await media.openVideoSampler(-1, InterfaceConfig.data.useHwaccel);
         
-        return new Sampler(media, resolution);
+        return new MediaSampler2(media, resolution);
     }
 
     #initAudioData() {
@@ -104,8 +104,8 @@ export class Sampler {
     }
 
     async startSampling(from: number, to: number): Promise<void> {
-        Debug.assert(!this.#isSampling && !this.media.isClosed);
-        if (this.isClosing) return;
+        Debug.assert(!this.media.isClosed);
+        if (this.isSampling) return Debug.early('already sampling');
 
         const sampleRate = this.media.audio!.sampleRate;
         const length = this.media.audio!.length;
@@ -113,50 +113,48 @@ export class Sampler {
         let b = Math.floor(to * sampleRate);
         if (b > length) b = length;
         Debug.assert(b > a);
-        
-        const framerate = this.media.video!.framerate;
-        const videoPos = Math.floor(from * framerate);
-        const prevKeyframe = await this.media.getKeyframeBefore(videoPos);
-        await this.media.waitUntilAvailable();
-        if (this.isClosing) return;
-        if (prevKeyframe === null) {
-            await Debug.debug(`startSampling: seeking to [${videoPos}]`);
-            await this.media.seekVideo(videoPos);
-        } else if (this.#sampleProgress > videoPos / framerate
-                || this.#sampleProgress < prevKeyframe / framerate)
-        {
-            await Debug.debug(`startSampling: seeking to [${videoPos}, using ${prevKeyframe}]`);
-            await this.media.seekVideo(prevKeyframe);
-        }
 
         this.#isSampling = true;
         this.#cancelling = false;
         this.#sampleEnd = b;
-        Debug.debug('start sampling', from, to);
-        Debug.trace('sampling', a, b);
+        
+        const framerate = this.media.video!.framerate;
+        const videoPos = Math.max(0, Math.floor(from * framerate - 1));
+        const prevKeyframe = await this.media.getKeyframeBefore(videoPos);
+        await this.media.waitUntilAvailable();
+        if (this.isClosing) return;
+        if (prevKeyframe === null
+         || this.#sampleProgress > videoPos / framerate
+         || this.#sampleProgress < prevKeyframe / framerate)
+        {
+            await Debug.debug(`startSampling: ${from} ${to} ${a} ${b}; seeking to [${videoPos}]`);
+            await this.media.seekVideo(videoPos);
+        } else {
+            Debug.debug(`startSampling: ${from} ${to} ${a} ${b}`);
+        }
 
         let doSampling = async () => {
             await this.media.waitUntilAvailable();
             if (this.isClosing) return;
             const result = await this.media.sampleAutomatic2(20);
+            this.#sampleProgress = result.audio.position;
             this.#intensity.set(result.audio.intensity, result.audio.start);
             this.#keyframes.set(result.video.keyframes, result.video.start);
             this.onProgress?.();
-
-            this.#sampleProgress = result.audio.position;
             if (result.isEof) {
                 Debug.debug(`sampling done upon EOF`);
                 this.#isSampling = false;
                 return;
             }
-            if (this.#sampleProgress > b) {
-                Debug.trace(`sampling done: ${from}~${this.#sampleProgress}`);
+            if (this.#sampleProgress > this.#sampleEnd) {
+                Debug.debug(`sampling done: ${from}~${this.#sampleProgress}`);
                 this.#isSampling = false;
                 return;
             }
             if (this.#cancelling) {
                 Debug.debug('sampling cancelled');
                 this.#isSampling = false;
+                this.#cancelling = false;
                 return;
             }
             requestAnimationFrame(() => doSampling());

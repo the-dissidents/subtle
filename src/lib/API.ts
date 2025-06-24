@@ -405,7 +405,7 @@ export class MMedia {
                 channel = createChannel('sampleAutomatic', {
                     sampleDone2: (data) => resolve(data)
                 }, reject);
-                invoke('sample_automatic', { id: this.id, targetWorkingTimeMs, channel });
+                invoke('sample_automatic2', { id: this.id, targetWorkingTimeMs, channel });
             });
         } finally {
             this.#currentJobs -= 1;
