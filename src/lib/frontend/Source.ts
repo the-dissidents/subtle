@@ -5,7 +5,7 @@ import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/Formats";
 
 import * as fs from "@tauri-apps/plugin-fs";
-import { basename } from '@tauri-apps/api/path';
+import { basename, join } from '@tauri-apps/api/path';
 import { guardAsync, Interface } from "./Interface";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { InterfaceConfig } from "../config/Groups";
@@ -48,6 +48,19 @@ function readSnapshot(s: Snapshot) {
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch();
     Source.onSubtitlesChanged.dispatch(s.change);
+}
+
+function autosaveTimestamp(now: Date = new Date()): string {
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始
+    const day = String(now.getDate()).padStart(2, '0');
+
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    // 格式：YYYYMMDD_HHMMSS
+    return `${year}${month}${day}_${hours}${minutes}${seconds}`;
 }
 
 let intervalId = 0;
@@ -161,41 +174,55 @@ export const Source = {
                 PrivateConfig.pushRecent(file);
                 currentFile.set(file);
             }
+            await this.cleanAutosave();
             return true;
         }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
     },
 
     async doAutoSave() {
-        function getCurrentTimestampForFilename(): string {
-            const now = new Date();
-
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始
-            const day = String(now.getDate()).padStart(2, '0');
-
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-
-            // 格式：YYYYMMDD_HHMMSS
-            return `${year}${month}${day}_${hours}${minutes}${seconds}`;
-        }
         if (!changedSinceLastAutosave) {
             Debug.info('no change since last autosave');
             return;
         }; // only autosave when changed
 
-        await guardAsync( async ()=> {
+        await guardAsync(async () => {
+            if (!await fs.exists('autosave', { baseDir: fs.BaseDirectory.AppLocalData }))
+                await fs.mkdir('autosave', { baseDir: fs.BaseDirectory.AppLocalData });
             const currentFile = get(this.currentFile);
             const autoSaveName =
                 (currentFile == '' ? 'untitled' : await basename(currentFile, '.json'))
-                + '_' + getCurrentTimestampForFilename() + '.json';
+                + '_' + autosaveTimestamp() + '.json';
             const text = Format.JSON.write(this.subs);
-            await fs.writeTextFile(autoSaveName, text, { baseDir: fs.BaseDirectory.AppLocalData });
+            await fs.writeTextFile(
+                await join('autosave', autoSaveName), text, 
+                { baseDir: fs.BaseDirectory.AppLocalData });
             changedSinceLastAutosave = false;
             Debug.info('autosaved', currentFile ?? '<untitled>');
             Interface.setStatus($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
         }, $_('msg.autosave-failed'));
+    },
+
+    async cleanAutosave() {
+        if (!await fs.exists('autosave', { baseDir: fs.BaseDirectory.AppLocalData }))
+            return;
+
+        const maxAge = InterfaceConfig.data.keepAutosaveFor * 1000 * 60 * 60 * 24;
+        if (maxAge <= 0) return;
+        const regex = /^.+_(\d{8}_\d{6})\.json$/;
+        const old = autosaveTimestamp(new Date(Date.now() - maxAge));
+        await guardAsync(async () => {
+            const entries = await fs.readDir(
+                'autosave', { baseDir: fs.BaseDirectory.AppLocalData });
+            for (const {name, isFile} of entries) {
+                if (!isFile) return;
+                const match = regex.exec(name);
+                if (match && match[1] < old) {
+                    await fs.remove(await join('autosave', name), 
+                        { baseDir: fs.BaseDirectory.AppLocalData });
+                    Debug.debug('cleaned autosave:', name);
+                }
+            }
+        }, $_('msg.failed-to-clean-autosave'));
     },
 
     startAutoSave() {

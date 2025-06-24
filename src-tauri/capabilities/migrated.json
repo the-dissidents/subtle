@@ -23,6 +23,16 @@
     "dialog:default",
     "fs:allow-appconfig-read-recursive",
     "fs:allow-appconfig-write-recursive",
+    "fs:allow-applocaldata-read-recursive",
+    "fs:allow-applocaldata-write-recursive",
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
     {
       "identifier": "fs:allow-size",
       "allow": [

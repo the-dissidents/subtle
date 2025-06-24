@@ -156,7 +156,7 @@ export const Interface = {
             await Playback.close();
         await guardAsync(() => Playback.load(path, audio ?? -1), 
             $_('msg.error-opening-video-path', {values: {path}}));
-        if (!Playback.player?.isLoaded) return;
+        if (!get(Playback.isLoaded)) return;
         
         let source = get(Source.currentFile);
         if (source != '')

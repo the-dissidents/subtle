@@ -78,6 +78,12 @@ export const InterfaceConfig = new PublicConfigGroup(
             bounds: [0, 60],
             default: 5
         },
+        keepAutosaveFor: {
+            localizedName: () => $_('config.keep-autosave-for'),
+            type: 'integer',
+            description: () => $_('config.keep-autosave-for-d'),
+            default: 30
+        },
         statusBarTwinkle: {
             localizedName: () => $_('config.twinkle-status-bar'),
             type: 'boolean',
