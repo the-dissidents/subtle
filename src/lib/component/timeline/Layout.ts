@@ -1,5 +1,4 @@
 import { MMedia } from "../../API";
-import { MediaSampler } from "../../MediaSampler";
 import { CanvasManager } from "../../CanvasManager";
 import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
 import { ChangeType, Source } from "../../frontend/Source";

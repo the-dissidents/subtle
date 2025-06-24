@@ -6,7 +6,6 @@ import { Debug } from "../Debug";
 import { MediaPlayerInterface, MediaPlayer, type SetPositionOptions } from "../component/preview/MediaPlayer";
 import { EventHost } from "../details/EventHost";
 import { Overridable } from "../details/Overridable.svelte";
-import type { MediaSampler } from "../MediaSampler";
 import type { MediaSampler2 } from "../component/timeline/MediaSampler2";
 
 export type PlayArea = {
