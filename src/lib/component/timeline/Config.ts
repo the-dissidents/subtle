@@ -20,6 +20,12 @@ export const TimelineConfig = new PublicConfigGroup(
     bounds: [50, 800],
     default: 700
   },
+  showKeyframes: {
+    localizedName: () => get(_)('config.show-keyframes'),
+    type: 'boolean',
+    description: () => get(_)('config.show-keyframes-d'),
+    default: true
+  },
   dragResizeArea: {
     localizedName: () => get(_)('config.resize-area-size'),
     type: 'number',
@@ -27,12 +33,6 @@ export const TimelineConfig = new PublicConfigGroup(
     bounds: [1, 10],
     default: 5
   },
-  // enableSnap: {
-  //   localizedName: () => get(_)('config.snapping'),
-  //   type: 'boolean',
-  //   description: () => get(_)('config.snapping-d'),
-  //   default: true
-  // },
   snapDistance: {
     localizedName: () => get(_)('config.snap-distance'),
     type: 'number',

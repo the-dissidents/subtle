@@ -179,26 +179,27 @@ export class TimelineRenderer {
     ctx.fill();
 
     lastGap = -1;
-    this.#drawAggregation(
-      Playback.sampler.keyframeResolution,
-      (a, b, c) => Playback.sampler!.keyframeData(a, b, c),
-      (x, width, value) => {
-        if (value == 0) {
-          if (lastGap < 0) lastGap = x;
-          // this.layout.requestedSampler = true;
-        } else {
-          if (lastGap >= 0) {
-            ctx.fillStyle = "#6D66";
-            ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
-            lastGap = -1;
+    if (TimelineConfig.data.showKeyframes) {
+      this.#drawAggregation(
+        Playback.sampler.keyframeResolution,
+        (a, b, c) => Playback.sampler!.keyframeData(a, b, c),
+        (x, width, value) => {
+          if (value == 0) {
+            if (lastGap < 0) lastGap = x;
+            // this.layout.requestedSampler = true;
+          } else {
+            if (lastGap >= 0) {
+              ctx.fillStyle = "#6D66";
+              ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
+              lastGap = -1;
+            }
+            if (value == 2) {
+              ctx.fillStyle = "#66E6";
+              ctx.fillRect(x, yscroll, width, this.layout.height);
+            }
           }
-          if (value == 2) {
-            ctx.fillStyle = "#66E6";
-            ctx.fillRect(x, yscroll, width, this.layout.height);
-          }
-        }
-      }
-    );
+        });
+    }
   
     if (this.layout.requestedSampler)
       this.layout.processSampler();
