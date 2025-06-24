@@ -60,6 +60,7 @@ export const Playback = {
     }),
 
     onLoad: new EventHost<[rawurl: string, id: number]>(),
+    onLoaded: new EventHost<[]>(),
     onSetAudioStream: new EventHost<[id: number]>(),
     onClose: new EventHost<[]>(),
     
@@ -71,6 +72,7 @@ export const Playback = {
         isLoaded.set(true);
         Debug.assert(this.player !== null);
         duration = this.player.duration!;
+        Playback.onLoaded.dispatch();
         Playback.onRefreshPlaybackControl.dispatch();
     },
 

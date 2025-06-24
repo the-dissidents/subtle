@@ -39,6 +39,10 @@ const CURSOR_COLOR =
   $derived(theme.isDark ? 'pink' : 'oklch(62.73% 0.209 12.37)');
 const PENDING_WAVEFORM_COLOR = 
   $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 40%)`);
+const PENDING_KEYFRAME_COLOR = 
+  $derived(theme.isDark ? `rgb(10% 100% 10% / 30%)` : `rgb(40% 100% 40% / 40%)`);
+const KEYFRAME_COLOR = 
+  $derived(theme.isDark ? `rgb(10% 40% 100% / 30%)` : `rgb(40% 40% 100% / 40%)`);
 const WAVEFORM_COLOR = 
   $derived(theme.isDark ? `#5bb` : 'oklch(76.37% 0.101 355.37)');
 const INOUT_AREA_OUTSIDE = 
@@ -179,7 +183,9 @@ export class TimelineRenderer {
     ctx.fill();
 
     lastGap = -1;
-    if (TimelineConfig.data.showKeyframes) {
+    if (TimelineConfig.data.showKeyframes
+     && this.layout.scale * devicePixelRatio / Playback.sampler.keyframeResolution > 1) 
+    {
       this.#drawAggregation(
         Playback.sampler.keyframeResolution,
         (a, b, c) => Playback.sampler!.keyframeData(a, b, c),
@@ -189,12 +195,12 @@ export class TimelineRenderer {
             // this.layout.requestedSampler = true;
           } else {
             if (lastGap >= 0) {
-              ctx.fillStyle = "#6D66";
+              ctx.fillStyle = PENDING_KEYFRAME_COLOR;
               ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
               lastGap = -1;
             }
             if (value == 2) {
-              ctx.fillStyle = "#66E6";
+              ctx.fillStyle = KEYFRAME_COLOR;
               ctx.fillRect(x, yscroll, width, this.layout.height);
             }
           }

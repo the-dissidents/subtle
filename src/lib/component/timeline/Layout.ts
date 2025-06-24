@@ -67,14 +67,16 @@ export class TimelineLayout {
       } catch (e) {
         await this.#samplerMedia.close();
         this.#samplerMedia = undefined;
-        return;
       }
+    });
+
+    Playback.onLoaded.bind(this, () => {
       this.setScale(Math.max(this.width / Playback.duration, 10));
       this.setOffset(0);
       Playback.setPosition(0);
       this.requestedSampler = true;
       this.manager.requestRender();
-    });
+    })
 
     Playback.onClose.bind(this, async () => {
       if (Playback.sampler == undefined)
@@ -116,6 +118,7 @@ export class TimelineLayout {
       if (type != ChangeType.Metadata)
         this.manager.requestRender();
     });
+
     Source.onSubtitleObjectReload.bind(this, () => {
       this.#updateContentArea();
       this.requestedLayout = true;
@@ -283,10 +286,12 @@ export class TimelineLayout {
     let end = this.offset + this.width / this.scale;
     const preload = Math.min(PRELOAD_MARGIN, (end - start) * PRELOAD_MARGIN_FACTOR);
     if (Playback.sampler.isSampling) {
-      if (Playback.sampler.sampleProgress + preload < this.offset 
-       || Playback.sampler.sampleProgress > end + preload) 
+      if (Playback.sampler.sampleProgress > Playback.sampler.sampleStart
+       && (Playback.sampler.sampleProgress + preload < this.offset 
+        || Playback.sampler.sampleProgress > end + preload))
+      {
         Playback.sampler.tryCancelSampling();
-      else if (Playback.sampler.sampleEnd < end + preload) {
+      } else if (Playback.sampler.sampleEnd < end + preload) {
         Playback.sampler.extendSampling(end + preload);
       }
       return;

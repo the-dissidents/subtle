@@ -107,7 +107,9 @@ export const Interface = {
             return;
         }
         return guardAsync(async () => {
+            await Debug.debug('reading file');
             const file = await fs.readFile(path);
+            await Debug.debug('analysing encoding');
             const result = chardet.analyse(file);
             if (result[0].confidence == 100 
             && (result[0].name == 'UTF-8' || result[0].name == 'ASCII'))
@@ -128,6 +130,7 @@ export const Interface = {
     },
 
     async openFile(path: string) {
+        await Debug.debug('parsing file', path);
         const text = await this.readTextFile(path);
         if (!text) return;
         let newSubs = parseSubtitleSource(text);
@@ -136,6 +139,7 @@ export const Interface = {
                 $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
             return;
         }
+        await Debug.debug('opening document');
         await Source.openDocument(newSubs, path);
         if (newSubs.migrated == 'olderVersion') 
             await dialog.message(
@@ -230,7 +234,7 @@ export const Interface = {
         const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
         if (typeof path != 'string') return;
         await this.openFile(path);
-        Source.startAutoSave()
+        Source.startAutoSave();
     },
 
     async askOpenVideo() {

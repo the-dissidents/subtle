@@ -393,62 +393,6 @@ function render(cxt: CanvasRenderingContext2D) {
 const me = {};
 onDestroy(() => EventHost.unbind(me));
 
-Source.onSubtitleObjectReload.bind(me, () => {
-  updateColumns();
-});
-
-Source.onSubtitlesChanged.bind(me, (t) => {
-  // TODO: can we optimize this by not re-layouting everything on every edit?
-  if (t == ChangeType.View) {
-    // the only way columns are updated is through the subtitle table
-    // updateColumns();
-  } else if (t !== ChangeType.Metadata) {
-    requestedLayout = true;
-    manager.requestRender();
-  }
-});
-
-Editing.onSelectionChanged.bind(me, () => {
-  selection = new SvelteSet(Editing.getSelection());
-  manager.requestRender();
-});
-
-Editing.onKeepEntryAtPosition.bind(me, (ent, old) => {
-  if (manager.dragType !== 'none') return;
-
-  const posNew = lineMap.get(ent);
-  const posOld = lineMap.get(old);
-  if (posNew === undefined || posOld === undefined) {
-    Debug.warn('?!row', ent, old);
-    return;
-  }
-  const sy = (posNew.line - posOld.line) * lineHeight + manager.scroll[1];
-  manager.setScroll({y: sy})
-  Editing.onKeepEntryInView.dispatch(ent);
-});
-
-Editing.onKeepEntryInView.bind(me, (ent) => {
-  // otherwise dragging outside/auto scrolling becomes unusable
-  if (manager.dragType !== 'none') return;
-
-  if (ent instanceof SubtitleEntry) {
-    const pos = lineMap.get(ent);
-    if (pos === undefined) {
-      Debug.warn('?!row', ent);
-      return;
-    }
-    const sy = Math.max(
-      (pos.line + pos.height + 1) * lineHeight - manager.size[1] / manager.scale, 
-      Math.min(manager.scroll[1], pos.line * lineHeight));
-    manager.setScroll({y: sy})
-    manager.requestRender();
-  } else {
-    const sy = manager.contentRect.b - manager.size[1] / manager.scale;
-    manager.setScroll({y: sy})
-    manager.requestRender();
-  }
-});
-
 function updateColumns() {
   entryColumns = Source.subs.view.perEntryColumns
     .map((x) => ({metric: x, layout: undefined}));
@@ -494,6 +438,62 @@ onMount(() => {
   $effect(() => {
     if (theme.isDark !== undefined)
       manager.requestRender();
+  });
+
+  Source.onSubtitleObjectReload.bind(me, () => {
+    updateColumns();
+  });
+
+  Source.onSubtitlesChanged.bind(me, (t) => {
+    // TODO: can we optimize this by not re-layouting everything on every edit?
+    if (t == ChangeType.View) {
+      // the only way columns are updated is through the subtitle table
+      // updateColumns();
+    } else if (t !== ChangeType.Metadata) {
+      requestedLayout = true;
+      manager.requestRender();
+    }
+  });
+
+  Editing.onSelectionChanged.bind(me, () => {
+    selection = new SvelteSet(Editing.getSelection());
+    manager.requestRender();
+  });
+
+  Editing.onKeepEntryAtPosition.bind(me, (ent, old) => {
+    if (manager.dragType !== 'none') return;
+
+    const posNew = lineMap.get(ent);
+    const posOld = lineMap.get(old);
+    if (posNew === undefined || posOld === undefined) {
+      Debug.warn('?!row', ent, old);
+      return;
+    }
+    const sy = (posNew.line - posOld.line) * lineHeight + manager.scroll[1];
+    manager.setScroll({y: sy})
+    Editing.onKeepEntryInView.dispatch(ent);
+  });
+
+  Editing.onKeepEntryInView.bind(me, (ent) => {
+    // otherwise dragging outside/auto scrolling becomes unusable
+    if (manager.dragType !== 'none') return;
+
+    if (ent instanceof SubtitleEntry) {
+      const pos = lineMap.get(ent);
+      if (pos === undefined) {
+        Debug.warn('?!row', ent);
+        return;
+      }
+      const sy = Math.max(
+        (pos.line + pos.height + 1) * lineHeight - manager.size[1] / manager.scale, 
+        Math.min(manager.scroll[1], pos.line * lineHeight));
+      manager.setScroll({y: sy})
+      manager.requestRender();
+    } else {
+      const sy = manager.contentRect.b - manager.size[1] / manager.scale;
+      manager.setScroll({y: sy})
+      manager.requestRender();
+    }
   });
 });
 

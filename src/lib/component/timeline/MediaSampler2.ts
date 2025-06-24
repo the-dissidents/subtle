@@ -6,7 +6,7 @@ import { AggregationTree } from "../../details/AggregationTree";
 
 export class MediaSampler2 {
     #sampleLength: number;
-
+    #samplerStart = 0;
     #sampleEnd = 0;
     #sampleProgress = 0;
     #cancelling = false;
@@ -22,6 +22,7 @@ export class MediaSampler2 {
     /** points per second */
     get intensityResolution() { return this.media.audio!.sampleRate / this.#sampleLength; }
     get isSampling() { return this.#isSampling; }
+    get sampleStart() { return this.#samplerStart / this.media.audio!.sampleRate; }
     get sampleEnd() { return this.#sampleEnd / this.media.audio!.sampleRate; }
     get sampleProgress() { return this.#sampleProgress / this.media.audio!.sampleRate; }
 
@@ -116,6 +117,7 @@ export class MediaSampler2 {
 
         this.#isSampling = true;
         this.#cancelling = false;
+        this.#samplerStart = a;
         this.#sampleEnd = b;
         
         const framerate = this.media.video!.framerate;
@@ -127,10 +129,10 @@ export class MediaSampler2 {
          || this.#sampleProgress > videoPos / framerate
          || this.#sampleProgress < prevKeyframe / framerate)
         {
-            await Debug.debug(`startSampling: ${from} ${to} ${a} ${b}; seeking to [${videoPos}]`);
+            await Debug.trace(`startSampling: ${from} ${to} ${a} ${b}; seeking to [${videoPos}]`);
             await this.media.seekVideo(videoPos);
         } else {
-            Debug.debug(`startSampling: ${from} ${to} ${a} ${b}`);
+            Debug.trace(`startSampling: ${from} ${to} ${a} ${b}`);
         }
 
         let doSampling = async () => {
@@ -142,17 +144,17 @@ export class MediaSampler2 {
             this.#keyframes.set(result.video.keyframes, result.video.start);
             this.onProgress?.();
             if (result.isEof) {
-                Debug.debug(`sampling done upon EOF`);
+                Debug.trace(`sampling done upon EOF`);
                 this.#isSampling = false;
                 return;
             }
             if (this.#sampleProgress > this.#sampleEnd) {
-                Debug.debug(`sampling done: ${from}~${this.#sampleProgress}`);
+                Debug.trace(`sampling done: ${from}~${this.#sampleProgress}`);
                 this.#isSampling = false;
                 return;
             }
             if (this.#cancelling) {
-                Debug.debug('sampling cancelled');
+                Debug.trace('sampling cancelled');
                 this.#isSampling = false;
                 this.#cancelling = false;
                 return;

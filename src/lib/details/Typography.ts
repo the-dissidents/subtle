@@ -20,7 +20,6 @@ export const Typography = {
         const testString = 'Mgjpq';
         ctx.font = `${testPxSize}px ${fontFamily}`;
         const metrics = ctx.measureText(testString);
-        console.log(metrics);
         const result = testPxSize / 
             (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent);
         RealDims.set(fontFamily, result);
