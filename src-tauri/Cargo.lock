@@ -1260,7 +1260,7 @@ dependencies = [
 [[package]]
 name = "ffmpeg-sys-next"
 version = "7.1.0"
-source = "git+https://github.com/the-dissidents/rust-ffmpeg-sys.git?branch=official#41ec705306d907b37bd50d507a19978e1c7f22ab"
+source = "git+https://github.com/the-dissidents/rust-ffmpeg-sys.git?branch=official#d7b2e01705342a72c979aa719bedd98e7328582a"
 dependencies = [
  "bindgen",
  "cc",

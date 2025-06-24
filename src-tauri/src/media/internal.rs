@@ -589,10 +589,9 @@ impl AudioSamplerFront {
         if let Some(sd) = sampler_data.as_mut() {
             match sd.start + sd.intensity.len() {
                 0 => sd.start = index_start,
-                x if x == index_start + 1 => drop(sd.intensity.pop()),
-                x if x == index_start => (),
-                x => return Err(MediaError::InternalError(format!(
-                    "unexpected {x}, expecting {index_start}")))
+                x if x < index_start => return Err(MediaError::InternalError(format!(
+                    "unexpected {x}, expecting {index_start}"))),
+                _ => ()
             }
         }
 
@@ -605,7 +604,13 @@ impl AudioSamplerFront {
             counter += 1;
             if counter == self.step {
                 self.intensities.set(&[sum], index);
-                sampler_data.as_mut().map(|x| x.intensity.push(sum));
+                sampler_data.as_mut().map(|x| {
+                    if x.start + x.intensity.len() <= index {
+                        x.intensity.push(sum);
+                    } else {
+                        x.intensity[index - x.start] = sum;
+                    }
+                });
                 counter = 0;
                 index += 1;
                 if index >= self.intensities.length {
@@ -616,7 +621,11 @@ impl AudioSamplerFront {
         }
         self.intensities.set(&[sum], index);
         sampler_data.as_mut().map(|x| {
-            x.intensity.push(sum);
+            if x.start + x.intensity.len() <= index {
+                x.intensity.push(sum);
+            } else {
+                x.intensity[index - x.start] = sum;
+            }
             x.position = frame.position + frame.decoded.samples() as i64;
         });
         Ok(())
@@ -870,7 +879,7 @@ mod tests {
             println!("-- {t}");
         }
 
-        let path = "/Users/emf/Downloads/Little Boy (James Benning, 2025).mkv";
+        let path = "E:\\Little Boy (James Benning, 2025).mkv";
         let mut playback = MediaPlayback::from_file(path).unwrap();
         playback.open_video(None, true).unwrap();
         playback.open_audio(None).unwrap();
