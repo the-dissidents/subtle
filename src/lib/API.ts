@@ -21,6 +21,19 @@ export type VideoStatus = {
     size: [width: number, height: number],
 }
 
+export type SampleResult = {
+    audio: {
+        start: number,
+        position: number,
+        intensity: number[]
+    },
+    video: {
+        start: number,
+        keyframes: number[]
+    },
+    isEof: boolean
+}
+
 export type MediaEvent = {
     event: 'done'
     data: {}
@@ -65,6 +78,9 @@ export type MediaEvent = {
 } | {
     event: 'sampleDone',
     data: { pos: number }
+} | {
+    event: 'sampleDone2',
+    data: SampleResult
 };
 
 class MediaError extends Error {
@@ -356,14 +372,14 @@ export class MMedia {
     }
 
     /** returns null on EOF */
-    async sampleUntil(when: number) {
+    async sampleAutomatic(targetWorkingTimeMs: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
         this.#currentJobs += 1;
         try {
             return await new Promise<number | null>((resolve, reject) => {
-                channel = createChannel('sampleUntil', {
+                channel = createChannel('sampleAutomatic', {
                     'EOF': () => {
                         Debug.debug('at eof');
                         this.#eof = true;
@@ -371,7 +387,25 @@ export class MMedia {
                     },
                     sampleDone: (data) => resolve(data.pos)
                 }, reject);
-                invoke('sample_until', { id: this.id, when, channel });
+                invoke('sample_automatic', { id: this.id, targetWorkingTimeMs, channel });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
+    /** returns null on EOF */
+    async sampleAutomatic2(targetWorkingTimeMs: number) {
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
+        try {
+            return await new Promise<SampleResult>((resolve, reject) => {
+                channel = createChannel('sampleAutomatic', {
+                    sampleDone2: (data) => resolve(data)
+                }, reject);
+                invoke('sample_automatic', { id: this.id, targetWorkingTimeMs, channel });
             });
         } finally {
             this.#currentJobs -= 1;

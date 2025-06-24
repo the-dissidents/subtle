@@ -6,7 +6,6 @@ import { ChangeType, Source } from "../../frontend/Source";
 import { Debug } from "../../Debug";
 import { Playback } from "../../frontend/Playback";
 import { DebugConfig, InterfaceConfig } from "../../config/Groups";
-import { get } from "svelte/store";
 import { TimelineConfig } from "./Config";
 import { EventHost } from "../../details/EventHost";
 

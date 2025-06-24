@@ -7,7 +7,7 @@ type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array
 
 const PRELOAD_MARGIN = 200;
 
-class DataRequest<T extends TypedArray>{
+export class DataRequest<T extends TypedArray>{
     #output: T;
     #buffer: T;
     #start = 0;
@@ -239,10 +239,7 @@ export class MediaSampler {
         let doSampling = async () => {
             await this.media.waitUntilAvailable();
             if (this.isClosing) return;
-            // const next = this.#sampleProgress 
-            //     + this.#sampleLength! / this.media.audio!.sampleRate * 200;
-            const next = -1;
-            const result = await this.media.sampleUntil(next);
+            const result = await this.media.sampleAutomatic(20);
             this.intensity!.markDirty();
             this.keyframes!.markDirty();
             this.onProgress?.();

@@ -63,6 +63,19 @@ pub struct DecodedAudioFrame {
     pub decoded: frame::Audio,
 }
 
+#[derive(Clone, Serialize, Debug)]
+pub struct AudioSampleData {
+    pub start: usize,
+    pub position: i64,
+    pub intensity: Vec<f32>
+}
+
+#[derive(Clone, Serialize, Debug)]
+pub struct VideoSampleData {
+    pub start: usize,
+    pub keyframes: Vec<u8>
+}
+
 pub struct AudioBase {
     stream_i: usize,
     stream_timebase: Rational,
@@ -464,30 +477,29 @@ impl MediaPlayback {
     }
 
     // returns false at eof
-    pub fn sample_next(&mut self) -> Result<Option<Frame>, MediaError> {
+    pub fn sample_next(&mut self, 
+        audio_data: Option<&mut AudioSampleData>,
+        video_data: Option<&mut VideoSampleData>
+    ) -> Result<Option<Frame>, MediaError> {
         assert!(self.audio.is_some() || self.video.is_some());
         match self.get_next()? {
-            Some(Frame::Audio(f)) => match self.audio_mut().unwrap().front_mut() {
+            Some(Frame::Audio(f)) => 
+            match self.audio_mut().unwrap().front_mut() {
                 AudioFront::Sampler(s) => {
-                    s.process(&f)?;
+                    s.process(&f, audio_data)?;
                     Ok(Some(Frame::Audio(f)))
                 }
-                _ => {
-                    return Err(MediaError::InternalError(
-                        "audio not opened as sampler".to_string(),
-                    ))
-                }
+                _ => return Err(MediaError::InternalError(
+                    "audio not opened as sampler".to_string()))
             },
-            Some(Frame::Video(f)) => match self.video_mut().unwrap().front_mut() {
+            Some(Frame::Video(f)) => 
+            match self.video_mut().unwrap().front_mut() {
                 VideoFront::Sampler(s) => {
-                    s.process(&f)?;
+                    s.process(&f, video_data)?;
                     Ok(Some(Frame::Video(f)))
                 }
-                _ => {
-                    return Err(MediaError::InternalError(
-                        "video not opened as sampler".to_string(),
-                    ))
-                }
+                _ => return Err(MediaError::InternalError(
+                    "video not opened as sampler".to_string()))
             },
             None => Ok(None),
         }
@@ -563,27 +575,37 @@ impl AudioPlayerFront {
 }
 
 impl AudioSamplerFront {
-    pub fn process(&mut self, frame: &DecodedAudioFrame) -> Result<(), MediaError> {
+    pub fn process(
+        &mut self, frame: &DecodedAudioFrame, 
+        mut sampler_data: Option<&mut AudioSampleData>
+    ) -> Result<(), MediaError> {
         let mut processed = frame::Audio::empty();
         check!(self.resampler.run(&frame.decoded, &mut processed))?;
 
-        let index = frame.position / self.step as i64;
-        let mut index: usize = match index {
-            y if y >= 0 => y as usize,
+        let index_start = match frame.position / self.step as i64 {
+            y if y >= 0 && y < self.intensities.length as i64 => y as usize,
             _ => return Ok(())
         };
-        if index >= self.intensities.length {
-            return Ok(());
+        if let Some(sd) = sampler_data.as_mut() {
+            match sd.start + sd.intensity.len() {
+                0 => sd.start = index_start,
+                x if x == index_start - 1 => drop(sd.intensity.pop()),
+                x if x == index_start => (),
+                x => return Err(MediaError::InternalError(format!(
+                    "unexpected {x}, expecting {index_start}")))
+            }
         }
 
         let data: &[f32] = frame.decoded.plane(0);
         let mut counter = frame.position as u32 % self.step;
-        let mut sum: f32 = self.intensities.at(index);
+        let mut sum: f32 = self.intensities.at(index_start);
+        let mut index = index_start;
         for sample in data {
             sum = sum.max(sample.abs());
             counter += 1;
             if counter == self.step {
                 self.intensities.set(&[sum], index);
+                sampler_data.as_mut().map(|x| x.intensity.push(sum));
                 counter = 0;
                 index += 1;
                 if index >= self.intensities.length {
@@ -593,6 +615,10 @@ impl AudioSamplerFront {
             }
         }
         self.intensities.set(&[sum], index);
+        sampler_data.as_mut().map(|x| {
+            x.intensity.push(sum);
+            x.position = frame.position + frame.decoded.samples() as i64;
+        });
         Ok(())
     }
 
@@ -700,16 +726,24 @@ impl VideoPlayerFront {
 }
 
 impl VideoSamplerFront {
-    pub fn process(&mut self, frame: &DecodedVideoFrame) -> Result<(), MediaError> {
+    pub fn process(&mut self, frame: &DecodedVideoFrame, 
+        mut sampler_data: Option<&mut VideoSampleData>
+    ) -> Result<(), MediaError> {
         let index: usize = match frame.position {
-            x if x >= 0 => x.try_into().unwrap(),
+            x if x >= 0 && x < self.keyframes.length as i64 => x.try_into().unwrap(),
             _ => return Ok(()),
         };
-        if index >= self.keyframes.length {
-            return Ok(());
+        if let Some(sd) = sampler_data.as_mut() {
+            match sd.start + sd.keyframes.len() {
+                0 => sd.start = index,
+                x if x == index => (),
+                x => return Err(MediaError::InternalError(format!(
+                    "unexpected {x}, expecting {index}")))
+            }
         }
-        self.keyframes
-            .set(&[if frame.decoded.is_key() { 2 } else { 1 }], index);
+        let value = if frame.decoded.is_key() { 2 } else { 1 };
+        self.keyframes.set(&[value], index);
+        sampler_data.as_mut().map(|x| x.keyframes.push(value));
         Ok(())
     }
 

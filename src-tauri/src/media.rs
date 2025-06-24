@@ -15,7 +15,7 @@ mod accel;
 
 pub(crate) use internal::MediaPlayback;
 
-use crate::media::internal::{AudioFront, VideoFront};
+use crate::media::internal::{AudioFront, AudioSampleData, VideoFront, VideoSampleData};
 
 pub struct PlaybackRegistry {
     next_id: i32,
@@ -75,6 +75,12 @@ pub enum MediaEvent<'a> {
     KeyframeData { pos: Option<usize> },
     #[serde(rename_all = "camelCase")]
     SampleDone { pos: f64 },
+    #[serde(rename_all = "camelCase")]
+    SampleDone2 { 
+        audio: AudioSampleData,
+        video: VideoSampleData,
+        is_eof: bool
+    },
 }
 
 fn send(channel: &Channel<MediaEvent>, what: MediaEvent) {
@@ -524,8 +530,8 @@ pub fn send_data<N>(data: &[N]) -> Result<ipc::Response, ()> {
 }
 
 #[tauri::command]
-pub fn sample_until(
-    id: i32, when: f64,
+pub fn sample_automatic(
+    id: i32, target_working_time_ms: u64,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
@@ -535,18 +541,12 @@ pub fn sample_until(
         None => return send_invalid_id(&channel),
     };
     let start_time = Instant::now();
-    let target_working_time = Duration::from_millis(20);
+    let target_working_time = Duration::from_millis(target_working_time_ms);
     let mut last_time: f64;
     loop {
-        match playback.sample_next() {
-            Ok(Some(Frame::Audio(f))) => {
-                last_time = f.time;
-                if when >= 0.0 && f.time > when { break; }
-            }
-            Ok(Some(Frame::Video(f))) => {
-                last_time = f.time;
-                if when >= 0.0 && f.time > when { break; }
-            }
+        match playback.sample_next(None, None) {
+            Ok(Some(Frame::Audio(f))) => last_time = f.time,
+            Ok(Some(Frame::Video(f))) => last_time = f.time,
             Ok(None) => {
                 send(&channel, MediaEvent::EOF {});
                 return;
@@ -556,11 +556,47 @@ pub fn sample_until(
                 return;
             }
         }
-        if when < 0.0 && start_time.elapsed() > target_working_time {
+        if start_time.elapsed() > target_working_time {
             break;
         }
     }
     send(&channel, MediaEvent::SampleDone { pos: last_time });
+}
+
+
+#[tauri::command]
+pub fn sample_automatic2(
+    id: i32, target_working_time_ms: u64,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) {
+    let mut ap = state.lock().unwrap();
+    let playback = match ap.table.get_mut(&id) {
+        Some(x) => x,
+        None => return send_invalid_id(&channel),
+    };
+    let start_time = Instant::now();
+    let target_working_time = Duration::from_millis(target_working_time_ms);
+    let mut is_eof = false;
+    let mut audio_data = AudioSampleData { start: 0, intensity: vec![], position: 0 };
+    let mut video_data = VideoSampleData { start: 0, keyframes: vec![] };
+    loop {
+        match playback.sample_next(Some(&mut audio_data), Some(&mut video_data)) {
+            Ok(None) => {
+                is_eof = true;
+                break;
+            }
+            Err(e) => {
+                send_error!(&channel, e.to_string());
+                return;
+            },
+            _ => ()
+        }
+        if start_time.elapsed() > target_working_time {
+            break;
+        }
+    }
+    send(&channel, MediaEvent::SampleDone2 { audio: audio_data, video: video_data, is_eof });
 }
 
 #[tauri::command]

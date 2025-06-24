@@ -237,3 +237,92 @@ handler.showModal = async () => {
   <!-- content here -->
 </DialogBase>
 ```
+
+## rust
+
+Consider the following Rust program
+
+```rust
+fn main() {
+    let mut number: i32 = 1;
+    let opt: Option<&mut i32> = Some(&mut number);
+    if let Some(x) = opt {
+        *x += 1;
+        println!("{}", *x);
+    }
+    if let Some(x) = opt {
+        *x += 1;
+        println!("{}", *x);
+    }
+}
+```
+
+...which doesn't compile:
+
+```txt
+error[E0382]: use of moved value
+ --> src/lib.rs:8:17
+  |
+4 |     if let Some(x) = opt {
+  |                 - value moved here
+...
+8 |     if let Some(x) = opt {
+  |                 ^ value used here after move
+  |
+  = note: move occurs because value has type `&mut i32`, which does not implement the `Copy` trait
+help: borrow this binding in the pattern to avoid moving the value
+  |
+4 |     if let Some(ref x) = opt {
+  |                 +++
+```
+
+What if we follow the advice?
+
+```diff
+fn main() {
+    let mut number: i32 = 1;
+    let opt: Option<&mut i32> = Some(&mut number);
+-   if let Some(x) = opt {
++   if let Some(ref x) = opt {
+-       *x += 1;
++       **x += 1;
+        println!("{}", *x);
+    }
+    if let Some(x) = opt {
+        *x += 1;
+        println!("{}", *x);
+    }
+}
+```
+
+No:
+
+```txt
+error[E0594]: cannot assign to `**x`, which is behind a `&` reference
+ --> src/lib.rs:5:9
+  |
+5 |         **x += 1;
+  |         ^^^^^^^^ `x` is a `&` reference, so the data it refers to cannot be written
+  |
+help: consider changing this to be a mutable reference
+  |
+4 |     if let Some(ref mut x) = opt {
+  |                     +++
+```
+
+Following this doesn't help either:
+
+```txt
+error[E0596]: cannot borrow `opt.0` as mutable, as `opt` is not declared as mutable
+ --> src/lib.rs:4:17
+  |
+4 |     if let Some(ref mut x) = opt {
+  |                 ^^^^^^^^^ cannot borrow as mutable
+  |
+help: consider changing this to be mutable
+  |
+3 |     let mut opt: Option<&mut i32> = Some(&mut number);
+  |         +++
+```
+
+So it seems you can't mutate an `Option<&mut ...>` twice ... ?
