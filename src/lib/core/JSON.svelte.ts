@@ -1,9 +1,10 @@
-import { type JSONSchemaType } from "ajv";
 import { Debug } from "../Debug";
-import { MigrationDuplicatedStyles, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleMetadata, type SubtitleStyle } from "./Subtitles.svelte";
-import { ajv, DeserializationError, parseObject } from "../Serialization";
-import { FilterSchema, Metrics, type MetricName } from "./Filter";
+import { MigrationDuplicatedStyles, parseSubtitleStyle, SubtitleEntry, Subtitles, ZMetadata, type SubtitleFormat, type SubtitleStyle } from "./Subtitles.svelte";
+import { DeserializationError, parseObjectZ } from "../Serialization";
+import { Metrics, type MetricName } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
+
+import * as z from "zod/v4";
 
 /**
  * Version details:
@@ -14,93 +15,11 @@ import { SvelteSet } from "svelte/reactivity";
  */
 export const SubtitleFormatVersion = '000404';
 
-// FIXME: should not repeat the default values here, already defined in Subtitle.svelte.ts
-const StyleSchema: JSONSchemaType<SubtitleStyle> = {
-    type: 'object',
-    properties: {
-        name: { type: 'string' },
-        font: { type: 'string', default: '' },
-        size: { type: 'number', exclusiveMinimum: 0, default: 72 },
-        color: { type: 'string', default: 'white' },
-        outlineColor: { type: 'string', default: 'black' },
-        outline: { type: 'number', minimum: 0, default: 1 },
-        shadow: { type: 'number', minimum: 0, default: 0 },
-        styles: {
-            type: 'object',
-            properties: {
-                bold: { type: 'boolean', default: false },
-                italic: { type: 'boolean', default: false },
-                underline: { type: 'boolean', default: false },
-                strikethrough: { type: 'boolean', default: false },
-            },
-            required: []
-        },
-        margin: {
-            type: 'object', 
-            properties: {
-                top: { type: 'number', default: 10 },
-                bottom: { type: 'number', default: 10 },
-                left: { type: 'number', default: 10 },
-                right: { type: 'number', default: 10 },
-            },
-            required: []
-        },
-        alignment: { type: 'integer', minimum: 1, maximum: 9, default: 2 },
-        validator: { 
-            anyOf: [FilterSchema, { type: 'null' }],
-            default: null
-        } as any
-    },
-    required: ['name', 'styles', 'margin']
-};
-
-const MetadataSchema: JSONSchemaType<SubtitleMetadata> = {
-    type: 'object',
-    properties: {
-        title: { type: 'string', default: '' },
-        language: { type: 'string', default: '' },
-        width: { type: 'number', exclusiveMinimum: 0, default: 1920 },
-        height: { type: 'number', exclusiveMinimum: 0, default: 1080 },
-        scalingFactor: { type: 'number', exclusiveMinimum: 0, default: 1 },
-        special: {
-            type: 'object',
-            properties: {
-                untimedText: { type: 'string', default: '' }
-            },
-            required: []
-        }
-    },
-    required: ['special']
-}
-
-type SerializedView = {
-    perEntryColumns: string[],
-    perChannelColumns: string[],
-    timelineExcludeStyles: string[]
-}
-
-const ViewSchema: JSONSchemaType<SerializedView> = {
-    type: 'object',
-    properties: {
-        perEntryColumns: { 
-            type: 'array', items: { type: 'string' }, 
-            default: ['startTime', 'endTime'] 
-        },
-        perChannelColumns: { 
-            type: 'array', items: { type: 'string' }, 
-            default: ['style', 'content'] 
-        },
-        timelineExcludeStyles: { 
-            type: 'array', items: { type: 'string' }, 
-            default: [] 
-        }
-    },
-    required: []
-}
-
-const validateStyle = ajv.compile(StyleSchema);
-const validateMetadata = ajv.compile(MetadataSchema);
-const validateView = ajv.compile(ViewSchema);
+const ZView = z.object({
+    perEntryColumns: z.array(z.string()),
+    perChannelColumns: z.array(z.string()),
+    timelineExcludeStyles: z.array(z.string())
+});
 
 function serializeView(view: Subtitles['view']) {
     return {
@@ -111,7 +30,7 @@ function serializeView(view: Subtitles['view']) {
 }
 
 function parseView(o: any, subs: Subtitles, version: string) {
-    let sv = parseObject(o, validateView);
+    let sv = parseObjectZ(o, ZView);
     // currently this doesn't detect whether the metrics are really valid
     // e.g. entry columns should not be channel metrics
     subs.view.perEntryColumns = sv.perEntryColumns.filter((x) => 
@@ -189,7 +108,7 @@ export const JSONSubtitles: SubtitleFormat = {
         const version = o.version ?? '0';
         let subs = new Subtitles();
 
-        if (o.metadata) subs.metadata = parseObject(o.metadata, validateMetadata);
+        if (o.metadata) subs.metadata = parseObjectZ(o.metadata, ZMetadata);
 
         const styles = o.styles, entries = o.entries;
         if (o.defaultStyle === undefined || !Array.isArray(styles) || !Array.isArray(entries))
@@ -197,10 +116,10 @@ export const JSONSubtitles: SubtitleFormat = {
 
         if (version < '000400') {
             // pre 0.4: the default style is defined outside the styles array
-            let defaultStyle = $state(parseObject(o.defaultStyle, validateStyle))
+            let defaultStyle = $state(parseSubtitleStyle(o.defaultStyle))
             subs.defaultStyle = defaultStyle;
             subs.styles = [defaultStyle, ...styles.map((x) => {
-                let style = $state(parseObject(x, validateStyle));
+                let style = $state(parseSubtitleStyle(x));
                 return style;
             })];
             subs.migrated = 'olderVersion';
@@ -209,7 +128,7 @@ export const JSONSubtitles: SubtitleFormat = {
                 subs.migrated = 'newerVersion';
             }
             subs.styles = styles.map((x) => {
-                let style = $state(parseObject(x, validateStyle));
+                let style = $state(parseSubtitleStyle(x));
                 return style;
             });
             const def = subs.styles.find((x) => x.name == o.defaultStyle);

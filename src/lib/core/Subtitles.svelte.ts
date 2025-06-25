@@ -1,7 +1,9 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { Debug } from "../Debug";
 import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
-import type { MetricFilter, MetricName } from "./Filter";
+import { parseFilter, type MetricFilter, type MetricName } from "./Filter";
+import z from "zod/v4";
+import { parseObjectZ } from "../Serialization";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelType = typeof Labels[number];
@@ -12,35 +14,51 @@ export enum AlignMode {
     TopLeft, TopCenter, TopRight,
 }
 
-export interface SubtitleStyle {
-    name: string;
-    font: string;
-    size: number;
-    color: string;
-    outlineColor: string;
-    outline: number;
-    shadow: number;
-    styles: {
-        bold: boolean,
-        italic: boolean,
-        underline: boolean,
-        strikethrough: boolean
-    };
-    margin: { top: number, bottom: number, left: number, right: number };
-    alignment: AlignMode;
-    validator: MetricFilter | null;
+const ZStyleBase = z.object({
+    name: z.string(),
+    font: z.string().default(''),
+    size: z.number().positive().default(72),
+    color: z.string().default('white'),
+    outlineColor: z.string().default('black'),
+    outline: z.number().min(0).default(1),
+    shadow: z.number().min(0).default(0),
+    styles: z.object({
+        bold: z.boolean().default(false),
+        italic: z.boolean().default(false),
+        underline: z.boolean().default(false),
+        strikethrough: z.boolean().default(false)
+    }),
+    margin: z.object({
+        top: z.number().default(10),
+        bottom: z.number().default(10),
+        left: z.number().default(10),
+        right: z.number().default(10),
+    }),
+    alignment: z.int().min(1).max(9).default(2),
+});
+
+export type SubtitleStyle = z.infer<typeof ZStyleBase> & {
+    validator: MetricFilter | null
+};
+
+export function parseSubtitleStyle(obj: any): SubtitleStyle {
+    const base = parseObjectZ(obj, ZStyleBase);
+    const validator = obj.validator ? parseFilter(obj.validator) : null;
+    return { ...base, validator };
 }
 
-export interface SubtitleMetadata {
-    title: string,
-    language: string,
-    width: number,
-    height: number,
-    scalingFactor: number,
-    special: {
-        untimedText: string,
-    }
-}
+export const ZMetadata = z.object({
+    title: z.string().default(''),
+    language: z.string().default(''),
+    width: z.int().positive().default(1920),
+    height: z.int().positive().default(1080),
+    scalingFactor: z.number().positive().default(1),
+    special: z.object({
+        untimedText: z.string().default('')
+    })
+});
+
+export type SubtitleMetadata = z.infer<typeof ZMetadata>;
 
 export const MigrationDuplicatedStyles = new WeakMap<SubtitleStyle, SubtitleStyle[]>();
 
@@ -75,36 +93,11 @@ export class Subtitles {
     });
 
     static createStyle(name: string): SubtitleStyle {
-        return {
-            name,
-            font: '', size: 72,
-            color: 'white',
-            outlineColor: 'black',
-            outline: 1,
-            shadow: 0,
-            styles: {
-                bold: false,
-                italic: false,
-                underline: false,
-                strikethrough: false
-            },
-            margin: { top: 10, bottom: 10, left: 10, right: 10 },
-            alignment: 2,
-            validator: null
-        }
+        return parseSubtitleStyle({ name, styles: {}, margin: {} });
     };
 
     static #createMetadata(): SubtitleMetadata {
-        return {
-            title: '',
-            language: '',
-            width: 1920,
-            height: 1080,
-            scalingFactor: 1,
-            special: {
-                untimedText: ''
-            }
-        }
+        return ZMetadata.parse({ special: {} });
     }
 
     /** Note: only copies styles from base */

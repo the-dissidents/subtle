@@ -1,15 +1,12 @@
-import type { JSONSchemaType } from "ajv";
 import { Debug } from "../Debug";
+import { Basic } from "../Basic";
+import { Editing } from "../frontend/Editing";
 import type { LabelType, SubtitleEntry, SubtitleStyle } from "./Subtitles.svelte"
-
-import { ajv, DeserializationError, parseObject } from "../Serialization";
+import { z } from "zod/v4";
 import wcwidth from "wcwidth";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { Basic } from "../Basic";
 const $_ = unwrapFunctionStore(_);
-
-import { Editing } from "../frontend/Editing";
 
 export const MetricContextList = ['editing', 'entry', 'style', 'channel'] as const;
 export type MetricContext = (typeof MetricContextList)[number];
@@ -402,64 +399,43 @@ type _ParamType<Name extends MetricFilterMethodName> =
 
 // serialization
 
-const SimpleFilterSchema: JSONSchemaType<SimpleMetricFilter> = {
-    type: 'object',
-    properties: {
-        metric: { enum: Object.keys(Metrics) } as any,
-        method: { enum: Object.keys(MetricFilterMethods) } as any,
-        negated: { type: 'boolean' },
-        parameters: { type: "array", 
-            anyOf: [
-                { items: { type: "integer" } },
-                { items: { type: "string" } }
-            ]
-        } as any
-    },
-    required: ['metric', 'method', 'parameters']
-};
-
-export const FilterSchema: JSONSchemaType<MetricFilter> = {
-    '$id': 'filter',
-    oneOf: [
-        {
-            type: 'object',
-            properties: {
-                type: { enum: ['and', 'or'] } as any,
-                filters: {
-                    type: 'array',
-                    items: { '$ref': '#' } as any
-                }
-            },
-            required: ['type', 'filters']
-        },
-        SimpleFilterSchema
-    ]
-};
-
-const validateFilter = ajv.compile(FilterSchema);
-
-function checkFilterInternal(
-    filter: SimpleMetricFilter | MetricFilter
-): void {
-    if ('type' in filter) {
-        filter.filters.forEach(checkFilterInternal);
+const ZSimpleFilter = z.object({
+    metric: z.enum(Object.keys(Metrics) as [MetricName]),
+    method: z.enum(Object.keys(MetricFilterMethods) as [MetricFilterMethodName]),
+    negated: z.boolean().default(false),
+    parameters: z.array(z.unknown())
+}).check(({issues, value: x}) => {
+    const method = MetricFilterMethods[x.method];
+    if (method.parameters == 0) {
+        if (x.parameters.length > 0) issues.push({ 
+            code: 'custom', input: x.parameters,
+            message: '0 parameters expected',
+            continue: true
+        });
     } else {
-        const method = MetricFilterMethods[filter.method];
-        const params = filter.parameters as any[];
-        if (method.parameters == 0) {
-            if (params.length > 0)
-                throw new DeserializationError('0 parameters expected');
-        } else {
-            if (params.length != method.parameters)
-                throw new DeserializationError(`${method.parameters} parameters expected`);
-            if (typeof params[0] != method.parameterType)
-                throw new DeserializationError(`${method.parameterType} parameters expected`);
-        }
+        if (x.parameters.length != method.parameters) issues.push({ 
+            code: 'custom', input: x.parameters,
+            message: `${method.parameters} parameters expected`,
+            continue: true
+        });
+        if (typeof x.parameters[0] != method.parameterType) issues.push({ 
+            code: 'custom', input: x.parameters,
+            message: `${method.parameterType} parameters expected`,
+            continue: true
+        });
     }
-}
+});
 
-export function deserializeFilter(filter: {}): MetricFilter {
-    const obj = parseObject(filter, validateFilter);
-    checkFilterInternal(obj);
-    return obj;
+export const ZFilter = z.union([
+    z.object({
+        type: z.enum(['and', 'or']),
+        get filters(): z.ZodArray<typeof ZFilter> {
+            return z.array(ZFilter);
+        }
+    }),
+    ZSimpleFilter, 
+]).transform((x) => x as MetricFilter);
+
+export function parseFilter(x: any): MetricFilter {
+    return z.parse(ZFilter, x) as MetricFilter;
 }
