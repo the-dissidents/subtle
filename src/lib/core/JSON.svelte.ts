@@ -4,7 +4,7 @@ import { DeserializationError, parseObjectZ } from "../Serialization";
 import { Metrics } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
 
-import * as z from "zod/v4";
+import * as z from "zod/v4-mini";
 
 /**
  * Version details:

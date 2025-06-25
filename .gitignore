@@ -12,4 +12,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .aider.*
 .aider*
-stats.html
+stats*.html

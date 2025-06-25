@@ -10,7 +10,7 @@ import * as fs from "@tauri-apps/plugin-fs";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { KeyCodeMap, type KeyCode } from "../details/KeyCodeMap";
-import { z } from "zod/v4";
+import * as z from "zod/v4-mini";
 const $_ = unwrapFunctionStore(_);
 
 export class KeyBinding {
@@ -141,7 +141,7 @@ const ZKeybindingSerialization = z.object({
         key: z.enum(keyCodeArray as [KeyCode]),
         modifiers: z.array(z.enum(ModifierKeys))
     })),
-    contexts: z.array(z.enum(UIFocusList)).optional()
+    contexts: z.optional(z.array(z.enum(UIFocusList)))
 });
 
 const ZKeymap = z.record(z.string(), z.array(ZKeybindingSerialization));

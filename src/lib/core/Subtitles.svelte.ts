@@ -6,7 +6,7 @@ import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
 import { parseFilter, type MetricFilter } from "./Filter";
 import { parseObjectZ } from "../Serialization";
 
-import z from "zod/v4";
+import * as z from "zod/v4-mini";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelType = typeof Labels[number];
@@ -18,26 +18,37 @@ export enum AlignMode {
 }
 
 const ZStyleBase = z.object({
-    name: z.string(),
-    font: z.string().default(''),
-    size: z.number().positive().default(72),
-    color: z.string().default('white'),
-    outlineColor: z.string().default('black'),
-    outline: z.number().min(0).default(1),
-    shadow: z.number().min(0).default(0),
-    styles: z.object({
-        bold: z.boolean().default(false),
-        italic: z.boolean().default(false),
-        underline: z.boolean().default(false),
-        strikethrough: z.boolean().default(false)
-    }),
-    margin: z.object({
-        top: z.number().default(10),
-        bottom: z.number().default(10),
-        left: z.number().default(10),
-        right: z.number().default(10),
-    }),
-    alignment: z.int().min(1).max(9).default(2),
+  name: z.string(),
+  font: z._default(z.string(), ''),
+  size: z._default(z.number().check(z.positive()), 72),
+  color: z._default(z.string(), 'white'),
+  outlineColor: z._default(z.string(), 'black'),
+  outline: z._default(z.number().check(z.gte(0)), 1),
+  shadow: z._default(z.number().check(z.gte(0)), 0),
+  styles: z.object({
+    bold: z._default(z.boolean(), false),
+    italic: z._default(z.boolean(), false),
+    underline: z._default(z.boolean(), false),
+    strikethrough: z._default(z.boolean(), false),
+  }),
+  margin: z.object({
+    top: z._default(z.number(), 10),
+    bottom: z._default(z.number(), 10),
+    left: z._default(z.number(), 10),
+    right: z._default(z.number(), 10),
+  }),
+  alignment: z._default(z.int().check(z.gte(0)).check(z.lte(9)), 2),
+});
+
+export const ZMetadata = z.object({
+  title: z._default(z.string(), ''),
+  language: z._default(z.string(), ''),
+  width: z._default(z.int().check(z.positive()), 1920),
+  height: z._default(z.int().check(z.positive()), 1080),
+  scalingFactor: z._default(z.number().check(z.positive()), 1),
+  special: z.object({
+    untimedText: z._default(z.string(), ''),
+  }),
 });
 
 export type SubtitleStyle = z.infer<typeof ZStyleBase> & {
@@ -49,17 +60,6 @@ export function parseSubtitleStyle(obj: any): SubtitleStyle {
     const validator = obj.validator ? parseFilter(obj.validator) : null;
     return { ...base, validator };
 }
-
-export const ZMetadata = z.object({
-    title: z.string().default(''),
-    language: z.string().default(''),
-    width: z.int().positive().default(1920),
-    height: z.int().positive().default(1080),
-    scalingFactor: z.number().positive().default(1),
-    special: z.object({
-        untimedText: z.string().default('')
-    })
-});
 
 export type SubtitleMetadata = z.infer<typeof ZMetadata>;
 

@@ -1,7 +1,7 @@
 import { Debug } from "../Debug";
 import { Basic } from "../Basic";
 import type { LabelType, SubtitleEntry, SubtitleStyle } from "./Subtitles.svelte"
-import { z } from "zod/v4";
+import * as z from "zod/v4-mini";
 import wcwidth from "wcwidth";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
@@ -394,9 +394,9 @@ type _ParamType<Name extends MetricFilterMethodName> =
 // serialization
 
 const ZSimpleFilter = z.object({
-    metric: z.string().refine((x) => x in Metrics),
+    metric: z.string().check(z.refine((x) => x in Metrics)),
     method: z.enum(Object.keys(MetricFilterMethods) as [MetricFilterMethodName]),
-    negated: z.boolean().default(false),
+    negated: z._default(z.boolean(), false),
     parameters: z.array(z.unknown())
 }).check(({issues, value: x}) => {
     const m = Metrics[x.metric as keyof typeof Metrics];
@@ -426,15 +426,17 @@ const ZSimpleFilter = z.object({
     }
 });
 
-export const ZFilter = z.union([
+const ZFilterBase = z.union([
     z.object({
         type: z.enum(['and', 'or']),
-        get filters(): z.ZodArray<typeof ZFilter> {
-            return z.array(ZFilter);
+        get filters(): z.core.$ZodArray<typeof ZFilterBase> {
+            return z.array(ZFilterBase);
         }
     }),
     ZSimpleFilter, 
-]).transform((x) => x as MetricFilter);
+]);
+
+export const ZFilter = z.pipe(ZFilterBase, z.transform((x) => x as MetricFilter));
 
 export function parseFilter(x: any): MetricFilter {
     return z.parse(ZFilter, x) as MetricFilter;

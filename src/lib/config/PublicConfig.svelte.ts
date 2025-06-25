@@ -7,7 +7,7 @@ import { Debug } from "../Debug";
 import { Basic } from "../Basic";
 import { tick } from "svelte";
 import { hook } from "../details/Hook.svelte";
-import { z } from "zod/v4";
+import * as z from "zod/v4-mini";
 
 export type PublicConfigItem = {
     localizedName: () => string,
@@ -51,7 +51,7 @@ type GroupType<T extends PublicConfigGroupDefinition> = {
 export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
     data: GroupType<T> = $state({} as any);
     readonly defaults: Readonly<GroupType<T>>;
-    readonly ztype: z.ZodType<GroupType<T>>;
+    readonly ztype: z.core.$ZodType<GroupType<T>>;
 
     constructor(
         public readonly name: () => string,
@@ -59,7 +59,7 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
         public readonly priority: number,
         public readonly definition: T,
     ) {
-        let schemaContent: {[key: string]: z.ZodType} = {};
+        let schemaContent: {[key: string]: z.core.$ZodType} = {};
         for (const key in definition) {
             const def = definition[key];
             this.data[key] = def.default;
@@ -67,27 +67,27 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
                 case "boolean":
                 case "string":
                     let s = def.type == 'string' ? z.string() : z.boolean();
-                    schemaContent[key] = (s as any).default(def.default); break;
+                    schemaContent[key] = z._default(s, def.default); break;
                 case "number":
                 case "integer":
                     let n = def.type == 'integer' ? z.int() : z.number();
                     if (def.bounds && def.bounds[0] !== null)
-                        n = n.min(def.bounds[0]);
+                        n = n.check(z.gte(def.bounds[0]));
                     if (def.bounds && def.bounds[1] !== null)
-                        n = n.max(def.bounds[1]);
-                    schemaContent[key] = n.default(def.default);
+                        n = n.check(z.lte(def.bounds[1]));
+                    schemaContent[key] = z._default(n, def.default);
                     break;
                 case "select":
                 case "dropdown":
-                    schemaContent[key] = z.enum(Object.keys(def.options)).default(def.default);
+                    schemaContent[key] = z._default(z.enum(Object.keys(def.options)), def.default);
                     break;
                 default:
                     Debug.never(def);
             }
         }
         
-        this.ztype = z.object(schemaContent).transform((x) => x as GroupType<T>);
-        this.defaults = this.ztype.parse({});
+        this.ztype = z.pipe(z.object(schemaContent), z.transform((x) => x as GroupType<T>));
+        this.defaults = z.parse(this.ztype, {});
     }
 }
 
@@ -129,7 +129,7 @@ export class PublicConfig {
                 const group = this.groups[key];
                 const object: unknown = obj[key];
                 if (object !== undefined) {
-                    const validated = group.ztype.safeParse(object);
+                    const validated = z.safeParse(group.ztype, object);
                     if (!validated.success) {
                         await Debug.warn(`invalid config for group ${key}:`, validated.error);
                         continue;

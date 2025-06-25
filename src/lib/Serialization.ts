@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import * as z from "zod/v4-mini";
 
 export class DeserializationError extends Error {
     constructor(msg: string) {
