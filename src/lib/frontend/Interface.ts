@@ -25,7 +25,7 @@ import { MAPI } from "../API";
 
 const $_ = unwrapFunctionStore(_);
 
-const IMPORT_FILTERS = [
+const IMPORT_FILTERS = () => [
     { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },
     { name: $_('filter.srt-subtitles'), extensions: ['srt'] },
     { name: $_('filter.vtt-subtitles'), extensions: ['vtt'] },
@@ -200,7 +200,7 @@ export const Interface = {
     },
 
     async askImportFile() {
-        const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
+        const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
         if (typeof selected != 'string') return;
         const text = await this.readTextFile(selected);
         if (!text) return;
@@ -230,7 +230,7 @@ export const Interface = {
     },
   
     async askOpenFile() {
-        const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
+        const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
         if (typeof path != 'string') return;
         await this.openFile(path);
         Source.startAutoSave();

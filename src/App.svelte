@@ -1,7 +1,13 @@
 <script lang="ts">
 console.info('App loading');
 
-import { _, locale } from 'svelte-i18n';
+import { _, locale, isLoading } from 'svelte-i18n';
+import * as i18n from 'svelte-i18n';
+
+i18n.register('en', () => import('./locales/en.json'));
+i18n.register('zh-cn', () => import('./locales/zh-cn.json'));
+i18n.register('zh-tw', () => import('./locales/zh-tw.json'));
+i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
 
 import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
@@ -219,6 +225,10 @@ appWindow.onDragDropEvent(async (ev) => {
       $uiFocus = 'Other';
   }}/>
 
+{#if $isLoading}
+loading locales
+{:else}
+
 <!-- dialogs -->
 <TimeAdjustmentDialog handler={Dialogs.timeTransform}/>
 <ImportOptionsDialog  handler={Dialogs.importOptions}/>
@@ -340,6 +350,8 @@ appWindow.onDragDropEvent(async (ev) => {
     onanimationend={() => statusTwinkling = false}
   >{$status.msg}</div>
 </main>
+
+{/if}
 
 <style>
 @media (prefers-color-scheme: light) {
