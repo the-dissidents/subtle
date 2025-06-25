@@ -1,7 +1,7 @@
 import { Debug } from "../Debug";
 import { MigrationDuplicatedStyles, parseSubtitleStyle, SubtitleEntry, Subtitles, ZMetadata, type SubtitleFormat, type SubtitleStyle } from "./Subtitles.svelte";
 import { DeserializationError, parseObjectZ } from "../Serialization";
-import { Metrics, type MetricName } from "./Filter";
+import { Metrics } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
 
 import * as z from "zod/v4";
@@ -34,9 +34,9 @@ function parseView(o: any, subs: Subtitles, version: string) {
     // currently this doesn't detect whether the metrics are really valid
     // e.g. entry columns should not be channel metrics
     subs.view.perEntryColumns = sv.perEntryColumns.filter((x) => 
-        x in Metrics && Metrics[x as MetricName]) as MetricName[];
+        x in Metrics && Metrics[x as keyof typeof Metrics]);
     subs.view.perChannelColumns = sv.perChannelColumns.filter((x) => 
-        x in Metrics && Metrics[x as MetricName]) as MetricName[];
+        x in Metrics && Metrics[x as keyof typeof Metrics]);
     const styleMap = new Map(subs.styles.map((x) => [x.name, x]));
     if (sv.timelineExcludeStyles.some((x) => !styleMap.has(x)))
         throw new DeserializationError('invalid item in timelineExcludeStyles');

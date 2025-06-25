@@ -3,16 +3,11 @@ console.info('PublicConfig loading');
 import { path } from "@tauri-apps/api";
 import { join } from "@tauri-apps/api/path";
 import * as fs from "@tauri-apps/plugin-fs";
-import Ajv, { type JSONSchemaType, type ValidateFunction } from "ajv";
 import { Debug } from "../Debug";
 import { Basic } from "../Basic";
 import { tick } from "svelte";
 import { hook } from "../details/Hook.svelte";
-
-const ajv = new Ajv({
-    removeAdditional: true,
-    useDefaults: true
-});
+import { z } from "zod/v4";
 
 export type PublicConfigItem = {
     localizedName: () => string,
@@ -53,12 +48,10 @@ type GroupType<T extends PublicConfigGroupDefinition> = {
     [key in keyof T]: T[key]['default']
 };
 
-type GroupSchema<T extends PublicConfigGroupDefinition> = JSONSchemaType<GroupType<T>>;
-
 export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
     data: GroupType<T> = $state({} as any);
     readonly defaults: Readonly<GroupType<T>>;
-    readonly validate: ValidateFunction<GroupType<T>>;
+    readonly ztype: z.ZodType<GroupType<T>>;
 
     constructor(
         public readonly name: () => string,
@@ -66,48 +59,35 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
         public readonly priority: number,
         public readonly definition: T,
     ) {
-        let defaults = {} as any;
-
-        let schema: GroupSchema<T> = {
-            type: "object",
-            properties: {},
-            required: []
-        };
+        let schemaContent: {[key: string]: z.ZodType} = {};
         for (const key in definition) {
             const def = definition[key];
             this.data[key] = def.default;
-            defaults[key] = def.default;
-
-            schema.properties[key] = {};
-            const prop = schema.properties[key];
             switch (def.type) {
-                case "string":
                 case "boolean":
-                    prop.type = def.type;
-                    prop.default = def.default;
-                    break;
-                case "integer":
+                case "string":
+                    let s = def.type == 'string' ? z.string() : z.boolean();
+                    schemaContent[key] = (s as any).default(def.default); break;
                 case "number":
-                    prop.type = def.type;
-                    prop.default = def.default;
-                    if (!def.bounds) break;
-                    if (def.bounds[0] !== null)
-                        prop.minimum = def.bounds[0];
-                    if (def.bounds[1] !== null)
-                        prop.maximum = def.bounds[1];
+                case "integer":
+                    let n = def.type == 'integer' ? z.int() : z.number();
+                    if (def.bounds && def.bounds[0] !== null)
+                        n = n.min(def.bounds[0]);
+                    if (def.bounds && def.bounds[1] !== null)
+                        n = n.max(def.bounds[1]);
+                    schemaContent[key] = n.default(def.default);
                     break;
                 case "select":
                 case "dropdown":
-                    prop.enum = Object.keys(def.options);
-                    prop.default = def.default;
+                    schemaContent[key] = z.enum(Object.keys(def.options)).default(def.default);
                     break;
                 default:
                     Debug.never(def);
             }
         }
         
-        this.defaults = defaults;
-        this.validate = ajv.compile<GroupType<T>>(schema);
+        this.ztype = z.object(schemaContent).transform((x) => x as GroupType<T>);
+        this.defaults = this.ztype.parse({});
     }
 }
 
@@ -149,11 +129,12 @@ export class PublicConfig {
                 const group = this.groups[key];
                 const object: unknown = obj[key];
                 if (object !== undefined) {
-                    if (!group.validate(object)) {
-                        await Debug.warn(`invalid config for group ${key}:`, group.validate.errors);
+                    const validated = group.ztype.safeParse(object);
+                    if (!validated.success) {
+                        await Debug.warn(`invalid config for group ${key}:`, validated.error);
                         continue;
                     }
-                    group.data = object;
+                    group.data = validated.data;
                 }
             }
         } catch (e) {

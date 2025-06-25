@@ -1,20 +1,19 @@
 console.info('Source loading');
 
-import { get, readonly, writable } from "svelte/store";
+import { Debug } from "../Debug";
 import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/Formats";
 
-import * as fs from "@tauri-apps/plugin-fs";
-import { basename, join } from '@tauri-apps/api/path';
-import { guardAsync, Interface } from "./Interface";
 import { PrivateConfig } from "../config/PrivateConfig";
 import { InterfaceConfig } from "../config/Groups";
-import { Editing } from "./Editing";
 import { EventHost } from "../details/EventHost";
+import { guardAsync, Interface } from "./Interface";
+import { Editing } from "./Editing";
 
+import * as fs from "@tauri-apps/plugin-fs";
+import { basename, join } from '@tauri-apps/api/path';
+import { get, readonly, writable } from "svelte/store";
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
-import { Debug } from "../Debug";
-
 const $_ = unwrapFunctionStore(_);
 
 export type Snapshot = {

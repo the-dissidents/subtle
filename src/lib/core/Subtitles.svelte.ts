@@ -1,9 +1,12 @@
-import { SvelteMap, SvelteSet } from "svelte/reactivity";
+console.info('core/Subtitles loading');
+
 import { Debug } from "../Debug";
+import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
-import { parseFilter, type MetricFilter, type MetricName } from "./Filter";
-import z from "zod/v4";
+import { parseFilter, type MetricFilter } from "./Filter";
 import { parseObjectZ } from "../Serialization";
+
+import z from "zod/v4";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelType = typeof Labels[number];
@@ -87,8 +90,8 @@ export class Subtitles {
     migrated: MigrationInfo = 'none';
 
     view = $state({
-        perEntryColumns: ['startTime', 'endTime'] as MetricName[],
-        perChannelColumns: ['style', 'content'] as MetricName[],
+        perEntryColumns: ['startTime', 'endTime'],
+        perChannelColumns: ['style', 'content'],
         timelineExcludeStyles: new SvelteSet<SubtitleStyle>()
     });
 

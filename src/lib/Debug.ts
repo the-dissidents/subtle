@@ -1,3 +1,5 @@
+console.info('Debug loading');
+
 import { invoke } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log"
 import StackTrace, { type StackFrame } from "stacktrace-js";

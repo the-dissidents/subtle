@@ -1,6 +1,5 @@
 import { Debug } from "../Debug";
 import { Basic } from "../Basic";
-import { Editing } from "../frontend/Editing";
 import type { LabelType, SubtitleEntry, SubtitleStyle } from "./Subtitles.svelte"
 import { z } from "zod/v4";
 import wcwidth from "wcwidth";
@@ -84,7 +83,7 @@ function newFilterMethod<
 >(f: MetricFilterMethod<FromType, ParameterType, Arity>) { return f; }
 
 export type SimpleMetricFilter<
-    Metric extends MetricName = MetricName,
+    Metric extends string = string,
     Method extends MetricFilterMethodName = MetricFilterMethodName
 > = {
     metric: Metric,
@@ -98,22 +97,22 @@ export type SimpleMetricFilter<
 };
 
 export function newMetricFilter<
-    Metric extends MetricName,
+    Metric extends string,
     Method extends MetricFilterMethodName
 >(f: SimpleMetricFilter<Metric, Method>) { return f; }
 
 export type MetricFilter = {
     type: 'and' | 'or',
-    filters: (SimpleMetricFilter<MetricName, MetricFilterMethodName> | MetricFilter)[]
-} | SimpleMetricFilter<MetricName, MetricFilterMethodName>;
+    filters: (SimpleMetricFilter<string, MetricFilterMethodName> | MetricFilter)[]
+} | SimpleMetricFilter<string, MetricFilterMethodName>;
 
 export type EvaluateFilterResult = {
-    failed: SimpleMetricFilter<MetricName, MetricFilterMethodName>[]
+    failed: SimpleMetricFilter<string, MetricFilterMethodName>[]
 };
 
 export function filterDescription(filter: SimpleMetricFilter) {
     return `${filter.negated ? $_('filter.description.not') : ''} ${
-        Metrics[filter.metric].localizedName()} ${
+        Metrics[filter.metric as keyof typeof Metrics].localizedName()} ${
         MetricFilterMethods[filter.method].localizedName()} ${
         (filter.parameters as (number[] | string[])).map((x) => x.toString()).join(' ')}`;
 }
@@ -135,7 +134,7 @@ export function evaluateFilter(
                 Debug.never(filter.type);
         }
     } else {
-        const from = Metrics[filter.metric].value(entry, style);
+        const from = Metrics[filter.metric as keyof typeof Metrics].value(entry, style);
         const success = MetricFilterMethods[filter.method]
             .exec(from as never, ...(filter.parameters as [never, any])) != filter.negated;
         return { failed: success ? [] : [filter] };
@@ -146,11 +145,7 @@ function getTextLength(s: string) {
     return [...s.matchAll(/[\w\u4E00-\u9FFF]/g)].length;
 }
 
-export const Metrics = {
-    selected: new Metric('boolean', 'editing',
-        () => $_('metrics.selected'), 
-        () => $_('metrics.selected'), 
-        (e) => Editing.inSelection(e)),
+export let Metrics = {
     startTime: new Metric('time', 'entry',
         () => $_('metrics.start-time'), 
         () => $_('metrics.start-time-short'), 
@@ -225,7 +220,7 @@ export const Metrics = {
         {
             description: () => $_('metrics.readable-characters-d')
         }),
-} as const;
+};
 
 export const MetricFilterMethods = {
     stringNonEmpty: newFilterMethod({
@@ -386,7 +381,6 @@ export const TextMetricFilterDefaultMethods:
     boolean: 'isTrue'
 } as const;
 
-export type MetricName = keyof typeof Metrics;
 export type MetricFilterMethodName = keyof typeof MetricFilterMethods;
 
 type _Arity<Name extends MetricFilterMethodName> = 
@@ -400,12 +394,18 @@ type _ParamType<Name extends MetricFilterMethodName> =
 // serialization
 
 const ZSimpleFilter = z.object({
-    metric: z.enum(Object.keys(Metrics) as [MetricName]),
+    metric: z.string().refine((x) => x in Metrics),
     method: z.enum(Object.keys(MetricFilterMethods) as [MetricFilterMethodName]),
     negated: z.boolean().default(false),
     parameters: z.array(z.unknown())
 }).check(({issues, value: x}) => {
+    const m = Metrics[x.metric as keyof typeof Metrics];
     const method = MetricFilterMethods[x.method];
+    if (method.fromType != m.type) issues.push({ 
+        code: 'custom', input: x,
+        message: 'method type mismatch',
+        continue: true
+    });
     if (method.parameters == 0) {
         if (x.parameters.length > 0) issues.push({ 
             code: 'custom', input: x.parameters,

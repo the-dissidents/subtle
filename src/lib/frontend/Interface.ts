@@ -1,6 +1,6 @@
 console.info('Interface loading');
 
-import { get, readonly, writable, type Readable } from "svelte/store";
+import { get, readonly, writable } from "svelte/store";
 
 import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";

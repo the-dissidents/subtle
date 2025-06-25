@@ -45,7 +45,6 @@ import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
-import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
 
 import { Dialogs } from './lib/frontend/Dialogs';
