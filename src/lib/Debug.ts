@@ -2,7 +2,7 @@ console.info('Debug loading');
 
 import { invoke } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log"
-import StackTrace, { type StackFrame } from "stacktrace-js";
+import type { StackFrame } from "stacktrace-js";
 import inspect from "object-inspect";
 
 /** Strangely tauri's log plugin does not export this enum, so it is recreated here */
@@ -65,6 +65,7 @@ const Filter = {
 }
 
 async function stacktrace(from?: Error) {
+    const StackTrace = await import('stacktrace-js');
     const frames = from 
         ? await StackTrace.fromError(from, Filter) 
         : StackTrace.getSync(Filter);

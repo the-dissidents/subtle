@@ -1,6 +1,6 @@
 console.info('Dialogs loading');
 
-import type { AnalyseResult, EncodingName } from "chardet"
+import type { AnalyseResult, EncodingName } from "chardet";
 import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil.svelte";
 import { mount, unmount } from "svelte";
 import OverlayMenu from "../ui/OverlayMenu.svelte";
@@ -24,7 +24,7 @@ export const Dialogs = {
     splitByLine: new DialogHandler<void, void>(),
     export: new DialogHandler<void, {content: string, ext: string} | null>(),
     encoding: new DialogHandler<
-        {source: Uint8Array, result: AnalyseResult}, 
+        {path: string, source: Uint8Array, result: AnalyseResult}, 
         {decoded: string, encoding: EncodingName} | null>(),
 
     overlayMenu(

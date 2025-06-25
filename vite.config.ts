@@ -6,9 +6,12 @@ import { visualizer } from "rollup-plugin-visualizer";
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [
-    nodePolyfills({include: ['buffer', 'stream', 'util']}),
+    // nodePolyfills({include: ['buffer', 'stream', 'util']}),
     svelte(),
-    visualizer()
+    visualizer({
+      template: 'treemap',
+      gzipSize: true,
+    })
   ],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

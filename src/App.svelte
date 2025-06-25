@@ -64,7 +64,6 @@ const appWindow = getCurrentWebviewWindow();
 let leftPane: HTMLElement | undefined = $state();
 let editTable: HTMLElement | undefined = $state();
 let videoCanvasContainer: HTMLElement | undefined = $state();
-let videoCanvas: HTMLCanvasElement | undefined = $state();
 let timelineCanvasContainer: HTMLDivElement | undefined = $state();
 let statusBar: HTMLDivElement | undefined = $state();
 

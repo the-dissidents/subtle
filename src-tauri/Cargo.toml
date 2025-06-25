@@ -32,6 +32,7 @@ time = "0.3.41"
 deranged = "=0.3.11"
 vsprintf = "2.0.0"
 num_cpus = "1.17.0"
+encoding_rs = "0.8.35"
 
 [target.'cfg(windows)'.dependencies]
 ffmpeg-sys-next = { version = "7.1.0", features = ["build-lib-d3d11va"] }

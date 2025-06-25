@@ -472,7 +472,6 @@ export class MMedia {
         }
     }
 
-
     async getKeyframeBefore(pos: number) {
         Debug.assert(!this.#destroyed);
         let channel: Channel<MediaEvent> | undefined;
@@ -520,6 +519,13 @@ export const MAPI = {
             invoke('media_version', {channel});
         });
     },
+
+    async decodeFile(path: string, encoding: string | null) {
+        const { type, data } = await invoke<{ type: 'ok' | 'error', data: string }>(
+            'try_decode_file', { path, encoding });
+        if (type == 'error') throw new Error(`try_decode_file: ${data}`);
+        return data;
+    }
 }
 
 

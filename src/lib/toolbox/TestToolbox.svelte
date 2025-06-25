@@ -1,5 +1,4 @@
 <script lang="ts">
-import chardet from 'chardet';
 import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
 
@@ -14,7 +13,6 @@ import { Source } from '../frontend/Source';
 import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
 import { Interface } from '../frontend/Interface';
-    import { AppleIcon } from '@lucide/svelte';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -69,7 +67,7 @@ const command = new UICommand(() => '', [], {
     let path = await dialog.open();
     if (!path) return;
     let file = await fs.readFile(path);
-    let detected = chardet.analyse(file);
+    let detected = (await import('chardet')).analyse(file);
     result = detected.map((x) => `${x.name} -- ${x.confidence}`).join('\n');
   }}>
   detect encoding
