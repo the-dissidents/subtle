@@ -106,15 +106,12 @@ export const Interface = {
             return;
         }
         return guardAsync(async () => {
-            await Debug.debug('reading file');
             const file = await fs.readFile(path);
-            await Debug.debug('analysing encoding');
-            const result = (await import('chardet')).analyse(file);
-            if (result[0].confidence == 100 
-            && (result[0].name == 'UTF-8' || result[0].name == 'ASCII'))
-            {
-                return await MAPI.decodeFile(path, 'UTF-8');
-            } else {
+            const decode = await MAPI.detectOrDecodeFile(path);
+            if (decode !== null)
+                return await MAPI.decodeFile(path, null);
+            else {
+                const result = (await import('chardet')).analyse(file);
                 const out = await Dialogs.encoding.showModal!({path, source: file, result});
                 if (!out) return null;
                 return out.decoded;

@@ -522,9 +522,19 @@ export const MAPI = {
 
     async decodeFile(path: string, encoding: string | null) {
         const { type, data } = await invoke<{ type: 'ok' | 'error', data: string }>(
-            'try_decode_file', { path, encoding });
-        if (type == 'error') throw new Error(`try_decode_file: ${data}`);
+            'decode_file_as', { path, encoding });
+        if (type == 'error') throw new Error(`decode_file_as: ${data}`);
         return data;
+    },
+
+    async detectOrDecodeFile(path: string) {
+        const result = await invoke<{ 
+            type: 'normal' | 'error', data: string 
+        } | { type: 'strange' }>(
+            'decode_or_detect_file', { path });
+        if (result.type == 'error') throw new Error(`decode_or_detect_file: ${result.data}`);
+        if (result.type == 'strange') return null;
+        return result.data;
     }
 }
 

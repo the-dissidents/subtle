@@ -226,7 +226,7 @@ appWindow.onDragDropEvent(async (ev) => {
   }}/>
 
 {#if $isLoading}
-loading locales
+<!-- loading locales -->
 {:else}
 
 <!-- dialogs -->

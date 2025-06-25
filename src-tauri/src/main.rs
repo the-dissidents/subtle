@@ -85,7 +85,8 @@ fn main() {
             media::video_set_size,
             media::get_keyframe_before,
             redirect_log::set_log_filter_level,
-            encoding::try_decode_file,
+            encoding::decode_file_as,
+            encoding::decode_or_detect_file
         ])
         .run(ctx)
         .expect("error while running tauri application");
