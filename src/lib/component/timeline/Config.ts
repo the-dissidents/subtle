@@ -13,7 +13,7 @@ import { TimelineParams } from './Timeline.svelte';
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import type { SubtitleEntry } from "../../core/Subtitles.svelte";
-export const $_ = unwrapFunctionStore(_);
+const $_ = unwrapFunctionStore(_);
 
 export const TimelineConfig = new PublicConfigGroup(
     () => get(_)('config.timeline'),

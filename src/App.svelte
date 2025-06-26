@@ -12,7 +12,7 @@ i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
 import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
 
-import { TableConfig } from "./lib/SubtitleTable.svelte";
+import { TableConfig } from "./lib/component/subtitleTable/Config";
 import { MediaConfig } from "./lib/component/preview/Config";
 import { TimelineConfig } from './lib/component/timeline/Config';
 
@@ -31,7 +31,7 @@ import KeybindingDialog from './lib/dialog/KeybindingDialog.svelte';
 import KeybindingInputDialog from './lib/dialog/KeybindingInputDialog.svelte';
 
 import EntryEdit from './lib/EntryEdit.svelte';
-import SubtitleTable from './lib/SubtitleTable.svelte';
+import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
 import Timeline from './lib/component/timeline/Timeline.svelte';
 import Preview from './lib/component/preview/Preview.svelte';
 

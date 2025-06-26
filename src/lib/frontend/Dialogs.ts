@@ -6,9 +6,10 @@ import { mount, unmount } from "svelte";
 import OverlayMenu from "../ui/OverlayMenu.svelte";
 import { UICommand } from "./CommandBase";
 import type { CommandBinding } from "./Keybinding";
-import { InputConfig } from "../config/Groups";
-import { $_ } from "./Commands";
-import { Editing, SelectMode, KeepInViewMode } from "./Editing";
+import { Editing } from "./Editing";
+
+import { _, unwrapFunctionStore } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
 
 export class DialogHandler<TInput = void, TOutput = string> {
     showModal?: (i: TInput) => Promise<TOutput>;

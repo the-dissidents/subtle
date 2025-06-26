@@ -1,7 +1,6 @@
 import { Interface } from "./Interface";
 import { UICommand } from "./CommandBase";
 
-import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { get } from "svelte/store";
 import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
@@ -18,7 +17,9 @@ import { Basic } from "../Basic";
 import { Format } from "../core/Formats";
 import { Toolboxes } from "./Toolboxes";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
-export const $_ = unwrapFunctionStore(_);
+
+import { _, unwrapFunctionStore } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
 
 const toJSON = (useEntries: SubtitleEntry[]) => 
     Format.JSON.write(Source.subs, { useEntries });
