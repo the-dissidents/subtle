@@ -44,7 +44,7 @@ function hasSelection(n = 0) {
     return Editing.getSelection().length > n;
 }
 
-function hasFocus() {
+export function hasFocus() {
     return Editing.getFocusedEntry() instanceof SubtitleEntry;
 }
 
@@ -94,46 +94,6 @@ function doubleForEachStyle(
 }
 
 export const BasicCommands = {
-    previousEntrySingle: new UICommand(() => $_('category.table'),
-        [ CommandBinding.from(['ArrowUp'], ['Table']),
-          CommandBinding.from(['Alt+ArrowUp']), ],
-    {
-        name: () => $_('action.previous-entry-single'),
-        call: () => Editing.offsetFocus(-1, SelectMode.Single, 
-            InputConfig.data.arrowNavigationType == 'keepPosition' 
-            ? KeepInViewMode.SamePosition 
-            : KeepInViewMode.KeepInSight)
-    }),
-    previousEntrySequence: new UICommand(() => $_('category.table'),
-        [ CommandBinding.from(['Shift+ArrowUp'], ['Table']),
-          CommandBinding.from(['Alt+Shift+ArrowUp']), ],
-    {
-        name: () => $_('action.previous-entry-sequence'),
-        call: () => Editing.offsetFocus(-1, SelectMode.Sequence, 
-            InputConfig.data.arrowNavigationType == 'keepPosition' 
-            ? KeepInViewMode.SamePosition 
-            : KeepInViewMode.KeepInSight)
-    }),
-    nextEntrySingle: new UICommand(() => $_('category.table'),
-        [ CommandBinding.from(['ArrowDown'], ['Table']),
-          CommandBinding.from(['Alt+ArrowDown']), ],
-    {
-        name: () => $_('action.next-entry-single'),
-        call: () => Editing.offsetFocus(1, SelectMode.Single, 
-            InputConfig.data.arrowNavigationType == 'keepPosition' 
-            ? KeepInViewMode.SamePosition 
-            : KeepInViewMode.KeepInSight)
-    }),
-    nextEntrySequence: new UICommand(() => $_('category.table'),
-        [ CommandBinding.from(['Shift+ArrowDown'], ['Table']),
-          CommandBinding.from(['Alt+Shift+ArrowDown']), ],
-    {
-        name: () => $_('action.next-entry-sequence'),
-        call: () => Editing.offsetFocus(1, SelectMode.Sequence, 
-            InputConfig.data.arrowNavigationType == 'keepPosition' 
-            ? KeepInViewMode.SamePosition 
-            : KeepInViewMode.KeepInSight)
-    }),
     editThisEntry:new UICommand(() => $_('category.editing'),
         [ CommandBinding.from(['Enter'], ['Table', 'Timeline']), ],
     {
@@ -210,8 +170,6 @@ export const BasicCommands = {
         name: () => $_('action.replace-previous'),
         call: () => Toolboxes.search!.execute('replace', 'previous')
     }),
-
-
     
     playEntry: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['P'], ['Table', 'Timeline']),
@@ -232,8 +190,6 @@ export const BasicCommands = {
             await Playback.play(true);
         }
     }),
-
-
 
     copyJSON: new UICommand(() => $_('category.editing'),
         [ CommandBinding.from(['CmdOrCtrl+C'], ['Table', 'Timeline']) ],

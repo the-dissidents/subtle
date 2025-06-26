@@ -1,56 +1,105 @@
-import { _ } from "svelte-i18n";
-import { get } from 'svelte/store';
 import { PublicConfigGroup } from "../../config/PublicConfig.svelte";
+import { InputConfig } from "../../config/Groups";
+import { UICommand } from "../../frontend/CommandBase";
+import { Editing, SelectMode, KeepInViewMode } from "../../frontend/Editing";
+import { CommandBinding, KeybindingManager } from "../../frontend/Keybinding";
+
+import { _, unwrapFunctionStore } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
 
 export const TableConfig = new PublicConfigGroup(
-  () => get(_)('config.table-view'),
+  () => $_('config.table-view'),
   null, 1,
 {
   maxZoom: {
-    localizedName: () => get(_)('config.maximum-zoom'),
+    localizedName: () => $_('config.maximum-zoom'),
     type: 'number',
-    description: () => get(_)('config.maximum-zoom-d'),
+    description: () => $_('config.maximum-zoom-d'),
     bounds: [1, 6],
     default: 2
   },
   autoScrollSpeed: {
-    localizedName: () => get(_)('config.auto-scroll-factor'),
+    localizedName: () => $_('config.auto-scroll-factor'),
     type: 'number',
-    description: () => get(_)('config.auto-scroll-factor-d'),
+    description: () => $_('config.auto-scroll-factor-d'),
     bounds: [1, 5],
     default: 2
   },
   autoScrollExponent: {
-    localizedName: () => get(_)('config.auto-scroll-exponent'),
+    localizedName: () => $_('config.auto-scroll-exponent'),
     type: 'number',
-    description: () => get(_)('config.auto-scroll-exponent-d'),
+    description: () => $_('config.auto-scroll-exponent-d'),
     bounds: [1, 2],
     default: 1.5
   },
   doubleClickStartEdit: {
-    localizedName: () => get(_)('config.double-click-starts-edit'),
+    localizedName: () => $_('config.double-click-starts-edit'),
     type: 'boolean',
     default: true
   },
   doubleClickPlaybackBehavior: {
-    localizedName: () => get(_)('config.double-click-playback-behavior.name'),
+    localizedName: () => $_('config.double-click-playback-behavior.name'),
     type: 'dropdown',
     options: {
       none: {
-        localizedName: () => get(_)('config.double-click-playback-behavior.none')
+        localizedName: () => $_('config.double-click-playback-behavior.none')
       },
       seek: {
-        localizedName: () => get(_)('config.double-click-playback-behavior.seek')
+        localizedName: () => $_('config.double-click-playback-behavior.seek')
       },
       play: {
-        localizedName: () => get(_)('config.double-click-playback-behavior.play')
+        localizedName: () => $_('config.double-click-playback-behavior.play')
       }
     },
     default: 'seek'
   },
   showDebug: {
-    localizedName: () => get(_)('config.show-debug-info'),
+    localizedName: () => $_('config.show-debug-info'),
     type: 'boolean',
     default: false
   },
 });
+
+export const TableCommands = {
+    previousEntrySingle: new UICommand(() => $_('category.table'),
+        [ CommandBinding.from(['ArrowUp'], ['Table']),
+          CommandBinding.from(['Alt+ArrowUp']), ],
+    {
+        name: () => $_('action.previous-entry-single'),
+        call: () => Editing.offsetFocus(-1, SelectMode.Single, 
+            InputConfig.data.arrowNavigationType == 'keepPosition' 
+            ? KeepInViewMode.SamePosition 
+            : KeepInViewMode.KeepInSight)
+    }),
+    previousEntrySequence: new UICommand(() => $_('category.table'),
+        [ CommandBinding.from(['Shift+ArrowUp'], ['Table']),
+          CommandBinding.from(['Alt+Shift+ArrowUp']), ],
+    {
+        name: () => $_('action.previous-entry-sequence'),
+        call: () => Editing.offsetFocus(-1, SelectMode.Sequence, 
+            InputConfig.data.arrowNavigationType == 'keepPosition' 
+            ? KeepInViewMode.SamePosition 
+            : KeepInViewMode.KeepInSight)
+    }),
+    nextEntrySingle: new UICommand(() => $_('category.table'),
+        [ CommandBinding.from(['ArrowDown'], ['Table']),
+          CommandBinding.from(['Alt+ArrowDown']), ],
+    {
+        name: () => $_('action.next-entry-single'),
+        call: () => Editing.offsetFocus(1, SelectMode.Single, 
+            InputConfig.data.arrowNavigationType == 'keepPosition' 
+            ? KeepInViewMode.SamePosition 
+            : KeepInViewMode.KeepInSight)
+    }),
+    nextEntrySequence: new UICommand(() => $_('category.table'),
+        [ CommandBinding.from(['Shift+ArrowDown'], ['Table']),
+          CommandBinding.from(['Alt+Shift+ArrowDown']), ],
+    {
+        name: () => $_('action.next-entry-sequence'),
+        call: () => Editing.offsetFocus(1, SelectMode.Sequence, 
+            InputConfig.data.arrowNavigationType == 'keepPosition' 
+            ? KeepInViewMode.SamePosition 
+            : KeepInViewMode.KeepInSight)
+    }),
+}
+KeybindingManager.register(TableCommands);

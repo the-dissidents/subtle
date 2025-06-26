@@ -12,7 +12,7 @@ import { MediaPlayerInterface } from '../preview/MediaPlayer';
 import { TimelineParams } from './Timeline.svelte';
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import type { SubtitleEntry } from "../../core/Subtitles.svelte";
+import { SubtitleEntry } from "../../core/Subtitles.svelte";
 const $_ = unwrapFunctionStore(_);
 
 export const TimelineConfig = new PublicConfigGroup(
@@ -101,6 +101,60 @@ export const TimelineCommands = {
         onDeactivate: (entry) => {
             EventHost.unbind(entry);
             Source.markChanged(ChangeType.Times);
+        }
+    }),
+    moveWholeStartTo: new UICommand(() => $_('category.timeline'),
+        [ CommandBinding.from(['CmdOrCtrl+['], ['Timeline']) ],
+    {
+        name: () => $_('action.move-whole-start-time-to-cursor'),
+        isApplicable: () => Editing.getSelection().length > 0,
+        call: () => {
+            const selection = Editing.getSelection();
+            const start = Math.min(...selection.map((x) => x.start));
+            const delta = start - Playback.position;
+            selection.forEach((x) => {
+                x.start -= delta;
+                x.end -= delta;
+            });
+            Source.markChanged(ChangeType.Times);
+        }
+    }),
+    moveWholeEndTo: new UICommand(() => $_('category.timeline'),
+        [ CommandBinding.from(['CmdOrCtrl+]'], ['Timeline']) ],
+    {
+        name: () => $_('action.move-whole-end-time-to-cursor'),
+        isApplicable: () => Editing.getSelection().length > 0,
+        call: () => {
+            const selection = Editing.getSelection();
+            const end = Math.max(...selection.map((x) => x.end));
+            const delta = end - Playback.position;
+            selection.forEach((x) => {
+                x.end -= delta;
+                x.end -= delta;
+            });
+            Source.markChanged(ChangeType.Times);
+        }
+    }),
+    setStart: new UICommand(() => $_('category.timeline'),
+        [ CommandBinding.from(['['], ['Timeline']) ],
+    {
+        name: () => $_('action.set-start-time-to-cursor'),
+        isApplicable: () => Editing.getFocusedEntry() instanceof SubtitleEntry,
+        call: () => {
+            const focus = Editing.getFocusedEntry();
+            Debug.assert(focus instanceof SubtitleEntry);
+            if (focus.end > Playback.position) focus.start = Playback.position;
+        }
+    }),
+    setEnd: new UICommand(() => $_('category.timeline'),
+        [ CommandBinding.from(['['], ['Timeline']) ],
+    {
+        name: () => $_('action.set-end-time-to-cursor'),
+        isApplicable: () => Editing.getFocusedEntry() instanceof SubtitleEntry,
+        call: () => {
+            const focus = Editing.getFocusedEntry();
+            Debug.assert(focus instanceof SubtitleEntry);
+            if (focus.start < Playback.position) focus.end = Playback.position;
         }
     }),
     selectMode: new UICommand(() => $_('category.timeline'),
