@@ -22,6 +22,8 @@ import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Debug } from "../Debug";
 import { MAPI } from "../API";
+import { UICommand } from "./CommandBase";
+import { CommandBinding, KeybindingManager } from "./Keybinding";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -277,3 +279,116 @@ export const Interface = {
         });
     }
 }
+
+export const InterfaceCommands = {
+    newFile: new UICommand(() => $_('category.document'),
+        [ CommandBinding.from(['CmdOrCtrl+N']) ],
+    {
+        name: () => $_('menu.new-file'),
+        call: async () => { 
+            if (await Interface.warnIfNotSaved())
+                Interface.newFile();
+        }
+    }),
+    openMenu: new UICommand(() => $_('category.document'),
+        [ CommandBinding.from(['CmdOrCtrl+O']), ],
+    {
+        name: () => $_('menu.open'),
+        items: () => {
+            const paths = PrivateConfig.get('paths');
+            return [
+                {
+                    name: () => $_('cxtmenu.other-file'),
+                    isDialog: true,
+                    async call() {
+                        if (await Interface.warnIfNotSaved())
+                            Interface.askOpenFile();
+                    },
+                },
+                ...(paths.length == 0 ? [
+                    {
+                        name: $_('cxtmenu.no-recent-files'),
+                        isApplicable: () => false,
+                        call() {}
+                    }
+                    ] : paths.map((x) => ({
+                        name: '[...]/' + x.name.split(Basic.pathSeparator)
+                            .slice(-2).join(Basic.pathSeparator),
+                        async call() {
+                            if (await Interface.warnIfNotSaved())
+                                Interface.openFile(x.name);
+                        }
+                    }))
+                ),
+            ]
+        }
+    }),
+    openVideo: new UICommand(() => $_('category.document'),
+        [ CommandBinding.from(['CmdOrCtrl+Shift+O']), ],
+    {
+        name: () => $_('menu.open-video'),
+        isDialog: true,
+        call: () => Interface.askOpenVideo()
+    }),
+    closeVideo: new UICommand(() => $_('category.document'),
+        [ ],
+    {
+        name: () => $_('menu.close-video'),
+        isApplicable: () => get(Playback.isLoaded),
+        call: () => Playback.close()
+    }),
+    import: new UICommand(() => $_('category.document'),
+        [ CommandBinding.from(['CmdOrCtrl+I']), ],
+    {
+        name: () => $_('menu.import'),
+        isDialog: true,
+        call: () => Interface.askImportFile()
+    }),
+    exportASS: new UICommand(() => $_('category.document'),
+        [ ],
+    {
+        name: () => $_('menu.export-ass'),
+        isDialog: true,
+        call: () => Interface.askExportFile('ass', (x) => Format.ASS.write(x))
+    }),
+    exportSRTPlaintext: new UICommand(() => $_('category.document'),
+        [ ],
+    {
+        name: () => $_('menu.export-srt-plaintext'),
+        isDialog: true,
+        call: async () => {
+            const result = await Dialogs.export.showModal!();
+            if (!result) return;
+            Interface.askExportFile(result.ext, () => result.content);
+        }
+    }),
+    exportMenu: new UICommand(() => $_('category.document'),
+        [ ],
+    {
+        name: () => $_('menu.export'),
+        items: [
+            {
+                name: () => 'ASS',
+                call: () => { InterfaceCommands.exportASS.call(); }
+            },
+            {
+                name: () => $_('cxtmenu.srt-plaintext'),
+                call: () => { InterfaceCommands.exportSRTPlaintext.call() }
+            }
+        ]
+    }),
+    save: new UICommand(() => $_('category.document'),
+        [ CommandBinding.from(['CmdOrCtrl+S']), ],
+    {
+        name: () => $_('action.save'),
+        call: () => Interface.askSaveFile()
+    }),
+    saveAs: new UICommand(() => $_('category.document'),
+        [ CommandBinding.from(['CmdOrCtrl+Shift+S']), ],
+    {
+        name: () => $_('menu.save-as'),
+        isDialog: true,
+        call: () => Interface.askSaveFile(true)
+    }),
+}
+KeybindingManager.register(InterfaceCommands);

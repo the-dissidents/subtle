@@ -7,7 +7,7 @@ import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api
 export type CommandOptions<TState = any> = ({
     displayAccel?: string,
     isDialog?: boolean,
-    call: () => (TState | Promise<TState>)
+    call: (self: UICommand<TState>) => (TState | Promise<TState>)
 } | {
     menuName?: string | (() => string),
     items: CommandOptions<TState>[] | (() => CommandOptions<TState>[])
@@ -23,20 +23,22 @@ function unwrap<T>(fv: T | (() => T)): T {
     return typeof fv === 'function' ? fv() : fv;
 }
 
-function commandOptionToMenu(item: CommandOptions): MenuItemOptions | SubmenuOptions {
+function commandOptionToMenu<T>(
+    item: CommandOptions<T>, cmd: UICommand<T>
+): MenuItemOptions | SubmenuOptions {
     const enabled = item.isApplicable ? item.isApplicable() : true;
     return 'call' in item ? {
         text: unwrap(item.name),
         enabled,
         accelerator: item.displayAccel,
-        action: () => item.call()
+        action: () => item.call(cmd)
     } : {
         text: unwrap(item.name),
         enabled,
         items: enabled ? [...item.menuName ? [{
             text: unwrap(item.menuName),
             enabled: false
-        }] : [], ...unwrap(item.items).map((x) => commandOptionToMenu(x))] : []
+        }] : [], ...unwrap(item.items).map((x) => commandOptionToMenu(x, cmd))] : []
     }
 }
 
@@ -83,14 +85,14 @@ export class UICommand<TState = void> {
                 this.options.displayAccel = b.sequence[0].toString();
             // chord display is not supported
         }
-        return commandOptionToMenu(this.options);
+        return commandOptionToMenu(this.options, this);
     }
 
     async menu() {
         const enabled = this.options.isApplicable ? this.options.isApplicable() : true;
         if (!enabled) return;
 
-        let opt = commandOptionToMenu(this.options);
+        let opt = commandOptionToMenu(this.options, this);
         if ('items' in opt) {
             await (await Menu.new(opt)).popup();
         } else {
@@ -119,7 +121,7 @@ export class UICommand<TState = void> {
             if (n < 0) return;
             await this.#runCommand(items[n]);
         } else {
-            this.#state = { value: await item.call() };
+            this.#state = { value: await item.call(this) };
         }
     }
 

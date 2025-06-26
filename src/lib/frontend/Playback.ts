@@ -7,6 +7,13 @@ import { MediaPlayerInterface, MediaPlayer, type SetPositionOptions } from "../c
 import { EventHost } from "../details/EventHost";
 import { Overridable } from "../details/Overridable.svelte";
 import type { MediaSampler2 } from "../component/timeline/MediaSampler2";
+import { InputConfig } from "../config/Groups";
+import { UICommand } from "./CommandBase";
+import { CommandBinding, KeybindingManager } from "./Keybinding";
+import { unwrapFunctionStore, _ } from "svelte-i18n";
+import { guardAsync } from "./Interface";
+
+const $_ = unwrapFunctionStore(_);
 
 export type PlayArea = {
     start: number | undefined,
@@ -120,3 +127,86 @@ export const Playback = {
         await this.play(!this.player.isPlaying);
     }
 }
+
+export const PlaybackCommands = {
+    selectAudioStream: new UICommand(() => $_('category.media'),
+        [ ],
+    {
+        name: () => $_('menu.select-audio-stream'),
+        isApplicable: () => get(Playback.isLoaded),
+        items: () => Playback.player!.streams
+            .filter((x) => x.type == 'audio')
+            .map((x) => ({
+                name: x.description + (
+                    x.index == Playback.player?.currentAudioStream 
+                    ? ' ' + $_('menu.audio-stream-current') : ''),
+                isApplicable: () => x.index != Playback.player?.currentAudioStream,
+                async call() {
+                    await guardAsync(() => Playback.setAudioStream(x.index),
+                        $_('msg.failed-to-set-audio-stream'))
+                }
+            }))
+    }),
+    togglePlay: new UICommand(() => $_('category.media'),
+        [ CommandBinding.from(['Space'], ['Table', 'Timeline']),
+          CommandBinding.from(['Alt+Space']), ],
+    {
+        name: () => $_('action.toggle-play'),
+        call: () => Playback.toggle()
+    }),
+    toggleInPoint: new UICommand(() => $_('category.media'),
+        [ CommandBinding.from(['I'], ['Table', 'Timeline']),
+          CommandBinding.from(['Alt+I']), ],
+    {
+        name: () => $_('action.toggle-in-point'),
+        call() {
+            const pos = Playback.position;
+            const area = Playback.playArea.setting;
+            Playback.playArea.setting.start = 
+                (area.start == pos || (area.end !== undefined && area.end <= pos)) 
+                ? undefined : pos;
+        }
+    }),
+    toggleOutPoint: new UICommand(() => $_('category.media'),
+        [ CommandBinding.from(['O'], ['Table', 'Timeline']),
+          CommandBinding.from(['Alt+O']), ],
+    {
+        name: () => $_('action.toggle-out-point'),
+        call() {
+            const pos = Playback.position;
+            const area = Playback.playArea.setting;
+            Playback.playArea.setting.end =
+                (area.end == pos || (area.start !== undefined && area.start >= pos)) 
+                ? undefined : pos;
+        }
+    }),
+    previousFrame: new UICommand(() => $_('category.media'),
+        [ CommandBinding.from(['CmdOrCtrl+ArrowLeft'], ['Timeline']),
+          CommandBinding.from(['Alt+CmdOrCtrl+ArrowLeft']), ],
+    {
+        name: () => $_('action.previous-frame'),
+        call: () => Playback.player?.requestPreviousFrame()
+    }),
+    nextFrame: new UICommand(() => $_('category.media'),
+        [ CommandBinding.from(['CmdOrCtrl+ArrowRight'], ['Timeline']),
+          CommandBinding.from(['Alt+CmdOrCtrl+ArrowRight']), ],
+    {
+        name: () => $_('action.next-frame'),
+        call: () => Playback.player?.requestNextFrame()
+    }),
+    jumpBackward: new UICommand(() => $_('category.media'),
+        [ CommandBinding.from(['ArrowLeft'], ['Timeline']),
+          CommandBinding.from(['Alt+ArrowLeft']), ],
+    {
+        name: () => $_('action.jump-backward'),
+        call: () => Playback.setPosition(Playback.position - InputConfig.data.skipDuration)
+    }),
+    jumpForward: new UICommand(() => $_('category.media'),
+        [ CommandBinding.from(['ArrowRight'], ['Timeline']),
+          CommandBinding.from(['Alt+ArrowRight']), ],
+    {
+        name: () => $_('action.jump-forward'),
+        call: () => Playback.setPosition(Playback.position + InputConfig.data.skipDuration)
+    }),
+}
+KeybindingManager.register(PlaybackCommands);

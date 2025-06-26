@@ -4,7 +4,8 @@ import { Menu } from "@tauri-apps/api/menu";
 import { Editing } from "./Editing";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
-import { Commands } from "./Commands";
+import { BasicCommands } from "./Commands";
+import { DialogCommands } from "./Dialogs";
 const $_ = unwrapFunctionStore(_);
 
 export const Actions = {
@@ -13,46 +14,46 @@ export const Actions = {
         if (selection.length == 0) return;
 
         let menu = await Menu.new({items: [
-            Commands.copyMenu.toMenuItem(),
-            Commands.copyChannelText.toMenuItem(),
-            Commands.cut.toMenuItem(),
-            Commands.paste.toMenuItem(),
+            BasicCommands.copyMenu.toMenuItem(),
+            BasicCommands.copyChannelText.toMenuItem(),
+            BasicCommands.cut.toMenuItem(),
+            BasicCommands.paste.toMenuItem(),
             { item: 'Separator' },
-            Commands.deleteSelection.toMenuItem(),
+            BasicCommands.deleteSelection.toMenuItem(),
             { item: 'Separator' },
-            Commands.selectAll.toMenuItem(),
-            Commands.selectByChannel.toMenuItem(),
-            Commands.invertSelection.toMenuItem(),
+            BasicCommands.selectAll.toMenuItem(),
+            BasicCommands.selectByChannel.toMenuItem(),
+            BasicCommands.invertSelection.toMenuItem(),
             { item: 'Separator' },
-            Commands.insertBeforeFocus.toMenuItem(),
-            Commands.insertAfterFocus.toMenuItem(),
-            Commands.moveMenu.toMenuItem(),
+            BasicCommands.insertBeforeFocus.toMenuItem(),
+            BasicCommands.insertAfterFocus.toMenuItem(),
+            BasicCommands.moveMenu.toMenuItem(),
             { item: 'Separator' },
-            Commands.combineIntoOneEntry.toMenuItem(),
-            Commands.splitChannels.toMenuItem(),
-            Commands.connectMenu.toMenuItem(),
+            BasicCommands.combineIntoOneEntry.toMenuItem(),
+            BasicCommands.splitChannels.toMenuItem(),
+            BasicCommands.connectMenu.toMenuItem(),
             { item: 'Separator' },
-            Commands.label.toMenuItem(),
+            BasicCommands.label.toMenuItem(),
             { item: 'Separator' },
             {
                 text: $_('cxtmenu.utilities'),
                 items: [
-                    Commands.transformTimes.toMenuItem(),
+                    BasicCommands.transformTimes.toMenuItem(),
                     { item: 'Separator' },
-                    Commands.sortSelectionByTime.toMenuItem(),
+                    BasicCommands.sortSelectionByTime.toMenuItem(),
                     { item: 'Separator' },
-                    Commands.createChannel.toMenuItem(),
-                    Commands.replaceChannel.toMenuItem(),
-                    Commands.exchangeChannel.toMenuItem(),
-                    Commands.mergeChannel.toMenuItem(),
-                    Commands.removeChannel.toMenuItem(),
-                    Commands.removeNewlines.toMenuItem(),
-                    Commands.removeBlankChannels.toMenuItem(),
+                    BasicCommands.createChannel.toMenuItem(),
+                    BasicCommands.replaceChannel.toMenuItem(),
+                    BasicCommands.exchangeChannel.toMenuItem(),
+                    BasicCommands.mergeChannel.toMenuItem(),
+                    BasicCommands.removeChannel.toMenuItem(),
+                    BasicCommands.removeNewlines.toMenuItem(),
+                    BasicCommands.removeBlankChannels.toMenuItem(),
                     { item: 'Separator' },
-                    Commands.mergeDuplicates.toMenuItem(),
-                    Commands.combineDialog.toMenuItem(),
-                    Commands.splitDialog.toMenuItem(),
-                    Commands.fixOverlap.toMenuItem(),
+                    BasicCommands.mergeDuplicates.toMenuItem(),
+                    DialogCommands.combineDialog.toMenuItem(),
+                    DialogCommands.splitDialog.toMenuItem(),
+                    BasicCommands.fixOverlap.toMenuItem(),
                 ]
             },
         ]});

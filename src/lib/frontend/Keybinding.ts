@@ -151,10 +151,23 @@ type KeymapSerialization = z.infer<typeof ZKeymap>;
 
 const ConfigFile = 'keybinding.json';
 
+let initialized = false;
+let commands = new Map<string, UICommand<any>>();
+
 export const KeybindingManager = {
-    commands: new Map<string, UICommand<any>>(),
+    get commands(): ReadonlyMap<string, UICommand<any>> {
+        return commands;
+    },
+
+    register(cmds: Record<string, UICommand<any>>) {
+        Debug.assert(!initialized);
+        Object.entries(cmds).forEach(([a, b]) => commands.set(a, b));
+    },
 
     async init() {
+        if (initialized)
+            return Debug.early('already initialized');
+        initialized = true;
         await this.read();
         this.update();
         document.addEventListener('keydown', (ev) => {

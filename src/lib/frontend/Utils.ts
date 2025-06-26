@@ -1,9 +1,8 @@
 console.info('Utils loading');
 
-import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import * as dialog from "@tauri-apps/plugin-dialog";
 
-import { SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Editing, SelectMode } from "./Editing";
 import { Interface } from "./Interface";
 import { ChangeType, Source } from "./Source";

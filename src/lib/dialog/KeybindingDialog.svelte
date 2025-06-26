@@ -1,7 +1,6 @@
 <script lang="ts">
 import { Debug } from '../Debug';
 import DialogBase from '../DialogBase.svelte';
-import { Commands } from '../frontend/Commands';
 import { Dialogs, type DialogHandler } from '../frontend/Dialogs';
 import { _, locale } from 'svelte-i18n';
 import { KeybindingManager, type CommandBinding } from '../frontend/Keybinding';
@@ -28,7 +27,7 @@ let refresh = $state(false);
 
 function groupedCommands() {
   const result = new Map<string, UICommand<any>[]>();
-  Object.entries(Commands).forEach(([_, cmd]) => {
+  Object.entries(KeybindingManager.commands).forEach(([_, cmd]) => {
     const category = cmd.category();
     if (!result.has(category))
       result.set(category, []);

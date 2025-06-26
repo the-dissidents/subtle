@@ -14,6 +14,8 @@ import * as fs from "@tauri-apps/plugin-fs";
 import { basename, join } from '@tauri-apps/api/path';
 import { get, readonly, writable } from "svelte/store";
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { UICommand } from "./CommandBase";
+import { CommandBinding, KeybindingManager } from "./Keybinding";
 const $_ = unwrapFunctionStore(_);
 
 export type Snapshot = {
@@ -241,3 +243,23 @@ export const Source = {
         }, InterfaceConfig.data.autosaveInterval * 1000 * 60);
     }
 }
+
+export const SourceCommands = {
+    undo: new UICommand(() => $_('category.document'),
+        [ CommandBinding.from(['CmdOrCtrl+Z'], ['Table', 'Timeline']),
+          CommandBinding.from(['CmdOrCtrl+Alt+Z']) ],
+    {
+        name: () => $_('menu.undo'),
+        isApplicable: () => Source.canUndo(),
+        call: () => { Source.undo() }
+    }),
+    redo: new UICommand(() => $_('category.document'),
+        [ CommandBinding.from(['CmdOrCtrl+Shift+Z'], ['Table', 'Timeline']),
+          CommandBinding.from(['CmdOrCtrl+Alt+Shift+Z']) ],
+    {
+        name: () => $_('menu.redo'),
+        isApplicable: () => Source.canRedo(),
+        call: () => { Source.redo() }
+    }),
+}
+KeybindingManager.register(SourceCommands);

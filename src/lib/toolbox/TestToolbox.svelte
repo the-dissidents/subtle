@@ -7,9 +7,8 @@ import { Debug } from '../Debug';
 import { Menu } from '@tauri-apps/api/menu';
 import { UICommand } from '../frontend/CommandBase';
 import { Dialogs } from '../frontend/Dialogs';
-import { Commands } from '../frontend/Commands';
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
-import { Source } from '../frontend/Source';
+import { Source, SourceCommands } from '../frontend/Source';
 import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
 import { Interface } from '../frontend/Interface';
@@ -103,7 +102,7 @@ const command = new UICommand(() => '', [], {
 </button>
 
 <button
-  onclick={() => Dialogs.keybindingInput!.showModal!([Commands.undo, null])}>
+  onclick={() => Dialogs.keybindingInput!.showModal!([SourceCommands.undo, null])}>
   keybinding input
 </button>
 

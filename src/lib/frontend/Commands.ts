@@ -1,4 +1,4 @@
-import { guardAsync, Interface } from "./Interface";
+import { Interface } from "./Interface";
 import { UICommand } from "./CommandBase";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
@@ -8,21 +8,17 @@ import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Editing, KeepInViewMode, SelectMode } from "./Editing";
 import { parseSubtitleSource } from "./Frontend";
-import { EventHost } from "../details/EventHost";
 import { Source, ChangeType, ChangeCause } from "./Source";
-import { Labels, SubtitleEntry, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { Labels, SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Playback } from "./Playback";
 import { Utils } from "./Utils";
 import { Dialogs } from "./Dialogs";
 import { InputConfig } from "../config/Groups";
 import { Basic } from "../Basic";
-import { PrivateConfig } from "../config/PrivateConfig";
 import { Format } from "../core/Formats";
 import { Toolboxes } from "./Toolboxes";
-import { TimelineParams } from "../component/timeline/Timeline.svelte";
-import { CommandBinding } from "./Keybinding";
-import { MediaPlayerInterface } from "../component/preview/MediaPlayer";
-const $_ = unwrapFunctionStore(_);
+import { CommandBinding, KeybindingManager } from "./Keybinding";
+export const $_ = unwrapFunctionStore(_);
 
 const toJSON = (useEntries: SubtitleEntry[]) => 
     Format.JSON.write(Source.subs, { useEntries });
@@ -73,7 +69,7 @@ function notSelectionCommonStyles() {
     return Source.subs.styles.filter((x) => !common.includes(x));
 }
 
-function forEachStyle(h: (style: SubtitleStyle) => void, styles = Source.subs.styles) {
+export function forEachStyle(h: (style: SubtitleStyle) => void, styles = Source.subs.styles) {
     return styles.map((style) => ({
         name: style.name,
         call: () => h(style)
@@ -96,146 +92,7 @@ function doubleForEachStyle(
     }));
 }
 
-export const Commands = {
-    undo: new UICommand(() => $_('category.document'),
-        [ CommandBinding.from(['CmdOrCtrl+Z'], ['Table', 'Timeline']),
-          CommandBinding.from(['CmdOrCtrl+Alt+Z']) ],
-    {
-        name: () => $_('menu.undo'),
-        isApplicable: () => Source.canUndo(),
-        call: () => { Source.undo() }
-    }),
-    redo: new UICommand(() => $_('category.document'),
-        [ CommandBinding.from(['CmdOrCtrl+Shift+Z'], ['Table', 'Timeline']),
-          CommandBinding.from(['CmdOrCtrl+Alt+Shift+Z']) ],
-    {
-        name: () => $_('menu.redo'),
-        isApplicable: () => Source.canRedo(),
-        call: () => { Source.redo() }
-    }),
-    newFile: new UICommand(() => $_('category.document'),
-        [ CommandBinding.from(['CmdOrCtrl+N']) ],
-    {
-        name: () => $_('menu.new-file'),
-        call: async () => { 
-            if (await Interface.warnIfNotSaved())
-                Interface.newFile();
-        }
-    }),
-    openMenu: new UICommand(() => $_('category.document'),
-        [ CommandBinding.from(['CmdOrCtrl+O']), ],
-    {
-        name: () => $_('menu.open'),
-        items: () => {
-            const paths = PrivateConfig.get('paths');
-            return [
-                {
-                    name: () => $_('cxtmenu.other-file'),
-                    isDialog: true,
-                    async call() {
-                        if (await Interface.warnIfNotSaved())
-                            Interface.askOpenFile();
-                    },
-                },
-                ...(paths.length == 0 ? [
-                    {
-                        name: $_('cxtmenu.no-recent-files'),
-                        isApplicable: () => false,
-                        call() {}
-                    }
-                    ] : paths.map((x) => ({
-                        name: '[...]/' + x.name.split(Basic.pathSeparator)
-                            .slice(-2).join(Basic.pathSeparator),
-                        async call() {
-                            if (await Interface.warnIfNotSaved())
-                                Interface.openFile(x.name);
-                        }
-                    }))
-                ),
-            ]
-        }
-    }),
-    openVideo: new UICommand(() => $_('category.document'),
-        [ CommandBinding.from(['CmdOrCtrl+Shift+O']), ],
-    {
-        name: () => $_('menu.open-video'),
-        isDialog: true,
-        call: () => Interface.askOpenVideo()
-    }),
-    closeVideo: new UICommand(() => $_('category.document'),
-        [ ],
-    {
-        name: () => $_('menu.close-video'),
-        isApplicable: () => get(Playback.isLoaded),
-        call: () => Playback.close()
-    }),
-    import: new UICommand(() => $_('category.document'),
-        [ CommandBinding.from(['CmdOrCtrl+I']), ],
-    {
-        name: () => $_('menu.import'),
-        isDialog: true,
-        call: () => Interface.askImportFile()
-    }),
-    exportASS: new UICommand(() => $_('category.document'),
-        [ ],
-    {
-        name: () => $_('menu.export-ass'),
-        isDialog: true,
-        call: () => Interface.askExportFile('ass', (x) => Format.ASS.write(x))
-    }),
-    exportSRTPlaintext: new UICommand(() => $_('category.document'),
-        [ ],
-    {
-        name: () => $_('menu.export-srt-plaintext'),
-        isDialog: true,
-        call: async () => {
-            const result = await Dialogs.export.showModal!();
-            if (!result) return;
-            Interface.askExportFile(result.ext, () => result.content);
-        }
-    }),
-    exportMenu: new UICommand(() => $_('category.document'),
-        [ ],
-    {
-        name: () => $_('menu.export'),
-        items: [
-            {
-                name: () => 'ASS',
-                call: () => {Commands.exportASS.call()}
-            },
-            {
-                name: () => $_('cxtmenu.srt-plaintext'),
-                call: () => {Commands.exportSRTPlaintext.call()}
-            }
-        ]
-    }),
-    save: new UICommand(() => $_('category.document'),
-        [ CommandBinding.from(['CmdOrCtrl+S']), ],
-    {
-        name: () => $_('action.save'),
-        call: () => Interface.askSaveFile()
-    }),
-    saveAs: new UICommand(() => $_('category.document'),
-        [ CommandBinding.from(['CmdOrCtrl+Shift+S']), ],
-    {
-        name: () => $_('menu.save-as'),
-        isDialog: true,
-        call: () => Interface.askSaveFile(true)
-    }),
-    openConfiguration: new UICommand(() => $_('category.system'),
-        [ ],
-    {
-        name: () => $_('menu.configuration'),
-        isDialog: true,
-        call: () => Dialogs.configuration.showModal!()
-    }),
-    openKeybinding: new UICommand(() => $_('category.system'),
-        [ ],
-    {
-        name: () => $_('menu.keybinding'),
-        isDialog: true,
-        call: () => Dialogs.keybinding.showModal!()
-    }),
+export const BasicCommands = {
     previousEntrySingle: new UICommand(() => $_('category.table'),
         [ CommandBinding.from(['ArrowUp'], ['Table']),
           CommandBinding.from(['Alt+ArrowUp']), ],
@@ -354,57 +211,7 @@ export const Commands = {
     }),
 
 
-    selectAudioStream: new UICommand(() => $_('category.media'),
-        [ ],
-    {
-        name: () => $_('menu.select-audio-stream'),
-        isApplicable: () => get(Playback.isLoaded),
-        items: () => Playback.player!.streams
-            .filter((x) => x.type == 'audio')
-            .map((x) => ({
-                name: x.description + (
-                    x.index == Playback.player?.currentAudioStream 
-                    ? ' ' + $_('menu.audio-stream-current') : ''),
-                isApplicable: () => x.index != Playback.player?.currentAudioStream,
-                async call() {
-                    await guardAsync(() => Playback.setAudioStream(x.index),
-                        $_('msg.failed-to-set-audio-stream'))
-                }
-            }))
-    }),
-    togglePlay: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['Space'], ['Table', 'Timeline']),
-          CommandBinding.from(['Alt+Space']), ],
-    {
-        name: () => $_('action.toggle-play'),
-        call: () => Playback.toggle()
-    }),
-    toggleInPoint: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['I'], ['Table', 'Timeline']),
-          CommandBinding.from(['Alt+I']), ],
-    {
-        name: () => $_('action.toggle-in-point'),
-        call() {
-            const pos = Playback.position;
-            const area = Playback.playArea.setting;
-            Playback.playArea.setting.start = 
-                (area.start == pos || (area.end !== undefined && area.end <= pos)) 
-                ? undefined : pos;
-        }
-    }),
-    toggleOutPoint: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['O'], ['Table', 'Timeline']),
-          CommandBinding.from(['Alt+O']), ],
-    {
-        name: () => $_('action.toggle-out-point'),
-        call() {
-            const pos = Playback.position;
-            const area = Playback.playArea.setting;
-            Playback.playArea.setting.end =
-                (area.end == pos || (area.start !== undefined && area.start >= pos)) 
-                ? undefined : pos;
-        }
-    }),
+    
     playEntry: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['P'], ['Table', 'Timeline']),
           CommandBinding.from(['Alt+P']), ],
@@ -424,95 +231,8 @@ export const Commands = {
             await Playback.play(true);
         }
     }),
-    previousFrame: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['CmdOrCtrl+ArrowLeft'], ['Timeline']),
-          CommandBinding.from(['Alt+CmdOrCtrl+ArrowLeft']), ],
-    {
-        name: () => $_('action.previous-frame'),
-        call: () => Playback.player?.requestPreviousFrame()
-    }),
-    nextFrame: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['CmdOrCtrl+ArrowRight'], ['Timeline']),
-          CommandBinding.from(['Alt+CmdOrCtrl+ArrowRight']), ],
-    {
-        name: () => $_('action.next-frame'),
-        call: () => Playback.player?.requestNextFrame()
-    }),
-    jumpBackward: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['ArrowLeft'], ['Timeline']),
-          CommandBinding.from(['Alt+ArrowLeft']), ],
-    {
-        name: () => $_('action.jump-backward'),
-        call: () => Playback.setPosition(Playback.position - InputConfig.data.skipDuration)
-    }),
-    jumpForward: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['ArrowRight'], ['Timeline']),
-          CommandBinding.from(['Alt+ArrowRight']), ],
-    {
-        name: () => $_('action.jump-forward'),
-        call: () => Playback.setPosition(Playback.position + InputConfig.data.skipDuration)
-    }),
 
-    holdToCreateEntry1: new UICommand(() => $_('category.timeline'),
-        [ CommandBinding.from(['J'], ['Timeline']) ],
-    {
-        name: () => $_('action.hold-to-create-entry-1'),
-        isApplicable: () => Playback.isPlaying && TimelineParams.activeChannel !== null,
-        call: async () => {
-            if (Commands.holdToCreateEntry2.activated)
-                await Commands.holdToCreateEntry2.end();
 
-            Debug.assert(TimelineParams.activeChannel !== undefined);
-            const pos = Playback.position;
-            const entry = Editing.insertAtTime(pos, pos, TimelineParams.activeChannel);
-            MediaPlayerInterface.onPlayback.bind(entry, 
-                (newpos) => { entry.end = Math.max(entry.end, newpos) });
-            return entry;
-        },
-        onDeactivate: (entry) => {
-            EventHost.unbind(entry);
-            Source.markChanged(ChangeType.Times);
-        }
-    }),
-    holdToCreateEntry2: new UICommand(() => $_('category.timeline'),
-        [ CommandBinding.from(['K'], ['Timeline']) ],
-    {
-        name: () => $_('action.hold-to-create-entry-2'),
-        isApplicable: () => Playback.isPlaying && TimelineParams.activeChannel !== null,
-        call: async () => {
-            if (Commands.holdToCreateEntry1.activated)
-                await Commands.holdToCreateEntry1.end();
-            
-            Debug.assert(TimelineParams.activeChannel !== undefined);
-            const pos = Playback.position;
-            const entry = Editing.insertAtTime(pos, pos, TimelineParams.activeChannel);
-            MediaPlayerInterface.onPlayback.bind(entry, 
-                (newpos) => { entry.end = Math.max(entry.end, newpos) });
-            return entry;
-        },
-        onDeactivate: (entry) => {
-            EventHost.unbind(entry);
-            Source.markChanged(ChangeType.Times);
-        }
-    }),
-    selectMode: new UICommand(() => $_('category.timeline'),
-        [ CommandBinding.from(['A'], ['Timeline']) ],
-    {
-        name: () => $_('action.open-select-tool'),
-        call: () => TimelineParams.currentMode = 'select'
-    }),
-    createMode: new UICommand(() => $_('category.timeline'),
-        [ CommandBinding.from(['D'], ['Timeline']) ],
-    {
-        name: () => $_('action.open-create-tool'),
-        call: () => TimelineParams.currentMode = 'create'
-    }),
-    splitMode: new UICommand(() => $_('category.timeline'),
-        [ CommandBinding.from(['C'], ['Timeline']) ],
-    {
-        name: () => $_('action.open-split-tool'),
-        call: () => TimelineParams.currentMode = 'split'
-    }),
 
     copyJSON: new UICommand(() => $_('category.editing'),
         [ CommandBinding.from(['CmdOrCtrl+C'], ['Table', 'Timeline']) ],
@@ -1022,20 +742,6 @@ export const Commands = {
         isApplicable: () => hasSelection(1),
         call: () => Utils.fixOverlap(Editing.getSelection())
     }),
-    combineDialog: new UICommand(() => $_('category.tool'),
-        [],
-    {
-        name: () => $_('action.combine-by-matching-time'),
-        isDialog: true,
-        isApplicable: () => hasSelection(),
-        call: () => Dialogs.combine.showModal!()
-    }),
-    splitDialog: new UICommand(() => $_('category.tool'),
-        [],
-    {
-        name: () => $_('action.split-by-line'),
-        isDialog: true,
-        isApplicable: () => hasSelection(),
-        call: () => Dialogs.splitByLine.showModal!()
-    }),
 };
+
+KeybindingManager.register(BasicCommands);

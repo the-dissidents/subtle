@@ -4,8 +4,11 @@ import type { AnalyseResult, EncodingName } from "chardet";
 import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil.svelte";
 import { mount, unmount } from "svelte";
 import OverlayMenu from "../ui/OverlayMenu.svelte";
-import type { UICommand } from "./CommandBase";
+import { UICommand } from "./CommandBase";
 import type { CommandBinding } from "./Keybinding";
+import { InputConfig } from "../config/Groups";
+import { $_ } from "./Commands";
+import { Editing, SelectMode, KeepInViewMode } from "./Editing";
 
 export class DialogHandler<TInput = void, TOutput = string> {
     showModal?: (i: TInput) => Promise<TOutput>;
@@ -41,4 +44,37 @@ export const Dialogs = {
             });
         });
     },
+}
+
+export const DialogCommands = {
+    openConfiguration: new UICommand(() => $_('category.system'),
+        [ ],
+    {
+        name: () => $_('menu.configuration'),
+        isDialog: true,
+        call: () => Dialogs.configuration.showModal!()
+    }),
+    openKeybinding: new UICommand(() => $_('category.system'),
+        [ ],
+    {
+        name: () => $_('menu.keybinding'),
+        isDialog: true,
+        call: () => Dialogs.keybinding.showModal!()
+    }),
+    combineDialog: new UICommand(() => $_('category.tool'),
+        [],
+    {
+        name: () => $_('action.combine-by-matching-time'),
+        isDialog: true,
+        isApplicable: () => Editing.getSelection().length > 0,
+        call: () => Dialogs.combine.showModal!()
+    }),
+    splitDialog: new UICommand(() => $_('category.tool'),
+        [],
+    {
+        name: () => $_('action.split-by-line'),
+        isDialog: true,
+        isApplicable: () => Editing.getSelection().length > 0,
+        call: () => Dialogs.splitByLine.showModal!()
+    }),
 }

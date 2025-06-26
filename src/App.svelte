@@ -53,16 +53,16 @@ import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
 import { derived, get } from 'svelte/store';
 
-import { Dialogs } from './lib/frontend/Dialogs';
-import { Interface } from './lib/frontend/Interface';
-import { Playback } from './lib/frontend/Playback';
-import { Source } from './lib/frontend/Source';
-import { Commands } from './lib/frontend/Commands';
+import { DialogCommands, Dialogs } from './lib/frontend/Dialogs';
+import { Interface, InterfaceCommands } from './lib/frontend/Interface';
+import { Playback, PlaybackCommands } from './lib/frontend/Playback';
+import { Source, SourceCommands } from './lib/frontend/Source';
+import { BasicCommands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 
-import { Debug, GetLevelFilter } from './lib/Debug';
 import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 
+import { Debug, GetLevelFilter } from './lib/Debug';
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow();
@@ -78,8 +78,6 @@ let playPos = $state(0);
 let playPosInput = $state(0);
 let statusTwinkling = $state(false);
 
-let undoRedoUpdateCounter = $state(0);
-
 let status = Interface.status;
 let uiFocus = Interface.uiFocus;
 let toolboxFocus = Interface.toolboxFocus;
@@ -90,6 +88,7 @@ let filenameDisplay =
 
 const me = {};
 
+let undoRedoUpdateCounter = $state(0);
 Source.onUndoBufferChanged.bind(me, () => {
   undoRedoUpdateCounter++;
 });
@@ -172,7 +171,6 @@ MainConfig.hook(() => InterfaceConfig.data.theme,
 
 MainConfig.init();
 
-KeybindingManager.commands = new Map(Object.entries(Commands));
 KeybindingManager.init();
 
 getVersion().then((x) => 
@@ -244,29 +242,31 @@ appWindow.onDragDropEvent(async (ev) => {
   <!-- toolbar -->
   <div>
     <ul class='menu'>
-      <li><button onclick={() => Commands.newFile.menu()}>{$_('menu.new-file')}</button></li>
-      <li><button onclick={() => Commands.openMenu.menu()}>{$_('menu.open')}</button></li>
-      <li><button onclick={() => Commands.saveAs.menu()}>{$_('menu.save-as')}</button></li>
-      <li><button onclick={() => Commands.import.menu()}>{$_('menu.import')}</button></li>
-      <li><button onclick={() => Commands.exportMenu.menu()}>{$_('menu.export')}</button></li>
+      <li><button onclick={() => InterfaceCommands.newFile.menu()}>{$_('menu.new-file')}</button></li>
+      <li><button onclick={() => InterfaceCommands.openMenu.menu()}>{$_('menu.open')}</button></li>
+      <li><button onclick={() => InterfaceCommands.saveAs.menu()}>{$_('menu.save-as')}</button></li>
+      <li><button onclick={() => InterfaceCommands.import.menu()}>{$_('menu.import')}</button></li>
+      <li><button onclick={() => InterfaceCommands.exportMenu.menu()}>{$_('menu.export')}</button></li>
       <li class='separator'></li>
       {#key undoRedoUpdateCounter}
       <li><button
-        onclick={() => Commands.undo.call()} 
+        onclick={() => SourceCommands.undo.call()} 
         disabled={Source.undoStack.length <= 1}>{$_('menu.undo')}</button></li>
       <li><button
-        onclick={() => Commands.redo.call()}
+        onclick={() => SourceCommands.redo.call()}
         disabled={Source.redoStack.length == 0}>{$_('menu.redo')}</button></li>
       {/key}
       <li class='separator'></li>
-      <li><button onclick={() => Commands.openVideo.call()}>
+      <li><button onclick={() => InterfaceCommands.openVideo.call()}>
         <FilmIcon />
         &nbsp;{$_('menu.open-video')}
       </button></li>
-      <li><button disabled={!$isMediaLoaded} onclick={() => Commands.selectAudioStream.call()}>
+      <li><button disabled={!$isMediaLoaded} 
+          onclick={() => PlaybackCommands.selectAudioStream.call()}>
         {$_('menu.select-audio-stream')}
       </button></li>
-      <li><button disabled={!$isMediaLoaded} onclick={() => Commands.closeVideo.call()}>
+      <li><button disabled={!$isMediaLoaded}
+          onclick={() => InterfaceCommands.closeVideo.call()}>
         {$_('menu.close-video')}
       </button></li>
       <li class='separator'></li>
@@ -274,7 +274,7 @@ appWindow.onDragDropEvent(async (ev) => {
       <li>
         <Tooltip text={$_('menu.keybinding')} position="bottom">
           <button aria-label={$_('menu.keybinding')}
-                  onclick={() => Commands.openKeybinding.call()}>
+                  onclick={() => DialogCommands.openKeybinding.call()}>
             <CommandIcon />
           </button>
         </Tooltip>
@@ -282,7 +282,7 @@ appWindow.onDragDropEvent(async (ev) => {
       <li>
         <Tooltip text={$_('menu.configuration')} position="bottom">
           <button aria-label={$_('menu.configuration')}
-                  onclick={() => Commands.openConfiguration.call()}>
+                  onclick={() => DialogCommands.openConfiguration.call()}>
             <SettingsIcon />
           </button>
         </Tooltip>
