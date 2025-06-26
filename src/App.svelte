@@ -1,7 +1,13 @@
 <script lang="ts">
 console.info('App loading');
 
-import { _, locale } from 'svelte-i18n';
+import { _, locale, isLoading } from 'svelte-i18n';
+import * as i18n from 'svelte-i18n';
+
+i18n.register('en', () => import('./locales/en.json'));
+i18n.register('zh-cn', () => import('./locales/zh-cn.json'));
+i18n.register('zh-tw', () => import('./locales/zh-tw.json'));
+i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
 
 import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { PrivateConfig } from './lib/config/PrivateConfig';
@@ -45,7 +51,6 @@ import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
-import type { Action } from 'svelte/action';
 import { derived, get } from 'svelte/store';
 
 import { Dialogs } from './lib/frontend/Dialogs';
@@ -65,7 +70,6 @@ const appWindow = getCurrentWebviewWindow();
 let leftPane: HTMLElement | undefined = $state();
 let editTable: HTMLElement | undefined = $state();
 let videoCanvasContainer: HTMLElement | undefined = $state();
-let videoCanvas: HTMLCanvasElement | undefined = $state();
 let timelineCanvasContainer: HTMLDivElement | undefined = $state();
 let statusBar: HTMLDivElement | undefined = $state();
 
@@ -221,6 +225,10 @@ appWindow.onDragDropEvent(async (ev) => {
       $uiFocus = 'Other';
   }}/>
 
+{#if $isLoading}
+<!-- loading locales -->
+{:else}
+
 <!-- dialogs -->
 <TimeAdjustmentDialog handler={Dialogs.timeTransform}/>
 <ImportOptionsDialog  handler={Dialogs.importOptions}/>
@@ -342,6 +350,8 @@ appWindow.onDragDropEvent(async (ev) => {
     onanimationend={() => statusTwinkling = false}
   >{$status.msg}</div>
 </main>
+
+{/if}
 
 <style>
 @media (prefers-color-scheme: light) {

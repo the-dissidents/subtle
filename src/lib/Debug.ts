@@ -1,6 +1,8 @@
+console.info('Debug loading');
+
 import { invoke } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log"
-import StackTrace, { type StackFrame } from "stacktrace-js";
+import * as StackTrace from "stacktrace-js";
 import inspect from "object-inspect";
 
 /** Strangely tauri's log plugin does not export this enum, so it is recreated here */
@@ -56,7 +58,7 @@ function formatData(data: any[]) {
 }
 
 const Filter = {
-    filter: (stackFrame: StackFrame) => 
+    filter: (stackFrame: StackTrace.StackFrame) => 
         !(stackFrame.getFileName()?.endsWith('src/lib/Debug.ts')) 
         && !(stackFrame.getFunctionName()?.includes('StackTrace$$')),
     offline: true

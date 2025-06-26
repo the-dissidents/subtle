@@ -1,12 +1,10 @@
 console.info('Interface loading');
 
-import { get, readonly, writable, type Readable } from "svelte/store";
+import { get, readonly, writable } from "svelte/store";
 
 import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
 import { Menu } from "@tauri-apps/api/menu";
-import chardet from 'chardet';
-import * as iconv from 'iconv-lite';
 
 import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/Formats";
@@ -23,10 +21,11 @@ import { Basic } from "../Basic";
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Debug } from "../Debug";
+import { MAPI } from "../API";
 
 const $_ = unwrapFunctionStore(_);
 
-const IMPORT_FILTERS = [
+const IMPORT_FILTERS = () => [
     { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },
     { name: $_('filter.srt-subtitles'), extensions: ['srt'] },
     { name: $_('filter.vtt-subtitles'), extensions: ['vtt'] },
@@ -107,16 +106,13 @@ export const Interface = {
             return;
         }
         return guardAsync(async () => {
-            await Debug.debug('reading file');
             const file = await fs.readFile(path);
-            await Debug.debug('analysing encoding');
-            const result = chardet.analyse(file);
-            if (result[0].confidence == 100 
-            && (result[0].name == 'UTF-8' || result[0].name == 'ASCII'))
-            {
-                return iconv.decode(file, 'UTF-8');
-            } else {
-                const out = await Dialogs.encoding.showModal!({source: file, result});
+            const decode = await MAPI.detectOrDecodeFile(path);
+            if (decode !== null)
+                return await MAPI.decodeFile(path, null);
+            else {
+                const result = (await import('chardet')).analyse(file);
+                const out = await Dialogs.encoding.showModal!({path, source: file, result});
                 if (!out) return null;
                 return out.decoded;
             }
@@ -201,7 +197,7 @@ export const Interface = {
     },
 
     async askImportFile() {
-        const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
+        const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
         if (typeof selected != 'string') return;
         const text = await this.readTextFile(selected);
         if (!text) return;
@@ -231,7 +227,7 @@ export const Interface = {
     },
   
     async askOpenFile() {
-        const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS});
+        const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
         if (typeof path != 'string') return;
         await this.openFile(path);
         Source.startAutoSave();

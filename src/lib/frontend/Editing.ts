@@ -9,6 +9,7 @@ import { EventHost } from "../details/EventHost";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";
+import { Metric, Metrics } from "../core/Filter";
 const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
@@ -39,6 +40,13 @@ export function getSelectMode(ev: MouseEvent | KeyboardEvent) {
     if (ev.getModifierState(Basic.ctrlKey())) return SelectMode.Multiple;
     return SelectMode.Single;
 }
+
+Object.defineProperty(Metrics, 'selected', {
+    value: new Metric('boolean', 'editing',
+        () => $_('metrics.selected'), 
+        () => $_('metrics.selected'), 
+        (e) => Editing.inSelection(e))
+});
 
 export const Editing = {
     selection: {

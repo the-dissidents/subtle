@@ -1,16 +1,15 @@
 <script lang="ts">
-import { type AnalyseResult, type EncodingName } from 'chardet';
-import * as iconv from 'iconv-lite';
-
+import type { AnalyseResult, EncodingName } from 'chardet';
 import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';
 
 import { _ } from 'svelte-i18n';
+import { MAPI } from '../API';
 
 interface Props {
   handler: DialogHandler<
-    {source: Uint8Array, result: AnalyseResult}, 
+    {path: string, source: Uint8Array, result: AnalyseResult}, 
     {decoded: string, encoding: EncodingName} | null>;
 }
 
@@ -19,9 +18,9 @@ let {
 }: Props = $props();
 
 let inner: DialogHandler<void, string> = {};
-  handler.showModal = async ({source: s, result}) => {
+  handler.showModal = async ({path: p, source: s, result}) => {
   Debug.assert(inner !== undefined);
-  source = s;
+  source = s; path = p;
   candidates = result;
   if (candidates.length > 0) {
     selectedEncoding = candidates[0].name;
@@ -31,7 +30,7 @@ let inner: DialogHandler<void, string> = {};
   if (btn !== 'ok' || !selectedEncoding) return null;
   return {
     encoding: selectedEncoding, 
-    decoded: iconv.decode(source, selectedEncoding)
+    decoded: await MAPI.decodeFile(path, selectedEncoding)
   };
 }
 
@@ -39,15 +38,16 @@ let selectedEncoding: EncodingName | undefined = $state();
 let okDisabled = $state(false);
 let preview = $state('');
 let source: Uint8Array;
+let path: string;
 let candidates: AnalyseResult | undefined = $state();
 
-function makePreview() {
+async function makePreview() {
   if (selectedEncoding && source) {
     try {
-      preview = iconv.decode(
-        source.subarray(0, Math.min(6000, source.length)), selectedEncoding);
+      preview = (await MAPI.decodeFile(path, selectedEncoding)).substring(0, 6000);
       okDisabled = false;
-    } catch {
+    } catch (e) {
+      Debug.warn(e);
       preview = '';
       okDisabled = true;
     }

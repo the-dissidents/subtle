@@ -1,7 +1,12 @@
-import { SvelteMap, SvelteSet } from "svelte/reactivity";
+console.info('core/Subtitles loading');
+
 import { Debug } from "../Debug";
+import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
-import type { MetricFilter, MetricName } from "./Filter";
+import { parseFilter, type MetricFilter } from "./Filter";
+import { parseObjectZ } from "../Serialization";
+
+import * as z from "zod/v4-mini";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelType = typeof Labels[number];
@@ -12,35 +17,51 @@ export enum AlignMode {
     TopLeft, TopCenter, TopRight,
 }
 
-export interface SubtitleStyle {
-    name: string;
-    font: string;
-    size: number;
-    color: string;
-    outlineColor: string;
-    outline: number;
-    shadow: number;
-    styles: {
-        bold: boolean,
-        italic: boolean,
-        underline: boolean,
-        strikethrough: boolean
-    };
-    margin: { top: number, bottom: number, left: number, right: number };
-    alignment: AlignMode;
-    validator: MetricFilter | null;
+const ZStyleBase = z.object({
+  name: z.string(),
+  font: z._default(z.string(), ''),
+  size: z._default(z.number().check(z.positive()), 72),
+  color: z._default(z.string(), 'white'),
+  outlineColor: z._default(z.string(), 'black'),
+  outline: z._default(z.number().check(z.gte(0)), 1),
+  shadow: z._default(z.number().check(z.gte(0)), 0),
+  styles: z.object({
+    bold: z._default(z.boolean(), false),
+    italic: z._default(z.boolean(), false),
+    underline: z._default(z.boolean(), false),
+    strikethrough: z._default(z.boolean(), false),
+  }),
+  margin: z.object({
+    top: z._default(z.number(), 10),
+    bottom: z._default(z.number(), 10),
+    left: z._default(z.number(), 10),
+    right: z._default(z.number(), 10),
+  }),
+  alignment: z._default(z.int().check(z.gte(0)).check(z.lte(9)), 2),
+});
+
+export const ZMetadata = z.object({
+  title: z._default(z.string(), ''),
+  language: z._default(z.string(), ''),
+  width: z._default(z.int().check(z.positive()), 1920),
+  height: z._default(z.int().check(z.positive()), 1080),
+  scalingFactor: z._default(z.number().check(z.positive()), 1),
+  special: z.object({
+    untimedText: z._default(z.string(), ''),
+  }),
+});
+
+export type SubtitleStyle = z.infer<typeof ZStyleBase> & {
+    validator: MetricFilter | null
+};
+
+export function parseSubtitleStyle(obj: any): SubtitleStyle {
+    const base = parseObjectZ(obj, ZStyleBase);
+    const validator = obj.validator ? parseFilter(obj.validator) : null;
+    return { ...base, validator };
 }
 
-export interface SubtitleMetadata {
-    title: string,
-    language: string,
-    width: number,
-    height: number,
-    scalingFactor: number,
-    special: {
-        untimedText: string,
-    }
-}
+export type SubtitleMetadata = z.infer<typeof ZMetadata>;
 
 export const MigrationDuplicatedStyles = new WeakMap<SubtitleStyle, SubtitleStyle[]>();
 
@@ -69,42 +90,17 @@ export class Subtitles {
     migrated: MigrationInfo = 'none';
 
     view = $state({
-        perEntryColumns: ['startTime', 'endTime'] as MetricName[],
-        perChannelColumns: ['style', 'content'] as MetricName[],
+        perEntryColumns: ['startTime', 'endTime'],
+        perChannelColumns: ['style', 'content'],
         timelineExcludeStyles: new SvelteSet<SubtitleStyle>()
     });
 
     static createStyle(name: string): SubtitleStyle {
-        return {
-            name,
-            font: '', size: 72,
-            color: 'white',
-            outlineColor: 'black',
-            outline: 1,
-            shadow: 0,
-            styles: {
-                bold: false,
-                italic: false,
-                underline: false,
-                strikethrough: false
-            },
-            margin: { top: 10, bottom: 10, left: 10, right: 10 },
-            alignment: 2,
-            validator: null
-        }
+        return parseSubtitleStyle({ name, styles: {}, margin: {} });
     };
 
     static #createMetadata(): SubtitleMetadata {
-        return {
-            title: '',
-            language: '',
-            width: 1920,
-            height: 1080,
-            scalingFactor: 1,
-            special: {
-                untimedText: ''
-            }
-        }
+        return ZMetadata.parse({ special: {} });
     }
 
     /** Note: only copies styles from base */

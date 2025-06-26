@@ -1,12 +1,17 @@
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [
-    nodePolyfills({include: ['buffer', 'stream', 'util']}),
-    svelte()
+    // nodePolyfills({include: ['buffer', 'stream', 'util']}),
+    svelte(),
+    visualizer({
+      template: 'treemap',
+      gzipSize: true,
+    })
   ],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

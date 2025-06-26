@@ -1,15 +1,11 @@
-import type { JSONSchemaType } from "ajv";
 import { Debug } from "../Debug";
+import { Basic } from "../Basic";
 import type { LabelType, SubtitleEntry, SubtitleStyle } from "./Subtitles.svelte"
-
-import { ajv, DeserializationError, parseObject } from "../Serialization";
+import * as z from "zod/v4-mini";
 import wcwidth from "wcwidth";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { Basic } from "../Basic";
 const $_ = unwrapFunctionStore(_);
-
-import { Editing } from "../frontend/Editing";
 
 export const MetricContextList = ['editing', 'entry', 'style', 'channel'] as const;
 export type MetricContext = (typeof MetricContextList)[number];
@@ -87,7 +83,7 @@ function newFilterMethod<
 >(f: MetricFilterMethod<FromType, ParameterType, Arity>) { return f; }
 
 export type SimpleMetricFilter<
-    Metric extends MetricName = MetricName,
+    Metric extends string = string,
     Method extends MetricFilterMethodName = MetricFilterMethodName
 > = {
     metric: Metric,
@@ -101,22 +97,22 @@ export type SimpleMetricFilter<
 };
 
 export function newMetricFilter<
-    Metric extends MetricName,
+    Metric extends string,
     Method extends MetricFilterMethodName
 >(f: SimpleMetricFilter<Metric, Method>) { return f; }
 
 export type MetricFilter = {
     type: 'and' | 'or',
-    filters: (SimpleMetricFilter<MetricName, MetricFilterMethodName> | MetricFilter)[]
-} | SimpleMetricFilter<MetricName, MetricFilterMethodName>;
+    filters: (SimpleMetricFilter<string, MetricFilterMethodName> | MetricFilter)[]
+} | SimpleMetricFilter<string, MetricFilterMethodName>;
 
 export type EvaluateFilterResult = {
-    failed: SimpleMetricFilter<MetricName, MetricFilterMethodName>[]
+    failed: SimpleMetricFilter<string, MetricFilterMethodName>[]
 };
 
 export function filterDescription(filter: SimpleMetricFilter) {
     return `${filter.negated ? $_('filter.description.not') : ''} ${
-        Metrics[filter.metric].localizedName()} ${
+        Metrics[filter.metric as keyof typeof Metrics].localizedName()} ${
         MetricFilterMethods[filter.method].localizedName()} ${
         (filter.parameters as (number[] | string[])).map((x) => x.toString()).join(' ')}`;
 }
@@ -138,7 +134,7 @@ export function evaluateFilter(
                 Debug.never(filter.type);
         }
     } else {
-        const from = Metrics[filter.metric].value(entry, style);
+        const from = Metrics[filter.metric as keyof typeof Metrics].value(entry, style);
         const success = MetricFilterMethods[filter.method]
             .exec(from as never, ...(filter.parameters as [never, any])) != filter.negated;
         return { failed: success ? [] : [filter] };
@@ -149,11 +145,7 @@ function getTextLength(s: string) {
     return [...s.matchAll(/[\w\u4E00-\u9FFF]/g)].length;
 }
 
-export const Metrics = {
-    selected: new Metric('boolean', 'editing',
-        () => $_('metrics.selected'), 
-        () => $_('metrics.selected'), 
-        (e) => Editing.inSelection(e)),
+export let Metrics = {
     startTime: new Metric('time', 'entry',
         () => $_('metrics.start-time'), 
         () => $_('metrics.start-time-short'), 
@@ -228,7 +220,7 @@ export const Metrics = {
         {
             description: () => $_('metrics.readable-characters-d')
         }),
-} as const;
+};
 
 export const MetricFilterMethods = {
     stringNonEmpty: newFilterMethod({
@@ -389,7 +381,6 @@ export const TextMetricFilterDefaultMethods:
     boolean: 'isTrue'
 } as const;
 
-export type MetricName = keyof typeof Metrics;
 export type MetricFilterMethodName = keyof typeof MetricFilterMethods;
 
 type _Arity<Name extends MetricFilterMethodName> = 
@@ -402,64 +393,51 @@ type _ParamType<Name extends MetricFilterMethodName> =
 
 // serialization
 
-const SimpleFilterSchema: JSONSchemaType<SimpleMetricFilter> = {
-    type: 'object',
-    properties: {
-        metric: { enum: Object.keys(Metrics) } as any,
-        method: { enum: Object.keys(MetricFilterMethods) } as any,
-        negated: { type: 'boolean' },
-        parameters: { type: "array", 
-            anyOf: [
-                { items: { type: "integer" } },
-                { items: { type: "string" } }
-            ]
-        } as any
-    },
-    required: ['metric', 'method', 'parameters']
-};
-
-export const FilterSchema: JSONSchemaType<MetricFilter> = {
-    '$id': 'filter',
-    oneOf: [
-        {
-            type: 'object',
-            properties: {
-                type: { enum: ['and', 'or'] } as any,
-                filters: {
-                    type: 'array',
-                    items: { '$ref': '#' } as any
-                }
-            },
-            required: ['type', 'filters']
-        },
-        SimpleFilterSchema
-    ]
-};
-
-const validateFilter = ajv.compile(FilterSchema);
-
-function checkFilterInternal(
-    filter: SimpleMetricFilter | MetricFilter
-): void {
-    if ('type' in filter) {
-        filter.filters.forEach(checkFilterInternal);
+const ZSimpleFilter = z.object({
+    metric: z.string().check(z.refine((x) => x in Metrics)),
+    method: z.enum(Object.keys(MetricFilterMethods) as [MetricFilterMethodName]),
+    negated: z._default(z.boolean(), false),
+    parameters: z.array(z.unknown())
+}).check(({issues, value: x}) => {
+    const m = Metrics[x.metric as keyof typeof Metrics];
+    const method = MetricFilterMethods[x.method];
+    if (method.fromType != m.type) issues.push({ 
+        code: 'custom', input: x,
+        message: 'method type mismatch',
+        continue: true
+    });
+    if (method.parameters == 0) {
+        if (x.parameters.length > 0) issues.push({ 
+            code: 'custom', input: x.parameters,
+            message: '0 parameters expected',
+            continue: true
+        });
     } else {
-        const method = MetricFilterMethods[filter.method];
-        const params = filter.parameters as any[];
-        if (method.parameters == 0) {
-            if (params.length > 0)
-                throw new DeserializationError('0 parameters expected');
-        } else {
-            if (params.length != method.parameters)
-                throw new DeserializationError(`${method.parameters} parameters expected`);
-            if (typeof params[0] != method.parameterType)
-                throw new DeserializationError(`${method.parameterType} parameters expected`);
-        }
+        if (x.parameters.length != method.parameters) issues.push({ 
+            code: 'custom', input: x.parameters,
+            message: `${method.parameters} parameters expected`,
+            continue: true
+        });
+        if (typeof x.parameters[0] != method.parameterType) issues.push({ 
+            code: 'custom', input: x.parameters,
+            message: `${method.parameterType} parameters expected`,
+            continue: true
+        });
     }
-}
+});
 
-export function deserializeFilter(filter: {}): MetricFilter {
-    const obj = parseObject(filter, validateFilter);
-    checkFilterInternal(obj);
-    return obj;
+const ZFilterBase = z.union([
+    z.object({
+        type: z.enum(['and', 'or']),
+        get filters(): z.core.$ZodArray<typeof ZFilterBase> {
+            return z.array(ZFilterBase);
+        }
+    }),
+    ZSimpleFilter, 
+]);
+
+export const ZFilter = z.pipe(ZFilterBase, z.transform((x) => x as MetricFilter));
+
+export function parseFilter(x: any): MetricFilter {
+    return z.parse(ZFilter, x) as MetricFilter;
 }

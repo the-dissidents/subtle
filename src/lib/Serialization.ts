@@ -1,10 +1,4 @@
-import Ajv, { type ValidateFunction } from "ajv";
-import { Debug } from "./Debug";
-
-export const ajv = new Ajv({
-    removeAdditional: true,
-    useDefaults: true
-});
+import * as z from "zod/v4-mini";
 
 export class DeserializationError extends Error {
     constructor(msg: string) {
@@ -13,10 +7,8 @@ export class DeserializationError extends Error {
     }
 }
 
-export function parseObject<T>(obj: {}, validator: ValidateFunction<T>): T {
-    if (!validator(obj)) {
-        Debug.debug(validator.errors);
-        throw new DeserializationError(validator.errors!.map((x) => x.message).join('; '));
-    }
-    return obj;
+export function parseObjectZ<Z extends z.core.$ZodType>(obj: {}, ztype: Z) {
+    let result = z.safeParse(ztype, obj);
+    if (result.success) return result.data;
+    throw new DeserializationError(z.prettifyError(result.error));
 }
