@@ -147,7 +147,7 @@ export const TimelineCommands = {
         }
     }),
     setEnd: new UICommand(() => $_('category.timeline'),
-        [ CommandBinding.from(['['], ['Timeline']) ],
+        [ CommandBinding.from([']'], ['Timeline']) ],
     {
         name: () => $_('action.set-end-time-to-cursor'),
         isApplicable: () => Editing.getFocusedEntry() instanceof SubtitleEntry,

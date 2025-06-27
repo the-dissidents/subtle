@@ -27,7 +27,7 @@ let refresh = $state(false);
 
 function groupedCommands() {
   const result = new Map<string, UICommand<any>[]>();
-  Object.entries(KeybindingManager.commands).forEach(([_, cmd]) => {
+  KeybindingManager.commands.forEach((cmd, _) => {
     const category = cmd.category();
     if (!result.has(category))
       result.set(category, []);

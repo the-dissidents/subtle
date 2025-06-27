@@ -105,7 +105,7 @@ export class UICommand<TState = void> {
             await this.end();
     }
 
-    async #runCommand(item: CommandOptions) {
+    async #runCommand(item: CommandOptions<TState>) {
         const enabled = item.isApplicable ? item.isApplicable() : true;
         Debug.assert(enabled);
         if ('items' in item) {
@@ -127,7 +127,8 @@ export class UICommand<TState = void> {
 
     async start(key: KeyBinding | null = null) {
         // don't start if already running
-        if (this.activated) return false;
+        if (this.activated)
+            return Debug.early(`already running: ${this.name}`);
 
         const enabled = this.options.isApplicable ? this.options.isApplicable() : true;
         if (!enabled) return false;
@@ -144,7 +145,9 @@ export class UICommand<TState = void> {
     }
 
     async end() {
-        Debug.assert(this.activated && this.#state !== undefined);
+        Debug.assert(this.activated);
+        if (this.#state == undefined)
+            return; // inside a selection dialog
         if (this.options.onDeactivate) {
             Debug.debug('executing onDeactivate', this.name);
             await this.options.onDeactivate(this.#state.value);

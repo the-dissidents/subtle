@@ -161,7 +161,8 @@ export const KeybindingManager = {
 
     register(cmds: Record<string, UICommand<any>>) {
         Debug.assert(!initialized);
-        Object.entries(cmds).forEach(([a, b]) => commands.set(a, b));
+        const entries = Object.entries(cmds);
+        entries.forEach(([a, b]) => commands.set(a, b));
     },
 
     async init() {
@@ -172,6 +173,7 @@ export const KeybindingManager = {
         this.update();
         document.addEventListener('keydown', (ev) => {
             const result = this.processKeydown(ev);
+            // Debug.trace('result:', result);
             switch (result.type) {
                 case 'incomplete':
                 case 'disabled': break;
@@ -200,6 +202,7 @@ export const KeybindingManager = {
         });
         document.addEventListener('keyup', (ev) => {
             const result = this.processKeyUp(ev);
+            // Debug.trace('keyup result:', result);
             switch (result.type) {
                 case 'deactivate':
                     result.commands.forEach((x) => x.end());
@@ -236,6 +239,7 @@ export const KeybindingManager = {
     },
 
     async save() {
+        Debug.assert(initialized);
         await Basic.ensureConfigDirectoryExists();
 
         let serializable: KeymapSerialization = {};
@@ -250,6 +254,7 @@ export const KeybindingManager = {
     },
 
     parseKey(ev: KeyboardEvent): KeyBinding | null {
+        Debug.assert(initialized);
         if (ModifierKeys.includes(ev.key as any))
             return null;
         let key = fromDOM(ev.code);
@@ -259,6 +264,7 @@ export const KeybindingManager = {
     },
 
     processKeydown(ev: KeyboardEvent): AcceptKeyDownResult {
+        Debug.assert(initialized);
         if (Dialogs.modalOpenCounter > 0)
             return { type: 'disabled' }; // TODO: more sophisticated disabling?
         const key = this.parseKey(ev);
@@ -297,6 +303,7 @@ export const KeybindingManager = {
     },
 
     processKeyUp(ev: KeyboardEvent): AcceptKeyUpResult {
+        Debug.assert(initialized);
         const code = fromDOM(ev.code);
         const commands: UICommand[] = [];
         for (const [cmd, key] of UICommand.activeCommands) {
@@ -349,6 +356,7 @@ export const KeybindingManager = {
     },
 
     findConflict(key: CommandBinding, cmd: UICommand<any>) {
+        Debug.assert(initialized);
         Debug.assert(bindingTree !== undefined);
         let conflicts: [UICommand<any>, UIFocus[]][] = [];
         let current = bindingTree;

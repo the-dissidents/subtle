@@ -57,7 +57,6 @@ import { DialogCommands, Dialogs } from './lib/frontend/Dialogs';
 import { Interface, InterfaceCommands } from './lib/frontend/Interface';
 import { Playback, PlaybackCommands } from './lib/frontend/Playback';
 import { Source, SourceCommands } from './lib/frontend/Source';
-import { BasicCommands } from './lib/frontend/Commands';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 
 import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';

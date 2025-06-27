@@ -119,7 +119,7 @@ export class TableInput {
     }
 
     onMouseDown(ev: MouseEvent) {
-        focus();
+        this.focus();
         // don't do anything if mouse is within header area
         if (ev.offsetY < this.layout.headerHeight / this.manager.scale) return;
 
