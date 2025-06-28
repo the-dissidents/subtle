@@ -176,11 +176,7 @@ export const Debug: {
     assert(cond: boolean, what?: string): asserts cond {
         if (!!!cond) {
             const msg = 'assertion failed' + (what ? `: ${what}` : '');
-            (async () => {
-                const { file, trace } = await stacktrace();
-                callLog(LogLevel.Error, msg, file);
-                callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
-            })();
+            this.error(msg);
             const error = new Error(msg);
             HasStacktrace.add(error);
             throw error;

@@ -94,7 +94,7 @@ function doubleForEachStyle(
 }
 
 export const BasicCommands = {
-    editThisEntry:new UICommand(() => $_('category.editing'),
+    editThisEntry: new UICommand(() => $_('category.editing'),
         [ CommandBinding.from(['Enter'], ['Table', 'Timeline']), ],
     {
         name: () => $_('action.edit-this-entry'),

@@ -10,6 +10,13 @@ import { Playback } from "../../frontend/Playback";
 import type { TranslatedWheelEvent } from "../../frontend/Frontend";
 import { TimelineConfig } from "./Config";
 import { Overridable } from "../../details/Overridable.svelte";
+import { Memorized } from "../../config/MemorizedValue.svelte";
+
+export const TimelineParams = {
+  activeChannel: undefined as SubtitleStyle | undefined,
+  lockCursor: Memorized.$('lockCursor', false),
+  currentMode: Memorized.$<'select' | 'create' | 'split'>('currentMode', 'select'),
+}
 
 abstract class TimelineAction {
   readonly origPos: number;
@@ -373,9 +380,7 @@ export class TimelineInput {
   } = null;
 
   useSnap = new Overridable(true);
-  currentMode: 'select' | 'create' | 'split' = $state('select');
   currentAction: TimelineAction | undefined;
-  activeChannel: SubtitleStyle | undefined;
 
   constructor(private layout: TimelineLayout) {
     this.manager = layout.manager;
@@ -404,8 +409,11 @@ export class TimelineInput {
     });
 
     this.layout.onLayout.bind(this, () => {
-      if (this.activeChannel && !this.layout.shownStyles.includes(this.activeChannel))
-          this.activeChannel = undefined;
+      if (TimelineParams.activeChannel 
+       && !this.layout.shownStyles.includes(TimelineParams.activeChannel))
+      {
+        TimelineParams.activeChannel = undefined;
+      }
     });
   }
 
@@ -511,10 +519,10 @@ export class TimelineInput {
     if (e.offsetX < this.layout.leftColumnWidth) {
       const style = this.layout.getChannelFromY(e.offsetY);
       if (style) {
-        if (this.activeChannel == style)
-          this.activeChannel = undefined;
+        if (TimelineParams.activeChannel == style)
+          TimelineParams.activeChannel = undefined;
         else 
-          this.activeChannel = style;
+          TimelineParams.activeChannel = style;
         this.manager.requestRender();
       }
     }
@@ -562,11 +570,11 @@ export class TimelineInput {
     const under = this.layout.findEntriesByPosition(
       e.offsetX + this.manager.scroll[0], e.offsetY);
 
-    if (this.currentMode == 'split') {
+    if (TimelineParams.currentMode.get() == 'split') {
       this.makeAlignmentLine(e.offsetX, true);
       return;
     }
-    if (this.currentMode == 'create' && under.length == 0) {
+    if (TimelineParams.currentMode.get() == 'create' && under.length == 0) {
       this.makeAlignmentLine(e.offsetX, true);
       return;
     }
@@ -671,7 +679,7 @@ export class TimelineInput {
             this.selection.clear();
             this.manager.requestRender();
           }
-          if (this.currentMode == 'create') {
+          if (TimelineParams.currentMode.get() == 'create') {
             // create entry
             const style = this.layout.getChannelFromY(e0.offsetY);
             if (!style) return false;
@@ -720,7 +728,7 @@ export class TimelineInput {
           }
           this.manager.requestRender();
 
-          if (this.currentMode == 'split') {
+          if (TimelineParams.currentMode.get() == 'split') {
             this.currentAction = new SplitEntry(this, this.layout, e0, selected);
             return true;
           }

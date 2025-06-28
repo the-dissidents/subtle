@@ -101,15 +101,17 @@ function fromTransformed() {
       <tr>
         <td>{$_('transformdialog.shift-times')}</td>
         <td>
+          <label><input type="radio" value="backward"
+              bind:group={shiftOption} onchange={() => toTransformed()}/>
+            {$_('transformdialog.backward')}</label>
           <label><input type="radio" value="forward"
               bind:group={shiftOption} onchange={() => toTransformed()}/>
             {$_('transformdialog.forward')}</label>
-          <label><input type="radio" value="backward"
-              bind:group={shiftOption} onchange={() => toTransformed()}/>
-            {$_('transformdialog.backward')}</label><br/>
+          <br/>
           <label>{$_('transformdialog.by')}<TimestampInput
             bind:timestamp={offset}
-            oninput={() => toTransformed()}/></label><br/>
+            oninput={() => toTransformed()}/></label>
+          <br/>
           <label><input type='checkbox' bind:checked={check}/>
             {$_('transformdialog.modify-everything-after-this')}</label><br/>
         </td>

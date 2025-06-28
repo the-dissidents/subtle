@@ -9,10 +9,10 @@ import { EventHost } from '../../details/EventHost';
 import { Playback } from '../../frontend/Playback';
 import { ChangeType, Source } from '../../frontend/Source';
 import { MediaPlayerInterface } from '../preview/MediaPlayer';
-import { TimelineParams } from './Timeline.svelte';
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { SubtitleEntry } from "../../core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
+import { TimelineParams } from "./Input.svelte";
 const $_ = unwrapFunctionStore(_);
 
 export const TimelineConfig = new PublicConfigGroup(
@@ -161,19 +161,19 @@ export const TimelineCommands = {
         [ CommandBinding.from(['A'], ['Timeline']) ],
     {
         name: () => $_('action.open-select-tool'),
-        call: () => TimelineParams.currentMode = 'select'
+        call: () => TimelineParams.currentMode.set('select')
     }),
     createMode: new UICommand(() => $_('category.timeline'),
         [ CommandBinding.from(['D'], ['Timeline']) ],
     {
         name: () => $_('action.open-create-tool'),
-        call: () => TimelineParams.currentMode = 'create'
+        call: () => TimelineParams.currentMode.set('create')
     }),
     splitMode: new UICommand(() => $_('category.timeline'),
         [ CommandBinding.from(['C'], ['Timeline']) ],
     {
         name: () => $_('action.open-split-tool'),
-        call: () => TimelineParams.currentMode = 'split'
+        call: () => TimelineParams.currentMode.set('split')
     }),
 };
 KeybindingManager.register(TimelineCommands);

@@ -62,6 +62,7 @@ import { KeybindingManager } from './lib/frontend/Keybinding';
 import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
+    import { Memorized } from './lib/config/MemorizedValue.svelte';
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow();
@@ -105,18 +106,6 @@ Playback.onRefreshPlaybackControl.bind(me, () => {
 });
 
 PrivateConfig.init();
-PrivateConfig.onInitialized(() => {
-  appWindow.setPosition(new LogicalPosition(
-    PrivateConfig.get('windowX'), 
-    PrivateConfig.get('windowY')));
-  appWindow.setSize(new LogicalSize(
-    Math.max(PrivateConfig.get('windowW'), 500),
-    Math.max(PrivateConfig.get('windowH'), 500)));
-  videoCanvasContainer!.style.height = `${PrivateConfig.get('videoH')}px`;
-  timelineCanvasContainer!.style.height = `${PrivateConfig.get('timelineH')}px`;
-  editTable!.style.height = `${PrivateConfig.get('editorH')}px`;
-  leftPane!.style.width = `${PrivateConfig.get('leftPaneW')}px`;
-});
 
 MainConfig.hook(() => InterfaceConfig.data.fontSize, 
   (v) => document.documentElement.style.setProperty('--fontSize', `${v}px`));
@@ -169,7 +158,6 @@ MainConfig.hook(() => InterfaceConfig.data.theme,
   });
 
 MainConfig.init();
-
 KeybindingManager.init();
 
 getVersion().then((x) => 
@@ -185,15 +173,15 @@ appWindow.onCloseRequested(async (ev) => {
   const size = (await appWindow.innerSize()).toLogical(factor);
   const pos = (await appWindow.position()).toLogical(factor);
   if (size.width > 500 && size.height > 500) {
-    await PrivateConfig.set('windowW', size.width);
-    await PrivateConfig.set('windowH', size.height);
+    $windowW = size.width;
+    $windowH = size.height;
   }
-  await PrivateConfig.set('windowX', pos.x);
-  await PrivateConfig.set('windowY', pos.y);
-  await PrivateConfig.set('videoH', videoCanvasContainer!.clientHeight);
-  await PrivateConfig.set('timelineH', timelineCanvasContainer!.clientHeight);
-  await PrivateConfig.set('editorH', editTable!.clientHeight);
-  await PrivateConfig.set('leftPaneW', leftPane!.clientWidth);
+  [$windowX, $windowY] = [pos.x, pos.y];
+  $videoH = videoCanvasContainer!.clientHeight;
+  $timelineH = timelineCanvasContainer!.clientHeight;
+  $editorH = editTable!.clientHeight;
+  $leftPaneW = leftPane!.clientWidth;
+  await Memorized.save();
   await Interface.savePublicConfig();
 });
 
@@ -204,6 +192,26 @@ appWindow.onDragDropEvent(async (ev) => {
     if (!await Interface.warnIfNotSaved()) return;
     await Interface.openFile(path);
   }
+});
+
+let windowW = Memorized.$('windowW', <number>1000);
+let windowH = Memorized.$('windowH', <number>800);
+let windowX = Memorized.$('windowX', <number>200);
+let windowY = Memorized.$('windowY', <number>200);
+let editorH = Memorized.$('editorH', <number>125);
+let timelineH = Memorized.$('timelineH', <number>150);
+let leftPaneW = Memorized.$('leftPaneW', <number>300);
+let videoH = Memorized.$('videoH', <number>200);
+
+Memorized.init();
+Memorized.onInitialize(() => {
+  let w = $windowW, h = $windowH, x = $windowX, y = $windowY;
+  appWindow.setPosition(new LogicalPosition(x, y));
+  appWindow.setSize(new LogicalSize(Math.max(w, 500), Math.max(h, 500)));
+  videoCanvasContainer!.style.height = `${$videoH}px`;
+  timelineCanvasContainer!.style.height = `${$timelineH}px`;
+  editTable!.style.height = `${$editorH}px`;
+  leftPane!.style.width = `${$leftPaneW}px`;
 });
 </script>
 
@@ -298,7 +306,7 @@ appWindow.onDragDropEvent(async (ev) => {
       </div>
       <!-- resizer -->
       <div>
-        <Resizer control={videoCanvasContainer} minValue={100}/>
+        <Resizer control={videoCanvasContainer} minValue={100} />
       </div>
       <!-- toolbox -->
       <div class="flexgrow fixminheight">
@@ -319,7 +327,7 @@ appWindow.onDragDropEvent(async (ev) => {
       </div>
     </div>
     <div style="width: 10px;">
-      <Resizer vertical={true} minValue={200} control={leftPane}/>
+      <Resizer vertical={true} minValue={200} control={leftPane} />
     </div>
     <div class="flexgrow fixminheight vlayout isolated">
       <!-- edit box -->
@@ -327,7 +335,7 @@ appWindow.onDragDropEvent(async (ev) => {
         <EntryEdit />
       </div>
       <!-- resizer -->
-      <div><Resizer control={editTable} minValue={125}/></div>
+      <div><Resizer control={editTable} minValue={125} /></div>
       <!-- table view -->
       <div class='flexgrow isolated' style="padding-bottom: 6px">
         <SubtitleTable />
@@ -336,7 +344,7 @@ appWindow.onDragDropEvent(async (ev) => {
   </div>
   <!-- resizer -->
   <div>
-    <Resizer control={timelineCanvasContainer!} reverse={true}/>
+    <Resizer control={timelineCanvasContainer!} reverse={true} />
   </div>
   <!-- timeline -->
   <div bind:this={timelineCanvasContainer}>

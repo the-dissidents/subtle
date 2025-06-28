@@ -9,17 +9,6 @@ let layout = $state<TimelineLayout>();
 let input = $state<TimelineInput>();
 let renderer: TimelineRenderer;
 
-export const TimelineParams = {
-  get activeChannel() {
-    return input!.activeChannel;
-  },
-  get currentMode() {
-    return input!.currentMode;
-  },
-  set currentMode(x) {
-    input!.currentMode = x;
-  }
-}
 </script>
 
 <script lang="ts">
@@ -29,13 +18,15 @@ import { ChangeType, Source } from "../../frontend/Source";
 import { Interface } from '../../frontend/Interface';
 import Popup, { type PopupHandler } from '../../ui/Popup.svelte';
 import { TimelineLayout } from "./Layout";
-import { TimelineInput } from "./Input.svelte";
+import { TimelineInput, TimelineParams } from "./Input.svelte";
 import { TimelineRenderer } from "./Render.svelte";
 import Tooltip from '../../ui/Tooltip.svelte';
 import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
 import { PrivateConfig } from '../../config/PrivateConfig';
 import { MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
+
+let currentMode = TimelineParams.currentMode;
 
 // Setup function for the canvas
 function setup(canvas: HTMLCanvasElement) {
@@ -88,24 +79,24 @@ function updateSnapOverride(ev: KeyboardEvent) {
     <Tooltip text={$_('timeline.select-tool')} position="right">
       <label>
         <input type="checkbox" class="button"
-          checked={input?.currentMode == 'select'}
-          onclick={() => input!.currentMode = 'select'} />
+          checked={$currentMode == 'select'}
+          onclick={() => $currentMode = 'select'} />
         <MousePointerIcon />
       </label>
     </Tooltip>
     <Tooltip text={$_('timeline.create-tool')} position="right">
       <label>
         <input type="checkbox" class="button"
-          checked={input?.currentMode == 'create'}
-          onclick={() => input!.currentMode = 'create'} />
+          checked={$currentMode == 'create'}
+          onclick={() => $currentMode = 'create'} />
         <PlusSquareIcon />
       </label>
     </Tooltip>
     <Tooltip text={$_('timeline.split-tool')} position="right">
       <label>
         <input type="checkbox" class="button"
-          checked={input?.currentMode == 'split'}
-          onclick={() => input!.currentMode = 'split'} />
+          checked={$currentMode == 'split'}
+          onclick={() => $currentMode = 'split'} />
         <ScissorsIcon />
       </label>
     </Tooltip>

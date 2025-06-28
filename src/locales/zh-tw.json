@@ -350,10 +350,10 @@
     "text": "文字"
   },
   "transformdialog": {
-    "backward": "向後",
+    "backward": "向前",
     "by": "平移量：",
     "end-of-selection": "選取範圍結尾",
-    "forward": "向前",
+    "forward": "向後",
     "fps-before-after": "幀率（之前:之後）",
     "modify-everything-after-this": "修改此後的一切",
     "range": "範圍",

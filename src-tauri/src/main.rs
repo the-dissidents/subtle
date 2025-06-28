@@ -52,6 +52,7 @@ fn main() {
                         file_name: Some("subtle".to_string()),
                     },
                 ))
+                .max_file_size(5_000_000)
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())

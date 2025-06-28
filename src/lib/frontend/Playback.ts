@@ -97,7 +97,7 @@ export const Playback = {
         isLoaded.set(false);
         await this.onClose.dispatchAndAwaitAll()
         duration = 0;
-        // this.forceSetPosition(0);
+        await this.forceSetPosition(0);
         Playback.onRefreshPlaybackControl.dispatch();
     },
 

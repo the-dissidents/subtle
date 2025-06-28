@@ -524,10 +524,10 @@
     "split-tool": "切割工具"
   },
   "transformdialog": {
-    "backward": "向后",
+    "backward": "向前",
     "by": "平移量：",
     "end-of-selection": "选区结尾",
-    "forward": "向前",
+    "forward": "向后",
     "fps-before-after": "帧率（之前:之后）",
     "modify-everything-after-this": "修改此后的一切",
     "range": "范围",

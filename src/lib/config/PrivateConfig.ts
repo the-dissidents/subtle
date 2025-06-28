@@ -20,19 +20,7 @@ export type FileSaveState = {
 const configPath = 'config.json';
 let configData = {
     maxRecent: 10,
-    paths: [] as FileSaveState[],
-
-    windowW: 1000,
-    windowH: 800,
-    windowX: 200,
-    windowY: 200,
-    
-    editorH: 125,
-    timelineH: 150,
-    leftPaneW: 300,
-    videoH: 200,
-
-    enableSnap: true,
+    paths: [] as FileSaveState[]
 };
 
 let initialized = false;
