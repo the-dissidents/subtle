@@ -18,7 +18,7 @@ let initialized = false;
 let onInitCallbacks: (() => void)[] = [];
 
 export class Memorized<T extends MemorizableValue> {
-    #subscriptions = new Set<(value: T) => void>();
+    protected subscriptions = new Set<(value: T) => void>();
 
     static $<T extends MemorizableValue>(key: string, initial: T) {
         if (key in memorizedData) {
@@ -26,6 +26,15 @@ export class Memorized<T extends MemorizableValue> {
             return memorizedData[key] as Memorized<T>;
         }
         return new Memorized(key, initial);
+    }
+
+    static $overridable<T extends MemorizableValue>(key: string, initial: T) {
+        if (key in memorizedData) {
+            Debug.assert(memorizedData[key] instanceof OverridableMemorized);
+            Debug.assert(typeof memorizedData[key].get() == typeof initial, 'type mismatch');
+            return memorizedData[key] as OverridableMemorized<T>;
+        }
+        return new OverridableMemorized(key, initial);
     }
 
     static isInitialized() {
@@ -78,14 +87,14 @@ export class Memorized<T extends MemorizableValue> {
         }, get(_)('msg.error-saving-private-config'));
     }
 
-    private constructor(key: string, private value: T) {
+    protected constructor(key: string, protected value: T) {
         memorizedData[key] = this;
     }
 
     subscribe(subscription: (value: T) => void): (() => void) {
-        this.#subscriptions.add(subscription);
-        subscription(this.value);
-        return () => this.#subscriptions.delete(subscription);
+        this.subscriptions.add(subscription);
+        subscription(this.get());
+        return () => this.subscriptions.delete(subscription);
     }
 
     get(): T {
@@ -94,6 +103,37 @@ export class Memorized<T extends MemorizableValue> {
 
     set(value: T) {
         this.value = value;
-        this.#subscriptions.forEach((x) => x(value));
+        this.subscriptions.forEach((x) => x(value));
+    }
+}
+
+export class OverridableMemorized<T extends MemorizableValue> extends Memorized<T> {
+    #override: T | undefined;
+
+    override get() {
+        return this.override ?? this.value;
+    }
+
+    override set(value: T) {
+        this.value = value;
+        if (this.override === undefined)
+            this.subscriptions.forEach((x) => x(value));
+    }
+
+    get setting() {
+        return this.value;
+    }
+
+    set setting(value: T) {
+        this.set(value);
+    }
+
+    get override() {
+        return this.#override;
+    }
+
+    set override(value: T | undefined) {
+        this.#override = value;
+        this.subscriptions.forEach((x) => x(this.override ?? this.value));
     }
 }

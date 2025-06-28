@@ -5,7 +5,6 @@ interface Props {
   vertical?: boolean;
   reverse?: boolean;
   minValue?: number;
-  children?: import('svelte').Snippet;
 }
 
 let {
@@ -14,7 +13,6 @@ let {
   vertical = false,
   reverse = false,
   minValue = 10,
-  children
 }: Props = $props();
 let cx = $state(0), cy = $state(0), orig = $state(0), orig2 = $state(0);
 
@@ -48,7 +46,6 @@ function ondrag(ev: MouseEvent) {
     }, {once: true});
   }}>
 <div class='inside'></div>
-{@render children?.()}
 </div>
 
 <style>

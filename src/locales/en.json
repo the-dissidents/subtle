@@ -518,6 +518,7 @@
     "create-tool": "create tool",
     "enable-snap": "enable snap",
     "filter-styles": "filter styles",
+    "lock-cursor": "lock cursor position when playing",
     "select-tool": "select tool",
     "split-tool": "split tool"
   },

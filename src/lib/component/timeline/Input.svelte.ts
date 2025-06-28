@@ -9,12 +9,12 @@ import { Debug } from "../../Debug";
 import { Playback } from "../../frontend/Playback";
 import type { TranslatedWheelEvent } from "../../frontend/Frontend";
 import { TimelineConfig } from "./Config";
-import { Overridable } from "../../details/Overridable.svelte";
 import { Memorized } from "../../config/MemorizedValue.svelte";
 
 export const TimelineParams = {
   activeChannel: undefined as SubtitleStyle | undefined,
-  lockCursor: Memorized.$('lockCursor', false),
+  lockCursor: Memorized.$('lockCursor', <boolean>false),
+  useSnap: Memorized.$overridable('useSnap', <boolean>true),
   currentMode: Memorized.$<'select' | 'create' | 'split'>('currentMode', 'select'),
 }
 
@@ -199,7 +199,7 @@ class DragMove extends MoveResizeBase {
     let dval = this.self.convertX(offsetX) - this.origPos;
 
     // TODO: maybe make it a command ('toggle snap') instead?
-    if (this.self.useSnap.value)
+    if (TimelineParams.useSnap.get())
       dval = this.self.snapVisible(this.points, this.start + dval) - this.start;
     this.changed = dval != 0;
     for (const [ent, pos] of this.origPositions.entries()) {
@@ -229,7 +229,7 @@ class DragResize extends MoveResizeBase {
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
     let val = this.origVal + this.self.convertX(offsetX) - this.origPos;
-    if (this.self.useSnap.value)
+    if (TimelineParams.useSnap.get())
       val = this.self.snapVisible([val]);
     let newStart: number, newEnd: number;
     if (this.where == 'start') {
@@ -378,8 +378,6 @@ export class TimelineInput {
     positions: Map<SubtitleStyle, number>, 
     current: SubtitleStyle 
   } = null;
-
-  useSnap = new Overridable(true);
   currentAction: TimelineAction | undefined;
 
   constructor(private layout: TimelineLayout) {
@@ -542,7 +540,7 @@ export class TimelineInput {
   makeAlignmentLine(x: number, always = false) {
     const pos = this.convertX(x);
     const old = this.alignmentLine?.pos;
-    const snap = this.useSnap.value;
+    const snap = TimelineParams.useSnap.get();
     if (snap)
       this.snapVisible([pos]);
     if (!snap || (always && this.alignmentLine === null))

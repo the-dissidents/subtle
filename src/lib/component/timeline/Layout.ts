@@ -8,6 +8,7 @@ import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { TimelineConfig } from "./Config";
 import { EventHost } from "../../details/EventHost";
 import { MediaSampler2 } from "./MediaSampler2";
+import { TimelineParams } from "./Input.svelte";
 
 const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
@@ -36,6 +37,7 @@ export class TimelineLayout {
   width = 100; height = 100;
   entryHeight = 0;
   leftColumnWidth = 100;
+  #previousPos = 0;
 
   #shownStyles: SubtitleStyle[] = [];
   #stylesMap = new Map<SubtitleStyle, number>();
@@ -100,8 +102,11 @@ export class TimelineLayout {
           Playback.setPosition(pos);
           return;
         }
+      } else if (!this.keepPosInSafeArea(pos) 
+               && Playback.isPlaying && TimelineParams.lockCursor.get()) {
+        this.setOffset(this.offset + (pos - this.#previousPos));
       }
-      this.keepPosInSafeArea(pos);
+      this.#previousPos = pos;
       this.manager.requestRender();
     });
 
@@ -222,11 +227,18 @@ export class TimelineLayout {
   }
 
   keepPosInSafeArea(pos: number) {
-    const left = this.offset,
+    const left = Math.max(0, this.offset + CURSOR_SAFE_AREA_RIGHT_MARGIN / this.#scale),
          right = this.offset + (this.width 
             - CURSOR_SAFE_AREA_RIGHT_MARGIN - this.leftColumnWidth) / this.#scale;
-    if (pos < left)  this.setOffset(this.offset + pos - left);
-    if (pos > right) this.setOffset(this.offset + pos - right);
+    if (pos < left) {
+      this.setOffset(this.offset + pos - left);
+      return true;
+    }
+    if (pos > right) {
+      this.setOffset(this.offset + pos - right);
+      return true;
+    }
+    return false;
   }
 
   layout(ctx: CanvasRenderingContext2D) {

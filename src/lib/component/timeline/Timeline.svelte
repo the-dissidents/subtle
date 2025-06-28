@@ -23,10 +23,11 @@ import { TimelineRenderer } from "./Render.svelte";
 import Tooltip from '../../ui/Tooltip.svelte';
 import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
-import { PrivateConfig } from '../../config/PrivateConfig';
-import { MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
+import { AlignCenterVerticalIcon, MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
 
 let currentMode = TimelineParams.currentMode;
+let useSnap = TimelineParams.useSnap;
+let lockCursor = TimelineParams.lockCursor;
 
 // Setup function for the canvas
 function setup(canvas: HTMLCanvasElement) {
@@ -51,22 +52,17 @@ function setup(canvas: HTMLCanvasElement) {
 
   uiFocus.subscribe((x) => {
     if (x != 'Timeline')
-      input!.useSnap.override = null;
+      TimelineParams.useSnap.override = undefined;
   });
 
   hook(() => Playback.playArea.setting, 
        () => layout!.manager.requestRender());
-  
-  PrivateConfig.onInitialized(
-    () => input!.useSnap.setting = PrivateConfig.get('enableSnap'));
 }
 
 function updateSnapOverride(ev: KeyboardEvent) {
   if ($uiFocus !== 'Timeline') return;
-  if (ev.altKey)
-    input!.useSnap.override = !input!.useSnap.setting;
-  else
-    input!.useSnap.override = null;
+  TimelineParams.useSnap.override = 
+    ev.altKey ? !TimelineParams.useSnap.setting : undefined;
 }
 </script>
 
@@ -106,12 +102,17 @@ function updateSnapOverride(ev: KeyboardEvent) {
     <Tooltip text={$_('timeline.enable-snap')} position="right">
       <label>
         <input type="checkbox" class="button"
-          checked={input?.useSnap.value}
-          onclick={() => {
-            input!.useSnap.setting = !input?.useSnap.setting;
-            PrivateConfig.set('enableSnap', input!.useSnap.setting);
-          }} />
+          checked={$useSnap}
+          onclick={() => useSnap.setting = !useSnap.setting} />
         <MagnetIcon />
+      </label>
+    </Tooltip>
+    <Tooltip text={$_('timeline.lock-cursor')} position="right">
+      <label>
+        <input type="checkbox" class="button"
+          checked={$lockCursor}
+          onclick={() => lockCursor.set(!lockCursor.get())} />
+        <AlignCenterVerticalIcon />
       </label>
     </Tooltip>
   </div>
