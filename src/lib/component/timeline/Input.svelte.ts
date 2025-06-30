@@ -10,8 +10,9 @@ import { Playback } from "../../frontend/Playback";
 import type { TranslatedWheelEvent } from "../../frontend/Frontend";
 import { TimelineConfig } from "./Config";
 import { Memorized } from "../../config/MemorizedValue.svelte";
+import { SubtitleTableHandle } from "../subtitleTable/Input.svelte";
 
-export const TimelineParams = {
+export const TimelineHandle = {
   activeChannel: undefined as SubtitleStyle | undefined,
   lockCursor: Memorized.$('lockCursor', <boolean>false),
   useSnap: Memorized.$overridable('useSnap', <boolean>true),
@@ -80,12 +81,12 @@ class BoxSelect extends TimelineAction {
     super(self, layout, e0);
     this.origSelection = Editing.getSelection();
     this.x1 = e0.offsetX + this.layout.manager.scroll[0],
-    this.y1 = e0.offsetY;
+    this.y1 = e0.offsetY + this.layout.manager.scroll[1];
   }
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
     let x2 = offsetX + this.layout.manager.scroll[0],
-        y2 = offsetY;
+        y2 = offsetY + this.layout.manager.scroll[1];
     let b: Box = {
       x: Math.min(this.x1, x2), y: Math.min(this.y1, y2), 
       w: Math.abs(this.x1 - x2), h: Math.abs(this.y1 - y2)};
@@ -199,7 +200,7 @@ class DragMove extends MoveResizeBase {
     let dval = this.self.convertX(offsetX) - this.origPos;
 
     // TODO: maybe make it a command ('toggle snap') instead?
-    if (TimelineParams.useSnap.get())
+    if (TimelineHandle.useSnap.get())
       dval = this.self.snapVisible(this.points, this.start + dval) - this.start;
     this.changed = dval != 0;
     for (const [ent, pos] of this.origPositions.entries()) {
@@ -229,7 +230,7 @@ class DragResize extends MoveResizeBase {
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
     let val = this.origVal + this.self.convertX(offsetX) - this.origPos;
-    if (TimelineParams.useSnap.get())
+    if (TimelineHandle.useSnap.get())
       val = this.self.snapVisible([val]);
     let newStart: number, newEnd: number;
     if (this.where == 'start') {
@@ -407,10 +408,10 @@ export class TimelineInput {
     });
 
     this.layout.onLayout.bind(this, () => {
-      if (TimelineParams.activeChannel 
-       && !this.layout.shownStyles.includes(TimelineParams.activeChannel))
+      if (TimelineHandle.activeChannel 
+       && !this.layout.shownStyles.includes(TimelineHandle.activeChannel))
       {
-        TimelineParams.activeChannel = undefined;
+        TimelineHandle.activeChannel = undefined;
       }
     });
   }
@@ -517,10 +518,10 @@ export class TimelineInput {
     if (e.offsetX < this.layout.leftColumnWidth) {
       const style = this.layout.getChannelFromY(e.offsetY);
       if (style) {
-        if (TimelineParams.activeChannel == style)
-          TimelineParams.activeChannel = undefined;
+        if (TimelineHandle.activeChannel == style)
+          TimelineHandle.activeChannel = undefined;
         else 
-          TimelineParams.activeChannel = style;
+          TimelineHandle.activeChannel = style;
         this.manager.requestRender();
       }
     }
@@ -532,15 +533,16 @@ export class TimelineInput {
   #onDoubleClick() {
     if (this.selection.size == 1) {
       let one = [...this.selection][0];
-      if (Editing.getFocusedEntry() == one)
-        Editing.startEditingFocusedEntry();
+      if (Editing.getFocusedEntry() == one) {
+        SubtitleTableHandle.processDoubleClick?.();
+      }
     }
   }
 
   makeAlignmentLine(x: number, always = false) {
     const pos = this.convertX(x);
     const old = this.alignmentLine?.pos;
-    const snap = TimelineParams.useSnap.get();
+    const snap = TimelineHandle.useSnap.get();
     if (snap)
       this.snapVisible([pos]);
     if (!snap || (always && this.alignmentLine === null))
@@ -566,13 +568,13 @@ export class TimelineInput {
     }
   
     const under = this.layout.findEntriesByPosition(
-      e.offsetX + this.manager.scroll[0], e.offsetY);
+      e.offsetX + this.manager.scroll[0], e.offsetY + this.manager.scroll[1]);
 
-    if (TimelineParams.currentMode.get() == 'split') {
+    if (TimelineHandle.currentMode.get() == 'split') {
       this.makeAlignmentLine(e.offsetX, true);
       return;
     }
-    if (TimelineParams.currentMode.get() == 'create' && under.length == 0) {
+    if (TimelineHandle.currentMode.get() == 'create' && under.length == 0) {
       this.makeAlignmentLine(e.offsetX, true);
       return;
     }
@@ -652,9 +654,8 @@ export class TimelineInput {
       this.#onDrag(e0.offsetX, e0.offsetY, e0);
       return true;
     } else {
-      const scrollX = this.manager.scroll[0];
       const underMouse = this.layout.findEntriesByPosition(
-        e0.offsetX + scrollX, e0.offsetY);
+        e0.offsetX + this.manager.scroll[0], e0.offsetY + this.manager.scroll[1]);
       if (e0.button == 1) {
         this.currentAction = new Scale(this, this.layout, e0);
         return true;
@@ -677,7 +678,7 @@ export class TimelineInput {
             this.selection.clear();
             this.manager.requestRender();
           }
-          if (TimelineParams.currentMode.get() == 'create') {
+          if (TimelineHandle.currentMode.get() == 'create') {
             // create entry
             const style = this.layout.getChannelFromY(e0.offsetY);
             if (!style) return false;
@@ -726,7 +727,7 @@ export class TimelineInput {
           }
           this.manager.requestRender();
 
-          if (TimelineParams.currentMode.get() == 'split') {
+          if (TimelineHandle.currentMode.get() == 'split') {
             this.currentAction = new SplitEntry(this, this.layout, e0, selected);
             return true;
           }

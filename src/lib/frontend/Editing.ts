@@ -91,12 +91,16 @@ export const Editing = {
     startEditingFocusedEntry() {
         let focused = this.getFocusedEntry();
         Debug.assert(focused instanceof SubtitleEntry);
-        if (this.focused.style === null || !this.styleToEditor.has(this.focused.style)) {
+        if (this.focused.style === null
+         || !this.styleToEditor.has(this.focused.style)
+         || !focused.texts.has(this.focused.style)
+        ) {
             const first = focused.texts.has(Source.subs.defaultStyle) 
                 ? Source.subs.defaultStyle
                 : Source.subs.styles.find((x) => focused.texts.has(x));
             Debug.assert(first !== undefined);
             this.focused.style = first;
+            Debug.debug('changed focused style to', first.name);
         }
         let elem = this.styleToEditor.get(this.focused.style)!;
         elem.focus();
@@ -168,14 +172,11 @@ export const Editing = {
     deleteChannel(style: SubtitleStyle) {
         let focused = this.getFocusedEntry();
         Debug.assert(focused instanceof SubtitleEntry);
-        if (!focused.texts.has(style)) return;
+        if (!focused.texts.has(style)) return Debug.early('no such channel to delete');
+        Debug.assert(focused.texts.size > 1);
         focused.texts.delete(style);
         if (this.focused.style == style)
             this.focused.style = null;
-        // let channel = focused.texts[index];
-        // if (channel == this.focused.channel)
-        //     this.clearFocus(false); // don't try to submit since we're deleting it
-        // focused.texts = focused.texts.toSpliced(index, 1);
         Source.markChanged(ChangeType.InPlace);
     },
 

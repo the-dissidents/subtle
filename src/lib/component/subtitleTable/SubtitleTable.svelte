@@ -51,30 +51,7 @@ onMount(() => {
   </button>
   <canvas bind:this={canvas}
     class:subsfocused={$uiFocus === 'Table'}
-    ondblclick={async () => {
-      input!.focus();
-      let focused = Editing.getFocusedEntry();
-      Debug.assert(focused !== null);
-      if (focused == 'virtual') {
-        if (TableConfig.data.doubleClickStartEdit)
-          Editing.startEditingNewVirtualEntry();
-      } else {
-        if (get(Playback.isLoaded)) switch (TableConfig.data.doubleClickPlaybackBehavior) {
-          case 'none': break;
-          case 'seek':
-            Playback.setPosition(focused.start);
-            break;
-          case 'play':
-            await Playback.forceSetPosition(focused.start);
-            Playback.play(true);
-            break;
-          default:
-            Debug.never(<never>TableConfig.data.doubleClickPlaybackBehavior);
-        }
-        if (TableConfig.data.doubleClickStartEdit)
-          Editing.startEditingFocusedEntry();
-      }
-    }}
+    ondblclick={() => input!.handleDoubleClick()}
     oncontextmenu={(ev) => {
       input!.focus();
       ev.preventDefault();

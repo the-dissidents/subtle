@@ -8,7 +8,7 @@ import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { TimelineConfig } from "./Config";
 import { EventHost } from "../../details/EventHost";
 import { MediaSampler2 } from "./MediaSampler2";
-import { TimelineParams } from "./Input.svelte";
+import { TimelineHandle } from "./Input.svelte";
 
 const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
@@ -103,7 +103,7 @@ export class TimelineLayout {
           return;
         }
       } else if (!this.keepPosInSafeArea(pos) 
-               && Playback.isPlaying && TimelineParams.lockCursor.get()) {
+               && Playback.isPlaying && TimelineHandle.lockCursor.get()) {
         this.setOffset(this.offset + (pos - this.#previousPos));
       }
       this.#previousPos = pos;
@@ -125,7 +125,6 @@ export class TimelineLayout {
     });
 
     Source.onSubtitleObjectReload.bind(this, () => {
-      this.#updateContentArea();
       this.requestedLayout = true;
       this.manager.requestRender();
     });
@@ -262,6 +261,7 @@ export class TimelineLayout {
       + TimelineLayout.LEFT_COLUMN_MARGIN * 2;
 
     this.manager.requestRender();
+    this.#updateContentArea();
     this.onLayout.dispatch();
   }
 

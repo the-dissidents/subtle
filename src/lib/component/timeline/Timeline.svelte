@@ -18,16 +18,16 @@ import { ChangeType, Source } from "../../frontend/Source";
 import { Interface } from '../../frontend/Interface';
 import Popup, { type PopupHandler } from '../../ui/Popup.svelte';
 import { TimelineLayout } from "./Layout";
-import { TimelineInput, TimelineParams } from "./Input.svelte";
+import { TimelineInput, TimelineHandle } from "./Input.svelte";
 import { TimelineRenderer } from "./Render.svelte";
 import Tooltip from '../../ui/Tooltip.svelte';
 import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
 import { AlignCenterVerticalIcon, MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
 
-let currentMode = TimelineParams.currentMode;
-let useSnap = TimelineParams.useSnap;
-let lockCursor = TimelineParams.lockCursor;
+let currentMode = TimelineHandle.currentMode;
+let useSnap = TimelineHandle.useSnap;
+let lockCursor = TimelineHandle.lockCursor;
 
 // Setup function for the canvas
 function setup(canvas: HTMLCanvasElement) {
@@ -52,7 +52,7 @@ function setup(canvas: HTMLCanvasElement) {
 
   uiFocus.subscribe((x) => {
     if (x != 'Timeline')
-      TimelineParams.useSnap.override = undefined;
+      TimelineHandle.useSnap.override = undefined;
   });
 
   hook(() => Playback.playArea.setting, 
@@ -61,8 +61,8 @@ function setup(canvas: HTMLCanvasElement) {
 
 function updateSnapOverride(ev: KeyboardEvent) {
   if ($uiFocus !== 'Timeline') return;
-  TimelineParams.useSnap.override = 
-    ev.altKey ? !TimelineParams.useSnap.setting : undefined;
+  TimelineHandle.useSnap.override = 
+    ev.altKey ? !TimelineHandle.useSnap.setting : undefined;
 }
 </script>
 

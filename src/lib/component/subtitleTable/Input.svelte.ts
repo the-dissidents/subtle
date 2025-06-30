@@ -12,6 +12,11 @@ import { TableConfig } from "./Config";
 
 import { _ } from 'svelte-i18n';
 import { get } from "svelte/store";
+import { Playback } from "../../frontend/Playback";
+
+export const SubtitleTableHandle = {
+    processDoubleClick: undefined as (undefined | (() => Promise<void>))
+};
 
 export class TableInput {
     private manager: CanvasManager;
@@ -28,9 +33,9 @@ export class TableInput {
         private validationMessagePopup: PopupHandler,
     ) {
         this.manager = layout.manager;
-        this.manager.onMouseMove.bind(this, (ev) => this.onMouseMove(ev));
-        this.manager.onMouseDown.bind(this, (ev) => this.onMouseDown(ev));
-        this.manager.onDrag.bind(this, (x, y) => this.onDrag(x, y));
+        this.manager.onMouseMove.bind(this, (ev) => this.#onMouseMove(ev));
+        this.manager.onMouseDown.bind(this, (ev) => this.#onMouseDown(ev));
+        this.manager.onDrag.bind(this, (x, y) => this.#onDrag(x, y));
 
         Editing.onSelectionChanged.bind(this, () => this.manager.requestRender());
 
@@ -70,18 +75,45 @@ export class TableInput {
                 this.manager.requestRender();
             }
         });
-    }
 
-    #getLineFromOffset(y: number) {
-        return (y / this.manager.scale + this.manager.scroll[1] - this.layout.headerHeight) 
-            / this.layout.lineHeight;
+        SubtitleTableHandle.processDoubleClick = () => this.handleDoubleClick();
     }
     
     focus() {
         Interface.uiFocus.set('Table');
     }
 
-    onMouseMove(ev: MouseEvent) {
+    async handleDoubleClick() {
+        this.focus();
+        let focused = Editing.getFocusedEntry();
+        Debug.assert(focused !== null);
+        if (focused == 'virtual') {
+            if (TableConfig.data.doubleClickStartEdit)
+            Editing.startEditingNewVirtualEntry();
+        } else {
+            switch (TableConfig.data.doubleClickPlaybackBehavior) {
+                case 'none': break;
+                case 'seek':
+                    Playback.setPosition(focused.start);
+                    break;
+                case 'play':
+                    await Playback.forceSetPosition(focused.start);
+                    if (get(Playback.isLoaded)) Playback.play(true);
+                    break;
+                default:
+                    Debug.never(<never>TableConfig.data.doubleClickPlaybackBehavior);
+            }
+            if (TableConfig.data.doubleClickStartEdit)
+                Editing.startEditingFocusedEntry();
+        }
+    }
+
+    #getLineFromOffset(y: number) {
+        return (y / this.manager.scale + this.manager.scroll[1] - this.layout.headerHeight) 
+            / this.layout.lineHeight;
+    }
+
+    #onMouseMove(ev: MouseEvent) {
         if (ev.offsetY < this.layout.headerHeight / this.manager.scale) return;
         
         const [cx, cy] = this.manager.convertPosition('offset', 'canvas', ev.offsetX, ev.offsetY);
@@ -118,7 +150,7 @@ export class TableInput {
         }
     }
 
-    onMouseDown(ev: MouseEvent) {
+    #onMouseDown(ev: MouseEvent) {
         this.focus();
         // don't do anything if mouse is within header area
         if (ev.offsetY < this.layout.headerHeight / this.manager.scale) return;
@@ -137,7 +169,7 @@ export class TableInput {
         }
     }
 
-    requestAutoScroll() {
+    #requestAutoScroll() {
         const doAutoScroll = () => {
             if (this.autoScrollY == 0) {
                 this.lastAnimateFrameTime = -1;
@@ -165,7 +197,7 @@ export class TableInput {
         requestAnimationFrame(() => doAutoScroll());
     }
 
-    onDrag(_: number, offsetY: number) {
+    #onDrag(_: number, offsetY: number) {
         function powWithSign(x: number, y: number) {
             return Math.sign(x) * Math.pow(Math.abs(x), y);
         }
@@ -174,10 +206,10 @@ export class TableInput {
         const speed = TableConfig.data.autoScrollSpeed;
         const exponent = TableConfig.data.autoScrollExponent;
         if (offsetY < this.layout.headerHeight) {
-            if (this.autoScrollY == 0) this.requestAutoScroll();
+            if (this.autoScrollY == 0) this.#requestAutoScroll();
             this.autoScrollY = powWithSign((offsetY - this.layout.headerHeight) * speed, exponent);
         } else if (offsetY > this.manager.size[1]) {
-            if (this.autoScrollY == 0) this.requestAutoScroll();
+            if (this.autoScrollY == 0) this.#requestAutoScroll();
             this.autoScrollY = powWithSign((offsetY - this.manager.size[1]) * speed, exponent);
         } else {
             this.autoScrollY = 0;

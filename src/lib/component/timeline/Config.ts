@@ -11,8 +11,8 @@ import { ChangeType, Source } from '../../frontend/Source';
 import { MediaPlayerInterface } from '../preview/MediaPlayer';
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
-import { TimelineParams } from "./Input.svelte";
+import { SubtitleEntry } from "../../core/Subtitles.svelte";
+import { TimelineHandle } from "./Input.svelte";
 const $_ = unwrapFunctionStore(_);
 
 export const TimelineConfig = new PublicConfigGroup(
@@ -72,9 +72,9 @@ export const TimelineConfig = new PublicConfigGroup(
 async function make(other: UICommand<any>) {
     if (other.activated)
         await other.end();
-    Debug.assert(TimelineParams.activeChannel !== undefined);
+    Debug.assert(TimelineHandle.activeChannel !== undefined);
     const pos = Playback.position;
-    const entry = Editing.insertAtTime(pos, pos, TimelineParams.activeChannel);
+    const entry = Editing.insertAtTime(pos, pos, TimelineHandle.activeChannel);
     MediaPlayerInterface.onPlayback.bind(entry, 
         (newpos) => { entry.end = Math.max(entry.end, newpos) });
     return entry;
@@ -85,7 +85,7 @@ export const TimelineCommands = {
         [ CommandBinding.from(['J'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-1'),
-        isApplicable: () => Playback.isPlaying && TimelineParams.activeChannel !== null,
+        isApplicable: () => Playback.isPlaying && TimelineHandle.activeChannel !== null,
         call: (): Promise<SubtitleEntry> => make(TimelineCommands.holdToCreateEntry2),
         onDeactivate: (entry) => {
             EventHost.unbind(entry);
@@ -96,7 +96,7 @@ export const TimelineCommands = {
         [ CommandBinding.from(['K'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-2'),
-        isApplicable: () => Playback.isPlaying && TimelineParams.activeChannel !== null,
+        isApplicable: () => Playback.isPlaying && TimelineHandle.activeChannel !== null,
         call: (): Promise<SubtitleEntry> => make(TimelineCommands.holdToCreateEntry1),
         onDeactivate: (entry) => {
             EventHost.unbind(entry);
@@ -161,19 +161,19 @@ export const TimelineCommands = {
         [ CommandBinding.from(['A'], ['Timeline']) ],
     {
         name: () => $_('action.open-select-tool'),
-        call: () => TimelineParams.currentMode.set('select')
+        call: () => TimelineHandle.currentMode.set('select')
     }),
     createMode: new UICommand(() => $_('category.timeline'),
         [ CommandBinding.from(['D'], ['Timeline']) ],
     {
         name: () => $_('action.open-create-tool'),
-        call: () => TimelineParams.currentMode.set('create')
+        call: () => TimelineHandle.currentMode.set('create')
     }),
     splitMode: new UICommand(() => $_('category.timeline'),
         [ CommandBinding.from(['C'], ['Timeline']) ],
     {
         name: () => $_('action.open-split-tool'),
-        call: () => TimelineParams.currentMode.set('split')
+        call: () => TimelineHandle.currentMode.set('split')
     }),
 };
 KeybindingManager.register(TimelineCommands);
