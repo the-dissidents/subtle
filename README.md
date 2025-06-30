@@ -4,6 +4,8 @@
 
 正在开发中的跨平台字幕编辑器。
 
+[**帮助和开发者指南**](https://github.com/the-dissidents/subtle/wiki)｜[**下载**](https://github.com/the-dissidents/subtle/releases)
+
 ## 功能
 
 - [x] 同时支持Mac和Windows，理论上也支持Linux系统
@@ -39,60 +41,22 @@
 不是bug：
 - 这不是一个专门编辑ASS或者什么格式的字幕软件，所以你会发现一些ASS功能在这里不支持，而ASS也不支持这里的一些功能（凭心而论，ASS本来也是一个非常糟糕的格式！）
 
-## 如何构建
+## 未来计划
 
-### macOS
+**1.0前实现**
+- 支持查字典
+- 支持字体管理，支持嵌入字体到ASS文件
+- 支持WebVTT格式
+- 更多帮助文档和教程
+- **1.0版本发布（大约2025年9月）**
 
-1. 确保能连接外网，并且已安装`git`，`npm`，`cargo`，以及`dylibbundler`或`homebrew`
-2. `git clone`
-3. `npm install`
-4. `cargo install tauri-cli --version "^2.0.0" --locked`（只需要第一次，后续构建不需要）
-5. `cargo tauri build --target universal-apple-darwin`
-6. `./mac-repack-test.sh`
-
-### Windows
-
-#### 使用GNU工具链
-
-在Cargo.toml里启用**我们改过的**ffmpeg-sys-next（也许别的也能用，但不保证）：
-```
-[patch.crates-io]
-ffmpeg-sys-next = { git = "https://github.com/the-dissidents/rust-ffmpeg-sys.git", branch = "master" }
-```
-
-注意编译过程中需要在本地构建ffmpeg以便静态链接，这件事必须在支持shell脚本的环境下进行，比如MSYS2。
-
-1. 确保能连接外网。
-2. 安装**MSYS2**。使用其中的pacman安装以下工具：clang, gcc toolchain, yasm, diffutils，记得选择统一的平台：`mingw64/mingw-w64-x86_64-*`
-3. 把clang的地址导出为环境变量LIBCLANG_PATH，否则一些工具可能找不着它
-4. 在**MSYS2**下使用rustup安装cargo。把host triple改成`x86_64-pc-windows-gnu`
-5. 把MSYS2的可执行文件路径（例如`C:/msys2/usr/bin`）加到Windows的PATH里面
-6. 用官方MSI安装Node.js。**不要在MSYS2里面**安装Node.js，否则无法正常运行vite！
-7. 如果没安装的话，用VS Code安装git
-8. `git clone`
-9. `npm install`
-10. `cargo install tauri-cli --version "^2.0.0" --locked`（只需要第一次，后续构建不需要）
-11. `cargo tauri build`
-
-#### 使用MSVC工具链
-
-在Cargo.toml里启用**我们改过的**ffmpeg-sys-next，但基于官方新版：
-```
-[patch.crates-io]
-ffmpeg-sys-next = { git = "https://github.com/the-dissidents/rust-ffmpeg-sys.git", branch = "official" }
-```
-
-- 确保能连接外网。
-- 直接在Windows环境下用rustup安装cargo，使用默认的host triple；同时安装Visual Studio
-- 安装Windows版NASM，记得加进PATH
-- 下载Windows版clang/LLVM（例如`clang+llvm-20.1.3-x86_64-pc-windows-msvc.tar.xz`），设置好LIBCLANG_PATH
-- 还是要安装**MSYS2**。`pacman -Syu`，`pacman -S make`
-- 把MSYS2的可执行文件路径（例如`C:/msys2/usr/bin`）加到Windows的PATH里面
-- 仍然是用官方MSI安装Node.js
-- 使用Visual Studio环境（例如`x64 Native Tools Command Prompt for VS 2022`）进行构建。
-- 注意，这种情况下编译ffmpeg可能花费非常长的时间
-- 还要注意，这种情况下rust-analyzer有可能因为没有Visual Studio环境而失败。为了让它正常工作，需要在它的配置里面加入关于msvc-cargo-wrapper.bat（这是我随便写的一个东西，你可能需要按照自己情况改一下）的几段。
-
+**1.0后实现**
+- 行内格式：支持字词加粗、自定义字体、注音等等
+- 多视图和自定义界面
+- 支持图形字幕，例如VobSub格式
+- AI全文翻译（Gemini?）
+- 自动打轴和语音识别（silero VAD+Whisper）
+- OCR硬字幕（Mistral OCR?）
 
 ## 联系
 

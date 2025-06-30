@@ -2,45 +2,448 @@ import { Basic } from "../Basic";
 import { CSSColors, parseCSSColor } from "../colorparser";
 import { Debug } from "../Debug";
 import { DeserializationError } from "../Serialization";
-import { AlignMode, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleStyle } from "./Subtitles.svelte";
+import { AlignMode, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser, type SubtitleStyle, type SubtitleWriter } from "./Subtitles.svelte";
 import { SubtitleTools } from "./SubtitleUtil.svelte";
 
-export const ASSSubtitles: SubtitleFormat = {
-    parse(source: string) {
-        const sections = getASSSections(source);
-        if (sections.size == 0)
-            throw new DeserializationError('invalid ASS');
-        let subs = new Subtitles();
-        if (!parseASSScriptInfo(sections, subs))
-            throw new DeserializationError('invalid ASS');
-        parseASSStyles(sections, subs);
-        parseASSEvents(sections, subs);
-        subs.migrated = 'ASS';
-        return subs;
+export const ASSSubtitles = {
+    detect(source) {
+        try {
+            new ASSParser(source);
+            return true;
+        } catch (e) {
+            return false;
+        }
     },
-    write(subs: Subtitles, options) {
+    parse: (source) => new ASSParser(source),
+    write: (subs) => new ASSWriter(subs)
+} satisfies SubtitleFormat;
+
+export type ASSParseWarnings = {
+    type: 'ignored-style-field',
+    name: string,
+    field: string,
+    value: string
+} | {
+    type: 'invalid-style-field',
+    name: string,
+    field: string,
+    value: string
+} | {
+    type: 'duplicate-style-definition',
+    name: string
+} | {
+    type: 'no-styles'
+} | {
+    type: 'undefined-style',
+    name: string
+} | {
+    type: 'ignored-special-character',
+    name: string,
+    occurrence: number
+} | {
+    type: 'ignored-override-tag',
+    occurrence: number
+} | {
+    type: 'ignored-drawing-command',
+    occurrence: number
+} | {
+    type: 'ignored-event-field',
+    field: string,
+    occurrence: number
+} | {
+    type: 'invalid-event-field',
+    line: number,
+    field: string,
+    value: string
+};
+
+export class ASSParser implements SubtitleParser {
+    #subs: Subtitles;
+    #sections: Map<string, string>;
+    #warnings: ASSParseWarnings[] = [];
+    #preserveInlines = true;
+    #transformInlineMultichannel = true;
+    #parsed = false;
+
+    constructor(source: string) {
+        const sectionRegex  = /^\[(.+)\]\s*\n((?:\s*[^[\n]+.+\n)+)/gm;
+        this.#sections = new Map([...source.matchAll(sectionRegex)].map((x) => [x[1], x[2]]));
+        if (this.#sections.size == 0)
+            throw new DeserializationError('invalid ASS');
+        this.#subs = new Subtitles();
+        this.#parseScriptInfo();
+    }
+
+    preserveInlines(x = true) {
+        this.#preserveInlines = x;
+        return this;
+    }
+
+    transformInlineMultichannel(x = true) {
+        this.#transformInlineMultichannel = x;
+        return this;
+    }
+
+    parse() {
+        Debug.assert(!this.#parsed);
+        this.#parseStyles();
+        this.#parseEvents();
+        this.#subs.migrated = 'ASS';
+        this.#parsed = true;
+        console.log(this.#warnings);
+        return this;
+    }
+
+    done(): Subtitles {
+        if (!this.#parsed) this.parse();
+        return this.#subs;
+    }
+
+    get warnings(): readonly ASSParseWarnings[] {
+        Debug.assert(this.#parsed);
+        return this.#warnings;
+    }
+
+    #warn(w: ASSParseWarnings) {
+        this.#warnings.push(w);
+    }
+
+    #parseScriptInfo() {
+        let text = this.#sections.get('Script Info');
+        if (text === undefined)
+            throw new DeserializationError('invalid ASS: script info not found');
+
+        const entryRegex = /(?<=\n)([^;].+?): *(.*)/g;
+        const infos = new Map([...text.matchAll(entryRegex)]
+            .map((x) => [x[1], x[2]]));
+        this.#subs.metadata.title = infos.get('Title') ?? this.#subs.metadata.title;
+        if (infos.has('PlayResX')) {
+            const n = Number.parseInt(infos.get('PlayResX')!);
+            if (!Number.isNaN(n)) this.#subs.metadata.width = n;
+        }
+        if (infos.has('PlayResY')) {
+            const n = Number.parseInt(infos.get('PlayResY')!);
+            if (!Number.isNaN(n)) this.#subs.metadata.height = n;
+        }
+    }
+
+    #parseAlignment(value: number): AlignMode | null {
+        if (this.#sections.has('V4 Styles')) switch (value) {
+            // Reference: https://aegisub.org/docs/latest/ass_tags/
+            // section "Line alignment (legacy)"
+            case 1: return AlignMode.BottomLeft;
+            case 2: return AlignMode.BottomCenter;
+            case 3: return AlignMode.BottomRight;
+            case 5: return AlignMode.TopLeft;
+            case 6: return AlignMode.TopCenter;
+            case 7: return AlignMode.TopRight;
+            case 9: return AlignMode.CenterLeft;
+            case 10: return AlignMode.Center;
+            case 11: return AlignMode.CenterRight;
+            default: return null;
+        }
+        if (value >= 1 && value <= 9) return value as AlignMode;
+        return null;
+    }
+
+    #parseStyles() {
+        let text = this.#sections.get('V4 Styles')
+                ?? this.#sections.get('V4+ Styles')
+                ?? this.#sections.get('V4++ Styles');
+        if (text === undefined) {
+            this.#warn({ type: 'no-styles' });
+            return;
+        }
+        const styleFieldMap = getASSFormatFieldMap(text);
+        if (styleFieldMap == null)
+            throw new DeserializationError('invalid ASS');
+        if (!styleFieldMap.has('Name'))
+            throw new DeserializationError('invalid ASS');
+
+        this.#subs.styles = [];
+
+        const stylesRegex = /Style:\s*(.*)\n/g;
+        let first: SubtitleStyle | undefined;
+        let nameToStyle = new Map<string, SubtitleStyle>();
+
+        const styleMatches = text.matchAll(stylesRegex);
+        for (const match of styleMatches) {
+            const bool = (field: string, f: (x: boolean) => boolean | void) => {
+                if (!styleFieldMap!.has(field)) return;
+                const value = items[styleFieldMap!.get(field)!];
+                if (value == '-1' && f(true) !== false) return;
+                else if (value == '0' && f(false) !== false) return;
+                else this.#warn({ type: 'invalid-style-field', name, field, value });
+            };
+            const float = 
+            (field: string, f: (x: number) => boolean | void) => {
+                if (!styleFieldMap!.has(field)) return;
+                const value = items[styleFieldMap.get(field)!];
+                const n = Number.parseFloat(value);
+                if (!isNaN(n) && f(n) !== false) return;
+                this.#warn({ type: 'invalid-style-field', name, field, value });
+            };
+            const color = (field: string, f: (x: string) => boolean | void) => {
+                if (!styleFieldMap!.has(field)) return;
+                const value = items[styleFieldMap.get(field)!];
+                const color = fromASSColor(value);
+                if (color !== null && f(color) !== false) return;
+                else this.#warn({ type: 'invalid-style-field', name, field, value });
+            };
+            const ignore = (field: string, def: string | RegExp) => {
+                if (!styleFieldMap!.has(field)) return;
+                const value = items[styleFieldMap.get(field)!];
+                if (typeof def == 'string'
+                    ? value == def
+                    : def.test(value)) return;
+                this.#warn({ type: 'ignored-style-field', name, field, value });
+            };
+
+            const items = match[1].split(',');
+            if (items.length != styleFieldMap.size)
+                throw new DeserializationError('invalid ASS');
+            const name = items[styleFieldMap.get('Name')!];
+            let style = nameToStyle.get(name);
+            if (style === undefined) {
+                let newStyle = $state(Subtitles.createStyle(name));
+                style = newStyle;
+                this.#subs.styles.push(newStyle);
+                nameToStyle.set(name, newStyle);
+                if (!first) first = style;
+            } else {
+                this.#warn({ type: 'duplicate-style-definition', name });
+            }
+
+            if (styleFieldMap.has('Fontname'))
+                style.font = items[styleFieldMap.get('Fontname')!];
+
+            bool('Bold',        (x) => {style.styles.bold = x});
+            bool('Italic',      (x) => {style.styles.italic = x});
+            bool('Underline',   (x) => {style.styles.underline = x});
+            bool('StrikeOut',   (x) => {style.styles.strikethrough = x});
+
+            float('Fontsize',   (x) => {style.size = x});
+            float('Outline',    (x) => {style.outline = x});
+            float('Shadow',     (x) => {style.shadow = x});
+            float('MarginL',    (x) => {style.margin.left = x});
+            float('MarginR',    (x) => {style.margin.right = x});
+            float('MarginT',    (x) => {style.margin.top = x});
+            float('MarginB',    (x) => {style.margin.bottom = x});
+            float('MarginV',    (x) => {[style.margin.top, style.margin.bottom] = [x, x]});
+            float('Alignment',  (x) => {
+                const a = this.#parseAlignment(x);
+                if (a === null) return false;
+                style.alignment = a;
+            });
+
+            color('PrimaryColor', (x) => {style.color = x});
+            color('OutlineColor', (x) => {style.outlineColor = x});
+
+            ignore('ScaleX', /^100(\.0+)?$/);
+            ignore('ScaleY', /^100(\.0+)?$/);
+            ignore('Spacing', /^0(\.0+)?$/);
+            ignore('Angle', /^0(\.0+)?$/);
+            ignore('BorderStyle', '1');
+            ignore('RelativeTo', '0');
+
+            // FIXME: SecondaryColour and BackColour are also ignored but not warned here
+            // because we don't know when to warn, yet we don't want to warn every time
+        }
+        
+        if (!first) this.#warn({ type: 'no-styles' });
+        else this.#subs.defaultStyle = first;
+    }
+
+    #parseEvents() {
+        let text = this.#sections.get('Events');
+        if (text == null)
+            throw new DeserializationError('invalid ASS');
+
+        const fieldMap = getASSFormatFieldMap(text);
+        if (fieldMap == null 
+         || !fieldMap.has('Start') 
+         || !fieldMap.has('End') 
+         || !fieldMap.has('Style')
+         || !fieldMap.has('Text'))
+            throw new DeserializationError('invalid ASS');
+
+        const nameToStyle = new Map(this.#subs.styles.map((x) => [x.name, x]));
+        const getStyleOrCreate = (styleName: string) => {
+            let style = nameToStyle.get(styleName);
+            if (!style) {
+                this.#warn({ type: 'undefined-style', name: styleName });
+                let newStyle = $state(Subtitles.createStyle(styleName));
+                style = newStyle;
+                nameToStyle.set(styleName, newStyle);
+                this.#subs.styles.push(newStyle);
+            }
+            return style;
+        };
+
+        let ignoredSpecial = new Map<string, number>();
+        let ignoredField = new Map<string, number>();
+        let ignoredOverride = 0;
+        let ignoredDrawing = 0;
+
+        const regex = RegExp(String.raw
+            `^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
+        let i = 0;
+        for (const line of text.matchAll(regex)) {
+            const timestamp = (field: string) => {
+                const value = opts[fieldMap.get(field)!];
+                const t = Basic.parseTimestamp(value);
+                if (t !== null) return t;
+                this.#warn({ type: 'invalid-event-field', line: i, field, value});
+                return null;
+            };
+            const ignore = (field: string, def: string) => {
+                if (!fieldMap.has(field) || opts[fieldMap.get(field)!] === def) return;
+                ignoredField.set(field, (ignoredField.get(field) ?? 0) + 1);
+            };
+
+            i++;
+            const opts = line[1].split(',');
+            const text = line[2];
+            const start = timestamp('Start'),
+                  end   = timestamp('End');
+            if (start === null || end === null) continue;
+            ignore('Effect', '');
+            ignore('Name', '');
+            ignore('MarginL', '0');
+            ignore('MarginR', '0');
+            ignore('MarginV', '0');
+            ignore('MarginT', '0');
+            ignore('MarginB', '0');
+            ignore('Marked', '0');
+            // FIXME: Layer is currently ignored, but we do export it
+
+            let entry = new SubtitleEntry(start, end);
+            const style = getStyleOrCreate(opts[fieldMap.get('Style')!]);
+            let currentStyle = style;
+            let parsedText = '';
+
+            const setText = () => {
+                const oldText = entry.texts.get(currentStyle);
+                entry.texts.set(currentStyle, 
+                    oldText === undefined 
+                    ? parsedText 
+                    : oldText + '\n' + parsedText);
+            }
+
+            for (let i = 0; i < text.length; i++) {
+                // handle inline multichannel: \N{\r#}
+                if (this.#transformInlineMultichannel) {
+                    let match = /^\\N{\\r(.*?)}/.exec(text.substring(i));
+                    if (match) {
+                        setText();
+                        currentStyle = match[1] ? getStyleOrCreate(match[1]) : style;
+                        parsedText = '';
+                        i += match[0].length - 1;
+                        continue;
+                    }
+                }
+                // handle special characters (escape sequences)
+                if (text[i] == '\\' && i < text.length - 1) {
+                    i += 1;
+                    switch (text[i]) {
+                        case 'n':
+                        case 'h':
+                            ignoredSpecial.set(text[i], (ignoredSpecial.get(text[i]) ?? 0) + 1);
+                            parsedText += this.#preserveInlines ? ' ' : '\\' + text[i];
+                            break;
+                        case 'N':
+                            parsedText += '\n';
+                            break;
+                        default:
+                            parsedText += '\\' + text[i];
+                            break;
+                    }
+                    continue;
+                }
+                // handle override tags
+                if (text[i] == '{' && i < text.length - 1) {
+                    let insideDrawing = false;
+                    while (i < text.length) {
+                        if (this.#preserveInlines)
+                            parsedText += text[i];
+                        if (insideDrawing) {
+                            if (/^{\\p0/.test(text.substring(i)))
+                                insideDrawing = false;
+                        } else {
+                            if (/^{\\p[1-9]/.test(text.substring(i))) {
+                                ignoredDrawing++;
+                                insideDrawing = true;
+                            } else if (text[i] == '}')
+                                break;
+                        }
+                        i++;
+                    }
+                    ignoredOverride++;
+                    continue;
+                }
+                parsedText += text[i];
+            }
+            setText();
+            this.#subs.entries.push(entry);
+        }
+
+        if (ignoredDrawing > 0)
+            this.#warn({ type: 'ignored-drawing-command', occurrence: ignoredDrawing });
+        if (ignoredOverride > 0)
+            this.#warn({ type: 'ignored-override-tag', occurrence: ignoredOverride });
+        for (const [ch, n] of ignoredSpecial)
+            this.#warn({ type: 'ignored-special-character', name: `\\${ch}`, occurrence: n });
+    }
+}
+
+export class ASSWriter implements SubtitleWriter {
+    constructor(private subs: Subtitles) {}
+
+    // TODO: option: emitASS2
+
+    #headerless = false;
+    headerless(x = true) {
+        this.#headerless = x;
+        return this;
+    }
+
+    #useEntries?: SubtitleEntry[];
+    useEntries(x: SubtitleEntry[] | undefined) {
+        this.#useEntries = x;
+        return this;
+    }
+
+    toString(): string {
         let result = '';
-        const defaultName = SubtitleTools.getUniqueStyleName(subs, '_default');
-        const reverseStyles = subs.styles.toReversed();
-        const entries = options?.useEntries ?? subs.entries;
+        const defaultName = new Map<SubtitleStyle, string>();
+        const reverseStyles = this.subs.styles.toReversed();
+        const entries = this.#useEntries ?? this.subs.entries;
         for (const entry of entries) {
             let t0 = Basic.formatTimestamp(entry.start, 2);
             let t1 = Basic.formatTimestamp(entry.end, 2);
             for (const style of reverseStyles) {
                 let text = entry.texts.get(style);
                 if (!text) continue;
-                // `default` seems to be a reserved word in the SSA format that always
+                // `Default` seems to be a reserved word in the SSA format that always
                 // points to the built-in default style, so if we have a style with this
                 // name we must rename it
-                const styleName = style.name == 'default' ? defaultName : style.name;
+                let styleName = style.name;
+                if (styleName.toLowerCase() == 'default') {
+                    if (defaultName.has(style)) styleName = defaultName.get(style)!;
+                    else {
+                        styleName = SubtitleTools.getUniqueStyleName(this.subs, 
+                            `_default${defaultName.size}`);
+                        defaultName.set(style, styleName);
+                    }
+                }
                 result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${
                     text.replaceAll('\n', '\\N')}\n`;
             }
         }
-        if (options?.headerless) return result;
-        else return writeASSHeader(subs) + result;
-    },
-} 
+        if (this.#headerless) return result;
+        else return writeASSHeader(this.subs) + result;
+    }
+}
 
 // &HAABBGGRR
 export function toASSColor(str: string) {
@@ -115,189 +518,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
     return result;
 }
 
-function getASSSections(source: string) {
-    const sectionRegex  = /\[(.+)\]\s*\n((?:\s*[^[\n]+.+\n)+)/g;
-    return new Map([...source.matchAll(sectionRegex)].map((x) => [x[1], x[2]]));
-}
-
 function getASSFormatFieldMap(section: string) {
     const fieldMapMatch = section.match(/Format:\s*(.*)\n/);
     if (!fieldMapMatch) return null;
     return new Map(
         fieldMapMatch[1].split(/,/).map((x, i) => [x.trim(), i] as const));
-}
-
-function parseASSScriptInfo(sections: Map<string, string>, subs: Subtitles) {
-    let text = sections.get('Script Info');
-    if (text === undefined) return false;
-
-    const entryRegex = /(?<=\n)([^;].+?): *(.*)/g;
-    const infos = new Map([...text.matchAll(entryRegex)]
-        .map((x) => [x[1], x[2]]));
-    subs.metadata.title = infos.get('Title') ?? subs.metadata.title;
-    if (infos.has('PlayResX')) {
-        const n = Number.parseInt(infos.get('PlayResX')!);
-        if (!Number.isNaN(n)) subs.metadata.width = n;
-    }
-    if (infos.has('PlayResY')) {
-        const n = Number.parseInt(infos.get('PlayResY')!);
-        if (!Number.isNaN(n)) subs.metadata.height = n;
-    }
-    return true;
-}
-
-function parseASSStyles(sections: Map<string, string>, subs: Subtitles) {
-    let text = sections.get('V4 Styles') ?? sections.get('V4+ Styles');
-    if (text === undefined) return Debug.early();
-
-    const styleFieldMap = getASSFormatFieldMap(text);
-    if (styleFieldMap == null) return subs;
-
-    subs.styles = [];
-
-    const stylesRegex = /Style:\s*(.*)\n/g;
-    let nameToStyle: Map<string, SubtitleStyle> = new Map();
-    let first: SubtitleStyle | null = null;
-    const styleMatches = text.matchAll(stylesRegex);
-    for (const match of styleMatches) {
-        const items = match[1].split(',');
-        try {
-            const name = items[styleFieldMap.get('Name')!];
-            let style = nameToStyle.get(name);
-            if (style === undefined) {
-                let newStyle = $state(Subtitles.createStyle(name));
-                style = newStyle;
-                subs.styles.push(newStyle);
-                nameToStyle.set(name, newStyle);
-                if (first === null) first = style;
-            } else {
-                // warn
-                Debug.warn('duplicate style definition:', name);
-            }
-            if (styleFieldMap.has('Fontname'))
-                style.font = items[styleFieldMap.get('Fontname')!];
-            if (styleFieldMap.has('Bold'))
-                style.styles.bold = items[styleFieldMap.get('Bold')!] == '-1';
-            if (styleFieldMap.has('Italic'))
-                style.styles.italic = items[styleFieldMap.get('Italic')!] == '-1';
-            if (styleFieldMap.has('Underline'))
-                style.styles.underline = 
-                    items[styleFieldMap.get('Underline')!] == '-1';
-            if (styleFieldMap.has('StrikeOut'))
-                style.styles.strikethrough = 
-                    items[styleFieldMap.get('StrikeOut')!] == '-1';
-            
-            if (styleFieldMap.has('Fontsize')) {
-                const n = Number.parseFloat(items[styleFieldMap.get('Fontsize')!]);
-                if (!Number.isNaN(n)) style.size = n;
-            }
-            if (styleFieldMap.has('Outline')) {
-                const n = Number.parseFloat(items[styleFieldMap.get('Outline')!]);
-                if (!Number.isNaN(n)) style.outline = n;
-            }
-            if (styleFieldMap.has('Shadow')) {
-                const n = Number.parseFloat(items[styleFieldMap.get('Shadow')!]);
-                if (!Number.isNaN(n)) style.shadow = n;
-            }
-            if (styleFieldMap.has('PrimaryColor')) {
-                const color = fromASSColor(items[styleFieldMap.get('PrimaryColor')!]);
-                if (color !== null) style.color = color;
-            }
-            if (styleFieldMap.has('OutlineColor')) {
-                const color = fromASSColor(items[styleFieldMap.get('OutlineColor')!]);
-                if (color !== null) style.outlineColor = color;
-            }
-            if (styleFieldMap.has('Alignment')) {
-                const n = Number.parseFloat(items[styleFieldMap.get('Alignment')!]);
-                if (n >= 1 && n <= 9) style.alignment = n as AlignMode;
-            }
-            if (styleFieldMap.has('MarginL')) {
-                const n = Number.parseFloat(items[styleFieldMap.get('MarginL')!]);
-                if (!Number.isNaN(n)) style.margin.left = n;
-            }
-            if (styleFieldMap.has('MarginR')) {
-                const n = Number.parseFloat(items[styleFieldMap.get('MarginR')!]);
-                if (!Number.isNaN(n)) style.margin.right = n;
-            }
-            if (styleFieldMap.has('MarginV')) {
-                const n = Number.parseFloat(items[styleFieldMap.get('MarginV')!]);
-                if (!Number.isNaN(n)) style.margin.top = style.margin.bottom = n;
-            }
-            // console.log('imported style:', name, style);
-        } catch (e) {
-            Debug.debug('error when importing style:', e);
-        }
-    }
-    
-    if (first == null) {
-        // no styles
-        Debug.warn('no style defined');
-    } else {
-        subs.defaultStyle = first;
-    }
-}
-
-function parseASSEvents(sections: Map<string, string>, subs: Subtitles) {
-    let text = sections.get('Events');
-    if (text === undefined) return Debug.early();
-
-    const fieldMap = getASSFormatFieldMap(text);
-    if (fieldMap == null 
-        || !fieldMap.has('Start') 
-        || !fieldMap.has('End') 
-        || !fieldMap.has('Style')
-        || !fieldMap.has('Text')) return subs;
-    Debug.debug(fieldMap);
-
-    const nameToStyle = new Map(subs.styles.map((x) => [x.name, x]));
-    function getStyleOrCreate(styleName: string) {
-        let style = nameToStyle.get(styleName);
-        if (!style) {
-            Debug.debug(`warning: style not found: ${styleName}`);
-            let newStyle = $state(Subtitles.createStyle(styleName));
-            style = newStyle;
-            nameToStyle.set(styleName, newStyle);
-            subs.styles.push(newStyle);
-        }
-        return style;
-    }
-
-    const regex = RegExp(String.raw
-        `^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
-    for (const match of text.matchAll(regex)) {
-        const opts = match[1].split(',');
-        const start = Basic.parseTimestamp(opts[fieldMap.get('Start')!]),
-              end   = Basic.parseTimestamp(opts[fieldMap.get('End')!]);
-        if (start === null || end === null) continue;
-        let entry = new SubtitleEntry(start, end);
-
-        let styleName = opts[fieldMap.get('Style')!];
-        let style = getStyleOrCreate(styleName);
-        let text = match[2].replaceAll('\\N', '\n').trimEnd();
-        let breaks = [...text.matchAll(/\n{\\r(.*?)}/g)];
-        if (breaks.length == 0) {
-            // regular entry
-            entry.texts.set(style, text);
-        } else {
-            // multiple channels
-            let startIndex = 0, currentStyle = style;
-            breaks.forEach((x) => {
-                let oldText = entry.texts.get(currentStyle);
-                let newText = text.substring(startIndex, x.index);
-                entry.texts.set(currentStyle, 
-                    oldText === undefined 
-                    ? newText 
-                    : oldText + '\n' + newText);
-                currentStyle = x[1] ? getStyleOrCreate(x[1]) : style;
-                startIndex = x.index + x[0].length;
-            });
-            let oldText = entry.texts.get(currentStyle);
-            let newText = text.substring(startIndex);
-            entry.texts.set(currentStyle, 
-                oldText === undefined 
-                ? newText 
-                : oldText + '\n' + newText);
-        }
-        subs.entries.push(entry);
-    }
 }

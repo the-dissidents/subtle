@@ -252,7 +252,7 @@ export const Interface = {
             if (typeof selected != 'string') return;
             file = selected;
         }
-        const text = Format.JSON.write(Source.subs);
+        const text = Format.JSON.write(Source.subs).toString();
         if (await Source.saveTo(file, text)) {
             await this.saveFileData();
             Source.subs.migrated = 'none';
@@ -349,7 +349,7 @@ export const InterfaceCommands = {
     {
         name: () => $_('menu.export-ass'),
         isDialog: true,
-        call: () => Interface.askExportFile('ass', (x) => Format.ASS.write(x))
+        call: () => Interface.askExportFile('ass', (x) => Format.ASS.write(x).toString())
     }),
     exportSRTPlaintext: new UICommand(() => $_('category.document'),
         [ ],

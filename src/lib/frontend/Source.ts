@@ -45,7 +45,7 @@ export enum ChangeType {
 function readSnapshot(s: Snapshot) {
     // this.clearSelection();
     // this.focused.style = null;
-    Source.subs = Format.JSON.parse(s.archive)!;
+    Source.subs = Format.JSON.parse(s.archive).done();
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch();
     Source.onSubtitlesChanged.dispatch(s.change);
@@ -62,6 +62,52 @@ function autosaveTimestamp(now: Date = new Date()): string {
 
     // 格式：YYYYMMDD_HHMMSS
     return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+}
+
+async function doAutoSave() {
+    if (!changedSinceLastAutosave) {
+        Debug.info('no change since last autosave');
+        return;
+    }; // only autosave when changed
+
+    await guardAsync(async () => {
+        if (!await fs.exists('autosave', { baseDir: fs.BaseDirectory.AppLocalData }))
+            await fs.mkdir('autosave', { baseDir: fs.BaseDirectory.AppLocalData });
+        const currentFile = get(Source.currentFile);
+        const autoSaveName =
+            (currentFile == '' ? 'untitled' : await basename(currentFile, '.json'))
+            + '_' + autosaveTimestamp() + '.json';
+        const text = Format.JSON.write(Source.subs).toString();
+        await fs.writeTextFile(
+            await join('autosave', autoSaveName), text, 
+            { baseDir: fs.BaseDirectory.AppLocalData });
+        changedSinceLastAutosave = false;
+        Debug.info('autosaved', currentFile ?? '<untitled>');
+        Interface.setStatus($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
+    }, $_('msg.autosave-failed'));
+}
+
+async function cleanAutosave() {
+    if (!await fs.exists('autosave', { baseDir: fs.BaseDirectory.AppLocalData }))
+        return;
+
+    const maxAge = InterfaceConfig.data.keepAutosaveFor * 1000 * 60 * 60 * 24;
+    if (maxAge <= 0) return;
+    const regex = /^.+_(\d{8}_\d{6})\.json$/;
+    const old = autosaveTimestamp(new Date(Date.now() - maxAge));
+    await guardAsync(async () => {
+        const entries = await fs.readDir(
+            'autosave', { baseDir: fs.BaseDirectory.AppLocalData });
+        for (const {name, isFile} of entries) {
+            if (!isFile) return;
+            const match = regex.exec(name);
+            if (match && match[1] < old) {
+                await fs.remove(await join('autosave', name), 
+                    { baseDir: fs.BaseDirectory.AppLocalData });
+                Debug.debug('cleaned autosave:', name);
+            }
+        }
+    }, $_('msg.failed-to-clean-autosave'));
 }
 
 let intervalId = 0;
@@ -94,7 +140,7 @@ export const Source = {
         Editing.editChanged = false;
         Editing.isEditingVirtualEntry.set(false);
         this.undoStack.push({
-            archive: Format.JSON.write(this.subs), 
+            archive: Format.JSON.write(this.subs).toString(), 
             change: type,
             saved: false}); // TODO
         this.redoStack = [];
@@ -175,55 +221,9 @@ export const Source = {
                 PrivateConfig.pushRecent(file);
                 currentFile.set(file);
             }
-            await this.cleanAutosave();
+            await cleanAutosave();
             return true;
         }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
-    },
-
-    async doAutoSave() {
-        if (!changedSinceLastAutosave) {
-            Debug.info('no change since last autosave');
-            return;
-        }; // only autosave when changed
-
-        await guardAsync(async () => {
-            if (!await fs.exists('autosave', { baseDir: fs.BaseDirectory.AppLocalData }))
-                await fs.mkdir('autosave', { baseDir: fs.BaseDirectory.AppLocalData });
-            const currentFile = get(this.currentFile);
-            const autoSaveName =
-                (currentFile == '' ? 'untitled' : await basename(currentFile, '.json'))
-                + '_' + autosaveTimestamp() + '.json';
-            const text = Format.JSON.write(this.subs);
-            await fs.writeTextFile(
-                await join('autosave', autoSaveName), text, 
-                { baseDir: fs.BaseDirectory.AppLocalData });
-            changedSinceLastAutosave = false;
-            Debug.info('autosaved', currentFile ?? '<untitled>');
-            Interface.setStatus($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
-        }, $_('msg.autosave-failed'));
-    },
-
-    async cleanAutosave() {
-        if (!await fs.exists('autosave', { baseDir: fs.BaseDirectory.AppLocalData }))
-            return;
-
-        const maxAge = InterfaceConfig.data.keepAutosaveFor * 1000 * 60 * 60 * 24;
-        if (maxAge <= 0) return;
-        const regex = /^.+_(\d{8}_\d{6})\.json$/;
-        const old = autosaveTimestamp(new Date(Date.now() - maxAge));
-        await guardAsync(async () => {
-            const entries = await fs.readDir(
-                'autosave', { baseDir: fs.BaseDirectory.AppLocalData });
-            for (const {name, isFile} of entries) {
-                if (!isFile) return;
-                const match = regex.exec(name);
-                if (match && match[1] < old) {
-                    await fs.remove(await join('autosave', name), 
-                        { baseDir: fs.BaseDirectory.AppLocalData });
-                    Debug.debug('cleaned autosave:', name);
-                }
-            }
-        }, $_('msg.failed-to-clean-autosave'));
     },
 
     startAutoSave() {
@@ -239,7 +239,7 @@ export const Source = {
                 first = false;
                 return; // skip the first interval to avoid immediate autosave
             }
-            await Source.doAutoSave();
+            await doAutoSave();
         }, InterfaceConfig.data.autosaveInterval * 1000 * 60);
     }
 }

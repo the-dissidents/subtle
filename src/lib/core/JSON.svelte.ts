@@ -102,9 +102,18 @@ function parseEntry(
     return entry;
 }
 
-export const JSONSubtitles: SubtitleFormat = {
+export const JSONSubtitles = {
+    detect(source) {
+        try {
+            JSON.parse(source);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    },
+
     parse(source) {
-        const o = globalThis.JSON.parse(source);
+        const o = JSON.parse(source);
         const version = o.version ?? '0';
         let subs = new Subtitles();
 
@@ -141,18 +150,27 @@ export const JSONSubtitles: SubtitleFormat = {
         subs.entries = entries
             .map((x) => parseEntry(x, subs, version))
             .filter((x) => x.texts.size > 0);
-        return subs;
+
+        return { done: () => subs };
     },
 
-    write(subs, options) {
-        return globalThis.JSON.stringify({
-            version: SubtitleFormatVersion,
-            metadata: subs.metadata,
-            defaultStyle: subs.defaultStyle.name,
-            styles: subs.styles,
-            view: serializeView(subs.view),
-            entries: (options?.useEntries ?? subs.entries)
-                .map((x) => serializeEntry(x)),
-        }, undefined, 2);
-    },
-}
+    write(subs) {
+        let options = {useEntries: undefined as SubtitleEntry[] | undefined};
+        let obj = {
+            useEntries(e: SubtitleEntry[]) {
+                options.useEntries = e;
+                return obj;
+            },
+            toString: () => JSON.stringify({
+                version: SubtitleFormatVersion,
+                metadata: subs.metadata,
+                defaultStyle: subs.defaultStyle.name,
+                styles: subs.styles,
+                view: serializeView(subs.view),
+                entries: (options.useEntries ?? subs.entries)
+                    .map((x) => serializeEntry(x)),
+            }, undefined, 2)
+        }
+        return obj;
+    }
+} satisfies SubtitleFormat;

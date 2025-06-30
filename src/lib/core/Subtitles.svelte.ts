@@ -18,33 +18,35 @@ export enum AlignMode {
 }
 
 const ZStyleBase = z.object({
-  name: z.string(),
-  font: z._default(z.string(), ''),
-  size: z._default(z.number().check(z.positive()), 72),
-  color: z._default(z.string(), 'white'),
+  name:                    z.string(),
+  font:         z._default(z.string(), ''),
+  size:         z._default(z.number().check(z.positive()), 72),
+  color:        z._default(z.string(), 'white'),
   outlineColor: z._default(z.string(), 'black'),
-  outline: z._default(z.number().check(z.gte(0)), 1),
-  shadow: z._default(z.number().check(z.gte(0)), 0),
+  outline:      z._default(z.number().check(z.gte(0)), 1),
+  shadow:       z._default(z.number().check(z.gte(0)), 0),
   styles: z.object({
-    bold: z._default(z.boolean(), false),
-    italic: z._default(z.boolean(), false),
-    underline: z._default(z.boolean(), false),
+    bold:          z._default(z.boolean(), false),
+    italic:        z._default(z.boolean(), false),
+    underline:     z._default(z.boolean(), false),
     strikethrough: z._default(z.boolean(), false),
   }),
   margin: z.object({
-    top: z._default(z.number(), 10),
-    bottom: z._default(z.number(), 10),
-    left: z._default(z.number(), 10),
-    right: z._default(z.number(), 10),
+    top:           z._default(z.number(), 10),
+    bottom:        z._default(z.number(), 10),
+    left:          z._default(z.number(), 10),
+    right:         z._default(z.number(), 10),
   }),
-  alignment: z._default(z.int().check(z.gte(0)).check(z.lte(9)), 2),
+  alignment: z.pipe(
+    z._default(z.int().check(z.gte(0)).check(z.lte(9)), 2), 
+    z.transform((x) => x as AlignMode)),
 });
 
 export const ZMetadata = z.object({
-  title: z._default(z.string(), ''),
-  language: z._default(z.string(), ''),
-  width: z._default(z.int().check(z.positive()), 1920),
-  height: z._default(z.int().check(z.positive()), 1080),
+  title:         z._default(z.string(), ''),
+  language:      z._default(z.string(), ''),
+  width:         z._default(z.int().check(z.positive()), 1920),
+  height:        z._default(z.int().check(z.positive()), 1080),
   scalingFactor: z._default(z.number().check(z.positive()), 1),
   special: z.object({
     untimedText: z._default(z.string(), ''),
@@ -159,12 +161,25 @@ export class Subtitles {
     }
 }
 
-export interface SubtitleFormat {
-    parse(source: string): Subtitles;
-    write(subs: Subtitles, options?: {
-        headerless?: boolean,
-        useEntries?: SubtitleEntry[],
-        combine?: LinearFormatCombineStrategy
-    }): string;
-    // TODO: detect?
+export interface SubtitleWritableFormat {
+    write(subs: Subtitles): SubtitleWriter;
+}
+
+export interface SubtitleParsableFormat {
+    /**
+     * Detects if a source string is of this format. Returns `null` if uncertain.
+     */
+    detect(source: string): boolean | null;
+    parse(source: string): SubtitleParser;
+}
+
+export type SubtitleFormat = SubtitleWritableFormat & SubtitleParsableFormat;
+
+export interface SubtitleParser {
+    done(): Subtitles
+}
+
+export interface SubtitleWriter {
+    toString(): string
+    // toBinary?
 }

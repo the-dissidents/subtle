@@ -3,7 +3,8 @@ console.info('Frontend loading');
 import { Basic } from "../Basic";
 import { DebugConfig, InputConfig } from "../config/Groups";
 import { Format } from "../core/Formats";
-import { Subtitles } from "../core/Subtitles.svelte";
+import { Subtitles, type SubtitleFormat } from "../core/Subtitles.svelte";
+import { Debug } from "../Debug";
 
 export type TranslatedWheelEvent = {
     isZoom: true;
@@ -17,23 +18,26 @@ export type TranslatedWheelEvent = {
 };
 
 export function parseSubtitleSource(source: string): Subtitles | null {
-    try {
-        let newSub = Format.JSON.parse(source);
-        return newSub;
-    } catch {}
-
-    source = Basic.normalizeNewlines(source);
-
-    try {
-        let newSub = Format.SRT.parse(source);
-        return newSub;
-    } catch {}
-
-    try {
-        let newSub = Format.ASS.parse(source);
-        return newSub;
-    } catch {}
-
+    source = source.replaceAll('\r\n', '\n');
+    
+    const formats = [Format.JSON, Format.ASS, Format.SRT];
+    let possible: SubtitleFormat[] = [];
+    for (const f of formats) {
+        const d = f.detect(source);
+        if (d === null) possible.push(f);
+        if (d === true) return f.parse(source).done();
+    }
+    if (possible.length == 1)
+        return possible[0].parse(source).done();
+    for (const f of possible) {
+        try {
+            return f.parse(source).done();
+        } catch (e) {
+            // pass
+            Debug.debug(e);
+        }
+    }
+    Debug.debug('no recognized format');
     return null;
 }
 

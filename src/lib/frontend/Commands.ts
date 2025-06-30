@@ -21,17 +21,21 @@ import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
-const toJSON = (useEntries: SubtitleEntry[]) => 
-    Format.JSON.write(Source.subs, { useEntries });
-const toASS = (useEntries: SubtitleEntry[]) => 
-    Format.ASS.write(Source.subs, { useEntries });
+const toJSON = (entries: SubtitleEntry[]) => 
+    Format.JSON.write(Source.subs).useEntries(entries).toString();
+const toASS = (entries: SubtitleEntry[]) => 
+    Format.ASS.write(Source.subs).headerless().useEntries(entries).toString();
 
-const toSRT = (useEntries: SubtitleEntry[]) => 
-    Format.SRT.write(Source.subs, 
-        { useEntries, combine: LinearFormatCombineStrategy.Recombine });
-const toPlaintext = (useEntries: SubtitleEntry[]) => 
-    Format.plaintext.write(Source.subs, 
-        { useEntries, combine: LinearFormatCombineStrategy.KeepOrder });
+const toSRT = (entries: SubtitleEntry[]) => 
+    Format.SRT.write(Source.subs)
+        .useEntries(entries)
+        .strategy(LinearFormatCombineStrategy.Recombine)
+        .toString();
+const toPlaintext = (entries: SubtitleEntry[]) => 
+    Format.plaintext.write(Source.subs)
+        .useEntries(entries)
+        .strategy(LinearFormatCombineStrategy.KeepOrder)
+        .toString();
 
 async function copySelection(transform: (use: SubtitleEntry[]) => string) {
     let selection = Editing.getSelection();
