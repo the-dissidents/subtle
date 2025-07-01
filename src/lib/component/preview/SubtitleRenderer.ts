@@ -87,19 +87,19 @@ export class SubtitleRenderer {
     {
         this.#subs = subtitles;
         manager.onDisplaySizeChanged.bind(this, (_1, _2, rw, rh) => {
-            this.#changeResolution();
+            this.updateResolution();
         });
-        this.#changeResolution();
+        this.updateResolution();
         this.updateTimes();
     }
 
     changeSubtitles(newSubs: Subtitles) {
         this.#subs = newSubs;
-        this.#changeResolution();
+        this.updateResolution();
         this.updateTimes();
     }
 
-    #changeResolution() {
+    updateResolution() {
         const [width, height] = this.manager.physicalSize;
         let ratio = this.#subs.metadata.width / this.#subs.metadata.height;
         if (width / height < ratio) {

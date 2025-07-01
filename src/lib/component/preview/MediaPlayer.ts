@@ -12,7 +12,6 @@ import { EventHost } from "../../details/EventHost";
 import { MediaConfig } from "./Config";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { Playback } from "../../frontend/Playback";
 import { InterfaceConfig } from "../../config/Groups";
 const $_ = unwrapFunctionStore(_);
 
@@ -622,8 +621,8 @@ export class MediaPlayer {
             Debug.debug('starting playback');
             this.#requestedStartPlay = false;
             this.#playing = true;
-            await this.#postAudioMessage({ type: 'play' });
             MediaPlayerInterface.onPlayStateChanged.dispatch();
+            await this.#postAudioMessage({ type: 'play' });
             this.requestRender();
             return true;
         }
@@ -636,8 +635,8 @@ export class MediaPlayer {
         
         await Debug.debug('stopping playback');
         this.#playing = false;
-        await this.#postAudioMessage({ type: 'suspend' });
         MediaPlayerInterface.onPlayStateChanged.dispatch();
+        await this.#postAudioMessage({ type: 'suspend' });
     }
 
     #requestedStartPlay = false;

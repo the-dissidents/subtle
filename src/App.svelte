@@ -63,7 +63,7 @@ import { KeybindingManager } from './lib/frontend/Keybinding';
 import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
-    import { Memorized } from './lib/config/MemorizedValue.svelte';
+import { Memorized } from './lib/config/MemorizedValue.svelte';
     
 Debug.init();
 
@@ -75,9 +75,6 @@ let videoCanvasContainer: HTMLElement | undefined = $state();
 let timelineCanvasContainer: HTMLDivElement | undefined = $state();
 let statusBar: HTMLDivElement | undefined = $state();
 
-let isPlaying = $state(false);
-let playPos = $state(0);
-let playPosInput = $state(0);
 let statusTwinkling = $state(false);
 
 let status = Interface.status;
@@ -99,12 +96,6 @@ Interface.status.subscribe(() => {
   // twinkle status bar
   if (InterfaceConfig.data.statusBarTwinkle)
     statusTwinkling = true;
-});
-
-Playback.onRefreshPlaybackControl.bind(me, () => {
-  playPos = $isMediaLoaded ? Playback.position / Playback.duration : 0;
-  isPlaying = Playback.isPlaying;
-  playPosInput = Playback.position;
 });
 
 PrivateConfig.init();

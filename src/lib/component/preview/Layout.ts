@@ -27,6 +27,8 @@ export class PreviewLayout {
 
         this.#subsRenderer = new SubtitleRenderer(this.#manager, Source.subs);
         Source.onSubtitlesChanged.bind(this, (type) => {
+            if (type == ChangeType.Metadata)
+                this.#subsRenderer.updateResolution();
             if (type == ChangeType.Times || type == ChangeType.General)
                 this.#subsRenderer.updateTimes();
             this.#manager.requestRender();

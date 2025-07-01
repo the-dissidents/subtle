@@ -30,7 +30,6 @@ tick().then(() => {
     MediaPlayerInterface.onPlayback.bind(me, async (pos) => {
         position = pos;
         Playback.onPositionChanged.dispatch(pos);
-        Playback.onRefreshPlaybackControl.dispatch();
 
         if (Playback.isPlaying) {
             const playArea = Playback.playArea.value;
@@ -70,9 +69,7 @@ export const Playback = {
     onLoaded: new EventHost<[]>(),
     onSetAudioStream: new EventHost<[id: number]>(),
     onClose: new EventHost<[]>(),
-    
     onPositionChanged: new EventHost<[pos: number]>(),
-    onRefreshPlaybackControl: new EventHost<[]>(),
 
     async load(rawurl: string, audio: number) {
         await this.onLoad.dispatchAndAwaitAll(rawurl, audio);
@@ -80,7 +77,6 @@ export const Playback = {
         Debug.assert(this.player !== null);
         duration = this.player.duration!;
         Playback.onLoaded.dispatch();
-        Playback.onRefreshPlaybackControl.dispatch();
     },
 
     async setAudioStream(id: number) {
@@ -98,7 +94,6 @@ export const Playback = {
         await this.onClose.dispatchAndAwaitAll()
         duration = 0;
         await this.forceSetPosition(0);
-        Playback.onRefreshPlaybackControl.dispatch();
     },
 
     setPosition(pos: number, opt?: SetPositionOptions) {

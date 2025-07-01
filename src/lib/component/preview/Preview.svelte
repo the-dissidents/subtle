@@ -5,6 +5,7 @@
   import { Playback } from "../../frontend/Playback";
   import TimestampInput from "../../TimestampInput.svelte";
   import { PreviewLayout } from "./Layout";
+  import { MediaPlayerInterface } from "./MediaPlayer";
 
   let videoCanvas: HTMLCanvasElement | undefined = $state();
   let isPlaying = $state(false);
@@ -20,10 +21,14 @@
 
   const me = {};
 
-  Playback.onRefreshPlaybackControl.bind(me, () => {
+  Playback.onPositionChanged.bind(me, () => {
     playPos = $isMediaLoaded ? Playback.position / Playback.duration : 0;
-    isPlaying = Playback.isPlaying;
     playPosInput = Playback.position;
+  });
+
+  MediaPlayerInterface.onPlayStateChanged.bind(me, () => {
+    isPlaying = Playback.isPlaying;
+    Debug.debug(isPlaying);
   });
 </script>
 
