@@ -407,6 +407,7 @@
     "hotkey-not-found": "hotkey not found: {key}",
     "imported": "file imported",
     "new-entry-appended": "new entry appended",
+    "no-available-item": "no available items",
     "not-a-file": "not a file: {path}",
     "note-file-is-from-newer-version-path": "Note: this file is from a newer version of subtle. We recommend you update this app. If you continue, all newer features present in the file will be lost upon saving.",
     "note-file-is-migrated-path": "Note: this file is from an older version and will be updated. Small changes in styles may occur. After you save the updated file, older versions of this software will probably be unable to open it.",

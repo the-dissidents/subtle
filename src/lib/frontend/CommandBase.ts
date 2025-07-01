@@ -10,7 +10,9 @@ export type CommandOptions<TState = any> = ({
     call: (self: UICommand<TState>) => (TState | Promise<TState>)
 } | {
     menuName?: string | (() => string),
-    items: CommandOptions<TState>[] | (() => CommandOptions<TState>[])
+    emptyText?: string | (() => string),
+    items: CommandOptions<TState>[] | (() => CommandOptions<TState>[]),
+    rememberedItem?: string,
 }) & {
     name: string | (() => string),
     isApplicable?: () => boolean,
@@ -24,21 +26,33 @@ function unwrap<T>(fv: T | (() => T)): T {
 }
 
 function commandOptionToMenu<T>(
-    item: CommandOptions<T>, cmd: UICommand<T>
+    item: CommandOptions<T>, cmd: UICommand<T>,
+    parents: CommandOptions<T>[]
 ): MenuItemOptions | SubmenuOptions {
     const enabled = item.isApplicable ? item.isApplicable() : true;
     return 'call' in item ? {
         text: unwrap(item.name),
         enabled,
         accelerator: item.displayAccel,
-        action: () => item.call(cmd)
+        action: () => {
+            item.call(cmd);
+            let name = unwrap(item.name);
+            for (const p of parents.toReversed()) {
+                Debug.assert('items' in p);
+                p.rememberedItem = name;
+                name = unwrap(p.name);
+            }
+        }
     } : {
         text: unwrap(item.name),
         enabled,
-        items: enabled ? [...item.menuName ? [{
-            text: unwrap(item.menuName),
-            enabled: false
-        }] : [], ...unwrap(item.items).map((x) => commandOptionToMenu(x, cmd))] : []
+        items: enabled 
+            ? [...item.menuName 
+                ? [{ text: unwrap(item.menuName), enabled: false }] 
+                : [], 
+               ...unwrap(item.items)
+                 .map((x) => commandOptionToMenu(x, cmd, [...parents, item]))] 
+            : []
     }
 }
 
@@ -85,14 +99,14 @@ export class UICommand<TState = void> {
                 this.options.displayAccel = b.sequence[0].toString();
             // chord display is not supported
         }
-        return commandOptionToMenu(this.options, this);
+        return commandOptionToMenu(this.options, this, []);
     }
 
     async menu() {
         const enabled = this.options.isApplicable ? this.options.isApplicable() : true;
         if (!enabled) return;
 
-        let opt = commandOptionToMenu(this.options, this);
+        let opt = commandOptionToMenu(this.options, this, []);
         if ('items' in opt) {
             await (await Menu.new(opt)).popup();
         } else {
@@ -115,10 +129,15 @@ export class UICommand<TState = void> {
                     text: unwrap(x.name),
                     disabled: x.isApplicable ? !x.isApplicable() : false
                 })), 
-                unwrap(item.name),
-                unwrap(item.menuName ?? '')
+                {
+                    title: unwrap(item.name),
+                    text: unwrap(item.menuName ?? ''),
+                    emptyText: unwrap(item.emptyText ?? ''),
+                    rememberedItem: item.rememberedItem
+                }
             );
             if (n < 0) return;
+            item.rememberedItem = unwrap(items[n].name);
             await this.#runCommand(items[n]);
         } else {
             this.#state = { value: await item.call(this) };

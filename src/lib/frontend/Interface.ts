@@ -18,7 +18,7 @@ import { Playback } from "./Playback";
 import { DebugConfig, MainConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 
-import { unwrapFunctionStore, _, t } from 'svelte-i18n';
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Debug } from "../Debug";
 import { MAPI } from "../API";
@@ -142,7 +142,9 @@ export const Interface = {
                 newSubs = parser.done();
             } catch (_) {}
         } else {
-            newSubs = parseSubtitleSource(text);
+            try {
+                newSubs = parseSubtitleSource(text);
+            } catch (_) {}
         }
         if (!newSubs) {
             Interface.setStatus(

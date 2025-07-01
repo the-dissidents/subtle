@@ -35,12 +35,12 @@ export const Dialogs = {
 
     overlayMenu(
         items: {text: string, disabled?: boolean}[], 
-        title?: string, text?: string
+        options: {title?: string, text?: string, rememberedItem?: string, emptyText?: string}
     ): Promise<number> {
         return new Promise<number>((resolve) => {
             const menu = mount(OverlayMenu, {
                 target: document.getElementById('app')!,
-                props: { items, text, title, async onSubmit(x) {
+                props: { items, ...options, async onSubmit(x) {
                     await unmount(menu);
                     resolve(x);
                 }, }

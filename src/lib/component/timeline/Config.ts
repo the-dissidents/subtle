@@ -143,7 +143,10 @@ export const TimelineCommands = {
         call: () => {
             const focus = Editing.getFocusedEntry();
             Debug.assert(focus instanceof SubtitleEntry);
-            if (focus.end > Playback.position) focus.start = Playback.position;
+            if (focus.end > Playback.position) {
+                focus.start = Playback.position;
+                Source.markChanged(ChangeType.Times);
+            }
         }
     }),
     setEnd: new UICommand(() => $_('category.timeline'),
@@ -154,7 +157,10 @@ export const TimelineCommands = {
         call: () => {
             const focus = Editing.getFocusedEntry();
             Debug.assert(focus instanceof SubtitleEntry);
-            if (focus.start < Playback.position) focus.end = Playback.position;
+            if (focus.start < Playback.position) {
+                focus.end = Playback.position;
+                Source.markChanged(ChangeType.Times);
+            }
         }
     }),
     selectMode: new UICommand(() => $_('category.timeline'),

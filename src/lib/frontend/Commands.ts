@@ -259,7 +259,8 @@ export const BasicCommands = {
             })
             clipboard.writeText(results.join(' '));
             Interface.setStatus($_('msg.copied'));
-        }, selectionDistinctStyles())
+        }, selectionDistinctStyles()),
+        emptyText: () => $_('msg.no-available-item')
     }),
     cut: new UICommand(() => $_('category.editing'),
         [ CommandBinding.from(['CmdOrCtrl+X'], ['Table']) ],
@@ -339,7 +340,8 @@ export const BasicCommands = {
             Editing.selection.submitted = new Set(
                 Source.subs.entries.filter((e) => e.texts.has(style)));
             Editing.onSelectionChanged.dispatch(ChangeCause.Action);
-        }, selectionDistinctStyles())
+        }, selectionDistinctStyles()),
+        emptyText: () => $_('msg.no-available-item')
     }),
     invertSelection: new UICommand(() => $_('category.editing'),
         [ ],
@@ -612,7 +614,8 @@ export const BasicCommands = {
                     done = true;
                 }
             if (done) Source.markChanged(ChangeType.InPlace);
-        }, notSelectionCommonStyles())
+        }, notSelectionCommonStyles()),
+        emptyText: () => $_('msg.no-available-item')
     }),
     removeChannel: new UICommand(() => $_('category.editing'),
         [],
@@ -621,7 +624,8 @@ export const BasicCommands = {
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
             (x) => Utils.removeStyle(Editing.getSelection(), x), 
-            selectionDistinctStyles())
+            selectionDistinctStyles()),
+        emptyText: () => $_('msg.no-available-item')
     }),
     removeNewlines: new UICommand(() => $_('category.tool'),
         [],
@@ -630,7 +634,8 @@ export const BasicCommands = {
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
             (x) => Utils.removeNewlines(Editing.getSelection(), x), 
-            selectionDistinctStyles())
+            selectionDistinctStyles()),
+        emptyText: () => $_('msg.no-available-item')
     }),
     removeBlankChannels: new UICommand(() => $_('category.tool'),
         [],
@@ -665,7 +670,8 @@ export const BasicCommands = {
             selectionDistinctStyles(), Source.subs.styles,
             () => $_('cxtmenu.by'),
             (x, y) => Utils.replaceStyle(Editing.getSelection(), x, y)
-        )
+        ),
+        emptyText: () => $_('msg.no-available-item')
     }),
     exchangeChannel: new UICommand(() => $_('category.editing'),
         [],
@@ -676,7 +682,8 @@ export const BasicCommands = {
             selectionDistinctStyles(), selectionDistinctStyles(),
             () => $_('cxtmenu.and'),
             (x, y) => Utils.exchangeStyle(Editing.getSelection(), x, y)
-        )
+        ),
+        emptyText: () => $_('msg.no-available-item')
     }),
     mergeChannel: new UICommand(() => $_('category.editing'),
         [],
@@ -687,7 +694,8 @@ export const BasicCommands = {
             selectionDistinctStyles(), selectionDistinctStyles(),
             () => $_('cxtmenu.and'),
             (x, y) => Utils.mergeStyle(Editing.getSelection(), x, y)
-        )
+        ),
+        emptyText: () => $_('msg.no-available-item')
     }),
     mergeDuplicates: new UICommand(() => $_('category.tool'),
         [],

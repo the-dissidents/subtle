@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { Action } from "svelte/action";
 import { Debug } from "../Debug";
 
 let dialog: HTMLDialogElement | undefined = $state();
@@ -6,13 +7,16 @@ let closed = false;
 
 interface Props {
   items: { text: string, disabled?: boolean }[],
+  rememberedItem?: string,
   text?: string,
+  emptyText?: string,
   title?: string,
   onSubmit: (x: number) => void
 }
 
 let {
   onSubmit,
+  rememberedItem, emptyText,
   items, text = '', title = '',
 }: Props = $props();
 
@@ -20,6 +24,14 @@ $effect(() => {
   Debug.assert(dialog !== undefined);
   dialog.showModal();
 });
+
+const autofocus: Action<HTMLButtonElement, string> = (node, text) => {
+  $effect(() => {
+    if (text == rememberedItem)
+      node.focus();
+  });
+};
+
 </script>
 
 <dialog
@@ -42,9 +54,16 @@ $effect(() => {
         tabindex="0"
         disabled={item.disabled ?? false}
         onclick={() => {closed = true; onSubmit(i)}}
+        use:autofocus={item.text}
       >
         {item.text}
       </button>
+    {:else}
+    {#if emptyText}
+      <button class="noborder" disabled={true}>
+        {emptyText}
+      </button>
+    {/if}
     {/each}
   </div>
 </dialog>

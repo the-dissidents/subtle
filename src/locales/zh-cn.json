@@ -410,6 +410,7 @@
     "hotkey-not-found": "未定义快捷键：{key}",
     "imported": "成功导入文件",
     "new-entry-appended": "已添加新条目",
+    "no-available-item": "无可用选项",
     "not-a-file": "不是文件：{path}",
     "note-file-is-from-newer-version-path": "注意：正在打开由新版本subtle创建的字幕文件。建议您更新软件。如果仍然选择继续，文件中的新功能将在保存时丢失。",
     "note-file-is-migrated-path": "注意：正在打开旧版本存档文件；我们会自动将其转换为新版，过程中可能会产生一些样式上的变化。如果保存更新的文件，旧版本软件很可能将无法打开它。",

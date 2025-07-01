@@ -1,5 +1,5 @@
 <script lang="ts">
-import { newMetricFilter, Metric, MetricFilterMethods, Metrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod, TextMetricFilterDefaultMethods, type MetricName, type MetricTypeName, type MetricContext, MetricContextList, type MetricFilterMethodName } from "./core/Filter";
+import { newMetricFilter, Metric, MetricFilterMethods, Metrics, type SimpleMetricFilter, type MetricFilter, type MetricFilterMethod, TextMetricFilterDefaultMethods, type MetricTypeName, type MetricContext, MetricContextList, type MetricFilterMethodName } from "./core/Filter";
 import { _, locale } from 'svelte-i18n';
 import { Debug } from "./Debug";
 import type { Action } from "svelte/action";
@@ -24,7 +24,7 @@ let updateCounter = $state(0);
 
 locale.subscribe(() => updateCounter++);
 
-const metrics = Object.entries(Metrics) as [MetricName, Metric<any>][];
+const metrics = Object.entries(Metrics) as [keyof typeof Metrics, Metric<any>][];
 const methods = Object.entries(MetricFilterMethods) as 
   [keyof typeof MetricFilterMethods, MetricFilterMethod<any, any, any>][];
 
@@ -70,8 +70,10 @@ function createDefaultValue(type: MetricTypeName) {
        : Debug.never(type);
 }
 
-function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter {
-  const method = TextMetricFilterDefaultMethods[Metrics[metric].type];
+function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
+  const method = TextMetricFilterDefaultMethods[
+    Metrics[metric as keyof typeof Metrics].type as keyof typeof TextMetricFilterDefaultMethods
+  ];
   const m = MetricFilterMethods[method];
   const params = [];
   for (let i = 0; i < m.parameters; i++)
@@ -171,7 +173,7 @@ function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter
       </ul>
     </fieldset>
   {:else}
-  {@const metric = Metrics[f.metric]}
+  {@const metric = Metrics[f.metric as keyof typeof Metrics]}
     <div class="hlayout flexgrow line">
       {#if f.negated}
         <label>
@@ -225,7 +227,7 @@ function createDefaultFilter(metric: MetricName = 'content'): SimpleMetricFilter
         }}
       >
         {#each methods as [name, method]}
-          {#if method.fromType == Metrics[f.metric].type}
+          {#if method.fromType == Metrics[f.metric as keyof typeof Metrics].type}
             <option value={name}>{method.localizedName()}</option>
           {/if}
         {/each}

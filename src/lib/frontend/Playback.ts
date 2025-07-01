@@ -145,7 +145,8 @@ export const PlaybackCommands = {
                     await guardAsync(() => Playback.setAudioStream(x.index),
                         $_('msg.failed-to-set-audio-stream'))
                 }
-            }))
+            })),
+        emptyText: () => $_('msg.no-available-item')
     }),
     togglePlay: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['Space'], ['Table', 'Timeline']),
