@@ -29,6 +29,7 @@ import SplitByLineDialog from './lib/dialog/SplitByLineDialog.svelte';
 import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import KeybindingDialog from './lib/dialog/KeybindingDialog.svelte';
 import KeybindingInputDialog from './lib/dialog/KeybindingInputDialog.svelte';
+import ASSImportDialog from './lib/dialog/ASSImportDialog.svelte';
 
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
@@ -63,6 +64,7 @@ import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
     import { Memorized } from './lib/config/MemorizedValue.svelte';
+    
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow();
@@ -244,6 +246,7 @@ Memorized.onInitialize(() => {
 <ConfigDialog         handler={Dialogs.configuration}/>
 <KeybindingDialog     handler={Dialogs.keybinding}/>
 <KeybindingInputDialog handler={Dialogs.keybindingInput}/>
+<ASSImportDialog      handler={Dialogs.assImport}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->

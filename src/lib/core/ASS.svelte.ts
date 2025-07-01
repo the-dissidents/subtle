@@ -18,12 +18,7 @@ export const ASSSubtitles = {
     write: (subs) => new ASSWriter(subs)
 } satisfies SubtitleFormat;
 
-export type ASSParseWarnings = {
-    type: 'ignored-style-field',
-    name: string,
-    field: string,
-    value: string
-} | {
+export type ASSParseInvalidWarning = {
     type: 'invalid-style-field',
     name: string,
     field: string,
@@ -32,10 +27,22 @@ export type ASSParseWarnings = {
     type: 'duplicate-style-definition',
     name: string
 } | {
-    type: 'no-styles'
+    type: 'no-styles',
 } | {
     type: 'undefined-style',
     name: string
+} | {
+    type: 'invalid-event-field',
+    line: number,
+    field: string,
+    value: string
+};
+
+export type ASSParseUnsupportedWarning = {
+    type: 'ignored-style-field',
+    name: string,
+    field: string,
+    value: string
 } | {
     type: 'ignored-special-character',
     name: string,
@@ -51,18 +58,17 @@ export type ASSParseWarnings = {
     field: string,
     occurrence: number
 } | {
-    type: 'invalid-event-field',
-    line: number,
-    field: string,
-    value: string
+    type: 'ignored-embedded-fonts'
 };
+
+export type ASSParseWarning = 
+    ({ category: 'invalid' } & ASSParseInvalidWarning) 
+  | ({ category: 'unsupported' } & ASSParseUnsupportedWarning);
 
 export class ASSParser implements SubtitleParser {
     #subs: Subtitles;
     #sections: Map<string, string>;
-    #warnings: ASSParseWarnings[] = [];
-    #preserveInlines = true;
-    #transformInlineMultichannel = true;
+    #warnings: ASSParseWarning[] = [];
     #parsed = false;
 
     constructor(source: string) {
@@ -74,23 +80,20 @@ export class ASSParser implements SubtitleParser {
         this.#parseScriptInfo();
     }
 
-    preserveInlines(x = true) {
-        this.#preserveInlines = x;
-        return this;
-    }
-
-    transformInlineMultichannel(x = true) {
-        this.#transformInlineMultichannel = x;
-        return this;
-    }
+    preserveInlines = true;
+    transformInlineMultichannel = true;
 
     parse() {
-        Debug.assert(!this.#parsed);
+        if (this.#parsed) {
+            this.#warnings = [];
+            this.#subs = new Subtitles();
+            this.#parseScriptInfo();
+        }
         this.#parseStyles();
         this.#parseEvents();
+        this.#parseFonts();
         this.#subs.migrated = 'ASS';
         this.#parsed = true;
-        console.log(this.#warnings);
         return this;
     }
 
@@ -99,13 +102,17 @@ export class ASSParser implements SubtitleParser {
         return this.#subs;
     }
 
-    get warnings(): readonly ASSParseWarnings[] {
+    get warnings(): readonly ASSParseWarning[] {
         Debug.assert(this.#parsed);
         return this.#warnings;
     }
 
-    #warn(w: ASSParseWarnings) {
-        this.#warnings.push(w);
+    #invalid(w: ASSParseInvalidWarning) {
+        this.#warnings.push({...w, category: 'invalid'});
+    }
+
+    #unsupported(w: ASSParseUnsupportedWarning) {
+        this.#warnings.push({...w, category: 'unsupported'});
     }
 
     #parseScriptInfo() {
@@ -151,7 +158,7 @@ export class ASSParser implements SubtitleParser {
                 ?? this.#sections.get('V4+ Styles')
                 ?? this.#sections.get('V4++ Styles');
         if (text === undefined) {
-            this.#warn({ type: 'no-styles' });
+            this.#invalid({ type: 'no-styles' });
             return;
         }
         const styleFieldMap = getASSFormatFieldMap(text);
@@ -173,7 +180,7 @@ export class ASSParser implements SubtitleParser {
                 const value = items[styleFieldMap!.get(field)!];
                 if (value == '-1' && f(true) !== false) return;
                 else if (value == '0' && f(false) !== false) return;
-                else this.#warn({ type: 'invalid-style-field', name, field, value });
+                else this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
             const float = 
             (field: string, f: (x: number) => boolean | void) => {
@@ -181,14 +188,14 @@ export class ASSParser implements SubtitleParser {
                 const value = items[styleFieldMap.get(field)!];
                 const n = Number.parseFloat(value);
                 if (!isNaN(n) && f(n) !== false) return;
-                this.#warn({ type: 'invalid-style-field', name, field, value });
+                this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
             const color = (field: string, f: (x: string) => boolean | void) => {
                 if (!styleFieldMap!.has(field)) return;
                 const value = items[styleFieldMap.get(field)!];
                 const color = fromASSColor(value);
                 if (color !== null && f(color) !== false) return;
-                else this.#warn({ type: 'invalid-style-field', name, field, value });
+                else this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
             const ignore = (field: string, def: string | RegExp) => {
                 if (!styleFieldMap!.has(field)) return;
@@ -196,7 +203,7 @@ export class ASSParser implements SubtitleParser {
                 if (typeof def == 'string'
                     ? value == def
                     : def.test(value)) return;
-                this.#warn({ type: 'ignored-style-field', name, field, value });
+                this.#unsupported({ type: 'ignored-style-field', name, field, value });
             };
 
             const items = match[1].split(',');
@@ -211,7 +218,7 @@ export class ASSParser implements SubtitleParser {
                 nameToStyle.set(name, newStyle);
                 if (!first) first = style;
             } else {
-                this.#warn({ type: 'duplicate-style-definition', name });
+                this.#invalid({ type: 'duplicate-style-definition', name });
             }
 
             if (styleFieldMap.has('Fontname'))
@@ -250,7 +257,7 @@ export class ASSParser implements SubtitleParser {
             // because we don't know when to warn, yet we don't want to warn every time
         }
         
-        if (!first) this.#warn({ type: 'no-styles' });
+        if (!first) this.#invalid({ type: 'no-styles' });
         else this.#subs.defaultStyle = first;
     }
 
@@ -271,7 +278,7 @@ export class ASSParser implements SubtitleParser {
         const getStyleOrCreate = (styleName: string) => {
             let style = nameToStyle.get(styleName);
             if (!style) {
-                this.#warn({ type: 'undefined-style', name: styleName });
+                this.#invalid({ type: 'undefined-style', name: styleName });
                 let newStyle = $state(Subtitles.createStyle(styleName));
                 style = newStyle;
                 nameToStyle.set(styleName, newStyle);
@@ -293,7 +300,7 @@ export class ASSParser implements SubtitleParser {
                 const value = opts[fieldMap.get(field)!];
                 const t = Basic.parseTimestamp(value);
                 if (t !== null) return t;
-                this.#warn({ type: 'invalid-event-field', line: i, field, value});
+                this.#invalid({ type: 'invalid-event-field', line: i, field, value});
                 return null;
             };
             const ignore = (field: string, def: string) => {
@@ -332,7 +339,7 @@ export class ASSParser implements SubtitleParser {
 
             for (let i = 0; i < text.length; i++) {
                 // handle inline multichannel: \N{\r#}
-                if (this.#transformInlineMultichannel) {
+                if (this.transformInlineMultichannel) {
                     let match = /^\\N{\\r(.*?)}/.exec(text.substring(i));
                     if (match) {
                         setText();
@@ -349,7 +356,7 @@ export class ASSParser implements SubtitleParser {
                         case 'n':
                         case 'h':
                             ignoredSpecial.set(text[i], (ignoredSpecial.get(text[i]) ?? 0) + 1);
-                            parsedText += this.#preserveInlines ? ' ' : '\\' + text[i];
+                            parsedText += this.preserveInlines ? ' ' : '\\' + text[i];
                             break;
                         case 'N':
                             parsedText += '\n';
@@ -364,7 +371,7 @@ export class ASSParser implements SubtitleParser {
                 if (text[i] == '{' && i < text.length - 1) {
                     let insideDrawing = false;
                     while (i < text.length) {
-                        if (this.#preserveInlines)
+                        if (this.preserveInlines)
                             parsedText += text[i];
                         if (insideDrawing) {
                             if (/^{\\p0/.test(text.substring(i)))
@@ -388,11 +395,16 @@ export class ASSParser implements SubtitleParser {
         }
 
         if (ignoredDrawing > 0)
-            this.#warn({ type: 'ignored-drawing-command', occurrence: ignoredDrawing });
+            this.#unsupported({ type: 'ignored-drawing-command', occurrence: ignoredDrawing });
         if (ignoredOverride > 0)
-            this.#warn({ type: 'ignored-override-tag', occurrence: ignoredOverride });
+            this.#unsupported({ type: 'ignored-override-tag', occurrence: ignoredOverride });
         for (const [ch, n] of ignoredSpecial)
-            this.#warn({ type: 'ignored-special-character', name: `\\${ch}`, occurrence: n });
+            this.#unsupported({ type: 'ignored-special-character', name: `\\${ch}`, occurrence: n });
+    }
+
+    #parseFonts() {
+        if (this.#sections.has('Fonts'))
+            this.#unsupported({ type: 'ignored-embedded-fonts' });
     }
 }
 

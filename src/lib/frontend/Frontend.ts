@@ -18,8 +18,6 @@ export type TranslatedWheelEvent = {
 };
 
 export function parseSubtitleSource(source: string): Subtitles | null {
-    source = source.replaceAll('\r\n', '\n');
-    
     const formats = [Format.JSON, Format.ASS, Format.SRT];
     let possible: SubtitleFormat[] = [];
     for (const f of formats) {

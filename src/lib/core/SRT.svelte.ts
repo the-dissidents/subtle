@@ -27,7 +27,7 @@ export const SRTSubtitles = {
         let start: number = -1, end: number = -1;
         let ignoredCoords = false;
         const subs = new Subtitles();
-        const lines = source.split(/\r?\n/);
+        const lines = source.split('\n');
 
         for (const line of lines) {
             if (line.length == 0) continue;

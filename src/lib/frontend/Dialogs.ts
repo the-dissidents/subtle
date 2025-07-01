@@ -9,6 +9,7 @@ import type { CommandBinding } from "./Keybinding";
 import { Editing } from "./Editing";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
+import { ASSParser } from "../core/ASS.svelte";
 const $_ = unwrapFunctionStore(_);
 
 export class DialogHandler<TInput = void, TOutput = string> {
@@ -30,6 +31,7 @@ export const Dialogs = {
     encoding: new DialogHandler<
         {path: string, source: Uint8Array, result: AnalyseResult}, 
         {decoded: string, encoding: EncodingName} | null>(),
+    assImport: new DialogHandler<ASSParser, boolean>(),
 
     overlayMenu(
         items: {text: string, disabled?: boolean}[], 

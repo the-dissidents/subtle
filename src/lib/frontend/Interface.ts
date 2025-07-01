@@ -18,12 +18,13 @@ import { Playback } from "./Playback";
 import { DebugConfig, MainConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 
-import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { unwrapFunctionStore, _, t } from 'svelte-i18n';
 import { SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Debug } from "../Debug";
 import { MAPI } from "../API";
 import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
+import { ASSSubtitles } from "../core/ASS.svelte";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -110,13 +111,14 @@ export const Interface = {
         return guardAsync(async () => {
             const file = await fs.readFile(path);
             const decode = await MAPI.detectOrDecodeFile(path);
-            if (decode !== null)
-                return await MAPI.decodeFile(path, null);
-            else {
+            if (decode !== null) {
+                const decoded = await MAPI.decodeFile(path, null);
+                return Basic.normalizeNewlines(decoded);
+            } else {
                 const result = (await import('chardet')).analyse(file);
                 const out = await Dialogs.encoding.showModal!({path, source: file, result});
                 if (!out) return null;
-                return out.decoded;
+                return Basic.normalizeNewlines(out.decoded);
             }
         }, $_('msg.unable-to-read-file-path', {values: {path}}), null);
     },
@@ -131,7 +133,17 @@ export const Interface = {
         await Debug.debug('parsing file', path);
         const text = await this.readTextFile(path);
         if (!text) return;
-        let newSubs = parseSubtitleSource(text);
+        let newSubs: Subtitles | null = null;
+        if (ASSSubtitles.detect(text)) {
+            try {
+                const parser = ASSSubtitles.parse(text);
+                if (!await Dialogs.assImport!.showModal!(parser))
+                    return;
+                newSubs = parser.done();
+            } catch (_) {}
+        } else {
+            newSubs = parseSubtitleSource(text);
+        }
         if (!newSubs) {
             Interface.setStatus(
                 $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
@@ -190,7 +202,7 @@ export const Interface = {
                         .slice(-2).join(Basic.pathSeparator),
                     action: async () => {
                         if (await Interface.warnIfNotSaved())
-                        Interface.openFile(x.name);
+                        await Interface.openFile(x.name);
                     }
                 }))
             ),
