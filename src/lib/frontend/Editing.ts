@@ -3,13 +3,13 @@ console.info('Editing loading');
 import { get, writable, type Writable } from "svelte/store";
 import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Basic } from "../Basic";
-import { Interface } from "./Interface";
 import { ChangeCause, ChangeType, Source } from "./Source";
 import { EventHost } from "../details/EventHost";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";
 import { Metric, Metrics } from "../core/Filter";
+import { Frontend } from "./Frontend";
 const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
@@ -134,7 +134,7 @@ export const Editing = {
     },
 
     startEditingNewVirtualEntry() {
-        Interface.setStatus($_('msg.new-entry-appended'));
+        Frontend.setStatus($_('msg.new-entry-appended'));
         let last = Source.subs.entries.at(-1);
         let entry = last 
             ? new SubtitleEntry(last.end, last.end + 2) 

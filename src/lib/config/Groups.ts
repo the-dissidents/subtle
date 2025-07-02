@@ -71,6 +71,12 @@ export const InterfaceConfig = new PublicConfigGroup(
             bounds: [1, 200],
             default: 20
         },
+        nRecentOpened: {
+            localizedName: () => $_('config.n-recent-opened'),
+            type: 'integer',
+            bounds: [0, 50],
+            default: 10
+        },
         autosaveInterval: {
             localizedName: () => $_('config.autosave-interval'),
             type: 'integer',

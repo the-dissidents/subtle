@@ -9,6 +9,7 @@ import { ChangeType, Source } from "./Source";
 
 import { Debug } from "../Debug";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
+import { Frontend } from "./Frontend";
 const $_ = unwrapFunctionStore(_);
 
 export const Utils = {
@@ -78,7 +79,7 @@ export const Utils = {
             // entry.update.dispatch();
         }
 
-        Interface.setStatus($_('msg.changed-n-entries', {values: {n: count}}));
+        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: count}}));
         if (count > 0)
             Source.markChanged(ChangeType.Times);
     },
@@ -113,7 +114,7 @@ export const Utils = {
             Source.subs.entries.splice(index, 1);
         }
 
-        Interface.setStatus($_('msg.combined-n-entries', {values: {n: deletion.size}}));
+        Frontend.setStatus($_('msg.combined-n-entries', {values: {n: deletion.size}}));
         if (deletion.size > 0)
             Source.markChanged(ChangeType.Times);
     },
@@ -132,7 +133,7 @@ export const Utils = {
             if (textA !== undefined || textB !== undefined)
                 done++;
         }
-        Interface.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
+        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
             Source.markChanged(ChangeType.InPlace);
     },
@@ -147,7 +148,7 @@ export const Utils = {
             ent.texts.delete(b);
             done++;
         }
-        Interface.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
+        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
             Source.markChanged(ChangeType.InPlace);
     },
@@ -164,7 +165,7 @@ export const Utils = {
                 done++;
             }
         }
-        Interface.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
+        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
             Source.markChanged(ChangeType.InPlace);
     },
@@ -182,7 +183,7 @@ export const Utils = {
                     Source.subs.entries.indexOf(ent), 1);
             }
         }
-        Interface.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
+        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done) Source.markChanged(ChangeType.Times);
     },
 
@@ -194,7 +195,7 @@ export const Utils = {
             ent.texts.set(style, text.join(' '));
             done++;
         }
-        Interface.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
+        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done) Source.markChanged(ChangeType.InPlace);
     },
 

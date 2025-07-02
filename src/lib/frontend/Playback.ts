@@ -11,7 +11,7 @@ import { InputConfig } from "../config/Groups";
 import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { unwrapFunctionStore, _ } from "svelte-i18n";
-import { guardAsync } from "./Interface";
+import { guardAsync } from "./Frontend";
 
 const $_ = unwrapFunctionStore(_);
 

@@ -1,6 +1,25 @@
+<script lang="ts" module>
+export function overlayMenu(
+    items: {text: string, disabled?: boolean}[], 
+    options: {title?: string, text?: string, rememberedItem?: string, emptyText?: string}
+): Promise<number> {
+    return new Promise<number>((resolve) => {
+        const menu = mount(OverlayMenu, {
+            target: document.getElementById('app')!,
+            props: { items, ...options, async onSubmit(x) {
+                await unmount(menu);
+                resolve(x);
+            }, }
+        });
+    });
+}
+</script>
+
 <script lang="ts">
 import type { Action } from "svelte/action";
 import { Debug } from "../Debug";
+import { mount, unmount } from "svelte";
+import OverlayMenu from "./OverlayMenu.svelte";
 
 let dialog: HTMLDialogElement | undefined = $state();
 let closed = false;

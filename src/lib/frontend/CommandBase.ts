@@ -1,7 +1,7 @@
 import { Debug } from "../Debug";
-import { Dialogs } from "./Dialogs";
-import { Interface } from "./Interface";
-import { type KeyBinding, type CommandBinding } from "./Keybinding";
+import { overlayMenu } from "../ui/OverlayMenu.svelte";
+import { Frontend } from "./Frontend";
+import type { KeyBinding, CommandBinding } from "./Keybinding";
 import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api/menu";
 
 export type CommandOptions<TState = any> = ({
@@ -93,7 +93,7 @@ export class UICommand<TState = void> {
     // FIXME: using command as menu item does not update its `activated` state
     toMenuItem(): SubmenuOptions {
         if ('call' in this.options) {
-            const focus = Interface.getUIFocus();
+            const focus = Frontend.getUIFocus();
             const b = this.bindings.find((x) => !x.contexts || x.contexts.has(focus));
             if (b && b.sequence.length == 1)
                 this.options.displayAccel = b.sequence[0].toString();
@@ -124,7 +124,7 @@ export class UICommand<TState = void> {
         Debug.assert(enabled);
         if ('items' in item) {
             const items = unwrap(item.items);
-            let n = await Dialogs.overlayMenu(
+            let n = await overlayMenu(
                 items.map((x) => ({
                     text: unwrap(x.name),
                     disabled: x.isApplicable ? !x.isApplicable() : false

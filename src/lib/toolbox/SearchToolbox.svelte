@@ -36,6 +36,7 @@ import FilterEdit from '../FilterEdit.svelte';
 import { evaluateFilter, type MetricFilter } from '../core/Filter';
 import { Toolboxes } from '../frontend/Toolboxes';
 import Tooltip from '../ui/Tooltip.svelte';
+    import { Frontend } from '../frontend/Frontend';
 // import { Menu } from '@tauri-apps/api/menu';
 
 const handler: SearchHandler = $state({
@@ -47,7 +48,7 @@ const handler: SearchHandler = $state({
   replaceStyle: Source.subs.defaultStyle,
   execute,
   focus() {
-    Interface.toolboxFocus.set('search');
+    Frontend.toolboxFocus.set('search');
     setTimeout(() => termInput?.focus(), 0);
   }
 });
@@ -169,7 +170,7 @@ function processReplacement(original: string, match: RegExpExecArray, repl: stri
 async function execute(type: SearchAction, option: SearchOption) {
   const entries = Source.subs.entries;
   if (entries.length == 0) {
-    Interface.setStatus($_('msg.subtitle-is-empty'), 'error');
+    Frontend.setStatus($_('msg.subtitle-is-empty'), 'error');
     return;
   }
 
@@ -183,7 +184,7 @@ async function execute(type: SearchAction, option: SearchOption) {
       resumeFrom = null;
 
   if (useFilter && filter == null) {
-    Interface.setStatus($_('msg.filter-is-empty'), 'error');
+    Frontend.setStatus($_('msg.filter-is-empty'), 'error');
     return;
   }
 
@@ -197,7 +198,7 @@ async function execute(type: SearchAction, option: SearchOption) {
         `g${handler.caseSensitive ? '' : 'i'}`);
     } catch (e) {
       Debug.assert(e instanceof Error);
-      Interface.setStatus($_('msg.search-failed') + e.message, 'error');
+      Frontend.setStatus($_('msg.search-failed') + e.message, 'error');
       return;
     }
   } else if (useLabel || useStyle || useFilter) {
@@ -205,7 +206,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     expr = /.*/;
     usingEmptyTerm = true;
   } else {
-    Interface.setStatus($_('msg.search-expression-is-empty'), 'error');
+    Frontend.setStatus($_('msg.search-expression-is-empty'), 'error');
     return;
   }
 
@@ -332,7 +333,7 @@ async function execute(type: SearchAction, option: SearchOption) {
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     }
   }
-  Interface.setStatus(status);
+  Frontend.setStatus(status);
 }
 </script>
 

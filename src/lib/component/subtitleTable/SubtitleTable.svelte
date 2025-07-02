@@ -17,15 +17,15 @@ import OrderableList from "../../ui/OrderableList.svelte";
 import { Menu } from "@tauri-apps/api/menu";
 import { DeleteIcon, PenLineIcon, PlusIcon } from "@lucide/svelte";
 
-import { TableConfig } from "./Config";
 import { TableLayout, type Column } from "./Layout.svelte";
 import { TableRenderer } from "./Render.svelte";
 import { TableInput } from "./Input.svelte";
+import { Frontend } from "../../frontend/Frontend";
 
 let canvas = $state<HTMLCanvasElement>();
 let validationMessagePopup = $state<PopupHandler>({});
 let columnPopup = $state<PopupHandler>({});
-let uiFocus = Interface.uiFocus;
+let uiFocus = Frontend.uiFocus;
 
 let layout: TableLayout | undefined = $state();
 let input: TableInput | undefined = $state();

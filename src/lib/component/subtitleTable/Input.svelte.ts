@@ -13,6 +13,7 @@ import { TableConfig } from "./Config";
 import { _ } from 'svelte-i18n';
 import { get } from "svelte/store";
 import { Playback } from "../../frontend/Playback";
+import { Frontend } from "../../frontend/Frontend";
 
 export const SubtitleTableHandle = {
     processDoubleClick: undefined as (undefined | (() => Promise<void>))
@@ -80,7 +81,7 @@ export class TableInput {
     }
     
     focus() {
-        Interface.uiFocus.set('Table');
+        Frontend.uiFocus.set('Table');
     }
 
     async handleDoubleClick() {

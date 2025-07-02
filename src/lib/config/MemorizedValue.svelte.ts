@@ -1,40 +1,44 @@
+console.info('MemorizedValue loading');
+
 import { path } from "@tauri-apps/api";
 import { Basic } from "../Basic";
 import { Debug } from "../Debug";
 import { BaseDirectory, exists, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { z } from "zod/v4-mini";
-import { guardAsync } from "../frontend/Interface";
+import * as z from "zod/v4-mini";
+import { guardAsync } from "../frontend/Frontend";
 
 import { _ } from 'svelte-i18n';
 import { get } from "svelte/store";
 
-const zValue = z.union([z.string(), z.number(), z.boolean()]);
-const zData = z.record(z.string(), zValue);
-export type MemorizableValue = z.infer<typeof zValue>;
-
 const configPath = 'memorized.json';
-let memorizedData: Record<string, Memorized<any>> = {};
+let memorizedData: Record<string, Memorized<z.core.$ZodType>> = {};
 let initialized = false;
 let onInitCallbacks: (() => void)[] = [];
 
-export class Memorized<T extends MemorizableValue> {
-    protected subscriptions = new Set<(value: T) => void>();
+export class Memorized<T extends z.core.$ZodType> {
+    protected subscriptions = new Set<(value: z.infer<T>) => void>();
 
-    static $<T extends MemorizableValue>(key: string, initial: T) {
+    static $<T extends z.core.$ZodType>(key: string, ztype: T, initial: z.infer<T>) {
         if (key in memorizedData) {
-            Debug.assert(typeof memorizedData[key].get() == typeof initial, 'type mismatch');
+            const otherType = memorizedData[key].type;
+            Debug.assert(
+                JSON.stringify(ztype._zod.def) === JSON.stringify(otherType._zod.def), 
+                'type mismatch');
             return memorizedData[key] as Memorized<T>;
         }
-        return new Memorized(key, initial);
+        return new Memorized(key, ztype, initial);
     }
 
-    static $overridable<T extends MemorizableValue>(key: string, initial: T) {
+    static $overridable<T extends z.core.$ZodType>(key: string, ztype: T, initial: z.infer<T>) {
         if (key in memorizedData) {
+            const otherType = memorizedData[key].type;
+            Debug.assert(
+                JSON.stringify(ztype._zod.def) === JSON.stringify(otherType._zod.def), 
+                'type mismatch');
             Debug.assert(memorizedData[key] instanceof OverridableMemorized);
-            Debug.assert(typeof memorizedData[key].get() == typeof initial, 'type mismatch');
             return memorizedData[key] as OverridableMemorized<T>;
         }
-        return new OverridableMemorized(key, initial);
+        return new OverridableMemorized(key, ztype, initial);
     }
 
     static isInitialized() {
@@ -51,12 +55,15 @@ export class Memorized<T extends MemorizableValue> {
             }
             const obj = JSON.parse(await readTextFile(
                 configPath, {baseDir: BaseDirectory.AppConfig}));
-            for (const [key, value] of Object.entries(z.parse(zData, obj))) {
+            for (const [key, value] of Object.entries(obj)) {
                 if (key in memorizedData) {
-                    Debug.assert(typeof memorizedData[key].get() == typeof value);
-                    memorizedData[key].set(value);
+                    const result = z.safeParse(memorizedData[key].type, value);
+                    if (!result.success)
+                        Debug.warn('type mismatch in memorized data file', key, value);
+                    else
+                        memorizedData[key].set(result.data);
                 } else {
-                    Memorized.$(key, value);
+                    Debug.warn('unrecognized pair in memorized data file', key, value);
                 }
             }
         } catch (e) {
@@ -78,7 +85,7 @@ export class Memorized<T extends MemorizableValue> {
         Debug.assert(initialized);
         await Basic.ensureConfigDirectoryExists();
         await guardAsync(async () => {
-            let data: Record<string, MemorizableValue> = {};
+            let data: Record<string, any> = {};
             for (const [key, value] of Object.entries(memorizedData)) {
                 data[key] = value.get();
             }
@@ -87,34 +94,38 @@ export class Memorized<T extends MemorizableValue> {
         }, get(_)('msg.error-saving-private-config'));
     }
 
-    protected constructor(key: string, protected value: T) {
+    protected constructor(key: string, protected ztype: T, protected value: z.infer<T>) {
         memorizedData[key] = this;
     }
 
-    subscribe(subscription: (value: T) => void): (() => void) {
+    subscribe(subscription: (value: z.infer<T>) => void): (() => void) {
         this.subscriptions.add(subscription);
         subscription(this.get());
         return () => this.subscriptions.delete(subscription);
     }
 
-    get(): T {
+    get type() {
+        return this.ztype;
+    }
+
+    get(): z.infer<T> {
         return this.value;
     }
 
-    set(value: T) {
+    set(value: z.infer<T>) {
         this.value = value;
         this.subscriptions.forEach((x) => x(value));
     }
 }
 
-export class OverridableMemorized<T extends MemorizableValue> extends Memorized<T> {
-    #override: T | undefined;
+export class OverridableMemorized<T extends z.core.$ZodType> extends Memorized<T> {
+    #override: z.infer<T> | undefined;
 
     override get() {
         return this.override ?? this.value;
     }
 
-    override set(value: T) {
+    override set(value: z.infer<T>) {
         this.value = value;
         if (this.override === undefined)
             this.subscriptions.forEach((x) => x(value));
@@ -124,7 +135,7 @@ export class OverridableMemorized<T extends MemorizableValue> extends Memorized<
         return this.value;
     }
 
-    set setting(value: T) {
+    set setting(value: z.infer<T>) {
         this.set(value);
     }
 
@@ -132,7 +143,7 @@ export class OverridableMemorized<T extends MemorizableValue> extends Memorized<
         return this.#override;
     }
 
-    set override(value: T | undefined) {
+    set override(value: z.infer<T> | undefined) {
         this.#override = value;
         this.subscriptions.forEach((x) => x(this.override ?? this.value));
     }

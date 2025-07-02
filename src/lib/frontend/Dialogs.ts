@@ -1,11 +1,9 @@
 console.info('Dialogs loading');
 
+import { UICommand } from "./CommandBase";
 import type { AnalyseResult, EncodingName } from "chardet";
 import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil.svelte";
-import { mount, unmount } from "svelte";
-import OverlayMenu from "../ui/OverlayMenu.svelte";
-import { UICommand } from "./CommandBase";
-import type { CommandBinding } from "./Keybinding";
+import { KeybindingManager, type CommandBinding } from "./Keybinding";
 import { Editing } from "./Editing";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
@@ -17,8 +15,6 @@ export class DialogHandler<TInput = void, TOutput = string> {
 }
 
 export const Dialogs = {
-    modalOpenCounter: 0,
-
     importOptions: new DialogHandler<boolean, MergeOptions | null>(),
     timeTransform: new DialogHandler<void, TimeShiftOptions | null>(),
     combine: new DialogHandler<void, void>(),
@@ -32,21 +28,6 @@ export const Dialogs = {
         {path: string, source: Uint8Array, result: AnalyseResult}, 
         {decoded: string, encoding: EncodingName} | null>(),
     assImport: new DialogHandler<ASSParser, boolean>(),
-
-    overlayMenu(
-        items: {text: string, disabled?: boolean}[], 
-        options: {title?: string, text?: string, rememberedItem?: string, emptyText?: string}
-    ): Promise<number> {
-        return new Promise<number>((resolve) => {
-            const menu = mount(OverlayMenu, {
-                target: document.getElementById('app')!,
-                props: { items, ...options, async onSubmit(x) {
-                    await unmount(menu);
-                    resolve(x);
-                }, }
-            });
-        });
-    },
 }
 
 export const DialogCommands = {
@@ -81,3 +62,4 @@ export const DialogCommands = {
         call: () => Dialogs.splitByLine.showModal!()
     }),
 }
+KeybindingManager.register(DialogCommands);

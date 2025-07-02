@@ -3,19 +3,21 @@ console.info('Source loading');
 import { Debug } from "../Debug";
 import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/Formats";
-
-import { PrivateConfig } from "../config/PrivateConfig";
 import { InterfaceConfig } from "../config/Groups";
+import { Memorized } from "../config/MemorizedValue.svelte";
 import { EventHost } from "../details/EventHost";
-import { guardAsync, Interface } from "./Interface";
+
 import { Editing } from "./Editing";
+import { Frontend, guardAsync } from "./Frontend";
+import { UICommand } from "./CommandBase";
+import { CommandBinding, KeybindingManager } from "./Keybinding";
 
 import * as fs from "@tauri-apps/plugin-fs";
 import { basename, join } from '@tauri-apps/api/path';
 import { get, readonly, writable } from "svelte/store";
+import * as z from "zod/v4-mini";
+
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
-import { UICommand } from "./CommandBase";
-import { CommandBinding, KeybindingManager } from "./Keybinding";
 const $_ = unwrapFunctionStore(_);
 
 export type Snapshot = {
@@ -83,7 +85,7 @@ async function doAutoSave() {
             { baseDir: fs.BaseDirectory.AppLocalData });
         changedSinceLastAutosave = false;
         Debug.info('autosaved', currentFile ?? '<untitled>');
-        Interface.setStatus($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
+        Frontend.setStatus($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
     }, $_('msg.autosave-failed'));
 }
 
@@ -110,18 +112,39 @@ async function cleanAutosave() {
     }, $_('msg.failed-to-clean-autosave'));
 }
 
+const zFileSaveState = z.object({
+    name: z.string(), 
+    video: z.optional(z.string()),
+    audioStream: z.optional(z.int()),
+});
+
+let recentOpened = Memorized.$('recentOpened', z.array(zFileSaveState), []);
 let intervalId = 0;
 let changedSinceLastAutosave = false;
 let currentFile = writable('');
 let fileChanged = writable(false);
 
+let undoStack = [] as Snapshot[];
+let redoStack = [] as Snapshot[];
+
+async function pushRecent(file: string) {
+    const got = recentOpened.get();
+    const i = got.findIndex((x) => x.name == file);
+    if (i >= 0)
+        got.unshift(...got.splice(i, 1));
+    else
+        got.unshift({name: file});
+    while (got.length > InterfaceConfig.data.nRecentOpened)
+        got.pop();
+    await Memorized.save();
+}
+
 export const Source = {
     subs: new Subtitles(),
-    undoStack: [] as Snapshot[],
-    redoStack: [] as Snapshot[],
 
     get currentFile() { return readonly(currentFile); },
     get fileChanged() { return readonly(fileChanged); },
+    get recentOpened() { return recentOpened; },
 
     onUndoBufferChanged: new EventHost(),
     onSubtitlesChanged: new EventHost<[type: ChangeType]>(),
@@ -139,54 +162,53 @@ export const Source = {
 
         Editing.editChanged = false;
         Editing.isEditingVirtualEntry.set(false);
-        this.undoStack.push({
+        undoStack.push({
             archive: Format.JSON.write(this.subs).toString(), 
             change: type,
             saved: false}); // TODO
-        this.redoStack = [];
+        redoStack = [];
         this.onUndoBufferChanged.dispatch();
         this.onSubtitlesChanged.dispatch(type);
     },
 
     clearUndoRedo() {
-        this.undoStack = [];
-        this.redoStack = [];
+        redoStack = [];
+        redoStack = [];
         this.markChanged(ChangeType.General);
         this.onUndoBufferChanged.dispatch();
     },
 
-    canUndo() {return this.undoStack.length > 1;},
-    canRedo() {return this.redoStack.length > 0;},
+    canUndo() { return redoStack.length > 1; },
+    canRedo() { return redoStack.length > 0; },
 
     undo() {
         if (!this.canUndo()) {
-            Interface.setStatus($_('msg.nothing-to-undo'), 'info');
+            Frontend.setStatus($_('msg.nothing-to-undo'), 'info');
             return false;
         }
-        this.redoStack.push(this.undoStack.pop()!);
-        let snap = this.undoStack.at(-1)!;
+        redoStack.push(redoStack.pop()!);
+        let snap = redoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();
-        Interface.setStatus($_('msg.undone'), 'info');
+        Frontend.setStatus($_('msg.undone'), 'info');
         return true;
     },
 
     redo() {
         if (!this.canRedo()) {
-            Interface.setStatus($_('msg.nothing-to-redo'), 'info');
+            Frontend.setStatus($_('msg.nothing-to-redo'), 'info');
             return false;
         }
-        this.undoStack.push(this.redoStack.pop()!);
-        let snap = this.undoStack.at(-1)!;
+        redoStack.push(redoStack.pop()!);
+        let snap = redoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();
-        Interface.setStatus($_('msg.redone'), 'info');
+        Frontend.setStatus($_('msg.redone'), 'info');
         return true;
     },
 
     async openDocument(newSubs: Subtitles, path: string = '') {
-        if (path !== '')
-            PrivateConfig.pushRecent(path);
+        if (path !== '') pushRecent(path);
         this.subs = newSubs;
         Editing.clearFocus(false);
         Editing.clearSelection();
@@ -206,7 +228,7 @@ export const Source = {
     async exportTo(file: string, text: string) {
         return guardAsync(async () => {
             await fs.writeTextFile(file, text);
-            Interface.setStatus($_('msg.exported-to-file', {values: {file}}));
+            Frontend.setStatus($_('msg.exported-to-file', {values: {file}}));
             return true;
         }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
     },
@@ -214,11 +236,11 @@ export const Source = {
     async saveTo(file: string, text: string) {
         return guardAsync(async () => {
             await fs.writeTextFile(file, text);
-            Interface.setStatus($_('msg.saved-to-file', {values: {file}}));
+            Frontend.setStatus($_('msg.saved-to-file', {values: {file}}));
             fileChanged.set(false);
             changedSinceLastAutosave = false;
             if (file != get(this.currentFile)) {
-                PrivateConfig.pushRecent(file);
+                pushRecent(file);
                 currentFile.set(file);
             }
             await cleanAutosave();

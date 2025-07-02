@@ -13,6 +13,7 @@ import { MediaConfig } from "./Config";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { InterfaceConfig } from "../../config/Groups";
+import { Frontend } from "../../frontend/Frontend";
 const $_ = unwrapFunctionStore(_);
 
 export const MediaPlayerInterface = {
@@ -335,7 +336,7 @@ export class MediaPlayer {
                     });
                 }
                 if (this.#seeking) {
-                    Interface.setStatus($_('msg.seeked-to-frame', { values: {
+                    Frontend.setStatus($_('msg.seeked-to-frame', { values: {
                         time: frame.time.toFixed(3), 
                         pos: frame.position, 
                         naudio: this.#seeking.nSkippedAudio, 
@@ -452,7 +453,7 @@ export class MediaPlayer {
                 this.requestRender();
                 this.#requestPreload();
                 MediaPlayerInterface.onPlayback.dispatch(video[0].time);
-                Interface.setStatus($_('msg.seeked-to-frame-cached', { values: {
+                Frontend.setStatus($_('msg.seeked-to-frame-cached', { values: {
                     time: video[0].time.toFixed(3), 
                     pos: video[0].position
                 } }));

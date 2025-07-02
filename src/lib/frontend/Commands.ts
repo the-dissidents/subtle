@@ -1,4 +1,3 @@
-import { Interface } from "./Interface";
 import { UICommand } from "./CommandBase";
 
 import { get } from "svelte/store";
@@ -6,7 +5,7 @@ import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Editing, KeepInViewMode, SelectMode } from "./Editing";
-import { parseSubtitleSource } from "./Frontend";
+import { Frontend, parseSubtitleSource } from "./Frontend";
 import { Source, ChangeType, ChangeCause } from "./Source";
 import { Labels, SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Playback } from "./Playback";
@@ -41,7 +40,7 @@ async function copySelection(transform: (use: SubtitleEntry[]) => string) {
     let selection = Editing.getSelection();
     if (selection.length == 0) return;
     await clipboard.writeText(transform(selection));
-    Interface.setStatus($_('msg.copied'));
+    Frontend.setStatus($_('msg.copied'));
 };
 
 function hasSelection(n = 0) {
@@ -137,7 +136,7 @@ export const BasicCommands = {
         call() {
             if (Editing.focused.control) {
                 Editing.focused.control.blur();
-                Interface.uiFocus.set('Table');
+                Frontend.uiFocus.set('Table');
             }
         }
     }),
@@ -258,7 +257,7 @@ export const BasicCommands = {
                 if (text) results.push(text);
             })
             clipboard.writeText(results.join(' '));
-            Interface.setStatus($_('msg.copied'));
+            Frontend.setStatus($_('msg.copied'));
         }, selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -281,7 +280,7 @@ export const BasicCommands = {
             if (!source) return;
             let portion = parseSubtitleSource(source);
             if (!portion) {
-                Interface.setStatus($_('msg.failed-to-parse-clipboard-data-as-subtitles'), 'error');
+                Frontend.setStatus($_('msg.failed-to-parse-clipboard-data-as-subtitles'), 'error');
                 return;
             }
             let position: number;
@@ -301,9 +300,9 @@ export const BasicCommands = {
             if (entries.length > 0) {
                 Editing.setSelection(entries);
                 Source.markChanged(ChangeType.General);
-                Interface.setStatus($_('msg.pasted'));
+                Frontend.setStatus($_('msg.pasted'));
             } else {
-                Interface.setStatus($_('msg.nothing-to-paste'), 'error');
+                Frontend.setStatus($_('msg.nothing-to-paste'), 'error');
             }
         },
     }),
@@ -657,7 +656,7 @@ export const BasicCommands = {
                     }
                 }
             }
-            Interface.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
+            Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
             if (done) Source.markChanged(ChangeType.Times);
         },
     }),

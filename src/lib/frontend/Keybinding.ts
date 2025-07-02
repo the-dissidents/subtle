@@ -1,15 +1,14 @@
 import { Basic } from "../Basic";
 import { Debug } from "../Debug";
 import { HashMap } from "../details/HashMap";
-import { guardAsync, Interface } from "./Interface";
-import { UIFocusList, type UIFocus } from "./Frontend";
+import { KeyCodeMap, type KeyCode } from "../details/KeyCodeMap";
+
+import { Frontend, guardAsync, UIFocusList, type UIFocus } from "./Frontend";
 import { UICommand } from "./CommandBase";
 
-import { Dialogs } from "./Dialogs";
 import * as fs from "@tauri-apps/plugin-fs";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { KeyCodeMap, type KeyCode } from "../details/KeyCodeMap";
 import * as z from "zod/v4-mini";
 const $_ = unwrapFunctionStore(_);
 
@@ -179,7 +178,7 @@ export const KeybindingManager = {
                 case 'disabled': break;
                 case "notFound":
                     if (result.sequence.length > 1) {
-                        Interface.setStatus($_('msg.hotkey-not-found', 
+                        Frontend.setStatus($_('msg.hotkey-not-found', 
                             { values: { key: 
                                 result.sequence.map((x) => x.toString()).join(' ')
                             } }), 'error');
@@ -191,7 +190,7 @@ export const KeybindingManager = {
                     break;
                 case "waitNext":
                     ev.preventDefault();
-                    Interface.setStatus($_('msg.waiting-for-chord-after-pressing', 
+                    Frontend.setStatus($_('msg.waiting-for-chord-after-pressing', 
                         { values: { key: 
                             result.currentSequence.map((x) => x.toString()).join(' ')
                         } }));
@@ -265,10 +264,10 @@ export const KeybindingManager = {
 
     processKeydown(ev: KeyboardEvent): AcceptKeyDownResult {
         Debug.assert(initialized);
-        if (Dialogs.modalOpenCounter > 0)
+        if (Frontend.modalOpenCounter > 0)
             return { type: 'disabled' }; // TODO: more sophisticated disabling?
         const key = this.parseKey(ev);
-        const focus = Interface.getUIFocus();
+        const focus = Frontend.getUIFocus();
         if (!key) return { type: 'incomplete' };
         Debug.trace('key:', key, focus);
         currentSequence.push(key);

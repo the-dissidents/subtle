@@ -11,12 +11,14 @@ import type { TranslatedWheelEvent } from "../../frontend/Frontend";
 import { TimelineConfig } from "./Config";
 import { Memorized } from "../../config/MemorizedValue.svelte";
 import { SubtitleTableHandle } from "../subtitleTable/Input.svelte";
+import * as z from "zod/v4-mini";
 
 export const TimelineHandle = {
   activeChannel: undefined as SubtitleStyle | undefined,
-  lockCursor: Memorized.$('lockCursor', <boolean>false),
-  useSnap: Memorized.$overridable('useSnap', <boolean>true),
-  currentMode: Memorized.$<'select' | 'create' | 'split'>('currentMode', 'select'),
+  lockCursor: Memorized.$('lockCursor', z.boolean(), false),
+  useSnap: Memorized.$overridable('useSnap', z.boolean(), true),
+  currentMode: Memorized.$('currentMode', 
+    z.union([z.literal('select'), z.literal('create'), z.literal('split')]), 'select'),
 }
 
 abstract class TimelineAction {

@@ -1,21 +1,7 @@
-<script lang='ts' module>
-let rowPopup: PopupHandler = $state({});
-let styleRefreshCounter = $state(0);
-let buttonPosX = $state(0);
-let buttonPosY = $state(0);
-let uiFocus = Interface.uiFocus;
-
-let layout = $state<TimelineLayout>();
-let input = $state<TimelineInput>();
-let renderer: TimelineRenderer;
-
-</script>
-
 <script lang="ts">
 import { _ } from 'svelte-i18n';
 
 import { ChangeType, Source } from "../../frontend/Source";
-import { Interface } from '../../frontend/Interface';
 import Popup, { type PopupHandler } from '../../ui/Popup.svelte';
 import { TimelineLayout } from "./Layout";
 import { TimelineInput, TimelineHandle } from "./Input.svelte";
@@ -24,10 +10,21 @@ import Tooltip from '../../ui/Tooltip.svelte';
 import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
 import { AlignCenterVerticalIcon, MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
+import { Frontend } from '../../frontend/Frontend';
 
 let currentMode = TimelineHandle.currentMode;
 let useSnap = TimelineHandle.useSnap;
 let lockCursor = TimelineHandle.lockCursor;
+
+let rowPopup: PopupHandler = $state({});
+let styleRefreshCounter = $state(0);
+let buttonPosX = $state(0);
+let buttonPosY = $state(0);
+let uiFocus = Frontend.uiFocus;
+
+let layout = $state<TimelineLayout>();
+let input = $state<TimelineInput>();
+let renderer: TimelineRenderer;
 
 // Setup function for the canvas
 function setup(canvas: HTMLCanvasElement) {

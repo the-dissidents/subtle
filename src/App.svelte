@@ -10,11 +10,10 @@ i18n.register('zh-tw', () => import('./locales/zh-tw.json'));
 i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
 
 import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
-import { PrivateConfig } from './lib/config/PrivateConfig';
-
 import { TableConfig } from "./lib/component/subtitleTable/Config";
 import { MediaConfig } from "./lib/component/preview/Config";
 import { TimelineConfig } from './lib/component/timeline/Config';
+import { Memorized } from './lib/config/MemorizedValue.svelte';
 
 MainConfig.addGroup('timeline', TimelineConfig);
 MainConfig.addGroup('media', MediaConfig);
@@ -45,6 +44,7 @@ import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
 import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
+import ReferencesToolbox from './lib/toolbox/ReferencesToolbox.svelte';
 
 import { Basic } from './lib/Basic';
 
@@ -63,7 +63,8 @@ import { KeybindingManager } from './lib/frontend/Keybinding';
 import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
-import { Memorized } from './lib/config/MemorizedValue.svelte';
+import * as z from "zod/v4-mini";
+    import { Frontend } from './lib/frontend/Frontend';
     
 Debug.init();
 
@@ -77,9 +78,9 @@ let statusBar: HTMLDivElement | undefined = $state();
 
 let statusTwinkling = $state(false);
 
-let status = Interface.status;
-let uiFocus = Interface.uiFocus;
-let toolboxFocus = Interface.toolboxFocus;
+let status = Frontend.status;
+let uiFocus = Frontend.uiFocus;
+let toolboxFocus = Frontend.toolboxFocus;
 let isMediaLoaded = Playback.isLoaded;
 let filenameDisplay = 
   derived([Source.currentFile, Source.fileChanged, _], 
@@ -92,13 +93,11 @@ Source.onUndoBufferChanged.bind(me, () => {
   undoRedoUpdateCounter++;
 });
 
-Interface.status.subscribe(() => { 
+status.subscribe(() => { 
   // twinkle status bar
   if (InterfaceConfig.data.statusBarTwinkle)
     statusTwinkling = true;
 });
-
-PrivateConfig.init();
 
 MainConfig.hook(() => InterfaceConfig.data.fontSize, 
   (v) => document.documentElement.style.setProperty('--fontSize', `${v}px`));
@@ -187,14 +186,14 @@ appWindow.onDragDropEvent(async (ev) => {
   }
 });
 
-let windowW = Memorized.$('windowW', <number>1000);
-let windowH = Memorized.$('windowH', <number>800);
-let windowX = Memorized.$('windowX', <number>200);
-let windowY = Memorized.$('windowY', <number>200);
-let editorH = Memorized.$('editorH', <number>125);
-let timelineH = Memorized.$('timelineH', <number>150);
-let leftPaneW = Memorized.$('leftPaneW', <number>300);
-let videoH = Memorized.$('videoH', <number>200);
+let windowW = Memorized.$('windowW', z.number(), 1000);
+let windowH = Memorized.$('windowH', z.number(), 800);
+let windowX = Memorized.$('windowX', z.number(), 200);
+let windowY = Memorized.$('windowY', z.number(), 200);
+let editorH = Memorized.$('editorH', z.number(), 125);
+let timelineH = Memorized.$('timelineH', z.number(), 150);
+let leftPaneW = Memorized.$('leftPaneW', z.number(), 300);
+let videoH = Memorized.$('videoH', z.number(), 200);
 
 Memorized.init();
 Memorized.onInitialize(() => {
@@ -252,10 +251,10 @@ Memorized.onInitialize(() => {
       {#key undoRedoUpdateCounter}
       <li><button
         onclick={() => SourceCommands.undo.call()} 
-        disabled={Source.undoStack.length <= 1}>{$_('menu.undo')}</button></li>
+        disabled={!Source.canUndo()}>{$_('menu.undo')}</button></li>
       <li><button
         onclick={() => SourceCommands.redo.call()}
-        disabled={Source.redoStack.length == 0}>{$_('menu.redo')}</button></li>
+        disabled={!Source.canRedo()}>{$_('menu.redo')}</button></li>
       {/key}
       <li class='separator'></li>
       <li><button onclick={() => InterfaceCommands.openVideo.call()}>
@@ -316,6 +315,9 @@ Memorized.onInitialize(() => {
           </TabPage>
           <TabPage name="Test" id='test'>
             <TestToolbox/>
+          </TabPage>
+          <TabPage name={$_('tab.references')} id='references'>
+            <ReferencesToolbox/>
           </TabPage>
         </TabView>
       </div>

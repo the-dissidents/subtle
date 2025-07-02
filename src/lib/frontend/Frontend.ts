@@ -1,10 +1,10 @@
 console.info('Frontend loading');
 
-import { Basic } from "../Basic";
 import { DebugConfig, InputConfig } from "../config/Groups";
 import { Format } from "../core/Formats";
 import { Subtitles, type SubtitleFormat } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
+import { get, readonly, writable } from "svelte/store";
 
 export type TranslatedWheelEvent = {
     isZoom: true;
@@ -81,3 +81,63 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
 
 export type UIFocus = (typeof UIFocusList)[number];
 export const UIFocusList = ['EditingField', 'Table', 'Timeline', 'Other'] as const;
+
+export type StatusType = 'info' | 'error';
+export type ToolboxPage = 'properties' | 'search' | 'untimed' | 'test' | undefined;
+const status = writable({ msg: 'ok', type: 'info' as StatusType });
+
+export const Frontend = {
+    modalOpenCounter: 0,
+    uiFocus: writable<UIFocus>('Other'),
+    // FIXME: this immediately gets overwritten by App.svelte
+    toolboxFocus: writable<ToolboxPage>(),
+
+    get status() {
+        return readonly(status);
+    },
+
+    setStatus(msg: string, type: StatusType = 'info') {
+        Debug.debug('status ->', msg, type);
+        status.set({ msg, type });
+    },
+
+    getUIFocus(): UIFocus {
+        return get(this.uiFocus);
+    },
+}
+export async function guardAsync(x: () => Promise<void>, msg: string): Promise<void>;
+export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback: T): Promise<T>;
+
+export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback?: T) {
+    if (DebugConfig.data.disableTry) {
+        return await x();
+    } else {
+        try {
+            return await x();
+        } catch (x) {
+            Frontend.setStatus(`${msg}: ${x}`, 'error');
+            Debug.info('guardAsync:', msg, x);
+            return fallback;
+        };
+    }
+}
+
+type EnforceNotPromise<T extends () => any> = ReturnType<T> extends Promise<any> ? never : T;
+
+export function guard<T extends () => void>(x: EnforceNotPromise<T>, msg: string): void;
+export function guard<T extends () => any>(
+    x: EnforceNotPromise<T>, msg: string, fallback: ReturnType<T>): ReturnType<T>;
+
+export function guard<T>(x: () => T, msg: string, fallback?: T) {
+    if (DebugConfig.data.disableTry) {
+        return x();
+    } else {
+        try {
+            return x();
+        } catch (x) {
+            Frontend.setStatus(`${msg}: ${x}`, 'error');
+            Debug.info('guard:', msg, x);
+            return fallback;
+        };
+    }
+}

@@ -1,10 +1,9 @@
 console.info('Interface loading');
 
-import { get, readonly, writable } from "svelte/store";
+import { get } from "svelte/store";
 
 import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
-import { Menu } from "@tauri-apps/api/menu";
 
 import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/Formats";
@@ -12,10 +11,9 @@ import { Format } from "../core/Formats";
 import { Dialogs } from "./Dialogs";
 import { ChangeType, Source } from "./Source";
 import { Editing } from "./Editing";
-import { parseSubtitleSource, type UIFocus } from "./Frontend";
-import { PrivateConfig } from "../config/PrivateConfig";
+import { Frontend, guardAsync, parseSubtitleSource } from "./Frontend";
 import { Playback } from "./Playback";
-import { DebugConfig, MainConfig } from "../config/Groups";
+import { MainConfig } from "../config/Groups";
 import { Basic } from "../Basic";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
@@ -25,8 +23,9 @@ import { MAPI } from "../API";
 import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { ASSSubtitles } from "../core/ASS.svelte";
+import { Memorized } from "../config/MemorizedValue.svelte";
 
-const $_ = unwrapFunctionStore(_);
+export const $_ = unwrapFunctionStore(_);
 
 const IMPORT_FILTERS = () => [
     { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },
@@ -35,77 +34,18 @@ const IMPORT_FILTERS = () => [
     { name: $_('filter.ssa-subtitles'), extensions: ['ssa', 'ass'] },
     { name: $_('filter.subtle-archive'), extensions: ['json'] }];
 
-export async function guardAsync(x: () => Promise<void>, msg: string): Promise<void>;
-export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback: T): Promise<T>;
-
-export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback?: T) {
-    if (DebugConfig.data.disableTry) {
-        return await x();
-    } else {
-        try {
-            return await x();
-        } catch (x) {
-            Interface.setStatus(`${msg}: ${x}`, 'error');
-            Debug.info('guardAsync:', msg, x);
-            return fallback;
-        };
-    }
-}
-
-type EnforceNotPromise<T extends () => any> = ReturnType<T> extends Promise<any> ? never : T;
-
-export function guard<T extends () => void>(x: EnforceNotPromise<T>, msg: string): void;
-export function guard<T extends () => any>(
-    x: EnforceNotPromise<T>, msg: string, fallback: ReturnType<T>): ReturnType<T>;
-
-export function guard<T>(x: () => T, msg: string, fallback?: T) {
-    if (DebugConfig.data.disableTry) {
-        return x();
-    } else {
-        try {
-            return x();
-        } catch (x) {
-            Interface.setStatus(`${msg}: ${x}`, 'error');
-            Debug.info('guard:', msg, x);
-            return fallback;
-        };
-    }
-}
-
-export type StatusType = 'info' | 'error';
-export type ToolboxPage = 'properties' | 'search' | 'untimed' | 'test' | undefined;
-
-const status = writable({ msg: 'ok', type: 'info' as StatusType });
-
 export const Interface = {
-    uiFocus: writable<UIFocus>('Other'),
-    // FIXME: this immediately gets overwritten by App.svelte
-    toolboxFocus: writable<ToolboxPage>(),
-
-    get status() {
-        return readonly(status);
-    },
-
-    setStatus(msg: string, type: StatusType = 'info') {
-        Debug.debug('status ->', msg, type);
-        status.set({ msg, type });
-    },
-
-    getUIFocus(): UIFocus {
-        return get(this.uiFocus);
-    },
-
     async readTextFile(path: string) {
         try {
             const stats = await fs.stat(path);
             if (!stats.isFile) {
-                Interface.setStatus($_('msg.not-a-file', {values: {path}}), 'error');
+                Frontend.setStatus($_('msg.not-a-file', {values: {path}}), 'error');
                 return;
             }
             if (stats.size > 1024*1024*5 && !await dialog.ask(
                 $_('msg.very-large-file-warning'), {kind: 'warning'})) return null;
         } catch {
-            Interface.setStatus($_('msg.does-not-exist', {values: {path}}), 'error');
+            Frontend.setStatus($_('msg.does-not-exist', {values: {path}}), 'error');
             return;
         }
         return guardAsync(async () => {
@@ -126,7 +66,7 @@ export const Interface = {
     async newFile() {
         await Source.openDocument(new Subtitles());
         if (get(Playback.isLoaded)) await Playback.close();
-        Interface.setStatus($_('msg.created-new-file'));
+        Frontend.setStatus($_('msg.created-new-file'));
     },
 
     async openFile(path: string) {
@@ -147,7 +87,7 @@ export const Interface = {
             } catch (_) {}
         }
         if (!newSubs) {
-            Interface.setStatus(
+            Frontend.setStatus(
                 $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
             return;
         }
@@ -159,12 +99,12 @@ export const Interface = {
         if (newSubs.migrated == 'newerVersion') 
             await dialog.message(
                 $_('msg.note-file-is-from-newer-version-path', {values: {path}}));
-        const data = PrivateConfig.getFileData(path);
+        const data = Source.recentOpened.get().find((x) => x.name == path);
         if (data?.video) {
             await this.openVideo(data.video, data.audioStream);
         } else if (get(Playback.isLoaded))
             await Playback.close();
-        Interface.setStatus($_('msg.opened-path', {values: {path}}));
+        Frontend.setStatus($_('msg.opened-path', {values: {path}}));
     },
 
     async openVideo(path: string, audio?: number) {
@@ -183,35 +123,6 @@ export const Interface = {
         return !get(Source.fileChanged) || await dialog.confirm($_('msg.proceed-without-saving'));
     },
 
-    async openFileMenu() {
-        const paths = PrivateConfig.get('paths');
-        let openMenu = await Menu.new({ items: [
-            {
-                text: $_('cxtmenu.other-file'),
-                async action(_) {
-                        if (await Interface.warnIfNotSaved())
-                        Interface.askOpenFile();
-                },
-            },
-            { item: 'Separator' },
-            ...(paths.length == 0 ? [
-                    {
-                        text: $_('cxtmenu.no-recent-files'),
-                        enabled: false
-                    }
-                ] : paths.map((x) => ({
-                    text: '[...]/' + x.name.split(Basic.pathSeparator)
-                        .slice(-2).join(Basic.pathSeparator),
-                    action: async () => {
-                        if (await Interface.warnIfNotSaved())
-                        await Interface.openFile(x.name);
-                    }
-                }))
-            ),
-        ]});
-        openMenu.popup();
-    },
-
     async askImportFile() {
         const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
         if (typeof selected != 'string') return;
@@ -219,7 +130,7 @@ export const Interface = {
         if (!text) return;
         let newSubs = parseSubtitleSource(text);
         if (!newSubs) {
-            Interface.setStatus(
+            Frontend.setStatus(
                 $_('msg.failed-to-parse-as-subtitles-path', {values: {path: selected}}), 'error');
             return;
         }
@@ -232,7 +143,7 @@ export const Interface = {
         }
         Source.markChanged(ChangeType.General);
         Source.markChanged(ChangeType.StyleDefinitions);
-        Interface.setStatus($_('msg.imported'));
+        Frontend.setStatus($_('msg.imported'));
     },
 
     async askExportFile(ext: string, func: (s: Subtitles) => string) {
@@ -281,16 +192,23 @@ export const Interface = {
     async closeVideo() {
         let file = get(Source.currentFile);
         await Playback.close();
-        await PrivateConfig.setFileData(file, undefined);
+        let entry = Source.recentOpened.get().find((x) => x.name == file);
+        if (entry) {
+            entry.video = undefined;
+            entry.audioStream = undefined;
+        }
+        await Memorized.save();
     },
 
     async saveFileData() {
         const file = get(Source.currentFile);
         Debug.assert(file !== '');
-        await PrivateConfig.setFileData(file, {
-            video: Playback.player?.source,
-            audioStream: Playback.player?.currentAudioStream
-        });
+        let entry = Source.recentOpened.get().find((x) => x.name == file);
+        if (entry) {
+            entry.video = Playback.player?.source;
+            entry.audioStream = Playback.player?.currentAudioStream;
+        }
+        await Memorized.save();
     }
 }
 
@@ -309,7 +227,7 @@ export const InterfaceCommands = {
     {
         name: () => $_('menu.open'),
         items: () => {
-            const paths = PrivateConfig.get('paths');
+            const paths = Source.recentOpened.get();
             return [
                 {
                     name: () => $_('cxtmenu.other-file'),

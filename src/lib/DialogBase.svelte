@@ -2,7 +2,8 @@
 import { tick } from "svelte";
 import { _ } from 'svelte-i18n';
 import { Debug } from "./Debug";
-import { DialogHandler, Dialogs } from "./frontend/Dialogs";
+import { DialogHandler } from "./frontend/Dialogs";
+import { Frontend } from "./frontend/Frontend";
 
 export type DialogButton = {
   name: string,
@@ -83,7 +84,7 @@ handler.showModal = async () => {
       makeCenter();
       checkScroll();
     });
-    Dialogs.modalOpenCounter++;
+    Frontend.modalOpenCounter++;
   });
 }
 </script>
@@ -94,7 +95,7 @@ handler.showModal = async () => {
   style="top: {posy}px; left: {posx}px; max-width: {maxWidth};"
   onclose={() => {
     resolve?.('');
-    Dialogs.modalOpenCounter--;
+    Frontend.modalOpenCounter--;
   }}
 >
 <div class='vlayout'>

@@ -7,18 +7,17 @@ import { Basic } from "../Basic";
 import type { SubtitleEntry } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
 import * as fuzzyAlgorithm from "../details/Fuzzy";
+import { EventHost } from "../details/EventHost";
 
 import StyleSelect from "../StyleSelect.svelte";
 import Collapsible from "../ui/Collapsible.svelte";
 import NumberInput from "../ui/NumberInput.svelte";
 
-import { Dialogs } from "../frontend/Dialogs";
 import { Editing } from "../frontend/Editing";
-import { Interface } from "../frontend/Interface";
+import { Frontend } from "../frontend/Frontend";
 import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 
 import { _ } from 'svelte-i18n';
-import { EventHost } from "../details/EventHost";
 
 let locked = $state(false);
 let textsize = $state(14);
@@ -92,7 +91,7 @@ function fuzzyMatch() {
   // perform search
   const fail = () => {
     textarea.selectionEnd = textarea.selectionStart;
-    Interface.setStatus($_('untimed.fuzzy-search-failed-to-find-anything'));
+    Frontend.setStatus($_('untimed.fuzzy-search-failed-to-find-anything'));
   };
   let result = fuzzy.engine.search(current, fuzzy.maxSkip);
   if (!result) {
@@ -113,7 +112,7 @@ function fuzzyMatch() {
   // display
   if (i0 >= i1) fail(); else {
     setSelectionAndScroll(i0, i1);
-    Interface.setStatus($_('untimed.fuzzy-match-found', {values: {x: n / m}}));
+    Frontend.setStatus($_('untimed.fuzzy-match-found', {values: {x: n / m}}));
   }
 }
 
@@ -175,8 +174,8 @@ function clear() {
   onkeydown={(ev) => {
     if (fuzzy.enabled) {
       if (ev.getModifierState(Basic.ctrlKey()) || ev.altKey) return;
-      if (Dialogs.modalOpenCounter > 0) return;
-      if (document.activeElement !== textarea && Interface.getUIFocus() !== 'Table') return;
+      if (Frontend.modalOpenCounter > 0) return;
+      if (document.activeElement !== textarea && Frontend.getUIFocus() !== 'Table') return;
 
       if (ev.key == 'z') {
         textarea.selectionStart = offset(textarea.selectionStart, false);

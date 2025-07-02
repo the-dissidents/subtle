@@ -7,6 +7,7 @@ import { SubtitleEntry, type LabelType, type SubtitleStyle } from './core/Subtit
 import { Editing } from './frontend/Editing';
 import { Interface } from './frontend/Interface';
 import { ChangeType, Source } from './frontend/Source';
+import { Frontend } from './frontend/Frontend';
 
 import { Menu } from '@tauri-apps/api/menu';
 import * as dialog from "@tauri-apps/plugin-dialog";
@@ -21,7 +22,7 @@ let editingT0 = $state(0);
 let editingT1 = $state(0);
 let editingDt = $state(0);
 let editingLabel: LabelType = $state('none');
-let uiFocus = Interface.uiFocus;
+let uiFocus = Frontend.uiFocus;
 
 const me = {};
 
@@ -38,7 +39,7 @@ Editing.onSelectionChanged.bind(me, () => {
     editingT1 = focused.end;
     editingDt = editingT1 - editingT0;
     editingLabel = focused.label;
-    let isEditingNow = Interface.getUIFocus() == 'EditingField';
+    let isEditingNow = Frontend.getUIFocus() == 'EditingField';
     tick().then(() => {
       let col = document.getElementsByClassName('contentarea');
       for (const target of col) {

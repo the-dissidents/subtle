@@ -5,13 +5,15 @@ import * as fs from "@tauri-apps/plugin-fs";
 import { MAPI, MMedia, type AudioFrameData, type VideoFrameData } from "../API";
 import { Debug } from '../Debug';
 import { Menu } from '@tauri-apps/api/menu';
+
 import { UICommand } from '../frontend/CommandBase';
 import { Dialogs } from '../frontend/Dialogs';
-import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
+import { Frontend } from "../frontend/Frontend";
 import { Source, SourceCommands } from '../frontend/Source';
+
+import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
-import { Interface } from '../frontend/Interface';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -122,7 +124,7 @@ const command = new UICommand(() => '', [], {
   integrity test
 </button>
 
-<button onclick={() => Interface.toolboxFocus.set('search')}>
+<button onclick={() => Frontend.toolboxFocus.set('search')}>
   test toolbox focus
 </button>
 
