@@ -423,6 +423,8 @@
     "overwrite-style": "确认要覆盖样式 {style} 的已有内容？",
     "pasted": "粘贴",
     "proceed-without-saving": "文件还没有保存，确认继续？",
+    "query-successful": "查询成功",
+    "querying-source": "正在查询 {source} ...",
     "redone": "已重做",
     "saved-to-file": "已保存：{file}",
     "search-expression-is-empty": "查找表达式为空",

@@ -20,6 +20,7 @@
     "@tauri-apps/plugin-log": "^2.3.1",
     "@tauri-apps/plugin-opener": "^2.2.6",
     "@tauri-apps/plugin-os": "^2.0.0",
+    "@the_dissidents/dom-css-inliner": "^0.1.0",
     "chardet": "^2.1.0",
     "object-inspect": "^1.13.4",
     "stacktrace-js": "^2.0.2",

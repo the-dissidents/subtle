@@ -17,10 +17,17 @@ const zRString = z.array(z.union([z.string(), zRStringSubstitute]));
 
 export type ReferenceString = z.infer<typeof zRString>;
 
+// const ZRStrategy = z.enum(['iframe-load'])
+
 const zRSource = z.object({
     name: z.string(),
     url: zRString,
+    scrollTo: z.optional(zRString),
     selector: z.optional(zRString),
+    patchStyle: z.optional(z.array(z.object({
+        selector: zRString,
+        patches: z.array(z.tuple([z.string(), z.string()]))
+    }))),
     variables: z.array(z.object({
         name: z.string(),
         defaultValue: z.string()
@@ -34,7 +41,12 @@ export type ReferenceContext = {
     variables: Map<string, string>
 };
 
-function substitute(str: ReferenceString, ctx: ReferenceContext, encoder = (s: string) => s) {
+function substitute(
+    str: ReferenceString, 
+    source: ReferenceSource, 
+    ctx: ReferenceContext, 
+    encoder = (s: string) => s
+) {
     let result = '';
     for (const elem of str) {
         if (typeof elem === 'string')
@@ -42,7 +54,10 @@ function substitute(str: ReferenceString, ctx: ReferenceContext, encoder = (s: s
         else if (elem.type == 'keyword')
             result += encoder(ctx.keyword);
         else if (elem.type == 'variable')
-            result += encoder(ctx.variables.get(elem.name) ?? '');
+            result += encoder(
+                   ctx.variables.get(elem.name) 
+                ?? source.variables.find((x) => x.name == elem.name)?.defaultValue 
+                ?? '');
         else
             Debug.never(elem);
     }
@@ -52,53 +67,36 @@ function substitute(str: ReferenceString, ctx: ReferenceContext, encoder = (s: s
 const defaultSources: ReferenceSource[] = [
     {
         name: 'Wiktionary',
-        url: ['https://en.wiktionary.org/wiki/', { type: 'keyword' }, '#', { type: 'variable', name: 'language' }],
+        url: ['https://en.wiktionary.org/wiki/', { type: 'keyword' }],
+        scrollTo: ['#', { type: 'variable', name: 'language name' }],
+        selector: ['.mw-body-content'],
         variables: [ { name: 'language name', defaultValue: 'English' } ]
-    },
-    {
-        name: 'Google Translate',
-        url: [
-            'https://translate.google.com/',
-            '?sl=', { type: 'variable', name: 'original language code' },
-            '&tl=', { type: 'variable', name: 'target language code' },
-            '&text=', { type: 'keyword' },
-            '&op=translate'
-        ],
-        variables: [ 
-            { name: 'original language code', defaultValue: 'auto' },
-            { name: 'target language code', defaultValue: 'en' }
-        ]
     },
     {
         name: '法语助手',
         url: ['https://www.frdic.com/dicts/fr/', { type: 'keyword' }],
-        selector: ['.dict-body-main'],
+        selector: ['#translate'],
+        patchStyle: [{
+            selector: ['#bodycontent'],
+            patches: [['min-width', '0'], ['padding', '0 10px 0 10px']]
+        }],
         variables: []
     },
     {
         name: '德语助手',
         url: ['https://www.godic.net/dicts/de/', { type: 'keyword' }],
-        selector: ['.dict-body-main'],
+        selector: ['#translate'],
+        patchStyle: [{
+            selector: ['#bodycontent'],
+            patches: [['min-width', '0'], ['padding', '0 10px 0 10px']]
+        }],
         variables: []
-    },
-    {
-        name: 'Reverso',
-        url: [
-            'https://www.reverso.net/text-translation',
-            '#sl=', { type: 'variable', name: 'original language code' },
-            '&tl=', { type: 'variable', name: 'target language code' },
-            '&text=', { type: 'keyword' }
-        ],
-        variables: [ 
-            { name: 'original language code', defaultValue: 'eng' },
-            { name: 'target language code', defaultValue: 'chi' }
-        ]
     },
     {
         name: 'The Free Dictionary',
         url: [
             'https://www.thefreedictionary.com/', { type: 'keyword' }],
-        selector: ['.content-holder'],
+        selector: ['#MainTxt'],
         variables: []
     },
 ];
@@ -106,11 +104,55 @@ const defaultSources: ReferenceSource[] = [
 export const Reference = {
     sources: Memorized.$('referenceSources', z.array(zRSource), [...defaultSources]),
 
+    async getUrl(source: ReferenceSource, ctx: ReferenceContext) {
+        const url = new URL(substitute(source.url, source, ctx, encodeURIComponent));
+        return url;
+    },
+
     async fetch(source: ReferenceSource, ctx: ReferenceContext) {
-        const url = new URL(substitute(source.url, ctx, encodeURIComponent));
+        const url = new URL(substitute(source.url, source, ctx, encodeURIComponent));
         const response = await fetch(url);
         const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
-        // const elem = doc.querySelector(substitute(source.selector, ctx));
+
+        const selected = source.selector 
+            ? doc.querySelector(substitute(source.selector, source, ctx)) : null;
+
+        const attrs = ['src', 'href'];
+        doc.querySelectorAll<HTMLElement>('*').forEach((x) => {
+            for (const attr of attrs) {
+                const original = x.getAttribute(attr);
+                if (original) try {
+                    x.setAttribute(attr, new URL(original, url).toString());
+                } catch (_) {}
+            }
+            if (selected) {
+                if (!x.contains(selected) && !selected.contains(x)) {
+                    x.style.display = 'none';
+                }
+            }
+        });
+        if (source.patchStyle) for (const s of source.patchStyle) {
+            doc.querySelectorAll<HTMLElement>(substitute(s.selector, source, ctx)).forEach((x) => {
+                for (const [k, v] of s.patches)
+                    x.style.setProperty(k, v, 'important');
+                console.log(x);
+            });
+        }
+        doc.querySelectorAll('script').forEach((x) => 
+            x.parentNode?.removeChild(x));
         return doc.documentElement.outerHTML;
+    },
+
+    async displayInFrame(
+        source: ReferenceSource, ctx: ReferenceContext, iframe: HTMLIFrameElement
+    ) {
+        const html = await Reference.fetch(source, ctx);
+        const scrollTo = source.scrollTo ? substitute(source.scrollTo, source, ctx) : '';
+        iframe.srcdoc = html;
+        iframe.onload = () => {
+            if (scrollTo) iframe.contentDocument
+                ?.querySelector(scrollTo)
+                ?.scrollIntoView(true);
+        };
     }
 }

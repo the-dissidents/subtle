@@ -420,6 +420,8 @@
     "overwrite-style": "Overwrite existing text of style {style}?",
     "pasted": "pasted",
     "proceed-without-saving": "Proceed without saving?",
+    "query-successful": "Query successful",
+    "querying-source": "Querying source {source}...",
     "redone": "operation redone",
     "saved-to-file": "saved to {file}",
     "search-expression-is-empty": "search expression is empty",

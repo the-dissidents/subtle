@@ -3,8 +3,8 @@ import { PencilLineIcon } from '@lucide/svelte';
 import { _ } from 'svelte-i18n';
 import { Reference, type ReferenceSource } from '../frontend/References';
 import Collapsible from '../ui/Collapsible.svelte';
-    import { guardAsync } from '../frontend/Frontend';
-    import { Debug } from '../Debug';
+  import { Frontend, guardAsync } from '../frontend/Frontend';
+  import { Debug } from '../Debug';
 
 let keyword = $state('');
 let currentSource = $state<ReferenceSource>();
@@ -14,17 +14,18 @@ let iframe = $state<HTMLIFrameElement>();
 
 function query() {
   guardAsync(async () => {
-    Debug.assert(currentSource !== undefined);
-    Debug.assert(iframe !== undefined);
-    const html = await Reference.fetch(currentSource, { keyword, variables: params });
-    iframe.srcdoc = html;
+    if (currentSource === undefined || iframe === undefined) return;
+    Frontend.setStatus($_('msg.querying-source', {values: {source: currentSource.name}}));
+    await Reference.displayInFrame(currentSource, { keyword, variables: params }, iframe);
+    Frontend.setStatus($_('msg.query-successful'));
   }, $_('msg.error-when-querying-reference-source'))
 }
 </script>
 
 <div class='vlayout fill'>
   <div class='hlayout'>
-    <input type="text" class='flexgrow' bind:value={keyword} />
+    <input type="text" class='flexgrow' bind:value={keyword}
+      onsubmit={query} />
     <button onclick={query}
             disabled={currentSource === undefined || keyword.trim().length == 0}>
       {$_('refs.query')}
@@ -50,7 +51,7 @@ function query() {
           <td>
             <input type='text'
               value={params.has(name) ? params.get(name) : defaultValue}
-              onchange={(ev) => params.set(name, ev.currentTarget.value)} />
+              oninput={(ev) => params.set(name, ev.currentTarget.value)} />
           </td>
         </tr>
       {/each}
@@ -58,7 +59,7 @@ function query() {
     </table>
   </Collapsible>
   {/if}
-  <iframe title="reference" class='flexgrow' bind:this={iframe}>
+  <iframe sandbox="allow-same-origin" title="reference" class='flexgrow' bind:this={iframe}>
   </iframe>
 </div>
 
