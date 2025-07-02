@@ -161,7 +161,9 @@ export class ASSParser implements SubtitleParser {
             this.#invalid({ type: 'no-styles' });
             return;
         }
-        const styleFieldMap = getASSFormatFieldMap(text);
+        let styleFieldMap = this.#sections.has('V4++ Styles')
+            ? getASSFormatFieldMap('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginT, MarginB, Encoding, RelativeTo')
+            : getASSFormatFieldMap(text);
         if (styleFieldMap == null)
             throw new DeserializationError('invalid ASS');
         if (!styleFieldMap.has('Name'))
@@ -322,7 +324,7 @@ export class ASSParser implements SubtitleParser {
             ignore('MarginT', '0');
             ignore('MarginB', '0');
             ignore('Marked', '0');
-            // FIXME: Layer is currently ignored, but we do export it
+            // FIXME: Layer is currently ignored, but we do export it, so we don't emit a warning
 
             let entry = new SubtitleEntry(start, end);
             const style = getStyleOrCreate(opts[fieldMap.get('Style')!]);
@@ -409,7 +411,22 @@ export class ASSParser implements SubtitleParser {
 }
 
 export class ASSWriter implements SubtitleWriter {
-    constructor(private subs: Subtitles) {}
+    styleNames = new Map<SubtitleStyle, string>();
+
+    constructor(private subs: Subtitles) {
+        // `Default` seems to be a case-insensitive reserved word in the SSA format that always 
+        // points to the built-in default style; also the fields of dialogue lines are not 
+        // permitted to contain commas. As a consequence, if we have a style name in conflict with 
+        // this we must mangle it. 
+        for (const style of subs.styles) {
+            if (style.name.toLowerCase() == 'default' || style.name.includes(','))
+                this.styleNames.set(style, 
+                    SubtitleTools.getUniqueStyleName(
+                        this.subs, `${style.name.replace(',', '_')}_${this.styleNames.size}`));
+            else
+                this.styleNames.set(style, style.name);
+        }
+    }
 
     // TODO: option: emitASS2
 
@@ -427,7 +444,6 @@ export class ASSWriter implements SubtitleWriter {
 
     toString(): string {
         let result = '';
-        const defaultName = new Map<SubtitleStyle, string>();
         const reverseStyles = this.subs.styles.toReversed();
         const entries = this.#useEntries ?? this.subs.entries;
         for (const entry of entries) {
@@ -436,24 +452,57 @@ export class ASSWriter implements SubtitleWriter {
             for (const style of reverseStyles) {
                 let text = entry.texts.get(style);
                 if (!text) continue;
-                // `Default` seems to be a reserved word in the SSA format that always
-                // points to the built-in default style, so if we have a style with this
-                // name we must rename it
-                let styleName = style.name;
-                if (styleName.toLowerCase() == 'default') {
-                    if (defaultName.has(style)) styleName = defaultName.get(style)!;
-                    else {
-                        styleName = SubtitleTools.getUniqueStyleName(this.subs, 
-                            `_default${defaultName.size}`);
-                        defaultName.set(style, styleName);
-                    }
-                }
+                const styleName = this.styleNames.get(style);
+                Debug.assert(styleName !== undefined);
                 result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${
                     text.replaceAll('\n', '\\N')}\n`;
             }
         }
         if (this.#headerless) return result;
-        else return writeASSHeader(this.subs) + result;
+        else return this.writeASSHeader(this.subs) + result;
+    }
+
+    writeASSHeader(subs: Subtitles) {
+        const width = subs.metadata.width / subs.metadata.scalingFactor;
+        const height = subs.metadata.height / subs.metadata.scalingFactor;
+
+        let result = 
+`[Script Info]
+ScriptType: v4.00+
+YCbCr Matrix: None
+Title: ${subs.metadata.title}
+PlayResX: ${width}
+PlayResY: ${height}
+LayoutResX: ${width}
+LayoutResY: ${height}
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+`;
+        for (const s of subs.styles) {
+            const styleName = this.styleNames.get(s);
+            Debug.assert(styleName !== undefined);
+            result += `Style: ${styleName},`
+                    + `${s.font == '' ? 'Arial' : s.font},${s.size},`
+                    + `${toASSColor(s.color)},`
+                    + `${toASSColor(s.color)},`
+                    + `${toASSColor(s.outlineColor)},`
+                    + `${toASSColor(s.outlineColor)},`
+                    + `${s.styles.bold ? '-1' : '0'},`
+                    + `${s.styles.italic ? '-1' : '0'},`
+                    + `${s.styles.underline ? '-1' : '0'},`
+                    + `${s.styles.strikethrough ? '-1' : '0'},`
+                    + `100,100,0,0,1,`
+                    + `${s.outline},${s.shadow},`
+                    + `${s.alignment},`
+                    + `${s.margin.left},${s.margin.right},`
+                    + `${Math.max(s.margin.top, s.margin.bottom)},`
+                    + `1\n`;
+        }
+        result += '\n' +
+`[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+        return result;
     }
 }
 
@@ -485,49 +534,6 @@ export function fromASSColor(str: string) {
         return cssColor[0];
     else
         return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
-
-function writeASSHeader(subs: Subtitles) {
-    const width = subs.metadata.width / subs.metadata.scalingFactor;
-    const height = subs.metadata.height / subs.metadata.scalingFactor;
-
-    let result = 
-`[Script Info]
-ScriptType: v4.00+
-YCbCr Matrix: None
-Title: ${subs.metadata.title}
-PlayResX: ${width}
-PlayResY: ${height}
-LayoutResX: ${width}
-LayoutResY: ${height}
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-`;
-    const defaultName = SubtitleTools.getUniqueStyleName(subs, '_default');
-    for (let s of subs.styles) {
-        const styleName = s.name == 'default' ? defaultName : s.name;
-        result += `Style: ${styleName},`
-                + `${s.font == '' ? 'Arial' : s.font},${s.size},`
-                + `${toASSColor(s.color)},`
-                + `${toASSColor(s.color)},`
-                + `${toASSColor(s.outlineColor)},`
-                + `${toASSColor(s.outlineColor)},`
-                + `${s.styles.bold ? '-1' : '0'},`
-                + `${s.styles.italic ? '-1' : '0'},`
-                + `${s.styles.underline ? '-1' : '0'},`
-                + `${s.styles.strikethrough ? '-1' : '0'},`
-                + `100,100,0,0,1,`
-                + `${s.outline},${s.shadow},`
-                + `${s.alignment},`
-                + `${s.margin.left},${s.margin.right},`
-                + `${Math.max(s.margin.top, s.margin.bottom)},`
-                + `1\n`;
-    }
-    result += '\n' +
-`[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
-    return result;
 }
 
 function getASSFormatFieldMap(section: string) {

@@ -314,8 +314,8 @@ export class TimelineLayout {
           i_end = Math.ceil(end * resolution);
     const subarray = Playback.sampler.intensityData(1, i, i_end);
     const gapStart = subarray.findIndex(
-      // FIXME: the following is a desperate but seeming effective hack to get the sampler working 
-      // despite those one-frame gaps popping up; it's definitely not serious
+      // FIXME: the following is a desperate but seemingly effective hack to get the sampler 
+      // working despite those one-frame gaps popping up; it's definitely not serious
       (x, i) => i < subarray.length - 1 && isNaN(x) && isNaN(subarray[i+1]));
     if (Playback.isPlaying) {
       if (gapStart < 0) {
