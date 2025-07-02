@@ -398,6 +398,7 @@
     "error-saving-keybinding": "Error saving keybinding data",
     "error-saving-private-config": "error saving private config",
     "error-saving-public-config": "error saving public config",
+    "error-when-querying-reference-source": "Error when querying reference source",
     "error-when-writing-to-file": "error when writing to {file}",
     "exported-to-file": "exported to {file}",
     "failed-to-clean-autosave": "Failed to clean autosave files",
@@ -445,6 +446,10 @@
     "scaling-d": "Because font sizes and coordinates are relative to the resolution – the property value, unrelated to the actual media resolution – you may need to adjust the scaling factor when adapting a style or a subtitle file to a different resolution.",
     "styles": "styles",
     "title": "title"
+  },
+  "refs": {
+    "parameters": "Parameters",
+    "query": "Query"
   },
   "search": {
     "advanced": "advanced",

@@ -2,9 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 extern crate ffmpeg_next as ffmpeg;
+mod encoding;
 mod media;
 mod redirect_log;
-mod encoding;
 
 use std::sync::Mutex;
 use tauri::AppHandle;
@@ -21,32 +21,37 @@ fn main() {
     ffmpeg::init().unwrap();
     redirect_log::init_ffmpeg_logging();
 
-    let time_format = 
-        time::format_description::parse("[year]-[month]-[day]@[hour]:[minute]:[second].[subsecond digits:3]")
-        .unwrap();
+    let time_format = time::format_description::parse(
+        "[year]-[month]-[day]@[hour]:[minute]:[second].[subsecond digits:3]",
+    )
+    .unwrap();
 
     let ctx = tauri::generate_context!();
     tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .format(move |out, message, record| {
                     out.finish(format_args!(
                         "{}[{}][{}] {}",
-                        TimezoneStrategy::UseLocal.get_now().format(&time_format).unwrap(),
+                        TimezoneStrategy::UseLocal
+                            .get_now()
+                            .format(&time_format)
+                            .unwrap(),
                         record.level(),
                         record.target(),
                         message
                     ))
                 })
                 .level(log::LevelFilter::Trace)
-                .filter(|metadata| {
-                    metadata.level() <= *redirect_log::LOG_LEVEL.read().unwrap()
-                })
+                .filter(|metadata| metadata.level() <= *redirect_log::LOG_LEVEL.read().unwrap())
                 .clear_targets()
                 .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::Stderr))
+                    tauri_plugin_log::TargetKind::Stderr,
+                ))
                 .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::Webview))
+                    tauri_plugin_log::TargetKind::Webview,
+                ))
                 .target(tauri_plugin_log::Target::new(
                     tauri_plugin_log::TargetKind::LogDir {
                         file_name: Some("subtle".to_string()),

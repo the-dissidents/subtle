@@ -401,6 +401,7 @@
     "error-saving-keybinding": "保存快捷键设置时出错",
     "error-saving-private-config": "保存内部配置时出错",
     "error-saving-public-config": "存储配置时出错",
+    "error-when-querying-reference-source": "查询参考资料时出错",
     "error-when-writing-to-file": "写入文件时出错：{file}",
     "exported-to-file": "已导出：{file}",
     "failed-to-clean-autosave": "清理自动保存文件时出错",
@@ -448,6 +449,10 @@
     "scaling-d": "字幕中的字号和坐标是相对于分辨率（上面的设置值，和媒体真实值无关）计算的。因此，为了便于保持观感一致，可以用这个缩放值来进行整体调整。一般制作字幕时，直接将分辨率设为视频分辨率，然后调整缩放到舒适的大小即可",
     "styles": "样式",
     "title": "标题"
+  },
+  "refs": {
+    "parameters": "参数",
+    "query": "查询"
   },
   "search": {
     "advanced": "高级",

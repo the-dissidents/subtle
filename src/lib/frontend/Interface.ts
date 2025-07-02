@@ -25,7 +25,7 @@ import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { ASSSubtitles } from "../core/ASS.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
 
-export const $_ = unwrapFunctionStore(_);
+const $_ = unwrapFunctionStore(_);
 
 const IMPORT_FILTERS = () => [
     { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },

@@ -59,12 +59,12 @@ import { Interface, InterfaceCommands } from './lib/frontend/Interface';
 import { Playback, PlaybackCommands } from './lib/frontend/Playback';
 import { Source, SourceCommands } from './lib/frontend/Source';
 import { KeybindingManager } from './lib/frontend/Keybinding';
+import { Frontend } from './lib/frontend/Frontend';
 
 import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 
 import { Debug, GetLevelFilter } from './lib/Debug';
 import * as z from "zod/v4-mini";
-    import { Frontend } from './lib/frontend/Frontend';
     
 Debug.init();
 

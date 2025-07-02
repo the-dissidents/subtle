@@ -83,7 +83,7 @@ export type UIFocus = (typeof UIFocusList)[number];
 export const UIFocusList = ['EditingField', 'Table', 'Timeline', 'Other'] as const;
 
 export type StatusType = 'info' | 'error';
-export type ToolboxPage = 'properties' | 'search' | 'untimed' | 'test' | undefined;
+export type ToolboxPage = 'properties' | 'search' | 'untimed' | 'test' | 'references' | undefined;
 const status = writable({ msg: 'ok', type: 'info' as StatusType });
 
 export const Frontend = {
