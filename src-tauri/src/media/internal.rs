@@ -1,6 +1,8 @@
 extern crate ffmpeg_next as ffmpeg;
 
 use core::fmt;
+use ffmpeg::decoder;
+use ffmpeg::format::Pixel;
 use ffmpeg::threading::Type;
 use serde::Serialize;
 use std::cmp;
@@ -226,15 +228,21 @@ impl MediaPlayback {
                 .ok_or(MediaError::InternalError("No video stream".to_string()))?
                 .index(),
         };
+
         let stream = self.input.stream(index).ok_or(MediaError::InternalError(
             "invalid stream index".to_string(),
         ))?;
 
-        // create decoder
-        let mut decoder = 
-            check!(codec::Context::from_parameters(stream.parameters()))?.decoder();
+        let codec = decoder::find(stream.parameters().id()).ok_or(
+            MediaError::InternalError(format!(
+                "codec not found: {:?}", stream.parameters().id()),
+        ))?;
 
-        decoder.set_threading(codec::threading::Config { 
+        // create decoder
+        let mut decoder_ctx = codec::Context::new_with_codec(codec).decoder();
+        debug!("codec: {:?}", decoder_ctx.codec().map(|x| x.id()));
+
+        decoder_ctx.set_threading(codec::threading::Config { 
             kind: Type::Frame, 
             count: num_cpus::get()
         });
@@ -242,7 +250,7 @@ impl MediaPlayback {
 
         let accelerator_name = 
             if !accel { "" }
-            else if cfg!(windows) { "d3d11va"}
+            else if cfg!(windows) { "d3d11va" }
             else if cfg!(target_os = "macos") { "videotoolbox" }
             else { "" };
         let accelerator = 
@@ -250,7 +258,7 @@ impl MediaPlayback {
                 .iter().any(|x| x == accelerator_name)
             {
                 match accel::HardwareDecoder::create(
-                        accelerator_name, &mut decoder) {
+                        accelerator_name, &mut decoder_ctx) {
                     Ok(x) => {
                         debug!("create_video_base: using accelerator: {}", x.name());
                         Some(x)
@@ -262,8 +270,8 @@ impl MediaPlayback {
                 }
             } else { None };
 
-        let mut decoder = check!(decoder.video())?;
-        check!(decoder.set_parameters(stream.parameters()))?;
+        check!(decoder_ctx.set_parameters(stream.parameters()))?; // avcodec_parameters_to_context
+        let decoder = check!(decoder_ctx.video())?; // avcodec_open2
 
         let stream_avgfr = stream.avg_frame_rate();
         let stream_rfr = stream.rate();
@@ -309,13 +317,19 @@ impl MediaPlayback {
         &mut self, index: Option<usize>, accel: bool
     ) -> Result<(), MediaError> {
         let base = self.create_video_base(index, accel)?;
+
+        let format = if let Some(_) = base.accelerator.as_ref() {
+            Pixel::NV12 // TODO: I just guessed one
+        } else {
+            base.decoder.format()
+        };
         
         let front = VideoFront::Player(VideoPlayerFront {
-            original_format: base.decoder.format(),
+            original_format: format,
             original_size: (base.decoder.width(), base.decoder.height()),
             output_size: (base.decoder.width(), base.decoder.height()),
             scaler: check!(scaling::Context::get(
-                base.decoder.format(),
+                format,
                 base.decoder.width(),
                 base.decoder.height(),
                 format::Pixel::RGBA,
@@ -709,6 +723,23 @@ impl VideoPlayerFront {
         &mut self,
         mut frame: DecodedVideoFrame,
     ) -> Result<DecodedVideoFrame, MediaError> {
+        if frame.decoded.format() != self.original_format {
+            log::debug!("decoded format is actually {:?}", frame.decoded.format());
+
+            self.original_format = frame.decoded.format();
+            self.scaler = scaling::Context::get(
+                self.original_format,
+                self.original_size.0,
+                self.original_size.1,
+                format::Pixel::RGBA,
+                self.output_size.0,
+                self.original_size.1,
+                scaling::Flags::BILINEAR,
+            )
+            .map_err(|x| 
+                MediaError::InternalError(format!("Can't create scaler: {x}")))?;
+        }
+
         let mut processed = frame::Video::empty();
         check!(self.scaler.run(&frame.decoded, &mut processed))?;
         frame.decoded = processed;
@@ -733,7 +764,7 @@ impl VideoPlayerFront {
         .map_err(|x| format!("Can't create scaler: {x}"))?;
 
         self.output_size = size;
-        trace!("set output size: {:?}", size);
+        trace!("set output size: {:?}, format {:?}", size, self.original_format);
         Ok(())
     }
 }
@@ -810,19 +841,18 @@ impl VideoContext {
             receive_frame_error => check!(receive_frame_error)?,
         }
 
-        if let Some(accel) = &self.base.accelerator {
-            let mut sw_frame = frame::Video::empty();
-            check!(accel.transfer_frame(&decoded, &mut sw_frame))?;
-            decoded = sw_frame;
-        }
-
         let position = decoded
             .pts()
             // fall back to packet's DTS if no pts available (as in AVI)
             .unwrap_or(decoded.packet().dts)
             .rescale(self.base.stream_timebase, self.base.pos_timebase);
         let time = f64::from(self.base.pos_timebase) * position as f64;
-        // trace!("receive: video frame {}", position);
+
+        if let Some(accel) = &self.base.accelerator {
+            let mut sw_frame = frame::Video::empty();
+            check!(accel.transfer_frame(&decoded, &mut sw_frame))?;
+            decoded = sw_frame;
+        }
 
         Ok(Some(DecodedVideoFrame {
             position,
@@ -883,7 +913,8 @@ mod tests {
             println!("-- {t}");
         }
 
-        let path = "E:\\Little Boy (James Benning, 2025).mkv";
+        // let path = "E:\\Little Boy (James Benning, 2025).mkv";
+        let path = "/Users/emf/Downloads/Rural Landscape.mp4";
         let mut playback = MediaPlayback::from_file(path).unwrap();
         playback.open_video(None, true).unwrap();
         playback.open_audio(None).unwrap();

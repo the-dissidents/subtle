@@ -37,7 +37,7 @@ num_cpus = "1.17.0"
 ffmpeg-sys-next = { version = "7.1.0", features = ["build-lib-d3d11va"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-ffmpeg-sys-next = { version = "7.1.0", features = [] }
+ffmpeg-sys-next = { version = "7.1.0", features = ["build-videotoolbox"] }
 
 [target.'cfg(not(windows))'.dependencies]
 pprof = { version = "0.14.0", features = ["flamegraph", "frame-pointer"] }

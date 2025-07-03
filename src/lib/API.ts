@@ -521,6 +521,10 @@ export const MAPI = {
         });
     },
 
+    async config() {
+        return await invoke<string>('media_config', {});
+    },
+
     async testPerformance(path: string, postprocess: boolean) {
         return await new Promise<void>((resolve, reject) => {
             let channel = createChannel('test_performance', {

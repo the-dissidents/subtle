@@ -121,6 +121,12 @@ pub fn media_version(channel: Channel<MediaEvent>) {
 }
 
 #[tauri::command]
+pub fn media_config() -> String {
+    let config = ffmpeg_next::util::configuration();
+    return config.to_owned();
+}
+
+#[tauri::command]
 pub fn media_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {

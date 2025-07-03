@@ -49,6 +49,13 @@ const command = new UICommand(() => '', [], {
 
 <button
   onclick={async () => {
+    Debug.info(await MAPI.config());
+  }}>
+  ffmpeg config
+</button>
+
+<button
+  onclick={async () => {
     let path = await dialog.open();
     if (!path) return;
     await MAPI.testPerformance(path, false);
