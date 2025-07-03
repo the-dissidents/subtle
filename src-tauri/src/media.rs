@@ -688,3 +688,47 @@ pub fn get_keyframe_before(
     };
     send(&channel, MediaEvent::KeyframeData { pos: front.get_keyframe_before(pos) });
 }
+
+#[tauri::command]
+pub fn test_performance(path: String, postprocess: bool, channel: Channel<MediaEvent>) {
+    log::info!("list of available accelerators:");
+    for t in accel::HardwareDecoder::available_types() {
+        log::info!("-- {t}");
+    }
+
+    let mut playback = MediaPlayback::from_file(&path).unwrap();
+    playback.open_video(None, true).unwrap();
+    playback.open_audio(None).unwrap();
+    if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
+        x.set_output_size((768, 432)).unwrap();
+    }
+    log::info!("reading frames");
+    let start = Instant::now();
+    let mut i = 0;
+    let mut iv = 0;
+    let mut ia = 0;
+    while i < 10000 {
+        match playback.get_next().unwrap() {
+            Some(Frame::Video(f)) => {
+                if postprocess {
+                    if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
+                        x.process(f).unwrap();
+                    }
+                }
+                iv += 1;
+            }
+            Some(Frame::Audio(f)) => {
+                if postprocess {
+                    if let AudioFront::Player(x) = playback.audio_mut().unwrap().front_mut() {
+                        x.process(f).unwrap();
+                    }
+                }
+                ia += 1;
+            }
+            None => break,
+        }
+        i += 1;
+    }
+    log::info!("read {i} frames ({iv} video, {ia} audio) in {}s", start.elapsed().as_secs_f32());
+    send_done(&channel);
+}

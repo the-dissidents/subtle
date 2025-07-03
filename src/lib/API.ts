@@ -520,6 +520,15 @@ export const MAPI = {
             invoke('media_version', {channel});
         });
     },
+
+    async testPerformance(path: string, postprocess: boolean) {
+        return await new Promise<void>((resolve, reject) => {
+            let channel = createChannel('test_performance', {
+                done: () => resolve()
+            }, reject, -1);
+            invoke('test_performance', {path, postprocess, channel});
+        });
+    }
 }
 
 

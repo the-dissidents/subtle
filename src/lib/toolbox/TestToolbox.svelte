@@ -14,7 +14,6 @@ import { Source } from '../frontend/Source';
 import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
 import { Interface } from '../frontend/Interface';
-    import { AppleIcon } from '@lucide/svelte';
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -50,18 +49,20 @@ const command = new UICommand(() => '', [], {
 
 <button
   onclick={async () => {
-    if (!media) return;
-    let frames: (VideoFrameData | AudioFrameData | null)[] | null = [];
-    for (let i = 0; i < 10; i++) {
-      frames.push(await media.readNextFrame());
-      await Debug.debug('+ frame', i);
-      if (frames.length > 2)
-        frames.shift();
-    }
-    await Debug.debug('deleting');
-    frames = null;
+    let path = await dialog.open();
+    if (!path) return;
+    await MAPI.testPerformance(path, false);
   }}>
-  test memory leak
+  test performance
+</button>
+
+<button
+  onclick={async () => {
+    let path = await dialog.open();
+    if (!path) return;
+    await MAPI.testPerformance(path, true);
+  }}>
+  test performance (w/ postprocessing)
 </button>
 
 <button
