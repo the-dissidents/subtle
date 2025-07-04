@@ -696,14 +696,16 @@ pub fn get_keyframe_before(
 }
 
 #[tauri::command]
-pub fn test_performance(path: String, postprocess: bool, channel: Channel<MediaEvent>) {
+pub fn test_performance(
+    path: String, postprocess: bool, hwaccel: bool, channel: Channel<MediaEvent>
+) {
     log::info!("list of available accelerators:");
     for t in accel::HardwareDecoder::available_types() {
         log::info!("-- {t}");
     }
 
     let mut playback = MediaPlayback::from_file(&path).unwrap();
-    playback.open_video(None, true).unwrap();
+    playback.open_video(None, hwaccel).unwrap();
     playback.open_audio(None).unwrap();
     if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
         x.set_output_size((768, 432)).unwrap();

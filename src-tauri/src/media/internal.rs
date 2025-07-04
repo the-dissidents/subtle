@@ -339,7 +339,7 @@ impl MediaPlayback {
                     .try_into()
                     .unwrap(),
                 base.decoder.height(),
-                scaling::Flags::BILINEAR,
+                scaling::Flags::FAST_BILINEAR,
             ))?,
         });
 
@@ -897,8 +897,7 @@ impl VideoContext {
 #[cfg(test)]
 mod tests {
     use std::time::Instant;
-
-    use crate::media::{accel, internal::Frame, MediaPlayback};
+    use crate::media::{accel, internal::{AudioFront, Frame, VideoFront}, MediaPlayback};
 
     #[test]
     fn configuration() {
@@ -918,6 +917,9 @@ mod tests {
         let mut playback = MediaPlayback::from_file(path).unwrap();
         playback.open_video(None, true).unwrap();
         playback.open_audio(None).unwrap();
+        if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
+            x.set_output_size((768, 432)).unwrap();
+        }
         println!("reading frames");
         let start = Instant::now();
         let mut i = 0;
@@ -925,10 +927,16 @@ mod tests {
         let mut ia = 0;
         while i < 10000 {
             match playback.get_next().unwrap() {
-                Some(Frame::Video(_f)) => {
+                Some(Frame::Video(f)) => {
+                    if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
+                        x.process(f).unwrap();
+                    }
                     iv += 1;
                 }
-                Some(Frame::Audio(_f)) => {
+                Some(Frame::Audio(f)) => {
+                    if let AudioFront::Player(x) = playback.audio_mut().unwrap().front_mut() {
+                        x.process(f).unwrap();
+                    }
                     ia += 1;
                 }
                 None => break,

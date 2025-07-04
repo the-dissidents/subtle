@@ -20,7 +20,7 @@ MAPI.version().then((x) => {
   result = `ffmpeg version is ${x}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}`;
 });
 
-let media: MMedia | undefined;
+let hwaccel = $state(false);
 let tooltipPos: TooltipPosition = $state('bottom');
 
 let list = $state([
@@ -54,11 +54,16 @@ const command = new UICommand(() => '', [], {
   ffmpeg config
 </button>
 
+<label>
+  <input type='checkbox' bind:checked={hwaccel} />
+  hwaccel
+</label>
+
 <button
   onclick={async () => {
     let path = await dialog.open();
     if (!path) return;
-    await MAPI.testPerformance(path, false);
+    await MAPI.testPerformance(path, false, hwaccel);
   }}>
   test performance
 </button>
@@ -67,7 +72,7 @@ const command = new UICommand(() => '', [], {
   onclick={async () => {
     let path = await dialog.open();
     if (!path) return;
-    await MAPI.testPerformance(path, true);
+    await MAPI.testPerformance(path, true, hwaccel);
   }}>
   test performance (w/ postprocessing)
 </button>
