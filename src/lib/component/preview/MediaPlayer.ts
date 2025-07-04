@@ -345,6 +345,8 @@ export class MediaPlayer {
                     this.#seeking = undefined;
                 }
                 MediaPlayerInterface.onPlayback.dispatch(frame.time);
+            } else {
+                Debug.trace('receiveFrame: received video at', frame.position, frame.time);
             }
             await this.#tryStartPlaying();
         }

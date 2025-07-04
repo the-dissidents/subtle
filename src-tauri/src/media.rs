@@ -121,6 +121,12 @@ pub fn media_version(channel: Channel<MediaEvent>) {
 }
 
 #[tauri::command]
+pub fn media_config() -> String {
+    let config = ffmpeg_next::util::configuration();
+    return config.to_owned();
+}
+
+#[tauri::command]
 pub fn media_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     let playback = match ap.table.get_mut(&id) {
@@ -687,4 +693,50 @@ pub fn get_keyframe_before(
         _ => return send_error!(&channel, "video opened not as sampler")
     };
     send(&channel, MediaEvent::KeyframeData { pos: front.get_keyframe_before(pos) });
+}
+
+#[tauri::command]
+pub fn test_performance(
+    path: String, postprocess: bool, hwaccel: bool, channel: Channel<MediaEvent>
+) {
+    log::info!("list of available accelerators:");
+    for t in accel::HardwareDecoder::available_types() {
+        log::info!("-- {t}");
+    }
+
+    let mut playback = MediaPlayback::from_file(&path).unwrap();
+    playback.open_video(None, hwaccel).unwrap();
+    playback.open_audio(None).unwrap();
+    if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
+        x.set_output_size((768, 432)).unwrap();
+    }
+    log::info!("reading frames");
+    let start = Instant::now();
+    let mut i = 0;
+    let mut iv = 0;
+    let mut ia = 0;
+    while i < 10000 {
+        match playback.get_next().unwrap() {
+            Some(Frame::Video(f)) => {
+                if postprocess {
+                    if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
+                        x.process(f).unwrap();
+                    }
+                }
+                iv += 1;
+            }
+            Some(Frame::Audio(f)) => {
+                if postprocess {
+                    if let AudioFront::Player(x) = playback.audio_mut().unwrap().front_mut() {
+                        x.process(f).unwrap();
+                    }
+                }
+                ia += 1;
+            }
+            None => break,
+        }
+        i += 1;
+    }
+    log::info!("read {i} frames ({iv} video, {ia} audio) in {}s", start.elapsed().as_secs_f32());
+    send_done(&channel);
 }

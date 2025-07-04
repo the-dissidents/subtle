@@ -90,6 +90,8 @@ fn main() {
             media::get_video_sampler_data,
             media::video_set_size,
             media::get_keyframe_before,
+            media::test_performance,
+            media::media_config,
             redirect_log::set_log_filter_level,
             encoding::decode_file_as,
             encoding::decode_or_detect_file

@@ -520,6 +520,19 @@ export const MAPI = {
         });
     },
 
+    async config() {
+        return await invoke<string>('media_config', {});
+    },
+
+    async testPerformance(path: string, postprocess: boolean, hwaccel: boolean) {
+        return await new Promise<void>((resolve, reject) => {
+            let channel = createChannel('test_performance', {
+                done: () => resolve()
+            }, reject, -1);
+            invoke('test_performance', {path, postprocess, hwaccel, channel});
+        });
+    },
+
     async decodeFile(path: string, encoding: string | null) {
         const { type, data } = await invoke<{ type: 'ok' | 'error', data: string }>(
             'decode_file_as', { path, encoding });

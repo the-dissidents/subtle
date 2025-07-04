@@ -21,10 +21,12 @@ unsafe extern "C" fn get_format_callback(
     let mut p = fmt;
     while (*p) != AVPixelFormat::AV_PIX_FMT_NONE {
         if (*p) == (*data).pixel_format {
+            log::debug!("using hardware format {:?}", *p);
             return *p;
         }
         p = p.add(1);
     }
+    log::warn!("hardware format not found!");
     AVPixelFormat::AV_PIX_FMT_NONE
 }
 
@@ -82,13 +84,14 @@ impl HardwareDecoder {
             (*cxt.as_mut_ptr()).get_format = Some(get_format_callback);
             
             let mut device_ctx: *mut AVBufferRef = null_mut();
-            let err = av_hwdevice_ctx_create(&mut device_ctx as *mut *mut _, 
-                hwtype, null(), null_mut(), 0);
-            if err < 0 {
-                return Err(MediaError::InternalError("failed to create device".to_owned()));
+            match av_hwdevice_ctx_create(&mut device_ctx as *mut *mut _, 
+                hwtype, null(), null_mut(), 0) {
+                x if x < 0 => 
+                    return Err(MediaError::InternalError("failed to create device".to_owned())),
+                _ => {}
             }
-            (*cxt.as_mut_ptr()).hw_device_ctx = av_buffer_ref(device_ctx) ;
-
+            (*cxt.as_mut_ptr()).hw_device_ctx = av_buffer_ref(device_ctx);
+            
             Ok(HardwareDecoder { device_ctx, name })
         }
     }
