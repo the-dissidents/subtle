@@ -128,6 +128,7 @@ pub struct VideoPlayerFront {
     original_format: format::Pixel,
     original_size: (u32, u32),
     output_size: (u32, u32),
+    scaling_method: scaling::Flags,
     scaler: scaling::Context,
 }
 
@@ -328,6 +329,7 @@ impl MediaPlayback {
             original_format: format,
             original_size: (base.decoder.width(), base.decoder.height()),
             output_size: (base.decoder.width(), base.decoder.height()),
+            scaling_method: scaling::Flags::FAST_BILINEAR,
             scaler: check!(scaling::Context::get(
                 format,
                 base.decoder.width(),
@@ -724,47 +726,43 @@ impl VideoPlayerFront {
         mut frame: DecodedVideoFrame,
     ) -> Result<DecodedVideoFrame, MediaError> {
         if frame.decoded.format() != self.original_format {
-            log::debug!("decoded format is actually {:?}", frame.decoded.format());
-
+            log::warn!("decoded format is actually {:?}", frame.decoded.format());
             self.original_format = frame.decoded.format();
-            self.scaler = scaling::Context::get(
-                self.original_format,
-                self.original_size.0,
-                self.original_size.1,
-                format::Pixel::RGBA,
-                self.output_size.0,
-                self.original_size.1,
-                scaling::Flags::BILINEAR,
-            )
-            .map_err(|x| 
-                MediaError::InternalError(format!("Can't create scaler: {x}")))?;
+            self.create_scaler()?;
         }
 
+        // av_frame_alloc
         let mut processed = frame::Video::empty();
+        // sws_scale
         check!(self.scaler.run(&frame.decoded, &mut processed))?;
         frame.decoded = processed;
         Ok(frame)
     }
 
-    pub fn set_output_size(&mut self, size: (u32, u32)) -> Result<(), String> {
+    pub fn set_output_size(&mut self, size: (u32, u32)) -> Result<(), MediaError> {
         if self.output_size == size {
             return Ok(());
         }
 
-        let (width, height) = size;
+        self.output_size = size;
+        self.create_scaler()?;
+        debug!("set output size: {:?}, format {:?}", size, self.original_format);
+        Ok(())
+    }
+
+    fn create_scaler(&mut self) -> Result<(), MediaError> {
+        // sws_getContext
         self.scaler = scaling::Context::get(
             self.original_format,
             self.original_size.0,
             self.original_size.1,
             format::Pixel::RGBA,
-            width,
-            height,
-            scaling::Flags::BILINEAR,
+            self.output_size.0,
+            self.output_size.1,
+            self.scaling_method,
         )
-        .map_err(|x| format!("Can't create scaler: {x}"))?;
-
-        self.output_size = size;
-        trace!("set output size: {:?}, format {:?}", size, self.original_format);
+        .map_err(|x| 
+            MediaError::InternalError(format!("Can't create scaler: {x}")))?;
         Ok(())
     }
 }

@@ -168,7 +168,7 @@ pub fn video_set_size(
         VideoFront::Player(f) => {
             match f.set_output_size((width, height)) {
                 Ok(_) => send_done(&channel),
-                Err(e) => send_error!(&channel, e),
+                Err(e) => send_error!(&channel, e.to_string()),
             }
         },
         VideoFront::Sampler(_) => return send_error!(&channel, "video opened as sampler"),

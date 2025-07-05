@@ -7,6 +7,8 @@
   import { PreviewLayout } from "./Layout";
   import { MediaPlayerInterface } from "./MediaPlayer";
 
+  
+
   let videoCanvas: HTMLCanvasElement | undefined = $state();
   let isPlaying = $state(false);
   let playPos = $state(0);
@@ -16,7 +18,7 @@
 
   const setup: Action = () => {
     Debug.assert(videoCanvas !== undefined);
-    let layout = new PreviewLayout(videoCanvas);
+    new PreviewLayout(videoCanvas);
   };
 
   const me = {};
@@ -28,7 +30,6 @@
 
   MediaPlayerInterface.onPlayStateChanged.bind(me, () => {
     isPlaying = Playback.isPlaying;
-    Debug.debug(isPlaying);
   });
 </script>
 

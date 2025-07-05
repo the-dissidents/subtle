@@ -21,6 +21,13 @@ export const MediaConfig = new PublicConfigGroup(
         bounds: [1, 6],
         default: 3
     },
+    limitFrameSize: {
+        localizedName: () => $_('config.limit-frame-size'),
+        type: 'number',
+        description: () => $_('config.limit-frame-size-d'),
+        bounds: [0, 20],
+        default: 3
+    },
     showDebug: {
         localizedName: () => $_('config.show-debug-info'),
         type: 'boolean',

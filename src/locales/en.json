@@ -166,6 +166,8 @@
     "keep-autosave-for-d": "Autosave files older than this many days will be deleted. Set to zero to disable automatic deleting of autosave files.",
     "language": "language",
     "light": "light",
+    "limit-frame-size": "limit frame size",
+    "limit-frame-size-d": "Limit the size of data packets transmitted between the decoder and the frontend by using lower resolutions when necessary. In megabytes; values less than 0.5 are treated as no limit.",
     "maximum-zoom": "maximum zoom",
     "maximum-zoom-d": "Maximum zoom level, in proportion to regular size (e.g. 1 = 100%, 2 = 200%).",
     "media": "media",

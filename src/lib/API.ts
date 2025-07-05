@@ -334,8 +334,8 @@ export class MMedia {
     async setVideoSize(width: number, height: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#video !== undefined);
-        width = Math.max(1, Math.floor(width));
-        height = Math.max(1, Math.floor(height));
+        width = Math.max(1, Math.round(width));
+        height = Math.max(1, Math.round(height));
         await new Promise<void>((resolve, reject) => {
             let channel = createChannel('setVideoSize', {
                 done: () => resolve()

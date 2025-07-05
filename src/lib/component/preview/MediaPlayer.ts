@@ -7,7 +7,6 @@ import { CanvasManager } from "../../CanvasManager";
 import type { AudioFeedbackData, AudioInputData } from "./worker/DecodedAudioLoader";
 import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 import { Debug } from "../../Debug";
-import { Interface } from "../../frontend/Interface";
 import { EventHost } from "../../details/EventHost";
 import { MediaConfig } from "./Config";
 
@@ -29,13 +28,15 @@ export type SetPositionOptions = {
     imprecise?: boolean;
 };
 
+const DAMPING = 0.5;
+
 export class MediaPlayer {
     #canvas: OffscreenCanvas;
     #ctxbuf: OffscreenCanvasRenderingContext2D;
     #playing = false;
 
     #outOffsetX = 0; #outOffsetY = 0;
-    #outW = 0; #outH = 0;
+    #outDisplayW = 0; #outDisplayH = 0;
 
     #worklet: AudioWorkletNode;
     #onAudioFeedback?: (data: AudioFeedbackData) => void;
@@ -53,7 +54,10 @@ export class MediaPlayer {
         target: number,
         nSkippedAudio: number,
         nSkippedVideo: number
-    }
+    };
+
+    #fetchVideoTime = 0;
+    #fetchAudioTime = 0;
 
     // position used when no frames are loaded
     // TODO: is this necessary?
@@ -151,12 +155,11 @@ export class MediaPlayer {
     }
 
     async #updateOutputSize() {
-        Debug.assert(!this.media.isClosed);
-        const media = this.media;
-        Debug.assert(media.video !== undefined);
+        Debug.assert(!this.media.isClosed && this.media.video !== undefined);
         const [w, h] = this.manager.physicalSize;
-        const width = media.video.size[0] * media.video.sampleAspectRatio;
-        const height = media.video.size[1];
+        const width = this.media.video.size[0] * this.media.video.sampleAspectRatio;
+        const height = this.media.video.size[1];
+        Debug.assert(height !== 0);
         const ratio = width / height;
 
         let oh: number, ow: number;
@@ -164,15 +167,26 @@ export class MediaPlayer {
             [ow, oh] = [w, w / ratio];
         else
             [ow, oh] = [h * ratio, h];
-        this.#outOffsetX = (w - ow) / 2;
-        this.#outOffsetY = (h - oh) / 2;
-        if (ow == this.#outW && oh == this.#outH) return;
+        
+        this.#outOffsetX = Math.round((w - ow) / 2);
+        this.#outOffsetY = Math.round((h - oh) / 2);
+        ow = Math.max(1, Math.round(ow));
+        oh = Math.max(1, Math.round(oh));
+        [this.#outDisplayW, this.#outDisplayH] = [ow, oh];
 
-        [this.#outW, this.#outH] = [ow, oh];
-        await media.waitUntilAvailable();
-        await media.setVideoSize(ow, oh);
-        Debug.trace('video size ->', ow, oh);
-
+        if (MediaConfig.data.limitFrameSize > 0.5 
+         && ow * oh * 4 > MediaConfig.data.limitFrameSize * 1024 * 1024)
+        {
+            oh = Math.sqrt(MediaConfig.data.limitFrameSize / 4 / ratio) * 1024;
+            ow = oh * ratio;
+            ow = Math.max(1, Math.round(ow));
+            oh = Math.max(1, Math.round(oh));
+        }
+        
+        const [cw, ch] = this.media.outputSize;
+        if (ow == cw && oh == ch) return;
+        await this.media.waitUntilAvailable();
+        await this.media.setVideoSize(ow, oh);
         const pos = this.currentPosition;
         await this.#clearCache();
         if (pos !== null) this.requestSetPositionFrame(pos);
@@ -266,13 +280,14 @@ export class MediaPlayer {
 
         this.#populatingInProgress = true;
         await this.media.waitUntilAvailable();
+        const start = performance.now();
         const frame = await this.media.readNextFrame();
-        const result = await this.#receiveFrame(frame);
+        const result = await this.#receiveFrame(frame, performance.now() - start);
         this.#populatingInProgress = false;
         return result;
     }
 
-    async #receiveFrame(frame: VideoFrameData | AudioFrameData | null) {
+    async #receiveFrame(frame: VideoFrameData | AudioFrameData | null, time: number) {
         Debug.assert(!this.media.isClosed);
         if (this.#preloadEOF) {
             Debug.debug('preloadeof');
@@ -289,6 +304,7 @@ export class MediaPlayer {
 
         const video = this.#videoCache;
         if (frame.type == 'audio') {
+            this.#fetchAudioTime = time * DAMPING + this.#fetchAudioTime * (1 - DAMPING);
             if (this.#audioTail !== undefined && frame.time < this.#audioTail) {
                 Debug.warn('receiveFrame: abnormal audio frame ordering', 
                     frame.time, this.#audioTail);
@@ -312,6 +328,7 @@ export class MediaPlayer {
             await this.#postAudioMessage({ type: 'frame', frame });
             await this.#tryStartPlaying();
         } else {
+            this.#fetchVideoTime = time * DAMPING + this.#fetchVideoTime * (1 - DAMPING);
             if (video.length > 0 && frame.position < video.at(-1)!.position) {
                 Debug.warn('receiveFrame: abnormal video frame ordering',
                     frame.position, video.at(-1)!.position);
@@ -346,7 +363,7 @@ export class MediaPlayer {
                 }
                 MediaPlayerInterface.onPlayback.dispatch(frame.time);
             } else {
-                Debug.trace('receiveFrame: received video at', frame.position, frame.time);
+                // Debug.trace('receiveFrame: received video at', frame.position, frame.time);
             }
             await this.#tryStartPlaying();
         }
@@ -475,7 +492,7 @@ export class MediaPlayer {
                 await this.media.waitUntilAvailable();
                 const frame = await this.media.skipUntil(
                     position, Math.floor(position / framerate * samplerate));
-                this.#receiveFrame(frame);
+                this.#receiveFrame(frame, 0);
                 this.#requestPreload();
             }
         } finally {
@@ -504,17 +521,27 @@ export class MediaPlayer {
         this.requestSetPositionFrame(pos - 1);
     }
 
-    #drawFrame(frame: VideoFrameData) {
+    async #drawFrame(frame: VideoFrameData) {
         Debug.assert(!this.media.isClosed);
         Debug.assert(this.media.video !== undefined);
+        const start = performance.now();
         
-        let [nw, nh] = this.media.outputSize;
-        let imgData = new ImageData(frame.content, frame.stride);
-
-        let [w, h] = this.manager.physicalSize;
+        const [w, h] = this.manager.physicalSize;
         this.#ctxbuf.clearRect(0, 0, w, h);
-        this.#ctxbuf.putImageData(imgData, 
-            this.#outOffsetX, this.#outOffsetY, 0, 0, nw, nh);
+
+        const [ow, oh] = this.media.outputSize;
+        const imgData = new ImageData(frame.content, frame.stride);
+        let rescaled = false;
+        if (ow !== this.#outDisplayW || oh !== this.#outDisplayH) {
+            const bitmap = await createImageBitmap(imgData);
+            this.#ctxbuf.drawImage(bitmap, 
+                this.#outOffsetX, this.#outOffsetY, 
+                this.#outDisplayW, this.#outDisplayH);
+            rescaled = true;
+        } else {
+            this.#ctxbuf.putImageData(imgData, 
+                this.#outOffsetX, this.#outOffsetY, 0, 0, ow, oh);
+        }
 
         if (!MediaConfig.data.showDebug) return;
         
@@ -533,21 +560,27 @@ export class MediaPlayer {
 
         const x = this.#outOffsetX;
         this.#ctxbuf.fillText(
-            `fr: ${this.media.video!.framerate}; sp: ${this.media.audio!.sampleRate}`, x, 0);
+            `FPS ${this.media.video!.framerate} SPR ${this.media.audio!.sampleRate}`, x, 0);
         this.#ctxbuf.fillText(
-            `at: ${audioTime}`, x, 20);
+            `ATi ${audioTime.padEnd(9)}[${frame.position}]`, x, 20);
         this.#ctxbuf.fillText(
-            `vt: ${frame.time.toFixed(3)}`, x, 40);
+            `VTi ${frame.time.toFixed(3)}`, x, 40);
         this.#ctxbuf.fillText(
-            `la:${latency}`, x, 60);
+            `LAT${latency}`, x, 60);
         this.#ctxbuf.fillText(
-            `ps: ${frame.position}`, x, 80);
+            `DRW ${(performance.now() - start).toFixed(1)}`, x, 80);
         this.#ctxbuf.fillText(
-            `vb: ${this.#videoCache.length}`.padEnd(10)
-            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 100);
+            `FVT ${this.#fetchVideoTime.toFixed(2)}`.padEnd(10) + `FAT ${this.#fetchAudioTime.toFixed(2)}`, x, 100);
         this.#ctxbuf.fillText(
-            `ab: ${this.#audioBufferLength}`.padEnd(10) 
-            + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, x, 120);
+            `VBL ${this.#videoCache.length}`.padEnd(9)
+            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 120);
+        this.#ctxbuf.fillText(
+            `ABL ${this.#audioBufferLength}`.padEnd(9) 
+            + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, x, 140);
+        if (rescaled)
+            this.#ctxbuf.fillText(`RES ${ow}x${oh} -> ${this.#outDisplayW}x${this.#outDisplayH}`, x, 160);
+        else
+            this.#ctxbuf.fillText(`RES ${ow}x${oh}`, x, 160);
     }
 
     render(ctx: CanvasRenderingContext2D) {
@@ -562,7 +595,7 @@ export class MediaPlayer {
             await Debug.debug('playeof has been true');
             Debug.assert(this.#lastFrame !== undefined);
             MediaPlayerInterface.onPlayback.dispatch(this.#lastFrame.time);
-            this.#drawFrame(this.#lastFrame);
+            await this.#drawFrame(this.#lastFrame);
             this.manager.requestRender();
             this.#requestedRenderNext = false;
             return;
@@ -580,7 +613,7 @@ export class MediaPlayer {
             if (video[0].time > position - tolerance) {
                 // consume frame
                 const frame = video[0];
-                this.#drawFrame(frame);
+                await this.#drawFrame(frame);
 
                 if (this.#playing) {
                     MediaPlayerInterface.onPlayback.dispatch(frame.time);
