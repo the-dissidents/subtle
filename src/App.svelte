@@ -294,7 +294,7 @@ Memorized.onInitialize(() => {
   <div class='hlayout flexgrow fixminheight'>
     <div bind:this={leftPane} style="width: 300px;" class="fixminheight vlayout isolated">
       <!-- video -->
-      <div bind:this={videoCanvasContainer} class="vlayout">
+      <div bind:this={videoCanvasContainer}>
         <Preview />
       </div>
       <!-- resizer -->

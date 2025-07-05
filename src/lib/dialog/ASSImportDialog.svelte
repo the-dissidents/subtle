@@ -7,7 +7,7 @@ import { CircleAlertIcon, CircleCheckIcon } from '@lucide/svelte';
 import { Debug } from '../Debug';
 
 import { _ } from 'svelte-i18n';
-    import Tooltip from '../ui/Tooltip.svelte';
+import Tooltip from '../ui/Tooltip.svelte';
 
 interface Props {
   handler: DialogHandler<ASSParser, boolean>;
@@ -22,9 +22,6 @@ let parser = $state<ASSParser>();
 let warningGroups = $state<GroupedBy<ASSParseWarning, 'type'>>();
 let nInvalid = $state(0);
 let nUnsupported = $state(0);
-
-let preserveInlines = $state(true);
-let transformMultichannel = $state(true);
 
 handler.showModal = async (p) => {
   parser = p;

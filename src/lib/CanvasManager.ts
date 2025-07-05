@@ -165,8 +165,8 @@ export class CanvasManager {
         Debug.assert(context !== null);
         this.#cxt = context;
 
-        new ResizeObserver(() => this.#update()).observe(canvas);
-        this.#update();
+        new ResizeObserver(() => this.#updateSize()).observe(canvas);
+        this.#updateSize();
 
         canvas.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));
         canvas.addEventListener('mousemove', (ev) => this.#onMouseMove(ev));
@@ -413,8 +413,8 @@ export class CanvasManager {
             requestAnimationFrame(() => this.#render());
     }
 
-    #update() {
-        let factor = window.devicePixelRatio;
+    #updateSize() {
+        const factor = window.devicePixelRatio;
         this.#width = this.canvas.clientWidth;
         this.#height = this.canvas.clientHeight;
         this.canvas.width = Math.floor(this.#width * factor);

@@ -93,9 +93,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
         <ScissorsIcon />
       </label>
     </Tooltip>
-
     <hr/>
-
     <Tooltip text={$_('timeline.enable-snap')} position="right">
       <label>
         <input type="checkbox" class="button"

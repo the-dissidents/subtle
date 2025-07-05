@@ -132,6 +132,7 @@ export type VideoFrameData = {
     position: number,
     time: number,
     stride: number,
+    size: [width: number, height: number],
     content: Uint8ClampedArray
 }
 
@@ -204,7 +205,8 @@ export class MMedia {
             const content = new Uint8ClampedArray(data, 24, length);
             // Debug.debug('received:', `video @${position}(${time})`)
             // this.#_finalizationReg.register(data, `video @${position}(${time})`);
-            return { type, position, time, stride, content } satisfies VideoFrameData;
+            return { type, position, time, stride, content, 
+                size: [...this.#outSize] } satisfies VideoFrameData;
         }
     }
 
