@@ -29,7 +29,7 @@ export class SRTParser implements SubtitleParser {
     #ignoredTags = 0;
     #parsed = false;
 
-    stripTags = false;
+    preserveTags = true;
 
     constructor(private source: string) {
         this.#subs = new Subtitles();
@@ -119,7 +119,7 @@ export class SRTParser implements SubtitleParser {
         const stripped = text.replaceAll(tagRegex, '$2');
         if (stripped !== text) {
             this.#ignoredTags++;
-            if (this.stripTags) text = stripped;
+            if (!this.preserveTags) text = stripped;
         }
         const entry = new SubtitleEntry(start, end);
         entry.texts.set(this.#subs.defaultStyle, text);
@@ -131,7 +131,7 @@ export class SRTParser implements SubtitleParser {
         return this.#subs;
     }
 
-    get messages(): readonly SubtitleParseMessage[] {
+    get messages() {
         return this.#messages;
     }
 }

@@ -80,6 +80,7 @@
   "action-all-styles": "all styles",
   "assimportdialog": {
     "duplicate-style-definition": "duplicate style definition",
+    "header": "Import ASS",
     "ignored-drawing-command": "ignored drawing commands",
     "ignored-embedded-fonts": "ignored embedded fonts",
     "ignored-event-field": "ignored event field",
@@ -97,6 +98,7 @@
     "occurred-n-times": "(occurred {n} {n,plural,one{time} other{times}})",
     "options": "Options",
     "preserve-inlines": "preserve override tags",
+    "preserve-tags": "preserve format tags",
     "transform-info": "",
     "transform-inline-multichannel": "transform \\N{\\r...} syntax",
     "undefined-style": "undefined style"
@@ -501,6 +503,11 @@
     "to-style": "to style",
     "usage": "usage",
     "with-lines-more-than": "more than"
+  },
+  "srtimport": {
+    "header": "Import SRT",
+    "ignored-coordinates": "ignored coordinates",
+    "ignored-format-tags": "ignored HTML format tags"
   },
   "style": {
     "alignment": "alignment:",

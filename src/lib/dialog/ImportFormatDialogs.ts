@@ -1,16 +1,19 @@
 import { mount, tick, unmount } from "svelte";
-import AssImportDialog, { type ImportFormat } from "./ASSImportDialog.svelte";
+import AssImportDialog, { type ImportFormat } from "./ImportFormatDialog.svelte";
 import { DialogHandler } from "../frontend/Dialogs";
 import type { SubtitleParser } from "../core/Subtitles.svelte";
 import { ASSParser, type ASSParseMessage } from "../core/ASS.svelte";
 import { Debug } from "../Debug";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
+import type { SRTParseMessage, SRTParser } from "../core/SRT.svelte";
 const $_ = unwrapFunctionStore(_);
 
-async function show<P extends SubtitleParser>(parser: P, format: ImportFormat<P>) {
+async function show<P extends SubtitleParser>(
+    parser: P, skippable: boolean, format: ImportFormat<P>
+) {
     parser.update();
-    if (parser.messages.length == 0 && !format.options?.length)
+    if (parser.messages.length == 0 && skippable)
         return parser.done();
 
     const handler = new DialogHandler<[P, ImportFormat<P>], boolean>();
@@ -25,7 +28,43 @@ async function show<P extends SubtitleParser>(parser: P, format: ImportFormat<P>
 }
 
 export const ImportFormatDialogs = {
-    ASS: (p: ASSParser) => show(p, {
+    SRT: (p: SRTParser) => show(p, true, {
+        header: $_('srtimport.header'),
+        formatMessage(type, group) {
+            const one = <Ty extends SRTParseMessage['type']>(
+                f: (x: Extract<SRTParseMessage, { type: Ty; }>) => string
+            ) => // @ts-expect-error
+                f(group[0]);
+
+            switch (type) {
+                case 'ignored-coordinates': return {
+                    heading: $_('srtimport.ignored-coordinates') + ' '
+                        + one<'ignored-coordinates'>((x) => 
+                            $_('assimportdialog.occurred-n-times', {values: {n: x.occurrence}})),
+                    description: $_('srtimport.coordinates-info')
+                };
+                case 'ignored-format-tags': return {
+                    heading: $_('srtimport.ignored-format-tags') + ' '
+                        + one<'ignored-coordinates'>((x) => 
+                            $_('assimportdialog.occurred-n-times', {values: {n: x.occurrence}})),
+                    description: $_('srtimport.info')
+                };
+                default:
+                    Debug.never(type);
+            }
+        },
+        categoryDescription: () => undefined,
+        options: [
+            {
+                type: 'boolean',
+                name: $_('assimportdialog.preserve-tags'),
+                getValue: (p) => p.preserveTags,
+                setValue: (p, v) => p.preserveTags = v
+            },
+        ]
+    }),
+
+    ASS: (p: ASSParser) => show(p, false, {
         header: $_('assimportdialog.header'),
         formatMessage(type, group) {
             const map = <Ty extends ASSParseMessage['type']>(
@@ -75,19 +114,20 @@ export const ImportFormatDialogs = {
                             {values: {a: w.line, b: w.field, c: w.value}}))
                 };
                 case 'ignored-special-character': return {
-                    heading: $_('assimportdialog.ignored-special-character')
+                    heading: $_('assimportdialog.ignored-special-character') + ' '
                         + one<'ignored-special-character'>((x) => 
                             $_('assimportdialog.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-drawing-command': return {
-                    heading: $_('assimportdialog.ignored-drawing-command')
+                    heading: $_('assimportdialog.ignored-drawing-command') + ' '
                         + one<'ignored-drawing-command'>((x) => 
                             $_('assimportdialog.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-override-tag': return {
-                    heading: $_('assimportdialog.ignored-override-tag') 
+                    heading: $_('assimportdialog.ignored-override-tag') + ' '
                         + one<'ignored-override-tag'>((x) => 
                             $_('assimportdialog.occurred-n-times', {values: {n: x.occurrence}})),
+                    description: $_('assimportdialog.info-override-tag')
                 };
                 case 'ignored-embedded-fonts': return {
                     heading: $_('assimportdialog.ignored-embedded-fonts'),

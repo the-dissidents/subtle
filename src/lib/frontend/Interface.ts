@@ -24,7 +24,9 @@ import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { ASSSubtitles } from "../core/ASS.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
-import { ImportFormatDialogs } from "../dialog/ImportDialogs";
+import { ImportFormatDialogs } from "../dialog/ImportFormatDialogs";
+import { SRTSubtitles } from "../core/SRT.svelte";
+import { JSONSubtitles } from "../core/JSON.svelte";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -35,35 +37,56 @@ const IMPORT_FILTERS = () => [
     { name: $_('filter.ssa-subtitles'), extensions: ['ssa', 'ass'] },
     { name: $_('filter.subtle-archive'), extensions: ['json'] }];
 
-export const Interface = {
-    async readTextFile(path: string) {
-        try {
-            const stats = await fs.stat(path);
-            if (!stats.isFile) {
-                Frontend.setStatus($_('msg.not-a-file', {values: {path}}), 'error');
-                return;
-            }
-            if (stats.size > 1024*1024*5 && !await dialog.ask(
-                $_('msg.very-large-file-warning'), {kind: 'warning'})) return null;
-        } catch {
-            Frontend.setStatus($_('msg.does-not-exist', {values: {path}}), 'error');
+async function readTextFile(path: string) {
+    try {
+        const stats = await fs.stat(path);
+        if (!stats.isFile) {
+            Frontend.setStatus($_('msg.not-a-file', {values: {path}}), 'error');
             return;
         }
-        return guardAsync(async () => {
-            const file = await fs.readFile(path);
-            const decode = await MAPI.detectOrDecodeFile(path);
-            if (decode !== null) {
-                const decoded = await MAPI.decodeFile(path, null);
-                return Basic.normalizeNewlines(decoded);
-            } else {
-                const result = (await import('chardet')).analyse(file);
-                const out = await Dialogs.encoding.showModal!({path, source: file, result});
-                if (!out) return null;
-                return Basic.normalizeNewlines(out.decoded);
-            }
-        }, $_('msg.unable-to-read-file-path', {values: {path}}), null);
-    },
+        if (stats.size > 1024*1024*5 && !await dialog.ask(
+            $_('msg.very-large-file-warning'), {kind: 'warning'})) return null;
+    } catch {
+        Frontend.setStatus($_('msg.does-not-exist', {values: {path}}), 'error');
+        return;
+    }
+    return guardAsync(async () => {
+        const file = await fs.readFile(path);
+        const decode = await MAPI.detectOrDecodeFile(path);
+        if (decode !== null) {
+            const decoded = await MAPI.decodeFile(path, null);
+            return Basic.normalizeNewlines(decoded);
+        } else {
+            const result = (await import('chardet')).analyse(file);
+            const out = await Dialogs.encoding.showModal!({path, source: file, result});
+            if (!out) return null;
+            return Basic.normalizeNewlines(out.decoded);
+        }
+    }, $_('msg.unable-to-read-file-path', {values: {path}}), null);
+}
 
+async function parseSubtitleSourceInteractive(path: string, text: string) {
+    return guardAsync(async () => {
+        if (JSONSubtitles.detect(text)) {
+            return JSONSubtitles.parse(text).done();
+        }
+        if (ASSSubtitles.detect(text)) {
+            const parser = ASSSubtitles.parse(text);
+            if (!await ImportFormatDialogs.ASS(parser))
+                return null;
+            return parser.done();
+        }
+        if (SRTSubtitles.detect(text) !== false) {
+            const parser = SRTSubtitles.parse(text);
+            if (!await ImportFormatDialogs.SRT(parser))
+                return null;
+            return parser.done();
+        }
+        throw undefined;
+    }, $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), undefined);
+}
+
+export const Interface = {
     async newFile() {
         await Source.openDocument(new Subtitles());
         if (get(Playback.isLoaded)) await Playback.close();
@@ -72,26 +95,10 @@ export const Interface = {
 
     async openFile(path: string) {
         await Debug.debug('parsing file', path);
-        const text = await this.readTextFile(path);
+        const text = await readTextFile(path);
         if (!text) return;
-        let newSubs: Subtitles | null = null;
-        if (ASSSubtitles.detect(text)) {
-            try {
-                const parser = ASSSubtitles.parse(text);
-                if (!await ImportFormatDialogs.ASS(parser))
-                    return;
-                newSubs = parser.done();
-            } catch (_) {}
-        } else {
-            try {
-                newSubs = parseSubtitleSource(text);
-            } catch (_) {}
-        }
-        if (!newSubs) {
-            Frontend.setStatus(
-                $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
-            return;
-        }
+        const newSubs = await parseSubtitleSourceInteractive(path, text);
+        if (!newSubs) return;
         await Debug.debug('opening document');
         await Source.openDocument(newSubs, path);
         if (newSubs.migrated == 'olderVersion') 
@@ -127,7 +134,7 @@ export const Interface = {
     async askImportFile() {
         const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
         if (typeof selected != 'string') return;
-        const text = await this.readTextFile(selected);
+        const text = await readTextFile(selected);
         if (!text) return;
         let newSubs = parseSubtitleSource(text);
         if (!newSubs) {

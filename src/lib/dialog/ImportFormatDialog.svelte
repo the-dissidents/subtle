@@ -86,13 +86,16 @@ function parse() {
               {/each}
             </ul>
             {/if}
-            {#if f.description}
-            <p>{f.description}</p>
-            {/if}
           </li>
+          {#if f.description}
+          <li class="info">{f.description}</li>
+          {/if}
         {/each}
         {#if info}
-        <li class="info">{info}</li>
+        <hr/>
+        <li class="info-group">
+          {info}
+        </li>
         {/if}
       {:else}
         <li class='ok'>
@@ -150,7 +153,15 @@ function parse() {
     }
     & > li.info {
       font-weight: normal;
-      padding-left: 3em;
+      padding-left: 2em;
+      font-size: 90%;
+      color: gray;
+      line-height: 1.5;
+      text-align: justify;
+    }
+    & > li.info-group {
+      font-weight: normal;
+      padding: 0 0.2em 0 0.2em;
       font-size: 90%;
       color: gray;
       line-height: 1.5;
@@ -159,13 +170,17 @@ function parse() {
   }
 
   ul.ass-import-warnings ul {
-    padding: 0 0 0 3em;
+    padding: 3px 0 0 3em;
     list-style-type: circle;
     font-weight: normal;
     & > li {
-      padding: 5px 0 0 0;
+      padding: 2px 0 0 0;
       font-size: 95%;
     }
+  }
+
+  hr {
+    padding-top: 5px;
   }
 
   :global(.ass-import-warnings .lucide) {
