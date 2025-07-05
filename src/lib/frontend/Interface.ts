@@ -6,7 +6,7 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
 
 import { Subtitles } from "../core/Subtitles.svelte";
-import { Format } from "../core/Formats";
+import { Format } from "../core/SimpleFormats";
 
 import { Dialogs } from "./Dialogs";
 import { ChangeType, Source } from "./Source";
@@ -24,6 +24,7 @@ import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { ASSSubtitles } from "../core/ASS.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
+import { ImportFormatDialogs } from "../dialog/ImportDialogs";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -77,7 +78,7 @@ export const Interface = {
         if (ASSSubtitles.detect(text)) {
             try {
                 const parser = ASSSubtitles.parse(text);
-                if (!await Dialogs.assImport!.showModal!(parser))
+                if (!await ImportFormatDialogs.ASS(parser))
                     return;
                 newSubs = parser.done();
             } catch (_) {}

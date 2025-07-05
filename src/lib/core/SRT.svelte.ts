@@ -1,7 +1,7 @@
 import { Basic } from "../Basic";
 import { DeserializationError } from "../Serialization";
-import { SubtitleLinearFormatWriter } from "./Formats";
-import { SubtitleEntry, Subtitles, type SubtitleFormat } from "./Subtitles.svelte";
+import { SubtitleLinearFormatWriter } from "./SimpleFormats";
+import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParseMessage, type SubtitleParser } from "./Subtitles.svelte";
 
 function getTime(h: string, m: string, s: string, ms: string) {
     return Number.parseInt(h) * 3600 
@@ -12,22 +12,53 @@ function getTime(h: string, m: string, s: string, ms: string) {
 
 const timeRegex = /^\s*(\d+):(\d+):(\d+)[,.](\d+) --> (\d+):(\d+):(\d+)[,.](\d+)(?:\s+X1:(-?\d+) X2:(-?\d+) Y1:(-?\d+) Y2:(-?\d+))?\s*$/m;
 
-export const SRTSubtitles = {
-    detect(source) {
-        return timeRegex.test(source) ? null : false;
-    },
+export type SRTParseMessage = {
+    type: 'ignored-format-tags',
+    category: 'ignored',
+    occurrence: number
+} | {
+    type: 'ignored-coordinates',
+    category: 'ignored',
+    occurrence: number
+}
+
+export class SRTParser implements SubtitleParser {
+    #subs: Subtitles;
+    #messages: SRTParseMessage[] = [];
+    #ignoredCoords = 0;
+    #ignoredTags = 0;
+    #parsed = false;
+
+    stripTags = false;
+
+    constructor(private source: string) {
+        this.#subs = new Subtitles();
+    }
 
     /**
      * This is an exact clone of the algorithm in `srtdec.c`, in libavformat.
      * Reference: https://ffmpeg.org/doxygen/6.1/libavformat_2srtdec_8c_source.html
      */
-    parse(source) {
+    update() {
+        this.#subs = new Subtitles();
+        this.#ignoredTags = 0;
+        this.#ignoredCoords = 0;
+        this.#messages = [];
+        this.#parsed = true;
+
         let buffer = '';
         let line_cache = '';
         let start: number = -1, end: number = -1;
-        let ignoredCoords = false;
-        const subs = new Subtitles();
-        const lines = source.split('\n');
+        const lines = this.source.split('\n');
+
+        const submit = () => {
+            while (buffer.at(-1) == '\n')
+                buffer = buffer.substring(0, buffer.length - 1);
+            if (buffer.length > 0) {
+                this.#createEntry(start, end, buffer);
+                buffer = '';
+            }
+        };
 
         for (const line of lines) {
             if (line.length == 0) continue;
@@ -38,15 +69,7 @@ export const SRTSubtitles = {
                     if (!standalone_number && buffer.length == 0)
                         buffer = line_cache;
                     line_cache = '';
-
-                    while (buffer.at(-1) == '\n')
-                        buffer = buffer.substring(0, buffer.length - 1);
-                    if (buffer.length > 0) {
-                        const entry = new SubtitleEntry(start, end);
-                        entry.texts.set(subs.defaultStyle, buffer);
-                        subs.entries.push(entry);
-                        buffer = '';
-                    }
+                    submit();
                 }
                 // read times
                 start = getTime(times[1], times[2], times[3], times[4]);
@@ -54,7 +77,7 @@ export const SRTSubtitles = {
                 
                 if (times[9]) {
                     // we do not support coordinates
-                    ignoredCoords = true;
+                    this.#ignoredCoords++;
                 }
             } else {
                 if (start < 0) continue;
@@ -73,27 +96,51 @@ export const SRTSubtitles = {
         if (start >= 0) {
             if (line_cache.length > 0)
                 buffer = line_cache;
-    
-            while (buffer.at(-1) == '\n')
-                buffer = buffer.substring(0, buffer.length - 1);
-            if (buffer.length > 0) {
-                const entry = new SubtitleEntry(start, end);
-                entry.texts.set(subs.defaultStyle, buffer);
-                subs.entries.push(entry);
-                buffer = '';
-            }
+            submit();
         } else {
             throw new DeserializationError('invalid or empty SRT');
         }
         
-        subs.migrated = 'text';
-        return {
-            get ignoredCoords() {
-                return ignoredCoords;
-            },
-            done: () => subs
-        };
+        this.#subs.migrated = 'text';
+        if (this.#ignoredCoords > 0) this.#messages.push({
+            type: 'ignored-coordinates',
+            category: 'ignored',
+            occurrence: this.#ignoredCoords
+        });
+        if (this.#ignoredTags > 0) this.#messages.push({
+            type: 'ignored-format-tags',
+            category: 'ignored',
+            occurrence: this.#ignoredTags
+        });
+    }
+
+    #createEntry(start: number, end: number, text: string) {
+        const tagRegex = /<\s*(\w+)(?:\s.+)?>(.+)<\/\1>/g;
+        const stripped = text.replaceAll(tagRegex, '$2');
+        if (stripped !== text) {
+            this.#ignoredTags++;
+            if (this.stripTags) text = stripped;
+        }
+        const entry = new SubtitleEntry(start, end);
+        entry.texts.set(this.#subs.defaultStyle, text);
+        this.#subs.entries.push(entry);
+    }
+
+    done() {
+        if (!this.#parsed) this.update();
+        return this.#subs;
+    }
+
+    get messages(): readonly SubtitleParseMessage[] {
+        return this.#messages;
+    }
+}
+
+export const SRTSubtitles = {
+    detect(source) {
+        return timeRegex.test(source) ? null : false;
     },
+    parse: (source) => new SRTParser(source),
     
     // TODO: emit a warning if any text line contains timeRegex
     write: (subs) => new SubtitleLinearFormatWriter(subs, 

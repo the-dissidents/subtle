@@ -1,13 +1,13 @@
 <script lang="ts">
 import { SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { Source } from '../frontend/Source';
-import { Interface } from '../frontend/Interface';
 import type { DialogHandler } from '../frontend/Dialogs';
 import DialogBase from '../DialogBase.svelte';
 
 import { _ } from 'svelte-i18n';
-    import { LinearFormatCombineStrategy } from '../core/SubtitleUtil.svelte';
-    import { Format } from '../core/Formats';
+import { LinearFormatCombineStrategy } from '../core/SubtitleUtil.svelte';
+import { Format } from '../core/SimpleFormats';
+import { Frontend } from '../frontend/Frontend';
 
 interface Props {
   handler: DialogHandler<void, {content: string, ext: string} | null>;
@@ -63,12 +63,15 @@ function makePreview() {
     if (entry.texts.size > 0)
       entries.push(entry);
   }
-  preview = formatters[format](Source.subs, { useEntries: entries, combine });
+  preview = formatters[format](Source.subs)
+    .useEntries(entries)
+    .strategy(combine)
+    .toString();
 }
 
 async function copy() {
   await navigator.clipboard.writeText(preview);
-  Interface.setStatus($_('msg.copied-exported-data'));
+  Frontend.setStatus($_('msg.copied-exported-data'));
 }
 </script>
 

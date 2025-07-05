@@ -1,8 +1,32 @@
-<script lang="ts">
+<script lang="ts" module>
+export type MessageGroupFormat = {
+  heading: string,
+  items?: string[],
+  description?: string
+};
+
+export type FormatImportOption<P extends SubtitleParser> = {
+  type: 'boolean',
+  name: string,
+  description?: string,
+  getValue: (p: P) => boolean,
+  setValue: (p: P, v: boolean) => void
+};
+
+export type ImportFormat<P extends SubtitleParser> = {
+  header: string,
+  formatMessage<T extends P['messages'][0]['type']>(
+    type: T, group: OneGroup<P['messages'][0], 'type', T>): MessageGroupFormat;
+  categoryDescription(category: P['messages'][0]['category']): string | undefined;
+  options?: FormatImportOption<P>[];
+};
+</script>
+
+<script lang="ts" generics="P extends SubtitleParser">
 import DialogBase from '../DialogBase.svelte';
-import type { ASSParser, ASSParseWarning } from '../core/ASS.svelte';
-import type { DialogHandler } from '../frontend/Dialogs';
-import { groupBy, type GroupedBy } from '../details/GroupBy';
+import type { SubtitleParseMessage, SubtitleParser } from '../core/Subtitles.svelte';
+import { DialogHandler } from '../frontend/Dialogs';
+import { groupBy, type GroupedBy, type OneGroup } from '../details/GroupBy';
 import { CircleAlertIcon, CircleCheckIcon } from '@lucide/svelte';
 import { Debug } from '../Debug';
 
@@ -10,201 +34,97 @@ import { _ } from 'svelte-i18n';
 import Tooltip from '../ui/Tooltip.svelte';
 
 interface Props {
-  handler: DialogHandler<ASSParser, boolean>;
+  handler: DialogHandler<[P, ImportFormat<P>], boolean>;
 }
 
 let {
   handler = $bindable(),
 }: Props = $props();
 
-let inner: DialogHandler<void> = {};
-let parser = $state<ASSParser>();
-let warningGroups = $state<GroupedBy<ASSParseWarning, 'type'>>();
-let nInvalid = $state(0);
-let nUnsupported = $state(0);
+let inner = new DialogHandler<void>();
+let parser = $state<P>();
+let categories = $state<GroupedBy<P['messages'][0], 'category'>>();
+let format = $state<ImportFormat<P>>();
 
-handler.showModal = async (p) => {
+handler.showModal = async ([p, f]) => {
+  format = f;
   parser = p;
   parse();
   Debug.assert(inner !== undefined);
   let btn = await inner.showModal!();
   return btn == 'ok';
-}
+};
 
 function parse() {
   Debug.assert(parser !== undefined);
-  parser.parse();
-  nInvalid = parser.warnings.filter((x) => x.category == 'invalid').length;
-  nUnsupported = parser.warnings.filter((x) => x.category == 'unsupported').length;
-  warningGroups = groupBy(parser.warnings, 'type');
+  parser.update();
+  categories = groupBy(parser.messages, 'category');
 }
 </script>
 
 <DialogBase handler={inner}>
   {#snippet header()}
-  <h4>{$_('assimportdialog.header')}</h4>
+  <h4>{format?.header}</h4>
   {/snippet}
 
   <div class="hlayout">
     <div class="left">
       <ul class="ass-import-warnings">
-      {#if warningGroups}
-        {#if Object.entries(warningGroups).length == 0}
+      {#if categories}
+      {#each Object.entries(categories) as [k, v]}
+      {@const groups = groupBy(v as SubtitleParseMessage[], 'type')}
+      {@const info = format!.categoryDescription(k)}
+        {#each Object.entries(groups) as [type, msgs]}
+        {@const f = format!.formatMessage(type, msgs as any)}
+          <li>
+            <CircleAlertIcon />
+            {f.heading}
+            {#if f.items?.length}
+            <ul>
+              {#each f.items as item}
+              <li>{item}</li>
+              {/each}
+            </ul>
+            {/if}
+            {#if f.description}
+            <p>{f.description}</p>
+            {/if}
+          </li>
+        {/each}
+        {#if info}
+        <li class="info">{info}</li>
+        {/if}
+      {:else}
         <li class='ok'>
           <CircleCheckIcon />
           {$_('assimportdialog.no-problems')}
         </li>
-        {/if}
-
-        {#if 'duplicate-style-definition' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.duplicate-style-definition')}
-          <ul>
-            {#each warningGroups['duplicate-style-definition'] as w}
-              <li><code>{w.name}</code></li>
-            {/each}
-          </ul>
-        </li>
-        {/if}
-        {#if 'undefined-style' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.undefined-style')}
-          <ul>
-            {#each warningGroups['undefined-style'] as w}
-              <li><code>{w.name}</code></li>
-            {/each}
-          </ul>
-        </li>{/if}
-        {#if 'no-styles' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.no-styles')}
-        </li>
-        {/if}
-        {#if 'invalid-style-field' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.invalid-style-field')}
-          <ul>
-            {#each warningGroups['invalid-style-field'] as w}
-              <li>
-                {$_('assimportdialog.in-a-b-equals-c', {values: {a: w.name, b: w.field, c: w.value}})}
-              </li>
-            {/each}
-          </ul>
-        </li>
-        {/if}
-        {#if 'invalid-event-field' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.invalid-style-field')}
-          <ul>
-            {#each warningGroups['invalid-event-field'] as w}
-              <li>
-                {$_('assimportdialog.in-line-a-b-equals-c', {values: {a: w.line, b: w.field, c: w.value}})}
-              </li>
-            {/each}
-          </ul>
-        </li>
-        {/if}
-
-        {#if nInvalid}
-        <li class="info">
-          {$_('assimportdialog.info-invalid', {values: {n: nInvalid}})}
-        </li>
-        {/if}
-
-        {#if 'ignored-style-field' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.ignored-style-field')}
-          <ul>
-            {#each warningGroups['ignored-style-field'] as w}
-              <li>
-                {$_('assimportdialog.in-a-b-equals-c', {values: {a: w.name, b: w.field, c: w.value}})}
-              </li>
-            {/each}
-          </ul>
-        </li>{/if}
-        {#if 'ignored-event-field' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.ignored-event-field')}
-          <ul>
-            {#each warningGroups['ignored-event-field'] as w}
-              <li>
-                <code>{w.field}</code>
-                {$_('assimportdialog.occurred-n-times', {values: {n: w.occurrence}})}
-              </li>
-            {/each}
-          </ul>
-        </li>
-        {/if}
-        {#if 'ignored-special-character' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.ignored-special-character')}
-          <ul>
-            {#each warningGroups['ignored-special-character'] as w}
-              <li>
-                <code>{w.name}</code>
-                {$_('assimportdialog.occurred-n-times', {values: {n: w.occurrence}})}
-              </li>
-            {/each}
-          </ul>
-        </li>
-        {/if}
-        {#if 'ignored-drawing-command' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.ignored-drawing-command')}
-          {$_('assimportdialog.occurred-n-times', {values: {n: warningGroups['ignored-drawing-command'][0].occurrence}})}
-        </li>
-        {/if}
-        {#if 'ignored-override-tag' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.ignored-override-tag')}
-          {$_('assimportdialog.occurred-n-times', {values: {n: warningGroups['ignored-override-tag'][0].occurrence}})}
-        </li>
-        {/if}
-        {#if 'ignored-embedded-fonts' in warningGroups}
-        <li>
-          <CircleAlertIcon />
-          {$_('assimportdialog.ignored-embedded-fonts')}
-        </li>
-        {/if}
-
-        {#if nUnsupported}
-        <li class="info">
-          {$_('assimportdialog.info-ignored', {values: {n: nUnsupported}})}
-        </li>
-        {/if}
+      {/each}
       {/if}
       </ul>
     </div>
+
+  {#if format?.options}
     <div class="right">
       <h5>{$_('assimportdialog.options')}</h5>
-      <label>
-        <input type="checkbox" checked={parser?.preserveInlines}
-          disabled={warningGroups && !('ignored-override-tag' in warningGroups)}
-          onchange={(x) => 
-            {parser!.preserveInlines = x.currentTarget.checked; parse()}}/>
-        {$_('assimportdialog.preserve-inlines')}
-      </label>
-      <br/>
-      <label>
-        <input type="checkbox" checked={parser?.transformInlineMultichannel}
-          onchange={(x) => 
-            {parser!.transformInlineMultichannel = x.currentTarget.checked; parse()}}/>
-        {$_('assimportdialog.transform-inline-multichannel')}
-        <Tooltip text={$_('assimportdialog.transform-info')}/>
-      </label>
+      {#each format.options as opt}
+        {#if opt.type == 'boolean'}
+          <label>
+            <input type="checkbox" checked={opt.getValue(parser!)}
+              onchange={(x) => {opt.setValue(parser!, x.currentTarget.checked); parse()}}/>
+            {opt.name}
+            {#if opt.description}
+              <Tooltip text={opt.description} />
+            {/if}
+          </label>
+          <br/>
+        {:else}
+          {Debug.never(opt.type)}
+        {/if}
+      {/each}
     </div>
+  {/if}
   </div>
-
 </DialogBase>
 
 <style>

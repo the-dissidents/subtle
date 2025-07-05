@@ -18,7 +18,7 @@ export const ASSSubtitles = {
     write: (subs) => new ASSWriter(subs)
 } satisfies SubtitleFormat;
 
-export type ASSParseInvalidWarning = {
+export type ASSParseInvalidMessage = {
     type: 'invalid-style-field',
     name: string,
     field: string,
@@ -38,7 +38,7 @@ export type ASSParseInvalidWarning = {
     value: string
 };
 
-export type ASSParseUnsupportedWarning = {
+export type ASSParseUnsupportedMessage = {
     type: 'ignored-style-field',
     name: string,
     field: string,
@@ -61,14 +61,14 @@ export type ASSParseUnsupportedWarning = {
     type: 'ignored-embedded-fonts'
 };
 
-export type ASSParseWarning = 
-    ({ category: 'invalid' } & ASSParseInvalidWarning) 
-  | ({ category: 'unsupported' } & ASSParseUnsupportedWarning);
+export type ASSParseMessage = 
+    ({ category: 'invalid' } & ASSParseInvalidMessage) 
+  | ({ category: 'unsupported' } & ASSParseUnsupportedMessage);
 
 export class ASSParser implements SubtitleParser {
     #subs: Subtitles;
     #sections: Map<string, string>;
-    #warnings: ASSParseWarning[] = [];
+    #warnings: ASSParseMessage[] = [];
     #parsed = false;
 
     constructor(source: string) {
@@ -83,7 +83,7 @@ export class ASSParser implements SubtitleParser {
     preserveInlines = true;
     transformInlineMultichannel = true;
 
-    parse() {
+    update() {
         if (this.#parsed) {
             this.#warnings = [];
             this.#subs = new Subtitles();
@@ -98,20 +98,20 @@ export class ASSParser implements SubtitleParser {
     }
 
     done(): Subtitles {
-        if (!this.#parsed) this.parse();
+        if (!this.#parsed) this.update();
         return this.#subs;
     }
 
-    get warnings(): readonly ASSParseWarning[] {
+    get messages(): readonly ASSParseMessage[] {
         Debug.assert(this.#parsed);
         return this.#warnings;
     }
 
-    #invalid(w: ASSParseInvalidWarning) {
+    #invalid(w: ASSParseInvalidMessage) {
         this.#warnings.push({...w, category: 'invalid'});
     }
 
-    #unsupported(w: ASSParseUnsupportedWarning) {
+    #unsupported(w: ASSParseUnsupportedMessage) {
         this.#warnings.push({...w, category: 'unsupported'});
     }
 

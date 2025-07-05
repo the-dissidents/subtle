@@ -236,7 +236,6 @@ Memorized.onInitialize(() => {
 <ConfigDialog         handler={Dialogs.configuration}/>
 <KeybindingDialog     handler={Dialogs.keybinding}/>
 <KeybindingInputDialog handler={Dialogs.keybindingInput}/>
-<ASSImportDialog      handler={Dialogs.assImport}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->

@@ -68,7 +68,7 @@ function startDrag(ev: MouseEvent) {
 }
 
 let resolve: ((btn: string) => void) | undefined;
-Debug.assert(handler !== null);
+Debug.assert(handler !== null, 'no handler');
 handler.showModal = async () => {
   return new Promise((r) => {
     resolve = (btn) => {
@@ -77,8 +77,8 @@ handler.showModal = async () => {
       if (dialog?.open) dialog?.close();
       resolve = undefined;
     };
-    Debug.assert(dialog !== undefined);
-    Debug.assert(!dialog.open);
+    Debug.assert(dialog !== undefined, 'dialog element not initialized');
+    Debug.assert(!dialog.open, 'already open');
     dialog.showModal();
     tick().then(() => {
       makeCenter();

@@ -90,6 +90,7 @@
     "in-line-a-b-equals-c": "at event #{a}: {b} = \"{c}\"",
     "info-ignored": "{n,plural,one{This warning means} other{These warnings mean}} the ASS file uses features that we don't yet support. If the \"preserve override tags\" option is checked, subtle will retain inline commands in subtitle entries even if it cannot display them correctly. If you are sure these commands are not necessary (e.g. only decorative), you can uncheck the option to skip them. Note that currently, embedded fonts and event fields are always not imported.",
     "info-invalid": "{n,plural,one{This warning means} other{These warnings mean}} the ASS file has some invalid parts, but otherwise can be successfully parsed. The invalid parts will be skipped.",
+    "invalid-event-field": "invalid event field",
     "invalid-style-field": "invalid style field",
     "no-problems": "No problems found",
     "no-styles": "missing styles data",

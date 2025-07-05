@@ -165,6 +165,11 @@ export interface SubtitleWritableFormat {
     write(subs: Subtitles): SubtitleWriter;
 }
 
+export interface SubtitleParseMessage {
+    type: string,
+    category: string
+}
+
 export interface SubtitleParsableFormat {
     /**
      * Detects if a source string is of this format. Returns `null` if uncertain.
@@ -176,7 +181,9 @@ export interface SubtitleParsableFormat {
 export type SubtitleFormat = SubtitleWritableFormat & SubtitleParsableFormat;
 
 export interface SubtitleParser {
-    done(): Subtitles
+    done(): Subtitles;
+    update(): void;
+    messages: readonly SubtitleParseMessage[];
 }
 
 export interface SubtitleWriter {

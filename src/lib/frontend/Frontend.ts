@@ -1,7 +1,7 @@
 console.info('Frontend loading');
 
 import { DebugConfig, InputConfig } from "../config/Groups";
-import { Format } from "../core/Formats";
+import { Format } from "../core/SimpleFormats";
 import { Subtitles, type SubtitleFormat } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
 import { get, readonly, writable } from "svelte/store";

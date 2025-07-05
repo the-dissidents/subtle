@@ -13,7 +13,7 @@ import { Utils } from "./Utils";
 import { Dialogs } from "./Dialogs";
 import { InputConfig } from "../config/Groups";
 import { Basic } from "../Basic";
-import { Format } from "../core/Formats";
+import { Format } from "../core/SimpleFormats";
 import { Toolboxes } from "./Toolboxes";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 

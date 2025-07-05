@@ -151,7 +151,7 @@ export const JSONSubtitles = {
             .map((x) => parseEntry(x, subs, version))
             .filter((x) => x.texts.size > 0);
 
-        return { done: () => subs };
+        return { done: () => subs, update() {}, messages: [] };
     },
 
     write(subs) {

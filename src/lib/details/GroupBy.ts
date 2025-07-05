@@ -1,5 +1,12 @@
 export type GroupedBy<Obj extends {[k in Key]: string}, Key extends keyof Obj> = 
-    {[k in Obj[Key]]: Omit<Extract<Obj, {[k2 in Key]: k}>, Key>[]};
+    {[V in Obj[Key]]: OneGroup<Obj, Key, V>};
+
+export type OneGroup<
+    Obj extends {[k in Key]: string}, 
+    Key extends keyof Obj, 
+    Value extends Obj[Key]
+// > = Omit<Extract<Obj, {[k2 in Key]: Value}>, Key>[];
+> = Extract<Obj, {[k2 in Key]: Value}>[];
 
 export function groupBy<Obj extends {[k in Key]: string}, Key extends keyof Obj>(
     objs: readonly Obj[], key: Key
