@@ -97,6 +97,10 @@ async function contextMenu() {
   ]});
   menu.popup();
 }
+
+function markStyleChanged() {
+  Source.markChanged(ChangeType.StyleDefinitions);
+}
 </script>
 
 <div class='hlayout'>
@@ -178,6 +182,7 @@ async function contextMenu() {
                 onclick={(ev) => {
                   subtitles.defaultStyle = $style;
                   ev.currentTarget.checked = true;
+                  Source.markChanged(ChangeType.InPlace);
                 }}/>
               {$_('style.default')}
             </label>
@@ -185,16 +190,21 @@ async function contextMenu() {
         </tr>
         <tr>
           <td>{$_('style.font')}</td>
-          <td><input type="text" bind:value={$style.font}/></td>
+          <td><input type="text" bind:value={$style.font}
+            onchange={markStyleChanged}/></td>
         </tr>
         <tr>
           <td>{$_('style.size')}</td>
           <td class="hlayout style">
             <NumberInput width="100%" bind:value={$style.size}/>
-            <label><input type='checkbox' bind:checked={$style.styles.bold}/><b>B</b></label>
-            <label><input type='checkbox' bind:checked={$style.styles.italic}/><i>I</i></label>
-            <label><input type='checkbox' bind:checked={$style.styles.underline}/><u>U</u></label>
-            <label><input type='checkbox' bind:checked={$style.styles.strikethrough}/><s>S</s></label>
+            <label><input type='checkbox' bind:checked={$style.styles.bold}
+              onchange={markStyleChanged}/><b>B</b></label>
+            <label><input type='checkbox' bind:checked={$style.styles.italic}
+              onchange={markStyleChanged}/><i>I</i></label>
+            <label><input type='checkbox' bind:checked={$style.styles.underline}
+              onchange={markStyleChanged}/><u>U</u></label>
+            <label><input type='checkbox' bind:checked={$style.styles.strikethrough}
+              onchange={markStyleChanged}/><s>S</s></label>
           </td>
         </tr>
         <tr>
@@ -218,26 +228,33 @@ async function contextMenu() {
         <tbody>
           <tr>
             <td>{$_('style.text-color')}</td>
-            <td><input type="text" bind:value={$style.color}/></td>
+            <td><input type="text" bind:value={$style.color}
+              onchange={markStyleChanged}/></td>
           </tr>
           <tr>
             <td>{$_('style.line-color')}</td>
-            <td><input type="text" bind:value={$style.outlineColor}/></td>
+            <td><input type="text" bind:value={$style.outlineColor}
+              onchange={markStyleChanged}/></td>
           </tr>
           <tr>
             <td>{$_('style.line-size')}</td>
-            <td><NumberInput width="100%" bind:value={$style.outline}/></td>
+            <td><NumberInput width="100%" bind:value={$style.outline}
+              onchange={markStyleChanged}/></td>
           </tr>
           <tr>
             <td>{$_('style.shadow')}</td>
-            <td><NumberInput width="100%" bind:value={$style.shadow}/></td>
+            <td><NumberInput width="100%" bind:value={$style.shadow}
+              onchange={markStyleChanged}/></td>
           </tr>
           <tr>
             <td>{$_('style.alignment')}</td>
             <td><select
                 bind:this={alignSelector}
                 value={AlignMode[$style.alignment]}
-                oninput={() => $style.alignment = alignSelector!.selectedIndex + 1}>
+                oninput={() => {
+                  $style.alignment = alignSelector!.selectedIndex + 1;
+                  markStyleChanged();
+                }}>
               <option value="BottomLeft">{$_('style.bottom-left')}</option>
               <option value="BottomCenter">{$_('style.bottom-center')}</option>
               <option value="BottomRight">{$_('style.bottom-right')}</option>
@@ -255,19 +272,23 @@ async function contextMenu() {
               <div class="flex margin">
                 <div><label>{$_('style.top')}
                   <NumberInput min={0} max={1000}
-                    bind:value={$style.margin.top}/>
+                    bind:value={$style.margin.top}
+                    onchange={markStyleChanged}/>
                 </label></div>
                 <div><label>{$_('style.bottom')}
                   <NumberInput min={0} max={1000}
-                    bind:value={$style.margin.bottom}/>
+                    bind:value={$style.margin.bottom}
+                    onchange={markStyleChanged}/>
                 </label></div>
                 <div><label>{$_('style.left')}
                   <NumberInput min={0} max={1000}
-                    bind:value={$style.margin.left}/>
+                    bind:value={$style.margin.left}
+                    onchange={markStyleChanged}/>
                 </label></div>
                 <div><label>{$_('style.right')}
                   <NumberInput min={0} max={1000}
-                    bind:value={$style.margin.right}/>
+                    bind:value={$style.margin.right}
+                    onchange={markStyleChanged}/>
                 </label></div>
               </div>
             </td>
@@ -326,7 +347,7 @@ input[type='checkbox'] {
   margin-right: 5px;
 }
 .margin label {
-  width: 50px;
+  /* width: 50px; */
   display: inline-block;
 }
 .margin div {
