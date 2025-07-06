@@ -26,6 +26,7 @@ export const Dialogs = {
     encoding: new DialogHandler<
         {path: string, source: Uint8Array, result: AnalyseResult}, 
         {decoded: string, encoding: EncodingName} | null>(),
+    bugs: new DialogHandler<void, void>()
 }
 
 export const DialogCommands = {

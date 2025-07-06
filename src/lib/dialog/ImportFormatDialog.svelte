@@ -64,7 +64,7 @@ function parse() {
 
 <DialogBase handler={inner}>
   {#snippet header()}
-  <h4>{format?.header}</h4>
+  <h3>{format?.header}</h3>
   {/snippet}
 
   <div class="hlayout">

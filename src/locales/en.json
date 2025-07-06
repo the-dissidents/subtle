@@ -108,6 +108,9 @@
     "false": "false",
     "true": "true"
   },
+  "bugdialog": {
+    "header": "Report issues"
+  },
   "cancel": "cancel",
   "category": {
     "document": "document",
@@ -240,6 +243,7 @@
     "srt-plaintext": "SRT / plaintext / ...",
     "utilities": "utilities"
   },
+  "dismiss": "Dismiss",
   "editbox": {
     "anchor-end": "anchor end",
     "anchor-start": "anchor start",
@@ -348,6 +352,7 @@
   },
   "menu": {
     "audio-stream-current": "(current)",
+    "bug": "Report bugs",
     "close-video": "close",
     "configuration": "configuration",
     "export": "export",
@@ -405,6 +410,9 @@
     "error-saving-public-config": "error saving public config",
     "error-when-querying-reference-source": "Error when querying reference source",
     "error-when-writing-to-file": "error when writing to {file}",
+    "errorbanner": "An internal error has occurred. If possible, please report it to the developers with a log file attached.",
+    "errorbanner-more": "How do I report?",
+    "errorbanner-open": "Open log folder",
     "exported-to-file": "exported to {file}",
     "failed-to-clean-autosave": "Failed to clean autosave files",
     "failed-to-parse-as-subtitles-path": "failed to parse as subtitles: {path}",

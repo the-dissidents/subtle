@@ -109,6 +109,9 @@
     "false": "假",
     "true": "真"
   },
+  "bugdialog": {
+    "header": "报告问题"
+  },
   "cancel": "取消",
   "category": {
     "document": "文档",
@@ -241,6 +244,7 @@
     "srt-plaintext": "SRT / 纯文本 / ...",
     "utilities": "工具"
   },
+  "dismiss": "关闭",
   "editbox": {
     "anchor-end": "锚定结尾",
     "anchor-start": "锚定开头",
@@ -351,6 +355,7 @@
   },
   "menu": {
     "audio-stream-current": "（当前音频）",
+    "bug": "报告问题",
     "close-video": "关闭",
     "configuration": "配置",
     "export": "导出",
@@ -408,6 +413,9 @@
     "error-saving-public-config": "存储配置时出错",
     "error-when-querying-reference-source": "查询参考资料时出错",
     "error-when-writing-to-file": "写入文件时出错：{file}",
+    "errorbanner": "发生了内部错误！如果可能，请向开发者报告并提交运行日志",
+    "errorbanner-more": "如何报告问题？",
+    "errorbanner-open": "打开日志文件夹",
     "exported-to-file": "已导出：{file}",
     "failed-to-clean-autosave": "清理自动保存文件时出错",
     "failed-to-parse-as-subtitles-path": "无法解析字幕：{path}",

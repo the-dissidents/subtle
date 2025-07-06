@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log"
 import * as StackTrace from "stacktrace-js";
 import inspect from "object-inspect";
+import { EventHost } from "./details/EventHost";
 
 /** Strangely tauri's log plugin does not export this enum, so it is recreated here */
 export enum LogLevel {
@@ -77,6 +78,7 @@ async function stacktrace(from?: Error) {
 const HasStacktrace = new WeakSet<Error>();
 
 export const Debug: {
+    onError: EventHost<[origin: string, msg: string]>,
     filterLevel: LogLevelFilter,
     redirectNative: boolean,
     setPersistentFilterLevel(level: LogLevelFilter): Promise<void>,
@@ -90,6 +92,7 @@ export const Debug: {
     early(reason?: string): void,
     never(value?: never): never
 } = {
+    onError: new EventHost<[origin: string, msg: string]>(),
     filterLevel: LogLevelFilter.Debug,
     redirectNative: true,
     async setPersistentFilterLevel(level: LogLevelFilter) {
@@ -118,6 +121,11 @@ export const Debug: {
                     break;
                 case LogLevel.Error:
                     console.error(message);
+                    const match = /^([\d-@:.]+)\[(.*?)\]\[(.*?)\](.*)$/.exec(message);
+                    if (match)
+                        this.onError.dispatch(match[3], match[4]);
+                    else
+                        this.onError.dispatch('?', message);
                     break;
             }
         });
@@ -126,12 +134,14 @@ export const Debug: {
             if (ev.error instanceof Error) {
                 let { file, trace } = await stacktrace(ev.error);
                 callLog(LogLevel.Error, 
-                    formatData([`Unhandled error`, ev.error, ev.message]), file);
+                    formatData([`Unhandled error`, ev.error, 
+                        `: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`]), file);
                 if (!HasStacktrace.has(ev.error))
                     callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
             } else {
                 callLog(LogLevel.Error, 
-                    formatData([`Unhandled error`, ev.error]), '?');
+                    formatData([`Unhandled error`, ev.error, 
+                        `: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`]), '?');
             }
             return true;
         });
@@ -154,14 +164,12 @@ export const Debug: {
         callLog(LogLevel.Trace, formatData(data), file);
     },
     async debug(...data: any[]) {
-        const { file, trace } = await stacktrace();
+        const { file, trace: _ } = await stacktrace();
         callLog(LogLevel.Debug, formatData(data), file);
-        // callLog(LogLevel.Trace, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
     async info(...data: any[]) {
-        const { file, trace } = await stacktrace();
+        const { file, trace: _ } = await stacktrace();
         callLog(LogLevel.Info, formatData(data), file);
-        // callLog(LogLevel.Trace, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
     async warn(...data: any[]) {
         const { file, trace } = await stacktrace();

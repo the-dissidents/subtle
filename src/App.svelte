@@ -1,6 +1,7 @@
 <script lang="ts">
 console.info('App loading');
 
+import { derived, get } from 'svelte/store';
 import { _, locale, isLoading } from 'svelte-i18n';
 import * as i18n from 'svelte-i18n';
 
@@ -38,6 +39,7 @@ import Resizer from './lib/ui/Resizer.svelte';
 import TabPage from './lib/ui/TabPage.svelte';
 import TabView from './lib/ui/TabView.svelte';
 import Tooltip from './lib/ui/Tooltip.svelte';
+import Banner from './lib/ui/Banner.svelte';
 
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
@@ -50,8 +52,9 @@ import { Basic } from './lib/Basic';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
+import { appLogDir } from '@tauri-apps/api/path';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
-import { derived, get } from 'svelte/store';
+import { openPath } from '@tauri-apps/plugin-opener';
 
 import { DialogCommands, Dialogs } from './lib/frontend/Dialogs';
 import { Interface, InterfaceCommands } from './lib/frontend/Interface';
@@ -60,10 +63,10 @@ import { Source, SourceCommands } from './lib/frontend/Source';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 import { Frontend } from './lib/frontend/Frontend';
 
-import { CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
-
+import { BugIcon, CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 import { Debug, GetLevelFilter } from './lib/Debug';
 import * as z from "zod/v4-mini";
+    import BugDialog from './lib/dialog/BugDialog.svelte';
     
 Debug.init();
 
@@ -204,6 +207,13 @@ Memorized.onInitialize(() => {
   editTable!.style.height = `${$editorH}px`;
   leftPane!.style.width = `${$leftPaneW}px`;
 });
+
+let errorBanner = $state({open: false, text: ''});
+Debug.onError.bind({}, (origin, _msg) => {
+  if (origin == 'ffmpeg') return;
+  errorBanner.text = '';
+  errorBanner.open = true;
+});
 </script>
 
 <svelte:window
@@ -235,6 +245,19 @@ Memorized.onInitialize(() => {
 <ConfigDialog         handler={Dialogs.configuration}/>
 <KeybindingDialog     handler={Dialogs.keybinding}/>
 <KeybindingInputDialog handler={Dialogs.keybindingInput}/>
+<BugDialog             handler={Dialogs.bugs}/>
+
+<Banner style='error' bind:open={errorBanner.open}
+  text={$_('msg.errorbanner')}
+  buttons={[
+    { name: 'open', localizedName: () => $_('msg.errorbanner-open') },
+    { name: 'more', localizedName: () => $_('msg.errorbanner-more') },
+    { name: 'close', localizedName: () => $_('dismiss') }
+  ]}
+  onSubmit={async (x) => {
+    if (x == 'open') openPath(await appLogDir());
+    if (x == 'more') Dialogs.bugs.showModal!();
+  }}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->
@@ -269,6 +292,14 @@ Memorized.onInitialize(() => {
       </button></li>
       <li class='separator'></li>
       <li class="label">{$filenameDisplay}</li>
+      <li>
+        <Tooltip text={$_('menu.bug')} position="bottom">
+          <button aria-label={$_('menu.bug')}
+                  onclick={() => Dialogs.bugs.showModal!()}>
+            <BugIcon />
+          </button>
+        </Tooltip>
+      </li>
       <li>
         <Tooltip text={$_('menu.keybinding')} position="bottom">
           <button aria-label={$_('menu.keybinding')}
