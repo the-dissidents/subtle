@@ -4,7 +4,7 @@
 import type { AudioFrameData } from "../../../API";
 
 export type AudioInputData = {
-    type: 'clearBuffer' | 'suspend' | 'play'
+    type: 'clearBuffer' | 'suspend' | 'play' | 'query'
 } | {
     type: 'shiftUntil',
     position: number
@@ -31,6 +31,9 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
         super(...args);
         this.port.onmessage = (e: MessageEvent<AudioInputData>) => {
             switch (e.data.type) {
+                case "query":
+                    this.#postFeedback('ok');
+                    break;
                 case "suspend":
                     this.#playing = false;
                     this.#postFeedback('ok');

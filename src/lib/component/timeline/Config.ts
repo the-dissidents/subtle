@@ -8,11 +8,11 @@ import { Debug } from '../../Debug';
 import { EventHost } from '../../details/EventHost';
 import { Playback } from '../../frontend/Playback';
 import { ChangeType, Source } from '../../frontend/Source';
-import { MediaPlayerInterface } from '../preview/MediaPlayer';
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { TimelineHandle } from "./Input.svelte";
+import { MediaPlayerInterface2 } from "../preview/MediaPlayer2";
 const $_ = unwrapFunctionStore(_);
 
 export const TimelineConfig = new PublicConfigGroup(
@@ -75,7 +75,7 @@ async function make(other: UICommand<any>) {
     Debug.assert(TimelineHandle.activeChannel !== undefined);
     const pos = Playback.position;
     const entry = Editing.insertAtTime(pos, pos, TimelineHandle.activeChannel);
-    MediaPlayerInterface.onPlayback.bind(entry, 
+    MediaPlayerInterface2.onPlayback.bind(entry, 
         (newpos) => { entry.end = Math.max(entry.end, newpos) });
     return entry;
 }

@@ -3,7 +3,6 @@ console.info('Playback loading');
 import { tick } from "svelte";
 import { get, writable, type Readable } from "svelte/store";
 import { Debug } from "../Debug";
-import { MediaPlayerInterface, MediaPlayer, type SetPositionOptions } from "../component/preview/MediaPlayer";
 import { EventHost } from "../details/EventHost";
 import { Overridable } from "../details/Overridable.svelte";
 import type { MediaSampler2 } from "../component/timeline/MediaSampler2";
@@ -12,6 +11,7 @@ import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { unwrapFunctionStore, _ } from "svelte-i18n";
 import { guardAsync } from "./Frontend";
+import { MediaPlayerInterface2, type MediaPlayer2, type SetPositionOptions } from "../component/preview/MediaPlayer2";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -27,7 +27,7 @@ let isLoaded = writable(false),
 
 const me = {};
 tick().then(() => {
-    MediaPlayerInterface.onPlayback.bind(me, async (pos) => {
+    MediaPlayerInterface2.onPlayback.bind(me, async (pos) => {
         position = pos;
         Playback.onPositionChanged.dispatch(pos);
 
@@ -56,7 +56,7 @@ export const Playback = {
     get isLoaded(): Readable<boolean> { return isLoaded; },
     get isPlaying() { return this.player?.isPlaying ?? false; },
 
-    player: null as MediaPlayer | null,
+    player: null as MediaPlayer2 | null,
     sampler: null as MediaSampler2 | null,
 
     playArea: new Overridable<PlayArea>({
@@ -100,7 +100,7 @@ export const Playback = {
         if (this.player === null)
             this.forceSetPosition(pos);
         else
-            this.player.requestSetPosition(pos, opt);
+            this.player.requestSeekToTime(pos, opt);
     },
 
     async forceSetPosition(pos: number) {
@@ -108,13 +108,13 @@ export const Playback = {
             position = pos;
             Playback.onPositionChanged.dispatch(pos);
         } else {
-            await this.player.forceSetPosition(pos);
+            await this.player.seekToTime(pos);
         }
     },
 
     async play(state = true) {
         Debug.assert(this.player !== null);
-        await (state ? this.player.requestStartPlay() : this.player.stop());
+        await (state ? this.player.play() : this.player.stop());
     },
 
     async toggle() {

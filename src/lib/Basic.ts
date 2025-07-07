@@ -27,6 +27,9 @@ export const Basic = {
             new Promise<T>((_, reject) => setTimeout(() => reject('timeout'), t))]);
     },
 
+    /**
+     * Resolves in `n` milliseconds using `setTimeout`.
+     */
     wait(n: number) {
         return new Promise<void>((resolve) => setTimeout(() => resolve(), n));
     },

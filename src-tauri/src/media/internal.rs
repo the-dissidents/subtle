@@ -130,7 +130,6 @@ pub struct VideoPlayerFront {
     output_size: (u32, u32),
     scaling_method: scaling::Flags,
     scaler: scaling::Context,
-    last_frame_unscaled: Option<DecodedVideoFrame>
 }
 
 pub struct VideoSamplerFront {
@@ -344,7 +343,6 @@ impl MediaPlayback {
                 base.decoder.height(),
                 scaling::Flags::FAST_BILINEAR,
             ))?,
-            last_frame_unscaled: None
         });
 
         self.video = Some(VideoContext { base, front });

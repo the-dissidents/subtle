@@ -100,6 +100,7 @@ export const Debug: {
     info(...data: any[]): Promise<void>,
     warn(...data: any[]): Promise<void>,
     error(...data: any[]): Promise<void>,
+    forwardError(e: Error | unknown): Promise<void>,
     assert(cond: boolean, what?: string): asserts cond,
     early(reason?: string): void,
     never(value?: never): never
@@ -197,6 +198,16 @@ export const Debug: {
         console.error(formatPrelude(file), ...data);
         callLog(LogLevel.Error, formatData(data), file);
         callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+    },
+    async forwardError(e: Error | unknown) {
+        if (e instanceof Error) {
+            const { file, trace } = await stacktrace(e);
+            console.error(formatPrelude(file), e);
+            callLog(LogLevel.Error, formatData([e]), file);
+            callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+        } else {
+            await this.error(e);
+        }
     },
     assert(cond: boolean, what?: string): asserts cond {
         if (!!!cond) {

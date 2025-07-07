@@ -2,8 +2,8 @@ import { CanvasManager } from "../../CanvasManager";
 import { Playback } from "../../frontend/Playback";
 import { ChangeType, Source } from "../../frontend/Source";
 import { SubtitleRenderer } from "./SubtitleRenderer";
-import { MediaPlayer } from "./MediaPlayer";
 import { MediaConfig } from "./Config";
+import { MediaPlayer2 } from "./MediaPlayer2";
 
 export class PreviewLayout {
     #manager: CanvasManager;
@@ -39,7 +39,7 @@ export class PreviewLayout {
         });
 
         Playback.onLoad.bind(this, async (rawurl, id) => {
-            Playback.player = await MediaPlayer.create(this.#manager, rawurl, id);
+            Playback.player = await MediaPlayer2.create(this.#manager, rawurl, id);
         });
         Playback.onClose.bind(this, async () => {
             await Playback.player!.close();
@@ -52,7 +52,7 @@ export class PreviewLayout {
     }
 
     #render(ctx: CanvasRenderingContext2D) {
-        Playback.player?.render(ctx);
+        Playback.player?.renderTo(ctx);
         this.#subsRenderer.render(ctx);
     }
 

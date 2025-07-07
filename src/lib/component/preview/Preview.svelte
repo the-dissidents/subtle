@@ -3,7 +3,7 @@
   import { Playback } from "../../frontend/Playback";
   import TimestampInput from "../../TimestampInput.svelte";
   import { PreviewLayout } from "./Layout";
-  import { MediaPlayerInterface } from "./MediaPlayer";
+  import { MediaPlayerInterface2 } from "./MediaPlayer2";
 
   let isPlaying = $state(false);
   let playPos = $state(0);
@@ -21,7 +21,7 @@
     playPosInput = Playback.position;
   });
 
-  MediaPlayerInterface.onPlayStateChanged.bind(me, () => {
+  MediaPlayerInterface2.onPlayStateChanged.bind(me, () => {
     isPlaying = Playback.isPlaying;
   });
 </script>
