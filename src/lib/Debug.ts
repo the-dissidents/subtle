@@ -46,6 +46,18 @@ async function callLog(level: LogLevel, message: string, location?: string) {
     });
 }
 
+function formatPrelude(file: string) {
+    const now = new Date();
+    return `${now.getFullYear()
+        }-${now.getMonth().toString().padStart(2, '0')
+        }-${now.getDay().toString().padStart(2, '0')
+        }@${now.getHours().toString().padStart(2, '0')
+        }:${now.getMinutes().toString().padStart(2, '0')
+        }:${now.getSeconds().toString().padStart(2, '0')
+        }.${now.getMilliseconds().toString().padStart(3, '0')
+        }[webview:${file}] `;
+}
+
 function formatData(data: any[]) {
     if (data.length == 0)
         return '';
@@ -101,9 +113,9 @@ export const Debug: {
     },
     async init() {
         await log.attachLogger(({level, message}) => {
-            if (level < FilterToLevel[this.filterLevel]
-             || (!this.redirectNative && !message.includes('][webview'))
-            //  || message.includes('!!!WEBVIEW_STACKTRACE')
+            if (message.includes('][webview')
+             || level < FilterToLevel[this.filterLevel]
+             || !this.redirectNative
             ) return;
 
             switch (level) {
@@ -161,23 +173,28 @@ export const Debug: {
     },
     async trace(...data: any[]) {
         const { file } = await stacktrace();
+        console.debug(formatPrelude(file), ...data);
         callLog(LogLevel.Trace, formatData(data), file);
     },
     async debug(...data: any[]) {
         const { file, trace: _ } = await stacktrace();
+        console.debug(formatPrelude(file), ...data);
         callLog(LogLevel.Debug, formatData(data), file);
     },
     async info(...data: any[]) {
         const { file, trace: _ } = await stacktrace();
+        console.info(formatPrelude(file), ...data);
         callLog(LogLevel.Info, formatData(data), file);
     },
     async warn(...data: any[]) {
         const { file, trace } = await stacktrace();
+        console.warn(formatPrelude(file), ...data);
         callLog(LogLevel.Warn, formatData(data), file);
         callLog(LogLevel.Info, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
     async error(...data: any[]) {
         const { file, trace } = await stacktrace();
+        console.error(formatPrelude(file), ...data);
         callLog(LogLevel.Error, formatData(data), file);
         callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },

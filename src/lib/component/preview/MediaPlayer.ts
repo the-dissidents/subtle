@@ -37,6 +37,7 @@ export class MediaPlayer {
 
     #outOffsetX = 0; #outOffsetY = 0;
     #outDisplayW = 0; #outDisplayH = 0;
+    #requestedOutW = 0; #requestedOutH = 0;
 
     #worklet: AudioWorkletNode;
     #onAudioFeedback?: (data: AudioFeedbackData) => void;
@@ -185,11 +186,19 @@ export class MediaPlayer {
         
         const [cw, ch] = this.media.outputSize;
         if (ow == cw && oh == ch) return;
-        await this.media.waitUntilAvailable();
-        await this.media.setVideoSize(ow, oh);
         const pos = this.currentPosition;
-        await this.#clearCache();
-        if (pos !== null) this.requestSetPositionFrame(pos);
+        await Debug.debug(`updateOutputSize: ${ow}x${oh} -> ${pos}`);
+        if (pos === null) {
+            await this.media.waitUntilAvailable();
+            await this.media.setVideoSize(ow, oh);
+        } else {
+            // to rebuild the cache we must go back to its start
+            // this.requestSetPositionFrame(pos);
+            await this.#clearCache();
+            await this.media.waitUntilAvailable();
+            await this.media.setVideoSize(ow, oh);
+            await this.forceSetPositionFrame(pos);
+        }
     }
 
     async close() {
@@ -232,7 +241,7 @@ export class MediaPlayer {
         return await new Promise<void>((resolve, reject) => {
             setTimeout(() => {
                 this.#waitingWorklet = false;
-                reject(new Error('postAudioMessage timed out'));
+                reject(new Error(`postAudioMessage: timed out (${msg.type})`));
             }, 1000);
 
             this.#onAudioFeedback = (data) => {
@@ -290,6 +299,7 @@ export class MediaPlayer {
     async #receiveFrame(frame: VideoFrameData | AudioFrameData | null, time: number) {
         Debug.assert(!this.media.isClosed);
         if (this.#preloadEOF) {
+            Debug.assert(!frame);
             Debug.debug('preloadeof');
             return false;
         }
@@ -312,10 +322,6 @@ export class MediaPlayer {
                 return true;
             }
             if (this.#audioBufferLength == 0) {
-                if (video.length > 0 && video[0].time > frame.time) {
-                    // skip audio before current video position
-                    return true;
-                }
                 if (this.#seeking 
                  && frame.time < this.#seeking.target / this.media.video!.framerate)
                 {
@@ -323,7 +329,7 @@ export class MediaPlayer {
                     this.#seeking.nSkippedAudio++;
                     return true;
                 }
-                Debug.trace('receiveFrame: first audio at', frame.position, frame.time);
+                Debug.debug('receiveFrame: first audio at', frame.position, frame.time);
             }
             await this.#postAudioMessage({ type: 'frame', frame });
             await this.#tryStartPlaying();
@@ -344,9 +350,10 @@ export class MediaPlayer {
             }
             video.push(frame);
             if (video.length == 1) {
-                Debug.trace('receiveFrame: first video at', frame.position, frame.time);
+                Debug.debug('receiveFrame: first video at', frame.position, frame.time);
                 if (this.#audioHead !== undefined && this.#audioHead < frame.time) {
                     // shift audio buffer until current video position
+                    Debug.debug(`receiveFrame: shifting audio until ${frame.time} [${frame.position}]`);
                     await this.#postAudioMessage({ 
                         type: 'shiftUntil', 
                         position: frame.time * this.media.audio!.sampleRate 
@@ -361,7 +368,6 @@ export class MediaPlayer {
                     } }));
                     this.#seeking = undefined;
                 }
-                MediaPlayerInterface.onPlayback.dispatch(frame.time);
             } else {
                 // Debug.trace('receiveFrame: received video at', frame.position, frame.time);
             }
@@ -426,7 +432,7 @@ export class MediaPlayer {
         Debug.assert(!this.media.isClosed);
         const video = this.#videoCache;
 
-        await Debug.trace('forceSetPositionFrame', position);
+        await Debug.debug(`forceSetPositionFrame: ${(position * this.media.video!.framerate).toFixed(3)} [${position}]`);
         if (position < 0) position = 0;
         if (video.length > 0 && video[0].position == position) {
             return Debug.early('forceSetPositionFrame');
@@ -478,15 +484,7 @@ export class MediaPlayer {
                 } }));
             } else {
                 // else, do the seeking and rebuild cache
-                // const prevKeyframe = await Playback.sampler?.getKeyframeBefore(position) ?? null;
                 await this.media.waitUntilAvailable();
-                // if (prevKeyframe !== null) {
-                //     await this.media.seekVideo(prevKeyframe);
-                //     await Debug.debug(`setPositionFrame: seeking [${position}, using ${prevKeyframe}]`);
-                // } else {
-                //     await this.media.seekVideo(position);
-                //     await Debug.debug(`setPositionFrame: seeking [${position}]`);
-                // }
                 await this.media.seekVideo(position);
                 await this.#clearCache();
                 await this.media.waitUntilAvailable();
@@ -576,7 +574,7 @@ export class MediaPlayer {
             + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 120);
         this.#ctxbuf.fillText(
             `ABL ${this.#audioBufferLength}`.padEnd(9) 
-            + `(${(audioSize / 1024 / 1024).toFixed(2)}MB)`, x, 140);
+            + `(${(audioSize / 1024).toFixed(0)}KB)`, x, 140);
         if (rescaled)
             this.#ctxbuf.fillText(`RES ${ow}x${oh} -> ${this.#outDisplayW}x${this.#outDisplayH}`, x, 160);
         else
@@ -590,59 +588,63 @@ export class MediaPlayer {
     #requestedRenderNext = false;
 
     async #renderNext() {
-        if (this.#playEOF) {
-            // display last frame
-            await Debug.debug('playeof has been true');
-            Debug.assert(this.#lastFrame !== undefined);
-            MediaPlayerInterface.onPlayback.dispatch(this.#lastFrame.time);
-            await this.#drawFrame(this.#lastFrame);
+        const video = this.#videoCache;
+        // should make more sense once we implement a better scheduling
+        const tolerance = 2 / this.media.video!.framerate;
+        const position = this.#audioHead;
+
+        if (position !== undefined 
+         && video.length > 0 && video[0].time < position - tolerance) 
+        {
+            await Debug.debug(`render: discarding video: ${video[0].time.toFixed(3)} [${video[0].position}] ~ ${position}`);
+            while (video.length > 0 && video[0].time < position - tolerance)
+                video.shift();
+        }
+
+        if (this.#preloadEOF ? video.length == 0 : video.length <= 1) {
+            // videoCache is empty
+            if (this.#preloadEOF) {
+                this.#playEOF = true;
+                if (this.#playing) await this.stop();
+            } else if (!this.#requestedPreload) {
+                await Debug.debug('render: video cache empty, reloading');
+                this.#requestPreload();
+            }
+            this.#requestedRenderNext = false;
+            return;
+        }
+
+        // display last frame if not playing
+        if (!this.#playing) {
+            if (this.#playEOF) {
+                await Debug.debug('render: playeof has been true');
+                Debug.assert(this.#lastFrame !== undefined);
+            }
+            const frame = video.length > 0 ? video[0] : this.#lastFrame;
+            if (!frame) return;
+            MediaPlayerInterface.onPlayback.dispatch(frame.time);
+            await this.#drawFrame(frame);
             this.manager.requestRender();
             this.#requestedRenderNext = false;
             return;
         }
 
-        const video = this.#videoCache;
-        // should make more sense once we implement a better scheduling
-        const tolerance = 2 / this.media.video!.framerate;
-
-        const position = this.#audioHead;
-        while (position !== undefined) {
-            if (this.#preloadEOF 
-                ? video.length == 0 
-                : video.length <= 1) break;
-            if (video[0].time > position - tolerance) {
-                // consume frame
-                const frame = video[0];
-                await this.#drawFrame(frame);
-
-                if (this.#playing) {
-                    MediaPlayerInterface.onPlayback.dispatch(frame.time);
-                    video.shift();
-                    this.#requestPreload();
-                    // FIXME: this means we essentially display video one frame ahead of its time
-                    setTimeout(() => {
-                        this.#renderNext();
-                    }, Math.max(0, frame.time - position) * 1000);
-                } else {
-                    this.#requestedRenderNext = false;
-                }
-                this.manager.requestRender();
-                return;
-            } else {
-                // discard missed frame
-                await Debug.debug('render: discarding missed frame at', 
-                    video[0].position, video[0].time, position);
-                video.shift();
-            }
+        // consume frame if playing
+        if (position === undefined) {
+            await Debug.debug('render: position is undefined!');
+            return;
         }
-        // videoCache is empty
-        if (this.#preloadEOF) {
-            this.#playEOF = true;
-            if (this.#playing) await this.stop();
-        } else {
-            this.#requestPreload();
-        }
-        this.#requestedRenderNext = false;
+        const frame = video[0];
+        await this.#drawFrame(frame);
+
+        MediaPlayerInterface.onPlayback.dispatch(frame.time);
+        video.shift();
+        this.#requestPreload();
+        // FIXME: this means we essentially display video one frame ahead of its time
+        setTimeout(() => {
+            this.#renderNext();
+        }, Math.max(0, frame.time - position) * 1000);
+        this.manager.requestRender();
     }
 
     requestRender() {
