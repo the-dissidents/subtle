@@ -76,15 +76,15 @@ let hasStyles = $state(true)
         <td>{$_('importdialog.options')}</td>
         <td>
           <input type="radio" id="ia1" value="UsedOnly" 
-            bind:group={styleOption} disabled={!hasStyles} />
+            bind:group={selectOption} disabled={!hasStyles} />
           <label for="ia1">{$_('importdialog.import-styles-that-are-used')}</label><br/>
   
           <input type="radio" id="ia2" value="All" 
-            bind:group={styleOption} disabled={!hasStyles} />
+            bind:group={selectOption} disabled={!hasStyles} />
           <label for="ia2">{$_('importdialog.import-unused-styles-as-well')}</label><br/>
   
           <input type="radio" id="ia3" value="OnlyStyles" 
-            bind:group={styleOption} disabled={!hasStyles} />
+            bind:group={selectOption} disabled={!hasStyles} />
           <label for="ia3">{$_('importdialog.import-only-styles-and-no-subtitles')}</label><br/>
         </td>
       </tr>
