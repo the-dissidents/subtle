@@ -3,6 +3,7 @@ import { Basic } from "../../Basic";
 import { InterfaceConfig } from "../../config/Groups";
 import { Debug } from "../../Debug";
 import { AggregationTree } from "../../details/AggregationTree";
+import { Mutex } from "../../details/Mutex";
 
 export class MediaSampler2 {
     #sampleLength: number;
@@ -10,7 +11,9 @@ export class MediaSampler2 {
     #sampleEnd = 0;
     #sampleProgress = 0;
     #cancelling = false;
-    #isSampling = false;
+
+    #sampling = false;
+    #mutex = new Mutex(1000);
 
     #intensity: AggregationTree<Float32Array>;
     #keyframes: AggregationTree<Uint8Array>;
@@ -21,7 +24,7 @@ export class MediaSampler2 {
     get keyframeResolution() { return this.media.video!.framerate; }
     /** points per second */
     get intensityResolution() { return this.media.audio!.sampleRate / this.#sampleLength; }
-    get isSampling() { return this.#isSampling; }
+    get isSampling() { return this.#sampling; }
     get sampleStart() { return this.#samplerStart / this.media.audio!.sampleRate; }
     get sampleEnd() { return this.#sampleEnd / this.media.audio!.sampleRate; }
     get sampleProgress() { return this.#sampleProgress / this.media.audio!.sampleRate; }
@@ -67,34 +70,32 @@ export class MediaSampler2 {
 
     async setAudioStream(id: number) {
         if (id == this.media.audio!.index) return;
-        if (this.#isSampling) {
+        if (this.isSampling)
             this.tryCancelSampling();
-            await Basic.waitUntil(() => !this.#isSampling);
-        }
+        await this.#mutex.acquire();
         await this.media.openAudio(id);
         this.#initAudioData();
+        this.#mutex.release();
     }
 
-    isClosing = false;
     async close() {
         if (this.media.isClosed)
             return Debug.early('already closed');
-        this.isClosing = true;
-        if (this.#isSampling) {
+        if (this.isSampling)
             this.tryCancelSampling();
-            await Basic.waitUntil(() => !this.#isSampling);
-        }
+        await this.#mutex.acquire();
         await this.media.close();
+        this.#mutex.release();
     }
 
     tryCancelSampling() {
-        Debug.assert(this.#isSampling);
+        Debug.assert(this.#sampling);
         Debug.trace('cancelling sampling');
         this.#cancelling = true;
     }
 
     extendSampling(to: number) {
-        Debug.assert(this.#isSampling);
+        Debug.assert(this.#sampling);
         let pos = Math.floor(to * this.media.audio!.sampleRate);
         const length = this.media.audio!.length;
         if (pos > length) pos = length;
@@ -106,7 +107,7 @@ export class MediaSampler2 {
 
     async startSampling(from: number, to: number): Promise<void> {
         Debug.assert(!this.media.isClosed);
-        if (this.isSampling) return Debug.early('already sampling');
+        if (this.#sampling) return Debug.early('already sampling');
 
         const sampleRate = this.media.audio!.sampleRate;
         const length = this.media.audio!.length;
@@ -115,51 +116,52 @@ export class MediaSampler2 {
         if (b > length) b = length;
         Debug.assert(b > a);
 
-        this.#isSampling = true;
+        this.#sampling = true;
         this.#cancelling = false;
         this.#samplerStart = a;
         this.#sampleEnd = b;
-        
-        const framerate = this.media.video!.framerate;
-        const videoPos = Math.max(0, Math.floor(from * framerate - 1));
-        const prevKeyframe = await this.media.getKeyframeBefore(videoPos);
-        await this.media.waitUntilAvailable();
-        if (this.isClosing) return;
-        if (prevKeyframe === null
-         || this.#sampleProgress > videoPos / framerate
-         || this.#sampleProgress < prevKeyframe / framerate)
-        {
-            await Debug.trace(`startSampling: ${from} ${to} ${a} ${b}; seeking to [${videoPos}]`);
-            await this.media.seekVideo(videoPos);
-        } else {
-            Debug.trace(`startSampling: ${from} ${to} ${a} ${b}`);
-        }
+
+        await this.#mutex.use(async () => {
+            const framerate = this.media.video!.framerate;
+            const videoPos = Math.max(0, Math.floor(from * framerate - 1));
+            const prevKeyframe = await this.media.getKeyframeBefore(videoPos);
+            if (prevKeyframe === null
+            || this.#sampleProgress > videoPos / framerate
+            || this.#sampleProgress < prevKeyframe / framerate)
+            {
+                await Debug.trace(`startSampling: ${from}-${to} ${a}-${b}; -> [${videoPos}]`);
+                await this.media.seekVideo(videoPos);
+            } else {
+                await Debug.trace(`startSampling: ${from}-${to} ${a}-${b}`);
+            }
+        });
 
         let doSampling = async () => {
-            await this.media.waitUntilAvailable();
-            if (this.isClosing) return;
-            const result = await this.media.sampleAutomatic2(20);
-            this.#sampleProgress = result.audio.position;
-            this.#intensity.set(result.audio.intensity, result.audio.start);
-            this.#keyframes.set(result.video.keyframes, result.video.start);
-            this.onProgress?.();
-            if (result.isEof) {
-                Debug.trace(`sampling done upon EOF`);
-                this.#isSampling = false;
-                return;
-            }
-            if (this.#sampleProgress > this.#sampleEnd) {
-                Debug.trace(`sampling done: ${from}~${this.#sampleProgress}`);
-                this.#isSampling = false;
-                return;
-            }
-            if (this.#cancelling) {
-                Debug.trace('sampling cancelled');
-                this.#isSampling = false;
-                this.#cancelling = false;
-                return;
-            }
-            requestAnimationFrame(() => doSampling());
+            const ok = await this.#mutex.use(async () => {
+                const result = await this.media.sampleAutomatic2(20);
+                this.#sampleProgress = result.audio.position;
+                this.#intensity.set(result.audio.intensity, result.audio.start);
+                this.#keyframes.set(result.video.keyframes, result.video.start);
+                this.onProgress?.();
+                if (result.isEof) {
+                    Debug.trace(`sampling done upon EOF`);
+                    this.#sampling = false;
+                    return false;
+                }
+                if (this.#sampleProgress > this.#sampleEnd) {
+                    Debug.trace(`sampling done: ${from}~${this.#sampleProgress}`);
+                    this.#sampling = false;
+                    return false;
+                }
+                if (this.#cancelling) {
+                    Debug.trace('sampling cancelled');
+                    this.#sampling = false;
+                    this.#cancelling = false;
+                    return false;
+                }
+                return true;
+            });
+            if (ok) requestAnimationFrame(() => doSampling());
         }
         requestAnimationFrame(() => doSampling());
     }

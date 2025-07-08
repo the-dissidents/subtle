@@ -141,18 +141,16 @@ export class MediaPlayer2 {
     }
 
     async close() {
-        Debug.assert(!this.#closed);
-        await this.#mutex.acquire();
-
-        await Debug.info('closing media player');
-        this.#closed = true;
-        await this.audio.close();
-        await this.media.close();
-
-        this.#mutex.release();
+        await this.#mutex.use(async () => {
+            if (this.#closed) return;
+            this.#closed = true;
+            await Debug.info('closing media player');
+            await this.audio.close();
+            await this.media.close();
+        });
     }
 
-    // Must be called while busy-locked
+    // Must be called while locked
     async #clearCache() {
         Debug.assert(!this.#closed);
         this.#preloadEOF = false;
@@ -167,7 +165,7 @@ export class MediaPlayer2 {
         Debug.debug(`seeked to ${frame.position} [${frame.time.toFixed(3)}]`);
     }
 
-    // Must be called while busy-locked
+    // Must be called while locked
     async #receiveAudioFrame(frame: AudioFrameData) {
         if (this.audio.tail !== undefined && this.audio.tail > frame.position) {
             await Debug.warn(`receiveFrame: abnormal audio frame ordering: ${frame.position} < ${this.audio.tail}`);
@@ -181,11 +179,11 @@ export class MediaPlayer2 {
                 this.#seekDone();
         }
         if (this.audio.bufferLength == 0)
-            await Debug.debug('receiveFrame: first audio at', frame.position, frame.time);
+            await Debug.trace('receiveFrame: first audio at', frame.position, frame.time);
         await this.audio.pushFrame(frame);
     }
 
-    // Must be called while busy-locked
+    // Must be called while locked
     async #receiveVideoFrame(frame: VideoFrameData) {
         if (this.#videoBuffer.length > 0 && this.#videoBuffer.at(-1)!.position > frame.position) {
             await Debug.warn(`receiveFrame: abnormal video frame ordering: ${frame.position} < ${this.#videoBuffer.at(-1)!.position}`);
@@ -195,17 +193,18 @@ export class MediaPlayer2 {
         if (this.#seekTarget > 0 && frame.position < this.#seekTarget)
             return;
         this.#videoBuffer.push(frame);
+        this.#lastFrame = frame;
         if (this.#seekTarget > 0 && this.audio.bufferLength > 0)
             this.#seekDone();
         if (this.#videoBuffer.length == 1) {
             this.#position = frame.position;
             MediaPlayerInterface2.onPlayback.dispatch(frame.time);
-            await Debug.debug('receiveFrame: first video at', frame.position, frame.time);
+            await Debug.trace('receiveFrame: first video at', frame.position, frame.time);
             if (!this.#presenting) this.#present();
         }
     }
 
-    // Must be called while busy-locked
+    // Must be called while locked
     async #receiveFrame(frame: AudioFrameData | VideoFrameData | null, elapsed: number) {
         if (!frame) {
             this.#preloadEOF = true;
@@ -219,7 +218,6 @@ export class MediaPlayer2 {
         } else {
             this.#diag.fetchVideoTime = 
                 this.#diag.fetchVideoTime * DAMPING + elapsed * (1 - DAMPING);
-            this.#lastFrame = frame;
             await this.#receiveVideoFrame(frame);
         }
         return true;
@@ -237,6 +235,8 @@ export class MediaPlayer2 {
          && this.#videoBuffer.at(-1)!.time - this.#videoBuffer[0].time > preloadAmount)
         {
             // enough frames preloaded
+            // update the debug info about buffer lengths
+            if (!this.#presenting) this.#present();
             return false;
         }
 
@@ -246,8 +246,6 @@ export class MediaPlayer2 {
                 const frame = await this.media.readNextFrame();
                 const elapsed = performance.now() - start;
                 return await this.#receiveFrame(frame, elapsed);
-            } catch (e) {
-                await Debug.forwardError(e);
             } finally {
                 this.#mutex.release();
                 return true;
@@ -265,8 +263,6 @@ export class MediaPlayer2 {
         while (await this.#receiveNextFrame())
             await Basic.wait(0);
         this.#populateBufferRunning = false;
-        // so we can update the debug info about buffer lengths
-        if (!this.#presenting) this.#present();
     }
 
     async #drawFrame(frame: VideoFrameData) {
@@ -336,11 +332,16 @@ export class MediaPlayer2 {
         if (this.#closed) return -1;
 
         if (!this.#playing) {
+            let frame = this.#videoBuffer.at(0);
             if (this.#playEOF) {
                 Debug.assert(this.#lastFrame !== undefined);
+                frame = this.#lastFrame;
             }
-            const frame = this.#videoBuffer.at(0) ?? this.#lastFrame;
             if (!frame) return 0;
+            if (frame.position !== this.#position) {
+                await Debug.warn(`position=${this.#position}, frame=${frame.position}`);
+                // return 0;
+            }
             await this.#drawFrame(frame);
             this.manager.requestRender();
             return -1;
@@ -393,25 +394,23 @@ export class MediaPlayer2 {
     }
 
     async play() {
-        Debug.assert(!this.#playing && !this.#closed);
-        await this.#mutex.acquire();
-
-        this.#playing = true;
-        await this.audio.play();
+        await this.#mutex.use(async () => {
+            if (this.isPlaying || this.#closed) return;
+            this.#playing = true;
+            await Debug.debug('starting playback');
+            await this.audio.play();
+        });
         if (!this.#presenting) this.#present();
-
-        this.#mutex.release();
         MediaPlayerInterface2.onPlayStateChanged.dispatch();
     }
 
     async stop() {
-        Debug.assert(this.#playing);
-        await this.#mutex.acquire();
-
-        this.#playing = false;
-        await this.audio.stop();
-
-        this.#mutex.release();
+        await this.#mutex.use(async () => {
+            if (!this.isPlaying || this.#closed) return;
+            this.#playing = false;
+            await Debug.debug('stopping playback');
+            await this.audio.stop();
+        });
         MediaPlayerInterface2.onPlayStateChanged.dispatch();
     }
 
@@ -446,18 +445,17 @@ export class MediaPlayer2 {
 
     #seekFrameVersion = 0;
     async seekToFrame(index: number, opt?: SetPositionOptions) {
-        Debug.debug(`requested seek: ${index} [${index / this.media.video!.framerate}]`);
         this.#seekFrameVersion += 1;
         const myVersion = this.#seekFrameVersion;
-        
         if (this.#playing) await this.stop();
-        await this.#mutex.acquire();
 
-        await (async () => {
-            if (this.#seekFrameVersion != myVersion) return;
-            if (this.#seekTarget == index) return;
-            if (this.#position == index) return;
+        await this.#mutex.use(async () => {
+            if (this.#closed 
+             || this.#seekFrameVersion != myVersion
+             || this.#seekTarget == index
+             || this.#position == index) return;
 
+            Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}]`);
             await this.#clearCache();
             if (!(opt?.imprecise))
                 this.#seekTarget = index;
@@ -471,9 +469,8 @@ export class MediaPlayer2 {
             }
             if (!this.#populateBufferRunning)
                 this.#populateBuffer();
-        })();
-
-        this.#mutex.release();
+        });
+        
         if (!this.#presenting) this.#present();
     }
 
@@ -482,20 +479,17 @@ export class MediaPlayer2 {
         this.#resizeVersion += 1;
         const myVersion = this.#resizeVersion;
 
-        await this.#mutex.acquire();
-        await Debug.debug(`resize: ${ow}x${oh}`);
-
-        await (async () => {
-            if (this.#resizeVersion != myVersion) return;
+        await this.#mutex.use(async () => {
+            if (this.#closed || this.#resizeVersion != myVersion) return;
             const [cw, ch] = this.media.outputSize;
             if (ow === cw && oh === ch) return;
 
+            await Debug.debug(`resize: ${ow}x${oh}`);
             await this.media.setVideoSize(ow, oh);
             await this.#clearCache();
             this.seekToFrame(this.#position);
-        })();
-
-        this.#mutex.release();
+        });
+        
         if (!this.#presenting) this.#present();
     }
 
@@ -503,20 +497,19 @@ export class MediaPlayer2 {
         Debug.assert(!this.#closed);
         if (id == this.media.audio!.index) return;
         if (this.#playing) await this.stop();
-        
-        await this.#mutex.acquire();
 
-        const oldrate = this.media.audio!.sampleRate;
-        const status = await this.media.openAudio(id);
-        // to change the sample rate we must create a new context
-        if (status.sampleRate !== oldrate) {
-            await this.audio.close();
-            this.audio = await Audio.create(status.sampleRate);
-        }
+        await this.#mutex.use(async () => {
+            if (this.#closed) return;
+            const oldrate = this.media.audio!.sampleRate;
+            const status = await this.media.openAudio(id);
+            // to change the sample rate we must create a new context
+            if (status.sampleRate !== oldrate) {
+                await this.audio.close();
+                this.audio = await Audio.create(status.sampleRate);
+            }
 
-        await this.#clearCache();
-        this.seekToFrame(this.#position);
-
-        this.#mutex.release();
+            await this.#clearCache();
+            this.seekToFrame(this.#position);
+        });
     }
 }
