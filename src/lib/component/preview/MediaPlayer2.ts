@@ -49,25 +49,13 @@ export class MediaPlayer2 {
         return i * this.media.audio!.sampleRate / this.media.video!.framerate;
     }
 
-    get source() {
-        return this.rawurl;
-    }
-
-    get isPlaying() {
-        return this.#playing;
-    }
-
-    get duration() {
-        return this.media.duration;
-    }
-
-    get streams() {
-        return this.media.streams;
-    }
-
-    get currentAudioStream() {
-        return this.media.audio!.index;
-    }
+    get source() { return this.rawurl; }
+    get isPlaying() { return this.#playing; }
+    get duration() { return this.media.duration; }
+    get streams() { return this.media.streams; }
+    get currentAudioStream() { return this.media.audio!.index; }
+    get videoSize() { return this.media.video?.size; }
+    get sampleAspectRatio() { return this.media.video?.sampleAspectRatio; }
 
     private constructor(
         private media: MMedia, 

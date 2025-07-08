@@ -595,9 +595,6 @@ impl AudioSamplerFront {
         &mut self, frame: &DecodedAudioFrame, 
         mut sampler_data: Option<&mut AudioSampleData>
     ) -> Result<(), MediaError> {
-        let mut processed = frame::Audio::empty();
-        check!(self.resampler.run(&frame.decoded, &mut processed))?;
-
         let index_start = match frame.position / self.step as i64 {
             y if y >= 0 && y < self.intensities.length as i64 => y as usize,
             _ => return Ok(())
@@ -615,7 +612,10 @@ impl AudioSamplerFront {
             }
         }
 
-        let data: &[f32] = frame.decoded.plane(0);
+        let mut processed = frame::Audio::empty();
+        check!(self.resampler.run(&frame.decoded, &mut processed))?;
+        
+        let data: &[f32] = processed.plane(0);
         let mut counter = frame.position as u32 % self.step;
         let mut sum: f32 = self.intensities.at(index_start);
         let mut index = index_start;
