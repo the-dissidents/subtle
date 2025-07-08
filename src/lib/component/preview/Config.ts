@@ -12,7 +12,7 @@ export const MediaConfig = new PublicConfigGroup(
         type: 'number',
         description: () => $_('config.preload-amount-d'),
         bounds: [0.1, 10],
-        default: 1
+        default: 0.2
     },
     maxZoom: {
         localizedName: () => $_('config.maximum-zoom'),

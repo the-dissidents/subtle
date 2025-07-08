@@ -144,31 +144,16 @@ export const Debug: {
         });
 
         window.addEventListener('error', async (ev) => {
-            if (ev.error instanceof Error) {
-                let { file, trace } = await stacktrace(ev.error);
-                callLog(LogLevel.Error, 
-                    formatData([`Unhandled error`, ev.error, 
-                        `: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`]), file);
-                if (!HasStacktrace.has(ev.error))
-                    callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
-            } else {
-                callLog(LogLevel.Error, 
-                    formatData([`Unhandled error`, ev.error, 
-                        `: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`]), '?');
+            if (!HasStacktrace.has(ev.error)) {
+                Debug.error(`Unhandled error`, ev.error, 
+                        `: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`);
             }
             return true;
         });
         window.addEventListener('unhandledrejection', async (ev) => {
             ev.preventDefault();
-            if (ev.reason instanceof Error) {
-                let { file, trace } = await stacktrace(ev.reason);
-                callLog(LogLevel.Error, 
-                    formatData([`Unhandled rejection`, ev.reason, ev.reason.message]), file);
-                if (!HasStacktrace.has(ev.reason))
-                    callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
-            } else {
-                callLog(LogLevel.Error, 
-                    formatData([`Unhandled rejection`, ev.reason]), '?');
+            if (!HasStacktrace.has(ev.reason)) {
+                Debug.error(`Unhandled rejection`, ev.reason);
             }
         });
     },

@@ -67,14 +67,14 @@ pub struct DecodedAudioFrame {
 
 #[derive(Clone, Serialize, Debug)]
 pub struct AudioSampleData {
-    pub start: usize,
+    pub start: i64,
     pub position: i64,
     pub intensity: Vec<f32>
 }
 
 #[derive(Clone, Serialize, Debug)]
 pub struct VideoSampleData {
-    pub start: usize,
+    pub start: i64,
     pub keyframes: Vec<u8>
 }
 
@@ -596,15 +596,21 @@ impl AudioSamplerFront {
         mut sampler_data: Option<&mut AudioSampleData>
     ) -> Result<(), MediaError> {
         let index_start = match frame.position / self.step as i64 {
-            y if y >= 0 && y < self.intensities.length as i64 => y as usize,
+            y if y >= self.intensities.length as i64 => {
+                log::debug!("AudioSamplerFront.process: unexpected {y}, expecting < {}", self.intensities.length);
+                return Ok(());
+            },
+            y if y >= 0 => y as usize,
             _ => return Ok(())
         };
         if let Some(sd) = sampler_data.as_mut() {
-            match sd.start + sd.intensity.len() {
-                0 => sd.start = index_start,
+            if sd.start < 0 {
+                sd.start = index_start as i64;
+            }
+            match sd.start as usize + sd.intensity.len() {
                 x if x < index_start => {
-                    log::debug!("unexpected {x}, expecting >= {index_start}; filling with zeroes");
-                    while sd.start + sd.intensity.len() < index_start {
+                    log::debug!("AudioSamplerFront.process: unexpected {x}, expecting >= {index_start}; filling with zeroes");
+                    while sd.start as usize + sd.intensity.len() < index_start {
                         sd.intensity.push(0.);
                     }
                 },
@@ -625,10 +631,10 @@ impl AudioSamplerFront {
             if counter == self.step {
                 self.intensities.set(&[sum], index);
                 sampler_data.as_mut().map(|x| {
-                    if x.start + x.intensity.len() <= index {
+                    if x.start as usize + x.intensity.len() <= index {
                         x.intensity.push(sum);
                     } else {
-                        x.intensity[index - x.start] = sum;
+                        x.intensity[index - x.start as usize] = sum;
                     }
                 });
                 counter = 0;
@@ -641,10 +647,10 @@ impl AudioSamplerFront {
         }
         self.intensities.set(&[sum], index);
         sampler_data.as_mut().map(|x| {
-            if x.start + x.intensity.len() <= index {
+            if x.start as usize + x.intensity.len() <= index {
                 x.intensity.push(sum);
             } else {
-                x.intensity[index - x.start] = sum;
+                x.intensity[index - x.start as usize] = sum;
             }
             x.position = frame.position + frame.decoded.samples() as i64;
         });
@@ -772,20 +778,36 @@ impl VideoSamplerFront {
         mut sampler_data: Option<&mut VideoSampleData>
     ) -> Result<(), MediaError> {
         let index: usize = match frame.position {
-            x if x >= 0 && x < self.keyframes.length as i64 => x.try_into().unwrap(),
+            y if y >= self.keyframes.length as i64 => {
+                log::debug!("VideoSamplerFront.process: unexpected {y}, expecting < {}", self.keyframes.length);
+                return Ok(());
+            },
+            x if x >= 0 => x.try_into().unwrap(),
             _ => return Ok(()),
         };
         if let Some(sd) = sampler_data.as_mut() {
-            match sd.start + sd.keyframes.len() {
-                0 => sd.start = index,
-                x if x == index => (),
-                x => return Err(MediaError::InternalError(format!(
-                    "unexpected {x}, expecting {index}")))
+            if sd.start < 0 {
+                sd.start = index as i64;
+            }
+            match sd.start as usize + sd.keyframes.len() {
+                x if x < index => {
+                    log::debug!("VideoSamplerFront.process: unexpected {x}, expecting >= {index}");
+                    while (sd.start as usize + sd.keyframes.len() < index) {
+                        sd.keyframes.push(1);
+                    }
+                },
+                x => ()
             }
         }
         let value = if frame.decoded.is_key() { 2 } else { 1 };
         self.keyframes.set(&[value], index);
-        sampler_data.as_mut().map(|x| x.keyframes.push(value));
+        sampler_data.as_mut().map(|x| {
+            if (x.start as usize + x.keyframes.len() <= index) {
+                x.keyframes.push(value);
+            } else {
+                x.keyframes[index - x.start as usize] = value;
+            }
+        });
         Ok(())
     }
 

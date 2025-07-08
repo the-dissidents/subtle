@@ -60,17 +60,6 @@ function font(size: number) {
   return `${size}px ${InterfaceConfig.data.fontFamily}`;
 }
 
-function getTick(scale: number): [small: number, nMed: number, nBig: number] {
-  const UNITS = [0.001, 0.01, 0.1, 1, 10, 60, 600, 3600];
-  // const UNITS = [1/60, 1/24, 1, 10, 60, 600, 3600];
-  for (let i = 0; i < UNITS.length - 3; i++)
-    if (scale * UNITS[i] > 2 / devicePixelRatio) return [
-      UNITS[i], 
-      UNITS[i+1] / UNITS[i], 
-      UNITS[i+2] / UNITS[i]];
-  return [60, 10, 60];
-}
-
 export class TimelineRenderer {
   private readonly manager: CanvasManager;
 
@@ -212,6 +201,18 @@ export class TimelineRenderer {
       this.layout.processSampler();
   }
 
+  #getTick(scale: number): [small: number, nMed: number, nBig: number] {
+    const UNITS = Playback.player
+      ? [1 / Playback.player.frameRate, 1, 1, 10, 60, 600, 3600]
+      : [0.05, 0.1, 1, 10, 60, 600, 3600];
+    for (let i = 0; i < UNITS.length - 3; i++)
+      if (scale * UNITS[i+2] > 200 / devicePixelRatio) return [
+        UNITS[i], 
+        UNITS[i+1], 
+        UNITS[i+2]];
+    return [60, 10, 60];
+  }
+
   #renderRuler(ctx: CanvasRenderingContext2D) {
     const y = this.manager.scroll[1];
 
@@ -221,42 +222,43 @@ export class TimelineRenderer {
       ctx.lineTo(pos, y + height);
       ctx.stroke();
     };
-    const [small, nMed, nBig] = getTick(this.layout.scale);
-    const start = Math.floor(this.layout.offset / small / nBig) * small * nBig, 
-          end = this.layout.offset + this.layout.width / this.layout.scale;
-    const n = Math.ceil((end - start) / small);
+    const [small, medium, big] = this.#getTick(this.layout.scale);
+    const end = this.layout.offset + this.layout.width / this.layout.scale;
+          
     ctx.fillStyle = HEADER_BACK;
     ctx.fillRect(
       this.manager.scroll[0], y, 
       this.layout.width, TimelineLayout.HEADER_HEIGHT);
 
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < n; i++) {
-      const t = start + i * small;
-      const pos = t * this.layout.scale + this.layout.leftColumnWidth;
-      let tickHeight;
-      if (i % nBig == 0) {
-        tickHeight = TimelineLayout.HEADER_HEIGHT;
-        ctx.strokeStyle = LINE_BIG_COLOR;
-        line(pos, this.layout.height);
-      } else if (i % nMed == 0) {
-        tickHeight = TimelineLayout.HEADER_HEIGHT * 0.5;
-        ctx.strokeStyle = LINE_MED_COLOR;
-        line(pos, this.layout.height);
-      } else {
-        tickHeight = TimelineLayout.HEADER_HEIGHT * 0.2;
+    const draw = (tick: number, height: number, back?: string) => {
+      for (let x = Math.floor(this.layout.offset / tick) * tick; 
+           x <= end; x += tick)
+      {
+        const pos = x * this.layout.scale + this.layout.leftColumnWidth;
+        if (back) {
+          ctx.strokeStyle = back;
+          line(pos, this.layout.height);
+        }
+        ctx.strokeStyle = TICK_COLOR;
+        line(pos, height);
       }
-      ctx.strokeStyle = TICK_COLOR;
-      line(pos, tickHeight);
-    }
+    };
+
+    ctx.lineWidth = 0.5;
+    draw(small, TimelineLayout.HEADER_HEIGHT * 0.2);
+    draw(medium, TimelineLayout.HEADER_HEIGHT * 0.5, LINE_MED_COLOR);
+    draw(big, TimelineLayout.HEADER_HEIGHT, LINE_BIG_COLOR);
 
     ctx.fillStyle = RULER_TEXT;
     ctx.font = font(TimelineLayout.HEADER_HEIGHT * 0.8);
     ctx.textBaseline = 'bottom';
     ctx.textAlign = 'start';
-    for (let t = start; t < end; t += nBig * small) {
-      ctx.fillText(Basic.formatTimestamp(t, 2), 
-        Math.round(t * this.layout.scale + this.layout.leftColumnWidth) + 5, 
+
+    for (let x = Math.floor(this.layout.offset / big) * big; 
+         x < end; x += big)
+    {
+      ctx.fillText(Basic.formatTimestamp(x, 2), 
+        Math.round(x * this.layout.scale + this.layout.leftColumnWidth) + 5, 
         y + TimelineLayout.HEADER_HEIGHT);
     }
   }

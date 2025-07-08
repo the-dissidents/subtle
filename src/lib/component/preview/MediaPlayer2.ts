@@ -54,12 +54,13 @@ export class MediaPlayer2 {
     get duration() { return this.media.duration; }
     get streams() { return this.media.streams; }
     get currentAudioStream() { return this.media.audio!.index; }
+    get frameRate() { return this.media.video!.framerate; }
     get videoSize() { return this.media.video?.size; }
     get sampleAspectRatio() { return this.media.video?.sampleAspectRatio; }
 
     private constructor(
-        private media: MMedia, 
-        private manager: CanvasManager, 
+        private readonly media: MMedia, 
+        private readonly manager: CanvasManager, 
         private rawurl: string,
         private audio: Audio
     ) {
@@ -121,6 +122,7 @@ export class MediaPlayer2 {
             await Debug.debug('VideoPlayer: opened media');
         } catch (e) {
             media.close();
+            Debug.error(e);
             throw e;
         }
         const audio = await Audio.create(audioStatus.sampleRate);
@@ -292,7 +294,7 @@ export class MediaPlayer2 {
 
         const x = dx;
         ctx.fillText(
-            `FPS ${this.media.video!.framerate} SPR ${this.media.audio!.sampleRate}`, x, 0);
+            `FPS ${this.media.video!.framerate.toFixed(3)} SPR ${this.media.audio!.sampleRate}`, x, 0);
         ctx.fillText(
             `ATi ${audioTime.padEnd(9)}[${frame.position}]`, x, 20);
         ctx.fillText(

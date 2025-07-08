@@ -584,8 +584,10 @@ pub fn sample_automatic2(
     let start_time = Instant::now();
     let target_working_time = Duration::from_millis(target_working_time_ms);
     let mut is_eof = false;
-    let mut audio_data = AudioSampleData { start: 0, intensity: vec![], position: 0 };
-    let mut video_data = VideoSampleData { start: 0, keyframes: vec![] };
+    let mut audio_data = 
+        AudioSampleData { start: -1, intensity: vec![], position: 0 };
+    let mut video_data = 
+        VideoSampleData { start: -1, keyframes: vec![] };
     loop {
         match playback.sample_next(Some(&mut audio_data), Some(&mut video_data)) {
             Ok(None) => {
