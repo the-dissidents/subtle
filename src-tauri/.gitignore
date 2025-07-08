@@ -3,4 +3,4 @@
 /target/
 /gen
 /debug
-flamegraph.svg
+flamegraph*.svg

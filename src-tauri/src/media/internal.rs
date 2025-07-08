@@ -898,7 +898,7 @@ impl VideoContext {
 mod tests {
     use std::time::Instant;
 
-    use crate::media::{accel, internal::Frame, MediaPlayback};
+    use crate::media::{accel, internal::{AudioFront, Frame, VideoFront}, MediaPlayback};
 
     #[test]
     fn configuration() {
@@ -908,15 +908,15 @@ mod tests {
 
     #[test]
     fn performance() {
-        println!("list of available accelerators:");
+        eprintln!("list of available accelerators:");
         for t in accel::HardwareDecoder::available_types() {
             println!("-- {t}");
         }
 
-        // let path = "E:\\Little Boy (James Benning, 2025).mkv";
-        let path = "/Users/emf/Downloads/Rural Landscape.mp4";
+        let path = "E:\\Rural Landscape.mp4";
+        // let path = "/Users/emf/Downloads/Rural Landscape.mp4";
         let mut playback = MediaPlayback::from_file(path).unwrap();
-        playback.open_video(None, true).unwrap();
+        playback.open_video(None, false).unwrap();
         playback.open_audio(None).unwrap();
         println!("reading frames");
         let start = Instant::now();
@@ -925,10 +925,16 @@ mod tests {
         let mut ia = 0;
         while i < 10000 {
             match playback.get_next().unwrap() {
-                Some(Frame::Video(_f)) => {
+                Some(Frame::Video(f)) => {
+                    // if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
+                    //     x.process(f).unwrap();
+                    // }
                     iv += 1;
                 }
-                Some(Frame::Audio(_f)) => {
+                Some(Frame::Audio(f)) => {
+                    // if let AudioFront::Player(x) = playback.audio_mut().unwrap().front_mut() {
+                    //     x.process(f).unwrap();
+                    // }
                     ia += 1;
                 }
                 None => break,
