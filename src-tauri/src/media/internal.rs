@@ -792,17 +792,17 @@ impl VideoSamplerFront {
             match sd.start as usize + sd.keyframes.len() {
                 x if x < index => {
                     log::debug!("VideoSamplerFront.process: unexpected {x}, expecting >= {index}");
-                    while (sd.start as usize + sd.keyframes.len() < index) {
+                    while sd.start as usize + sd.keyframes.len() < index {
                         sd.keyframes.push(1);
                     }
                 },
-                x => ()
+                _ => ()
             }
         }
         let value = if frame.decoded.is_key() { 2 } else { 1 };
         self.keyframes.set(&[value], index);
         sampler_data.as_mut().map(|x| {
-            if (x.start as usize + x.keyframes.len() <= index) {
+            if x.start as usize + x.keyframes.len() <= index {
                 x.keyframes.push(value);
             } else {
                 x.keyframes[index - x.start as usize] = value;
@@ -918,7 +918,7 @@ impl VideoContext {
 mod tests {
     use std::time::Instant;
 
-    use crate::media::{accel, internal::{AudioFront, Frame, VideoFront}, MediaPlayback};
+    use crate::media::{accel, internal::{Frame, VideoFront}, MediaPlayback};
 
     #[test]
     fn configuration() {

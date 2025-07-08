@@ -178,7 +178,7 @@ export const Source = {
         this.onUndoBufferChanged.dispatch();
     },
 
-    canUndo() { return redoStack.length > 1; },
+    canUndo() { return undoStack.length > 1; },
     canRedo() { return redoStack.length > 0; },
 
     undo() {

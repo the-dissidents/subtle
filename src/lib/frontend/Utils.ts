@@ -200,22 +200,23 @@ export const Utils = {
     },
 
     mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {
-        let entry = selection[0];
-        let start = entry.start, end = entry.end;
+        const first = selection[0];
+        let start = first.start, end = first.end;
         for (let i = 1; i < selection.length; i++) {
             if (keepAll) for (const [style, text] of selection[i].texts) {
-                let oldText = entry.texts.get(style);
-                entry.texts.set(style, (oldText ?? '') + text);
+                let oldText = first.texts.get(style);
+                first.texts.set(style, (oldText ?? '') + text);
             }
             start = Math.min(start, selection[i].start);
             end = Math.max(end, selection[i].end);
+
+            Source.subs.entries.splice(
+                Source.subs.entries.indexOf(selection[i]), 1);
         }
-        entry.start = start;
-        entry.end = end;
-        Source.subs.entries.splice(
-            Source.subs.entries.indexOf(entry) + 1,
-            selection.length - 1);
-        Editing.selectEntry(entry, SelectMode.Single);
+        first.start = start;
+        first.end = end;
+        
+        Editing.selectEntry(first, SelectMode.Single);
         Source.markChanged(ChangeType.Times);
     }
 }
