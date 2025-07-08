@@ -33,6 +33,7 @@
     },
     "windows": [
       {
+        "label": "main",
         "title": "subtle",
         "width": 1000,
         "height": 800,

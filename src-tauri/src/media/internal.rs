@@ -948,13 +948,13 @@ mod tests {
         let mut ia = 0;
         while i < 10000 {
             match playback.get_next().unwrap() {
-                Some(Frame::Video(f)) => {
+                Some(Frame::Video(_f)) => {
                     // if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
                     //     x.process(f).unwrap();
                     // }
                     iv += 1;
                 }
-                Some(Frame::Audio(f)) => {
+                Some(Frame::Audio(_f)) => {
                     // if let AudioFront::Player(x) = playback.audio_mut().unwrap().front_mut() {
                     //     x.process(f).unwrap();
                     // }

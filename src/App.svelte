@@ -29,6 +29,7 @@ import SplitByLineDialog from './lib/dialog/SplitByLineDialog.svelte';
 import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import KeybindingDialog from './lib/dialog/KeybindingDialog.svelte';
 import KeybindingInputDialog from './lib/dialog/KeybindingInputDialog.svelte';
+import BugDialog from './lib/dialog/BugDialog.svelte';
 
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
@@ -52,9 +53,7 @@ import { Basic } from './lib/Basic';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
-import { appLogDir } from '@tauri-apps/api/path';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
-import { openPath } from '@tauri-apps/plugin-opener';
 
 import { DialogCommands, Dialogs } from './lib/frontend/Dialogs';
 import { Interface, InterfaceCommands } from './lib/frontend/Interface';
@@ -65,8 +64,8 @@ import { Frontend } from './lib/frontend/Frontend';
 
 import { BugIcon, CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
 import { Debug, GetLevelFilter } from './lib/Debug';
+import { MAPI } from './lib/API';
 import * as z from "zod/v4-mini";
-    import BugDialog from './lib/dialog/BugDialog.svelte';
     
 Debug.init();
 
@@ -255,7 +254,7 @@ Debug.onError.bind({}, (origin, _msg) => {
     { name: 'close', localizedName: () => $_('dismiss') }
   ]}
   onSubmit={async (x) => {
-    if (x == 'open') openPath(await appLogDir());
+    if (x == 'open') await MAPI.openDevtools();
     if (x == 'more') Dialogs.bugs.showModal!();
   }}/>
 

@@ -96,10 +96,17 @@ fn main() {
             media::media_config,
             redirect_log::set_log_filter_level,
             encoding::decode_file_as,
-            encoding::decode_or_detect_file
+            encoding::decode_or_detect_file,
+            open_devtools,
         ])
         .run(ctx)
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn open_devtools(app: AppHandle) {
+    #[cfg(debug_assertions)]
+    app.get_webview_window("main").unwrap().open_devtools();
 }
 
 #[tauri::command]

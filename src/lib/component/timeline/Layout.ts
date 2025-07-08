@@ -333,8 +333,9 @@ export class TimelineLayout {
     end += preload;
     if (start < 0) start = 0;
     if (end > Playback.duration) end = Playback.duration;
-    if (end <= start) {
-      Debug.debug(start, '>=', end);
+    if (end == start) return;
+    if (end < start) {
+      Debug.debug(start, '>', end);
       return;
     }
   

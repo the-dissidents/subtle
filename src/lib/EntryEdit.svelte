@@ -2,10 +2,10 @@
 import LabelSelect from './LabelSelect.svelte';
 import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
+import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
 
 import { SubtitleEntry, type LabelType, type SubtitleStyle } from './core/Subtitles.svelte';
 import { Editing } from './frontend/Editing';
-import { Interface } from './frontend/Interface';
 import { ChangeType, Source } from './frontend/Source';
 import { Frontend } from './frontend/Frontend';
 
@@ -190,7 +190,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
               ]
             });
             menu.popup();
-          }}>...</button>
+          }}><EllipsisIcon /></button>
         </td>
         <td style='width:100%'>
           <textarea class='contentarea' tabindex=0
@@ -217,15 +217,18 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
       {/each}
       <tr>
         <td class="vlayout">
-          <button onclick={async () => {
-            const menu = await Menu.new({
-              items: Source.subs.styles.filter((x) => !focused.texts.has(x)).map((x) => ({
-                text: x.name,
-                action: () => Editing.insertChannel(x)
-              }))
-            });
-            menu.popup();
-          }}>+</button>
+          <button 
+            onclick={async () => {
+              const menu = await Menu.new({
+                items: Source.subs.styles.filter((x) => !focused.texts.has(x)).map((x) => ({
+                  text: x.name,
+                  action: () => Editing.insertChannel(x)
+                }))
+              });
+              menu.popup();
+            }}
+          ><PlusIcon />
+          </button>
         </td>
       </tr>
     </tbody>

@@ -412,7 +412,7 @@
     "error-when-writing-to-file": "error when writing to {file}",
     "errorbanner": "An internal error has occurred. If possible, please report it to the developers with a log file attached.",
     "errorbanner-more": "How do I report?",
-    "errorbanner-open": "Open log folder",
+    "errorbanner-open": "Open devtools",
     "exported-to-file": "exported to {file}",
     "failed-to-clean-autosave": "Failed to clean autosave files",
     "failed-to-parse-as-subtitles-path": "failed to parse as subtitles: {path}",

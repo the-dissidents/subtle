@@ -415,7 +415,7 @@
     "error-when-writing-to-file": "写入文件时出错：{file}",
     "errorbanner": "发生了内部错误！如果可能，请向开发者报告并提交运行日志",
     "errorbanner-more": "如何报告问题？",
-    "errorbanner-open": "打开日志文件夹",
+    "errorbanner-open": "开发者工具",
     "exported-to-file": "已导出：{file}",
     "failed-to-clean-autosave": "清理自动保存文件时出错",
     "failed-to-parse-as-subtitles-path": "无法解析字幕：{path}",

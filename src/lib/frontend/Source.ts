@@ -186,7 +186,7 @@ export const Source = {
             Frontend.setStatus($_('msg.nothing-to-undo'), 'info');
             return false;
         }
-        redoStack.push(redoStack.pop()!);
+        redoStack.push(undoStack.pop()!);
         let snap = redoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();

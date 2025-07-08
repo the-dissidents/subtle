@@ -550,6 +550,10 @@ export const MAPI = {
         if (result.type == 'error') throw new Error(`decode_or_detect_file: ${result.data}`);
         if (result.type == 'strange') return null;
         return result.data;
+    },
+
+    async openDevtools() {
+        await invoke<void>('open_devtools');
     }
 }
 

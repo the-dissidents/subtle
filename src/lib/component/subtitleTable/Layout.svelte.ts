@@ -166,7 +166,9 @@ export class TableLayout {
             b: (this.totalLines + 1) * this.lineHeight + this.headerHeight + this.manager.scrollerSize
             // add 1 for virtual entry
         });
-        Debug.debug(`layout took ${performance.now() - startTime}ms`);
+        const elapsed = performance.now() - startTime;
+        if (elapsed > 50)
+            Debug.debug(`layout took ${elapsed.toFixed(1)}ms`);
     }
 
     #updateColumns() {
