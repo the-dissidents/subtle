@@ -189,7 +189,6 @@ export const BasicCommands = {
                 loop: false
             };
             await Playback.forceSetPosition(current.start);
-            await Basic.waitUntil(() => !Playback.player!.isPreloading);
             await Playback.play(true);
         }
     }),

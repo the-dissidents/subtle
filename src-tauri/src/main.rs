@@ -44,7 +44,9 @@ fn main() {
                     ))
                 })
                 .level(log::LevelFilter::Trace)
-                .filter(|metadata| metadata.level() <= *redirect_log::LOG_LEVEL.read().unwrap())
+                .filter(|metadata| 
+                    metadata.level() <= *redirect_log::LOG_LEVEL.read().unwrap()
+                 && !metadata.target().starts_with("tao::"))
                 .clear_targets()
                 .target(tauri_plugin_log::Target::new(
                     tauri_plugin_log::TargetKind::Stderr,

@@ -46,7 +46,7 @@ async function callLog(level: LogLevel, message: string, location?: string) {
     });
 }
 
-function formatPrelude(file: string) {
+function formatPrelude(level: string, file: string) {
     const now = new Date();
     return `${now.getFullYear()
         }-${now.getMonth().toString().padStart(2, '0')
@@ -55,7 +55,7 @@ function formatPrelude(file: string) {
         }:${now.getMinutes().toString().padStart(2, '0')
         }:${now.getSeconds().toString().padStart(2, '0')
         }.${now.getMilliseconds().toString().padStart(3, '0')
-        }[webview:${file}] `;
+        }[${level}][webview:${file}] `;
 }
 
 function formatData(data: any[]) {
@@ -174,36 +174,46 @@ export const Debug: {
     },
     async trace(...data: any[]) {
         const { file } = await stacktrace();
-        console.debug(formatPrelude(file), ...data);
+        if (this.filterLevel >= LogLevelFilter.Trace)
+            console.log(formatPrelude('TRACE', file), ...data);
         callLog(LogLevel.Trace, formatData(data), file);
     },
     async debug(...data: any[]) {
         const { file, trace: _ } = await stacktrace();
-        console.debug(formatPrelude(file), ...data);
+        if (this.filterLevel >= LogLevelFilter.Debug)
+            console.debug(formatPrelude('DEBUG', file), ...data);
         callLog(LogLevel.Debug, formatData(data), file);
     },
     async info(...data: any[]) {
         const { file, trace: _ } = await stacktrace();
-        console.info(formatPrelude(file), ...data);
+        if (this.filterLevel >= LogLevelFilter.Info)
+            console.info(formatPrelude('INFO', file), ...data);
         callLog(LogLevel.Info, formatData(data), file);
     },
     async warn(...data: any[]) {
         const { file, trace } = await stacktrace();
-        console.warn(formatPrelude(file), ...data);
+        if (this.filterLevel >= LogLevelFilter.Warn)
+            console.warn(formatPrelude('WARN', file), ...data);
         callLog(LogLevel.Warn, formatData(data), file);
         callLog(LogLevel.Info, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
     async error(...data: any[]) {
         const { file, trace } = await stacktrace();
-        console.error(formatPrelude(file), ...data);
-        callLog(LogLevel.Error, formatData(data), file);
+        if (this.filterLevel >= LogLevelFilter.Error)
+            console.error(formatPrelude('ERROR', file), ...data);
+        const format = formatData(data);
+        this.onError.dispatch(file, format);
+        callLog(LogLevel.Error, format, file);
         callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
     async forwardError(e: Error | unknown) {
         if (e instanceof Error) {
             const { file, trace } = await stacktrace(e);
-            console.error(formatPrelude(file), e);
-            callLog(LogLevel.Error, formatData([e]), file);
+            if (this.filterLevel >= LogLevelFilter.Error)
+                console.error(formatPrelude('ERROR', file), e);
+            const format = formatData([e]);
+            this.onError.dispatch(file, format);
+            callLog(LogLevel.Error, format, file);
             callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
         } else {
             await this.error(e);
@@ -226,12 +236,9 @@ export const Debug: {
         })();
     },
     never(x?: never): never {
-        (async () => {
-            const { file, func, trace } = await stacktrace();
-            callLog(LogLevel.Error, `Unreachable code reached (never=${x})`, file);
-            callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
-        })();
-        const error = new Error('unreachable code reached');
+        const msg = `Unreachable code reached (never=${x})`;
+        this.error(msg);
+        const error = new Error(msg);
         HasStacktrace.add(error);
         throw error;
     }

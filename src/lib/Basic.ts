@@ -34,6 +34,9 @@ export const Basic = {
         return new Promise<void>((resolve) => setTimeout(() => resolve(), n));
     },
 
+    /**
+     * @deprecated This will not work correctly. Use `Mutex` instead!
+     */
     waitUntil(cond: () => boolean): Promise<void> {
         return new Promise((resolve) => {
             const wait = () => {

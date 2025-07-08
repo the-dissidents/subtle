@@ -6,7 +6,7 @@ import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 export class Audio {
     #onAudioFeedback?: (data: AudioFeedbackData) => void;
     #closed = false;
-    #working = false;
+    #working: string | null = null;
     #worklet: AudioWorkletNode;
     #feedback: AudioFeedbackData = {
         type: 'ok',
@@ -66,15 +66,15 @@ export class Audio {
 
     async #post(msg: AudioInputData) {
         Debug.assert(!this.#closed, `closed (posting ${msg.type})`);
-        Debug.assert(!this.#working, `working (posting ${msg.type})`);
-        this.#working = true;
+        Debug.assert(!this.#working, `working ${this.#working} (posting ${msg.type})`);
+        this.#working = msg.type;
         return await new Promise<void>((resolve, reject) => {
             setTimeout(() => {
-                this.#working = false;
+                this.#working = null;
                 reject(new Error(`postAudioMessage: timed out (posting ${msg.type})`));
             }, 1000);
             this.#onAudioFeedback = (data) => {
-                this.#working = false;
+                this.#working = null;
                 this.#feedback = data;
                 resolve();
             };
