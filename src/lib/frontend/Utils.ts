@@ -218,5 +218,18 @@ export const Utils = {
         
         Editing.selectEntry(first, SelectMode.Single);
         Source.markChanged(ChangeType.Times);
+    },
+
+    getAdjecentEntryWithThisStyle(dir: 'next' | 'previous') {
+        const focusedEntry = Editing.getFocusedEntry();
+        if (!(focusedEntry instanceof SubtitleEntry)) return null;
+        const style = Editing.focused.style;
+        if (!style) return null;
+        const thisIndex = Source.subs.entries.indexOf(focusedEntry);
+        Debug.assert(thisIndex >= 0);
+        return (dir == 'next' 
+            ? Source.subs.entries.find((ent, i) => i > thisIndex && ent.texts.has(style))
+            : Source.subs.entries.findLast((ent, i) => i < thisIndex && ent.texts.has(style))
+        ) ?? null;
     }
 }

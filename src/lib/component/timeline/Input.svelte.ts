@@ -12,6 +12,7 @@ import { TimelineConfig } from "./Config";
 import { Memorized } from "../../config/MemorizedValue.svelte";
 import { SubtitleTableHandle } from "../subtitleTable/Input.svelte";
 import * as z from "zod/v4-mini";
+import { contextMenu } from "./Menu";
 
 export const TimelineHandle = {
   activeChannel: undefined as SubtitleStyle | undefined,
@@ -526,10 +527,16 @@ export class TimelineInput {
           TimelineHandle.activeChannel = style;
         this.manager.requestRender();
       }
+      return;
     }
 
     if (this.currentAction?.onMouseDown(e))
       return;
+
+    if (e.button == 2) {
+      e.preventDefault();
+      contextMenu();
+    }
   }
 
   #onDoubleClick() {

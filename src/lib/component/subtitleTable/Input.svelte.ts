@@ -3,7 +3,6 @@ import type { CanvasManager } from "../../CanvasManager";
 import { filterDescription, type SimpleMetricFilter } from "../../core/Filter";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
-import { Interface } from "../../frontend/Interface";
 import { ChangeCause } from "../../frontend/Source";
 import type { PopupHandler } from "../../ui/Popup.svelte";
 
@@ -11,9 +10,11 @@ import type { TableLayout, TextLayout } from "./Layout.svelte";
 import { TableConfig } from "./Config";
 
 import { _ } from 'svelte-i18n';
+
 import { get } from "svelte/store";
 import { Playback } from "../../frontend/Playback";
 import { Frontend } from "../../frontend/Frontend";
+import { contextMenu } from "./Menu";
 
 export const SubtitleTableHandle = {
     processDoubleClick: undefined as (undefined | (() => Promise<void>))
@@ -77,14 +78,19 @@ export class TableInput {
             }
         });
 
-        SubtitleTableHandle.processDoubleClick = () => this.handleDoubleClick();
+        SubtitleTableHandle.processDoubleClick = () => this.#handleDoubleClick();
+        this.manager.canvas.addEventListener('dblclick', () => this.#handleDoubleClick());
+        this.manager.canvas.addEventListener('contextmenu', (ev) => {
+            ev.preventDefault();
+            contextMenu();
+        });
     }
     
     focus() {
         Frontend.uiFocus.set('Table');
     }
 
-    async handleDoubleClick() {
+    async #handleDoubleClick() {
         this.focus();
         let focused = Editing.getFocusedEntry();
         Debug.assert(focused !== null);

@@ -1,14 +1,9 @@
 <script lang="ts">
 import { onDestroy, onMount } from "svelte";
 import { _, locale } from 'svelte-i18n';
-import { get } from 'svelte/store';
 import { Debug } from "../../Debug";
 
-import { Actions } from "../../frontend/Actions";
-import { Editing } from "../../frontend/Editing";
 import { EventHost } from "../../details/EventHost";
-import { Interface } from "../../frontend/Interface";
-import { Playback } from "../../frontend/Playback";
 
 import { Metrics, Metric, type MetricContext } from "../../core/Filter";
 import Popup, { type PopupHandler } from "../../ui/Popup.svelte";
@@ -51,12 +46,6 @@ onMount(() => {
   </button>
   <canvas bind:this={canvas}
     class:subsfocused={$uiFocus === 'Table'}
-    ondblclick={() => input!.handleDoubleClick()}
-    oncontextmenu={(ev) => {
-      input!.focus();
-      ev.preventDefault();
-      Actions.contextMenu();
-    }}
   ></canvas>
 </div>
 

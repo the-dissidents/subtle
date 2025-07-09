@@ -118,14 +118,27 @@ export const BasicCommands = {
             const focusedEntry = Editing.getFocusedEntry();
             if (!(focusedEntry instanceof SubtitleEntry)) return;
             Editing.submitFocusedEntry();
-            let i = Source.subs.entries.indexOf(focusedEntry) + 1;
-            if (i == Source.subs.entries.length)
-                Editing.startEditingNewVirtualEntry();
-            else
-                Editing.offsetFocus(1, SelectMode.Single, 
-                    InputConfig.data.enterNavigationType == 'keepPosition' 
-                    ? KeepInViewMode.SamePosition 
-                    : KeepInViewMode.KeepInSight);
+            Editing.offsetFocus(1, SelectMode.Single, 
+                InputConfig.data.enterNavigationType == 'keepPosition' 
+                ? KeepInViewMode.SamePosition 
+                : KeepInViewMode.KeepInSight);
+        }
+    }),
+    editNextEntryWithThistyle: new UICommand(() => $_('category.editing'),
+        [ CommandBinding.from(['Alt+Enter'], ['EditingField']), ],
+    {
+        name: () => $_('action.edit-next-entry-with-this-style'),
+        isApplicable: hasFocus,
+        call() {
+            const focusedEntry = Editing.getFocusedEntry();
+            if (!(focusedEntry instanceof SubtitleEntry)) return;
+            Editing.submitFocusedEntry();
+            const next = Utils.getAdjecentEntryWithThisStyle('next');
+            if (!next) return;
+            Editing.selectEntry(next, SelectMode.Single, ChangeCause.UIList, 
+                InputConfig.data.enterNavigationType == 'keepPosition' 
+                ? KeepInViewMode.SamePosition 
+                : KeepInViewMode.KeepInSight);
         }
     }),
     focusOnTable: new UICommand(() => $_('category.editing'),
@@ -330,14 +343,13 @@ export const BasicCommands = {
         [ ],
     {
         name: () => $_('action.select-all-by-channel'),
-        isApplicable: hasSelection,
         items: () => forEachStyle((style) => {
             Editing.selection.currentGroup.clear();
             Editing.selection.focused = null;
             Editing.selection.submitted = new Set(
                 Source.subs.entries.filter((e) => e.texts.has(style)));
             Editing.onSelectionChanged.dispatch(ChangeCause.Action);
-        }, selectionDistinctStyles()),
+        }, Source.subs.styles),
         emptyText: () => $_('msg.no-available-item')
     }),
     invertSelection: new UICommand(() => $_('category.editing'),
