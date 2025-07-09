@@ -104,33 +104,33 @@ export const TableCommands = {
             : KeepInViewMode.KeepInSight)
     }),
 
-    // previousEntryWithThisStyle: new UICommand(() => $_('category.table'),
-    //     [ CommandBinding.from(['Shift+CmdOrCtrl+ArrowUp'], ['Table']),
-    //       CommandBinding.from(['Shift+CmdOrCtrl+Alt+ArrowUp']), ],
-    // {
-    //     name: () => $_('action.previous-entry-with-this-style'),
-    //     call: () => {
-    //       const entry = Utils.getAdjecentEntryWithThisStyle('previous');
-    //       if (!entry) return;
-    //       Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList, 
-    //           InputConfig.data.enterNavigationType == 'keepPosition' 
-    //           ? KeepInViewMode.SamePosition 
-    //           : KeepInViewMode.KeepInSight);
-    //     }
-    // }),
-    // nextEntryWithThisStyle: new UICommand(() => $_('category.table'),
-    //     [ CommandBinding.from(['Shift+CmdOrCtrl+ArrowDown'], ['Table']),
-    //       CommandBinding.from(['Shift+CmdOrCtrl+Alt+ArrowDown']), ],
-    // {
-    //     name: () => $_('action.next-entry-with-this-style'),
-    //     call: () => {
-    //       const entry = Utils.getAdjecentEntryWithThisStyle('next');
-    //       if (!entry) return;
-    //       Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList, 
-    //           InputConfig.data.enterNavigationType == 'keepPosition' 
-    //           ? KeepInViewMode.SamePosition 
-    //           : KeepInViewMode.KeepInSight);
-    //     }
-    // }),
+    previousEntryWithThisStyle: new UICommand(() => $_('category.table'),
+        [ CommandBinding.from(['Shift+CmdOrCtrl+ArrowUp'], ['Table']),
+          CommandBinding.from(['Shift+CmdOrCtrl+Alt+ArrowUp']), ],
+    {
+        name: () => $_('action.previous-entry-with-this-style'),
+        call: () => {
+          const entry = Utils.getAdjecentEntryWithThisStyle('previous');
+          if (!entry) return;
+          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList, 
+              InputConfig.data.enterNavigationType == 'keepPosition' 
+              ? KeepInViewMode.SamePosition 
+              : KeepInViewMode.KeepInSight);
+        }
+    }),
+    nextEntryWithThisStyle: new UICommand(() => $_('category.table'),
+        [ CommandBinding.from(['Shift+CmdOrCtrl+ArrowDown'], ['Table']),
+          CommandBinding.from(['Shift+CmdOrCtrl+Alt+ArrowDown']), ],
+    {
+        name: () => $_('action.next-entry-with-this-style'),
+        call: () => {
+          const entry = Utils.getAdjecentEntryWithThisStyle('next');
+          if (!entry) return;
+          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList, 
+              InputConfig.data.enterNavigationType == 'keepPosition' 
+              ? KeepInViewMode.SamePosition 
+              : KeepInViewMode.KeepInSight);
+        }
+    }),
 }
 KeybindingManager.register(TableCommands);

@@ -38,6 +38,7 @@ export class TableInput {
         this.manager.onMouseMove.bind(this, (ev) => this.#onMouseMove(ev));
         this.manager.onMouseDown.bind(this, (ev) => this.#onMouseDown(ev));
         this.manager.onDrag.bind(this, (x, y) => this.#onDrag(x, y));
+        this.manager.onDragEnd.bind(this, () => this.#onDragEnd());
 
         Editing.onSelectionChanged.bind(this, () => this.manager.requestRender());
 
@@ -230,5 +231,9 @@ export class TableInput {
                 && this.layout.lines[i].line < this.currentLine; i++);
             Editing.selectEntry(this.layout.lines[i-1].entry, SelectMode.Sequence);
         }
+    }
+
+    #onDragEnd() {
+        this.autoScrollY = 0;
     }
 }

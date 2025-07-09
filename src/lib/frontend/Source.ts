@@ -46,8 +46,6 @@ export enum ChangeType {
 }
 
 function readSnapshot(s: Snapshot) {
-    // this.clearSelection();
-    // this.focused.style = null;
     Source.subs = Format.JSON.parse(s.archive).done();
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch();
@@ -157,7 +155,7 @@ export const Source = {
     },
 
     markChanged(type: ChangeType, description: string) {
-        Debug.trace('marking change:', ChangeType[type]);
+        Debug.trace('marking change:', ChangeType[type], description);
         fileChanged.set(true);
         changedSinceLastAutosave = true;
 
@@ -215,7 +213,7 @@ export const Source = {
         Editing.clearFocus(false);
         Editing.clearSelection();
         this.clearUndoRedo();
-        Editing.focused.style = newSubs.defaultStyle;
+        Editing.focused.style.set(newSubs.defaultStyle);
         currentFile.set(
             (newSubs.migrated !== 'none' 
                 && newSubs.migrated !== 'olderVersion') ? '' : path);

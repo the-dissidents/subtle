@@ -21,7 +21,7 @@ export type SelectionState = {
 export type FocusState = {
     entry: Writable<SubtitleEntry | null | 'virtual'>,
     control: HTMLTextAreaElement | null,
-    style: SubtitleStyle | null
+    style: Writable<SubtitleStyle | null>
 }
 
 export enum SelectMode {
@@ -48,6 +48,25 @@ Object.defineProperty(Metrics, 'selected', {
         (e) => Editing.inSelection(e))
 });
 
+function updateFocusedStyle() {
+    let focused = Editing.getFocusedEntry();
+    Debug.assert(focused instanceof SubtitleEntry);
+    const style = get(Editing.focused.style);
+    if (style === null
+        || !Editing.styleToEditor.has(style)
+        || !focused.texts.has(style)
+    ) {
+        const first = focused.texts.has(Source.subs.defaultStyle) 
+            ? Source.subs.defaultStyle
+            : Source.subs.styles.find((x) => focused.texts.has(x));
+        Debug.assert(first !== undefined);
+        Editing.focused.style.set(first);
+        Debug.debug('changed focused style to', first.name);
+        return first;
+    }
+    return style;
+}
+
 export const Editing = {
     selection: {
         submitted: new Set(),
@@ -59,7 +78,7 @@ export const Editing = {
     focused: {
         entry: writable(null),
         control: null,
-        style: null
+        style: writable(null)
     } as FocusState,
 
     editChanged: false,
@@ -89,20 +108,8 @@ export const Editing = {
     },
 
     startEditingFocusedEntry() {
-        let focused = this.getFocusedEntry();
-        Debug.assert(focused instanceof SubtitleEntry);
-        if (this.focused.style === null
-         || !this.styleToEditor.has(this.focused.style)
-         || !focused.texts.has(this.focused.style)
-        ) {
-            const first = focused.texts.has(Source.subs.defaultStyle) 
-                ? Source.subs.defaultStyle
-                : Source.subs.styles.find((x) => focused.texts.has(x));
-            Debug.assert(first !== undefined);
-            this.focused.style = first;
-            Debug.debug('changed focused style to', first.name);
-        }
-        let elem = this.styleToEditor.get(this.focused.style)!;
+        const style = updateFocusedStyle();
+        let elem = this.styleToEditor.get(style)!;
         elem.focus();
         elem.scrollIntoView();
     },
@@ -151,7 +158,7 @@ export const Editing = {
         // focus on the new entry
         this.clearSelection();
         this.selectEntry(entry, SelectMode.Single);
-        this.focused.style = Source.subs.styles.find((x) => entry.texts.has(x))!;
+        updateFocusedStyle();
         setTimeout(() => {
             this.onKeepEntryInView.dispatch(entry);
             this.startEditingFocusedEntry();
@@ -164,7 +171,7 @@ export const Editing = {
         Debug.assert(focused instanceof SubtitleEntry);
         if (focused.texts.has(style)) return;
         focused.texts.set(style, '');
-        this.focused.style = style;
+        this.focused.style.set(style);
         Source.markChanged(ChangeType.InPlace, $_('c.insert-channel'));
         this.startEditingFocusedEntry();
     },
@@ -175,8 +182,7 @@ export const Editing = {
         if (!focused.texts.has(style)) return Debug.early('no such channel to delete');
         Debug.assert(focused.texts.size > 1);
         focused.texts.delete(style);
-        if (this.focused.style == style)
-            this.focused.style = null;
+        updateFocusedStyle();
         Source.markChanged(ChangeType.InPlace, $_('c.delete-channel'));
     },
 
@@ -185,7 +191,7 @@ export const Editing = {
         Debug.assert(focused instanceof SubtitleEntry);
         if (!this.editChanged) return;
 
-        const style = this.focused.style;
+        const style = get(this.focused.style);
         const control = this.focused.control;
         Debug.assert(style !== null && control !== null);
         focused.texts.set(style, control.value);
@@ -293,14 +299,12 @@ export const Editing = {
                     this.selection.focused = ent;
                     this.selection.currentGroup.clear();
                     this.selection.currentGroup.add(ent);
-                    // this.#status = 'selection initiated';
                 } else {
                     let a = Source.subs.entries.indexOf(this.selection.focused);
                     let b = Source.subs.entries.indexOf(ent);
                     Debug.assert(a >= 0 && b >= 0);
                     this.selection.currentGroup = new Set(
                         Source.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1));
-                    // this.#status = 'seqselect updated';
                 }
                 break;
             case SelectMode.Multiple:
@@ -309,7 +313,6 @@ export const Editing = {
                 this.selection.focused = ent;
                 this.selection.currentGroup.clear();
                 this.selection.currentGroup.add(ent);
-                // this.#status = 'multiselect added item';
                 break;
             case SelectMode.Single:
                 // clear selection
@@ -326,12 +329,12 @@ export const Editing = {
             this.clearFocus();
             this.focused.entry.set(ent);
             // TODO: focus on current style
-            if (keepType == KeepInViewMode.SamePosition && oldFocus instanceof SubtitleEntry) {
+            if (keepType == KeepInViewMode.SamePosition && oldFocus instanceof SubtitleEntry)
                 this.onKeepEntryAtPosition.dispatch(ent, oldFocus);
-            } else {
+            else
                 this.onKeepEntryInView.dispatch(ent);
-            }
             this.onSelectionChanged.dispatch(cause);
+            updateFocusedStyle();
         }
     },
 }

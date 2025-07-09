@@ -204,7 +204,7 @@ function clear() {
         // the above causes the UI to refresh, so we delay a bit
         setTimeout(() => {
           Editing.selection.focused = fuzzy.currentEntry;
-          Editing.focused.style = fuzzy.useStyle;
+          Editing.focused.style.set(fuzzy.useStyle);
           Editing.onSelectionChanged.dispatch(ChangeCause.Action);
           Editing.startEditingFocusedEntry();
         }, 0);

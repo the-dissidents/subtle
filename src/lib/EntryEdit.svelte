@@ -23,6 +23,7 @@ let editingT1 = $state(0);
 let editingDt = $state(0);
 let editingLabel: LabelType = $state('none');
 let uiFocus = Frontend.uiFocus;
+let focusedStyle = Editing.focused.style;
 
 const me = {};
 
@@ -148,7 +149,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
       {#each Source.subs.styles as style}
       {#if focused.texts.has(style)}
       <tr>
-        <td class="vlayout">
+        <td class={{selected: style.name == $focusedStyle?.name, vlayout: true}}>
           <StyleSelect currentStyle={style}
             onsubmit={async (newStyle, cancel) => {
               if (focused.texts.has(newStyle) && !await dialog.confirm(
@@ -198,7 +199,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
             value={focused.texts.get(style)!}
             onfocus={(ev) => {
               $uiFocus = 'EditingField';
-              Editing.focused.style = style;
+              Editing.focused.style.set(style);
               Editing.focused.control = ev.currentTarget;
             }}
             onblur={(x) => {
@@ -255,7 +256,6 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   overflow: auto;
   box-shadow: gray 0px 0px 3px inset;
   border-radius: 3px;
-  padding: 0 3px;
   margin-left: 3px;
 }
 
@@ -263,10 +263,27 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   width: 100%;
   resize: none;
   overflow: visible;
-  padding: 5px;
   box-sizing: border-box;
   font-family: var(--editorFontFamily);
   font-size: var(--editorFontSize);
+}
+
+td {
+  padding: 3px;
+  border-radius: 3px;
+}
+
+
+@media (prefers-color-scheme: light) {
+  .selected {
+    background-color: var(--uchu-pink-2);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .selected {
+    background-color: var(--uchu-blue-9);
+  }
 }
 </style>
 

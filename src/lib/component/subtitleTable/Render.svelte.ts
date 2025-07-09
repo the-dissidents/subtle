@@ -19,7 +19,7 @@ const gridMajorColor      = $derived(theme.isDark ? '#666'          : '#999');
 const headerBackground    = $derived(theme.isDark ? '#555'          : '#ddd');
 const overlapColor        = $derived(theme.isDark ? 'lightpink'     : 'crimson');
 const focusBackground     = $derived(theme.isDark ? 'darkslategray' : 'lightblue');
-const selectedBackground  = $derived(theme.isDark ? '#444'          : '#eee');
+const selectedBackground  = $derived(theme.isDark ? '#444'          : '#e8e8e8');
 const errorBackground     = $derived(theme.isDark ? '#aa335599'     : '#eedd0099');
 
 export class TableRenderer {

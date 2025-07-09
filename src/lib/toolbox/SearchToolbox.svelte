@@ -276,7 +276,7 @@ async function execute(type: SearchAction, option: SearchOption) {
         if (newType == 'select') {
           // select this, and done
           Editing.selectEntry(entry, SelectMode.Single, ChangeCause.Action);
-          Editing.focused.style = newStyle;
+          Editing.focused.style.set(newStyle);
           setTimeout(() => {
             const editor = Editing.styleToEditor.get(newStyle);
             if (!editor) {

@@ -4,12 +4,12 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 
 import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Editing, SelectMode } from "./Editing";
-import { Interface } from "./Interface";
 import { ChangeType, Source } from "./Source";
 
 import { Debug } from "../Debug";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Frontend } from "./Frontend";
+import { get } from "svelte/store";
 const $_ = unwrapFunctionStore(_);
 
 export const Utils = {
@@ -226,7 +226,7 @@ export const Utils = {
     getAdjecentEntryWithThisStyle(dir: 'next' | 'previous') {
         const focusedEntry = Editing.getFocusedEntry();
         if (!(focusedEntry instanceof SubtitleEntry)) return null;
-        const style = Editing.focused.style;
+        const style = get(Editing.focused.style);
         if (!style) return null;
         const thisIndex = Source.subs.entries.indexOf(focusedEntry);
         Debug.assert(thisIndex >= 0);
