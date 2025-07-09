@@ -149,8 +149,7 @@ export const Interface = {
         if (entries.length > 0) {
             Editing.setSelection(entries);
         }
-        Source.markChanged(ChangeType.General);
-        Source.markChanged(ChangeType.StyleDefinitions);
+        Source.markChanged(ChangeType.General, $_('c.import-file'));
         Frontend.setStatus($_('msg.imported'));
     },
 

@@ -1,3 +1,4 @@
+import { get } from "svelte/store";
 import { CanvasManager } from "../../CanvasManager";
 import { InterfaceConfig, MainConfig } from "../../config/Groups";
 import { evaluateFilter, Metrics, type SimpleMetricFilter } from "../../core/Filter";
@@ -5,6 +6,7 @@ import type { SubtitleEntry, SubtitleStyle } from "../../core/Subtitles.svelte";
 import { Debug } from "../../Debug";
 import { ChangeType, Source } from "../../frontend/Source";
 import { TableConfig } from "./Config";
+import { _ } from "svelte-i18n";
 
 export type Column = {
   metric: keyof typeof Metrics,
@@ -183,7 +185,7 @@ export class TableLayout {
     changeColumns() {
         Source.subs.view.perEntryColumns = this.entryColumns.map((x) => x.metric);
         Source.subs.view.perChannelColumns = this.channelColumns.map((x) => x.metric);
-        Source.markChanged(ChangeType.View);
+        Source.markChanged(ChangeType.View, get(_)('c.column-view'));
         this.requestedLayout = true;
         this.manager.requestRender();
     }

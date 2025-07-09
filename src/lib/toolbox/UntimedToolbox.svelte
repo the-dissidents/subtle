@@ -53,7 +53,7 @@ function updateToSubs() {
   if (Source.subs.metadata.special.untimedText == textarea.value) return;
   Source.subs.metadata.special.untimedText = textarea.value;
   fuzzy.engine = null;
-  Source.markChanged(ChangeType.Metadata);
+  Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
 }
 
 function readFromSubs() {
@@ -199,7 +199,7 @@ function clear() {
         Debug.assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
         if (fuzzy.currentEntry.texts.get(fuzzy.useStyle) != str) {
           fuzzy.currentEntry.texts.set(fuzzy.useStyle, str);
-          Source.markChanged(ChangeType.InPlace);
+          Source.markChanged(ChangeType.InPlace, $_('c.fuzzy-replace'));
         }
         // the above causes the UI to refresh, so we delay a bit
         setTimeout(() => {

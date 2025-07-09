@@ -40,7 +40,7 @@ function newStyle() {
   let newStyle = Subtitles.createStyle(
     SubtitleTools.getUniqueStyleName(Source.subs, 'new'));
   Source.subs.styles.push(newStyle);
-  Source.markChanged(ChangeType.StyleDefinitions);
+  Source.markChanged(ChangeType.StyleDefinitions, $_('c.add-style'));
 }
 
 function removeUnusedStyles() {
@@ -48,12 +48,12 @@ function removeUnusedStyles() {
     Source.subs.entries.flatMap((x) => [...x.texts.keys()]));
   Source.subs.styles = Source.subs.styles.filter((x) => 
     usedStyles.has(x) || Source.subs.defaultStyle.name == x.name);
-  Source.markChanged(ChangeType.StyleDefinitions);
+  Source.markChanged(ChangeType.StyleDefinitions, $_('ppty.remove-all-unused'));
   styles = Source.subs.styles;
 }
 
 function markMetadataChange() {
-  Source.markChanged(ChangeType.Metadata);
+  Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
 }
 </script>
 

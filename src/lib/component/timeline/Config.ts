@@ -89,7 +89,7 @@ export const TimelineCommands = {
         call: (): Promise<SubtitleEntry> => make(TimelineCommands.holdToCreateEntry2),
         onDeactivate: (entry) => {
             EventHost.unbind(entry);
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
         }
     }),
     holdToCreateEntry2: new UICommand(() => $_('category.timeline'),
@@ -100,7 +100,7 @@ export const TimelineCommands = {
         call: (): Promise<SubtitleEntry> => make(TimelineCommands.holdToCreateEntry1),
         onDeactivate: (entry) => {
             EventHost.unbind(entry);
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
         }
     }),
     moveWholeStartTo: new UICommand(() => $_('category.timeline'),
@@ -116,7 +116,7 @@ export const TimelineCommands = {
                 x.start -= delta;
                 x.end -= delta;
             });
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('action.move-whole-start-time-to-cursor'));
         }
     }),
     moveWholeEndTo: new UICommand(() => $_('category.timeline'),
@@ -132,7 +132,7 @@ export const TimelineCommands = {
                 x.end -= delta;
                 x.end -= delta;
             });
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('action.move-whole-end-time-to-cursor'));
         }
     }),
     setStart: new UICommand(() => $_('category.timeline'),
@@ -145,7 +145,7 @@ export const TimelineCommands = {
             Debug.assert(focus instanceof SubtitleEntry);
             if (focus.end > Playback.position) {
                 focus.start = Playback.position;
-                Source.markChanged(ChangeType.Times);
+                Source.markChanged(ChangeType.Times, $_('action.set-start-time-to-cursor'));
             }
         }
     }),
@@ -159,7 +159,7 @@ export const TimelineCommands = {
             Debug.assert(focus instanceof SubtitleEntry);
             if (focus.start < Playback.position) {
                 focus.end = Playback.position;
-                Source.markChanged(ChangeType.Times);
+                Source.markChanged(ChangeType.Times, $_('action.set-end-time-to-cursor'));
             }
         }
     }),

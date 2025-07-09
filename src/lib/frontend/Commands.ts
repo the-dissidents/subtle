@@ -118,10 +118,14 @@ export const BasicCommands = {
             const focusedEntry = Editing.getFocusedEntry();
             if (!(focusedEntry instanceof SubtitleEntry)) return;
             Editing.submitFocusedEntry();
-            Editing.offsetFocus(1, SelectMode.Single, 
-                InputConfig.data.enterNavigationType == 'keepPosition' 
-                ? KeepInViewMode.SamePosition 
-                : KeepInViewMode.KeepInSight);
+            let i = Source.subs.entries.indexOf(focusedEntry) + 1;
+            if (i == Source.subs.entries.length)
+                Editing.startEditingNewVirtualEntry();
+            else
+                Editing.offsetFocus(1, SelectMode.Single, 
+                    InputConfig.data.enterNavigationType == 'keepPosition' 
+                    ? KeepInViewMode.SamePosition 
+                    : KeepInViewMode.KeepInSight);
         }
     }),
     editNextEntryWithThistyle: new UICommand(() => $_('category.editing'),
@@ -310,7 +314,7 @@ export const BasicCommands = {
             });
             if (entries.length > 0) {
                 Editing.setSelection(entries);
-                Source.markChanged(ChangeType.General);
+                Source.markChanged(ChangeType.General, $_('action.paste'));
                 Frontend.setStatus($_('msg.pasted'));
             } else {
                 Frontend.setStatus($_('msg.nothing-to-paste'), 'error');
@@ -401,7 +405,7 @@ export const BasicCommands = {
                 }
             }
             Editing.insertEntry(ent.texts.keys(), start, end, index);
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('action.insert-before'));
         },
     }),
     insertAfterFocus: new UICommand(() => $_('category.editing'),
@@ -432,7 +436,7 @@ export const BasicCommands = {
                 }
             }
             Editing.insertEntry(ent?.texts?.keys() ?? undefined, start, end, index);
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('action.insert-after'));
         },
     }),
     moveUp: new UICommand(() => $_('category.editing'),
@@ -503,7 +507,7 @@ export const BasicCommands = {
                 Source.subs.entries.splice(index, 1);
             }
             Editing.selectEntry(first, SelectMode.Single);
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('action.combine'));
         },
     }),
     splitChannels: new UICommand(() => $_('category.editing'),
@@ -533,7 +537,7 @@ export const BasicCommands = {
                 Editing.clearSelection();
                 for (let ent of newSelection)
                     Editing.selection.submitted.add(ent);
-                Source.markChanged(ChangeType.Times);
+                Source.markChanged(ChangeType.Times, $_('action.split-simultaneous'));
             }
         },
     }),
@@ -577,7 +581,7 @@ export const BasicCommands = {
             call() {
                 for (let entry of Editing.getSelection())
                     entry.label = x;
-                Source.markChanged(ChangeType.InPlace);
+                Source.markChanged(ChangeType.InPlace, $_('c.label'));
             },
         }))
     }),
@@ -589,7 +593,7 @@ export const BasicCommands = {
         async call() {
             let options = await Dialogs.timeTransform.showModal!();
             if (options && SubtitleUtil.shiftTimes(Source.subs, options))
-                Source.markChanged(ChangeType.Times);
+                Source.markChanged(ChangeType.Times, $_('c.transform-times'));
         },
     }),
     sortSelectionByTime: new UICommand(() => $_('category.tool'),
@@ -607,7 +611,7 @@ export const BasicCommands = {
                 positionMap.set(Source.subs.entries[i], i);
             selection.sort((a, b) => a.start - b.start);
             Source.subs.entries.splice(start, selection.length, ...selection);
-            Source.markChanged(ChangeType.Order);
+            Source.markChanged(ChangeType.Order, $_('action.sort-by-time'));
         },
     }),
     createChannel: new UICommand(() => $_('category.editing'),
@@ -623,7 +627,7 @@ export const BasicCommands = {
                     ent.texts.set(x, '');
                     done = true;
                 }
-            if (done) Source.markChanged(ChangeType.InPlace);
+            if (done) Source.markChanged(ChangeType.InPlace, $_('action.create-channel'));
         }, notSelectionCommonStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -668,7 +672,7 @@ export const BasicCommands = {
                 }
             }
             Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
-            if (done) Source.markChanged(ChangeType.Times);
+            if (done) Source.markChanged(ChangeType.Times, $_('action.remove-empty'));
         },
     }),
     replaceChannel: new UICommand(() => $_('category.editing'),

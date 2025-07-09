@@ -38,7 +38,7 @@ export const Utils = {
         if (index + direction < 0 || index + direction > Source.subs.entries.length) return;
         Source.subs.entries.splice(index, selection.length);
         Source.subs.entries.splice(index + direction, 0, ...selection);
-        Source.markChanged(ChangeType.Order);
+        Source.markChanged(ChangeType.Order, $_('c.move-entries'));
 
         let entry = direction > 0 ? selection.at(-1)! : selection[0];
         setTimeout(() => {
@@ -58,9 +58,10 @@ export const Utils = {
             newEntries = [...newEntries, ...selection]; break;
         }
         Source.subs.entries = newEntries;
-        Source.markChanged(ChangeType.Order);
+        Source.markChanged(ChangeType.Order, $_('c.move-entries'));
     },
 
+    // TODO: make this a dialog
     fixOverlap(selection: SubtitleEntry[], epsilon = 0.05) {
         let count = 0;
         for (let i = 0; i < selection.length - 1; i++) {
@@ -81,7 +82,7 @@ export const Utils = {
 
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: count}}));
         if (count > 0)
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('action.fix-erroneous-overlapping'));
     },
 
     mergeDuplicate(selection: SubtitleEntry[]) {
@@ -116,7 +117,7 @@ export const Utils = {
 
         Frontend.setStatus($_('msg.combined-n-entries', {values: {n: deletion.size}}));
         if (deletion.size > 0)
-            Source.markChanged(ChangeType.Times);
+            Source.markChanged(ChangeType.Times, $_('action.merge-overlapping-duplicates'));
     },
 
     exchangeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
@@ -135,7 +136,7 @@ export const Utils = {
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace);
+            Source.markChanged(ChangeType.InPlace, $_('action.exchange-channel'));
     },
 
     mergeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
@@ -150,7 +151,7 @@ export const Utils = {
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace);
+            Source.markChanged(ChangeType.InPlace, $_('action.merge-channel'));
     },
 
     async replaceStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
@@ -167,7 +168,7 @@ export const Utils = {
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace);
+            Source.markChanged(ChangeType.InPlace, $_('action.replace-channel'));
     },
 
     removeStyle(entries: SubtitleEntry[], style: SubtitleStyle) {
@@ -184,7 +185,8 @@ export const Utils = {
             }
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
-        if (done) Source.markChanged(ChangeType.Times);
+        if (done)
+            Source.markChanged(ChangeType.InPlace, $_('action.remove-channel'));
     },
 
     removeNewlines(entries: SubtitleEntry[], style: SubtitleStyle) {
@@ -196,7 +198,8 @@ export const Utils = {
             done++;
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
-        if (done) Source.markChanged(ChangeType.InPlace);
+        if (done)
+            Source.markChanged(ChangeType.InPlace, $_('action.remove-newlines'));
     },
 
     mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {
@@ -217,7 +220,7 @@ export const Utils = {
         first.end = end;
         
         Editing.selectEntry(first, SelectMode.Single);
-        Source.markChanged(ChangeType.Times);
+        Source.markChanged(ChangeType.InPlace, $_('action.merge-entries'));
     },
 
     getAdjecentEntryWithThisStyle(dir: 'next' | 'previous') {

@@ -23,7 +23,8 @@ const $_ = unwrapFunctionStore(_);
 export type Snapshot = {
     archive: string,
     change: ChangeType,
-    saved: boolean
+    saved: boolean,
+    description: string
 }
 
 export enum ChangeCause {
@@ -151,11 +152,11 @@ export const Source = {
     onSubtitleObjectReload: new EventHost(),
 
     init() {
-        this.markChanged(ChangeType.General);
+        this.markChanged(ChangeType.General, '');
         fileChanged.set(false);
     },
 
-    markChanged(type: ChangeType) {
+    markChanged(type: ChangeType, description: string) {
         Debug.trace('marking change:', ChangeType[type]);
         fileChanged.set(true);
         changedSinceLastAutosave = true;
@@ -165,7 +166,9 @@ export const Source = {
         undoStack.push({
             archive: Format.JSON.write(this.subs).toString(), 
             change: type,
-            saved: false}); // TODO
+            saved: false,
+            description
+        }); // TODO
         redoStack = [];
         this.onUndoBufferChanged.dispatch();
         this.onSubtitlesChanged.dispatch(type);
@@ -174,7 +177,6 @@ export const Source = {
     clearUndoRedo() {
         redoStack = [];
         redoStack = [];
-        this.markChanged(ChangeType.General);
         this.onUndoBufferChanged.dispatch();
     },
 
@@ -187,10 +189,10 @@ export const Source = {
             return false;
         }
         redoStack.push(undoStack.pop()!);
-        let snap = redoStack.at(-1)!;
+        let snap = undoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();
-        Frontend.setStatus($_('msg.undone'), 'info');
+        Frontend.setStatus($_('msg.undone', {values: {op: snap.description}}), 'info');
         return true;
     },
 
@@ -203,7 +205,7 @@ export const Source = {
         let snap = redoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();
-        Frontend.setStatus($_('msg.redone'), 'info');
+        Frontend.setStatus($_('msg.redone', {values: {op: snap.description}}), 'info');
         return true;
     },
 
@@ -222,7 +224,6 @@ export const Source = {
 
         this.onSubtitleObjectReload.dispatch();
         this.onSubtitlesChanged.dispatch(ChangeType.General);
-        this.onSubtitlesChanged.dispatch(ChangeType.StyleDefinitions);
     },
 
     async exportTo(file: string, text: string) {

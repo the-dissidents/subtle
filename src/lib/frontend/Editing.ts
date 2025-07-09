@@ -146,7 +146,7 @@ export const Editing = {
             entry.texts.set(Source.subs.defaultStyle, '');
         }
         Source.subs.entries.push(entry);
-        Source.markChanged(ChangeType.Times);
+        Source.markChanged(ChangeType.Times, $_('action.insert-after'));
 
         // focus on the new entry
         this.clearSelection();
@@ -165,7 +165,7 @@ export const Editing = {
         if (focused.texts.has(style)) return;
         focused.texts.set(style, '');
         this.focused.style = style;
-        Source.markChanged(ChangeType.InPlace);
+        Source.markChanged(ChangeType.InPlace, $_('c.insert-channel'));
         this.startEditingFocusedEntry();
     },
 
@@ -177,7 +177,7 @@ export const Editing = {
         focused.texts.delete(style);
         if (this.focused.style == style)
             this.focused.style = null;
-        Source.markChanged(ChangeType.InPlace);
+        Source.markChanged(ChangeType.InPlace, $_('c.delete-channel'));
     },
 
     submitFocusedEntry() {
@@ -189,7 +189,7 @@ export const Editing = {
         const control = this.focused.control;
         Debug.assert(style !== null && control !== null);
         focused.texts.set(style, control.value);
-        Source.markChanged(ChangeType.InPlace);
+        Source.markChanged(ChangeType.InPlace, $_('c.edit-entry'));
     },
 
     clearFocus(trySubmit = true) {
@@ -230,7 +230,7 @@ export const Editing = {
         if (next) this.selectEntry(next, SelectMode.Single);
         else this.selectVirtualEntry();
 
-        Source.markChanged(ChangeType.Times);
+        Source.markChanged(ChangeType.Times, $_('action.delete'));
         this.onSelectionChanged.dispatch(cause);
     },
 

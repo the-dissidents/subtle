@@ -100,7 +100,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
       applyEditForm(); 
       Editing.editChanged = true;}} 
     onchange={() => 
-      Source.markChanged(ChangeType.Times)}/>
+      Source.markChanged(ChangeType.Times, $_('c.timestamp'))}/>
   <br>
   <TimestampInput bind:timestamp={editingT1}
     stretch={true}
@@ -112,7 +112,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
     onchange={() => {
       if (editingT1 < editingT0) editingT1 = editingT0;
       applyEditForm();
-      Source.markChanged(ChangeType.Times);}}/>
+      Source.markChanged(ChangeType.Times, $_('c.timestamp'));}}/>
   <br>
   <TimestampInput bind:timestamp={editingDt}
     stretch={true}
@@ -124,7 +124,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
       applyEditForm();
       Editing.editChanged = true;}}
     onchange={() => 
-      Source.markChanged(ChangeType.Times)}/>
+      Source.markChanged(ChangeType.Times, $_('c.timestamp'))}/>
   <hr>
   <label class="hlayout center-items">
     <span style="padding-right: 5px; white-space: pre;">
@@ -135,7 +135,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
       stretch={true}
       onsubmit={() => {
         applyEditForm();
-        Source.markChanged(ChangeType.InPlace);
+        Source.markChanged(ChangeType.InPlace, $_('c.label'));
       }}/>
   </label>
 </fieldset>
@@ -158,7 +158,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
               }
               focused.texts.set(newStyle, focused.texts.get(style)!);
               focused.texts.delete(style);
-              Source.markChanged(ChangeType.InPlace);
+              Source.markChanged(ChangeType.InPlace, $_('c.change-style'));
             }} />
           <button onclick={async () => {
             let otherUsed = [...focused.texts.keys()].filter((x) => x !== style);
@@ -176,7 +176,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
                       Debug.assert(textA !== undefined && textB !== undefined);
                       focused.texts.set(x, textA);
                       focused.texts.set(style, textB);
-                      Source.markChanged(ChangeType.InPlace);
+                      Source.markChanged(ChangeType.InPlace, $_('c.exchange-channel'));
                     }
                   }))
                 },

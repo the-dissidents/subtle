@@ -53,7 +53,7 @@ async function contextMenu() {
         let i = subtitles.styles.indexOf($style);
         if (i < 0) return Debug.early('style not found');
         subtitles.styles.splice(i, 1);
-        Source.markChanged(ChangeType.StyleDefinitions);
+        Source.markChanged(ChangeType.StyleDefinitions, $_('c.delete-style'));
         onsubmit?.();
       }
     },
@@ -64,7 +64,7 @@ async function contextMenu() {
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
         // subtitles.styles = subtitles.styles;
-        Source.markChanged(ChangeType.StyleDefinitions);
+        Source.markChanged(ChangeType.StyleDefinitions, $_('c.duplicate-style'));
         onsubmit?.();
       }
     },
@@ -97,10 +97,6 @@ async function contextMenu() {
   ]});
   menu.popup();
 }
-
-function markStyleChanged() {
-  Source.markChanged(ChangeType.StyleDefinitions);
-}
 </script>
 
 <div class='hlayout'>
@@ -114,7 +110,7 @@ function markStyleChanged() {
         const name = SubtitleTools.getUniqueStyleName(subtitles, 'new');
         const newStyle = Subtitles.createStyle(name);
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
-        Source.markChanged(ChangeType.StyleDefinitions);
+        Source.markChanged(ChangeType.StyleDefinitions, $_('c.add-style'));
         onsubmit?.();
       }}
       aria-label='add'
@@ -130,7 +126,7 @@ function markStyleChanged() {
           subtitles.styles[i-1],
           ...subtitles.styles.slice(i+1)
         ];
-        Source.markChanged(ChangeType.StyleDefinitions);
+        Source.markChanged(ChangeType.StyleDefinitions, $_('c.reorder-styles'));
         onsubmit?.();
       }}
       aria-label='move up'
@@ -146,7 +142,7 @@ function markStyleChanged() {
           $style, 
           ...subtitles.styles.slice(i+2)
         ];
-        Source.markChanged(ChangeType.StyleDefinitions);
+        Source.markChanged(ChangeType.StyleDefinitions, $_('c.reorder-styles'));
         onsubmit?.();
       }}
       aria-label='move down'
@@ -173,7 +169,7 @@ function markStyleChanged() {
                   duplicateWarning = false;
                 } else {
                   $style.name = ev.currentTarget.value;
-                  Source.markChanged(ChangeType.InPlace);
+                  Source.markChanged(ChangeType.InPlace, $_('c.style-name'));
                 }
               }}/>
             <label style="padding-left: 5px;">
@@ -182,7 +178,7 @@ function markStyleChanged() {
                 onclick={(ev) => {
                   subtitles.defaultStyle = $style;
                   ev.currentTarget.checked = true;
-                  Source.markChanged(ChangeType.InPlace);
+                  Source.markChanged(ChangeType.InPlace, $_('c.default-style'));
                 }}/>
               {$_('style.default')}
             </label>
@@ -191,20 +187,25 @@ function markStyleChanged() {
         <tr>
           <td>{$_('style.font')}</td>
           <td><input type="text" bind:value={$style.font}
-            onchange={markStyleChanged}/></td>
+            onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font'))}/></td>
         </tr>
         <tr>
           <td>{$_('style.size')}</td>
           <td class="hlayout style">
-            <NumberInput width="100%" bind:value={$style.size}/>
+            <NumberInput width="100%" bind:value={$style.size} 
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-size'))}/>
             <label><input type='checkbox' bind:checked={$style.styles.bold}
-              onchange={markStyleChanged}/><b>B</b></label>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}/>
+              <b>B</b></label>
             <label><input type='checkbox' bind:checked={$style.styles.italic}
-              onchange={markStyleChanged}/><i>I</i></label>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}/>
+              <i>I</i></label>
             <label><input type='checkbox' bind:checked={$style.styles.underline}
-              onchange={markStyleChanged}/><u>U</u></label>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}/>
+              <u>U</u></label>
             <label><input type='checkbox' bind:checked={$style.styles.strikethrough}
-              onchange={markStyleChanged}/><s>S</s></label>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}/>
+              <s>S</s></label>
           </td>
         </tr>
         <tr>
@@ -220,7 +221,7 @@ function markStyleChanged() {
     <Collapsible header={$_('style.validator')}>
       <FilterEdit bind:filter={$style.validator} 
         availableContexts={['entry', 'channel']}
-        onchange={() => Source.markChanged(ChangeType.Filter)} />
+        onchange={() => Source.markChanged(ChangeType.Filter, $_('c.style-filter'))} />
     </Collapsible>
     <!-- advanced -->
     <Collapsible header={$_('style.more')}>
@@ -229,22 +230,26 @@ function markStyleChanged() {
           <tr>
             <td>{$_('style.text-color')}</td>
             <td><input type="text" bind:value={$style.color}
-              onchange={markStyleChanged}/></td>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
+            </td>
           </tr>
           <tr>
             <td>{$_('style.line-color')}</td>
             <td><input type="text" bind:value={$style.outlineColor}
-              onchange={markStyleChanged}/></td>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
+            </td>
           </tr>
           <tr>
             <td>{$_('style.line-size')}</td>
             <td><NumberInput width="100%" bind:value={$style.outline}
-              onchange={markStyleChanged}/></td>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-size'))}/>
+            </td>
           </tr>
           <tr>
             <td>{$_('style.shadow')}</td>
             <td><NumberInput width="100%" bind:value={$style.shadow}
-              onchange={markStyleChanged}/></td>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow'))}/>
+            </td>
           </tr>
           <tr>
             <td>{$_('style.alignment')}</td>
@@ -253,7 +258,7 @@ function markStyleChanged() {
                 value={AlignMode[$style.alignment]}
                 oninput={() => {
                   $style.alignment = alignSelector!.selectedIndex + 1;
-                  markStyleChanged();
+                  Source.markChanged(ChangeType.InPlace, $_('c.style-alignment'));
                 }}>
               <option value="BottomLeft">{$_('style.bottom-left')}</option>
               <option value="BottomCenter">{$_('style.bottom-center')}</option>
@@ -273,22 +278,22 @@ function markStyleChanged() {
                 <div><label>{$_('style.top')}
                   <NumberInput min={0} max={1000}
                     bind:value={$style.margin.top}
-                    onchange={markStyleChanged}/>
+                    onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
                 </label></div>
                 <div><label>{$_('style.bottom')}
                   <NumberInput min={0} max={1000}
                     bind:value={$style.margin.bottom}
-                    onchange={markStyleChanged}/>
+                    onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
                 </label></div>
                 <div><label>{$_('style.left')}
                   <NumberInput min={0} max={1000}
                     bind:value={$style.margin.left}
-                    onchange={markStyleChanged}/>
+                    onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
                 </label></div>
                 <div><label>{$_('style.right')}
                   <NumberInput min={0} max={1000}
                     bind:value={$style.margin.right}
-                    onchange={markStyleChanged}/>
+                    onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
                 </label></div>
               </div>
             </td>

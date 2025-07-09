@@ -151,7 +151,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
             else
               exclude.add(style);
             layout!.requestedLayout = true;
-            Source.markChanged(ChangeType.View);
+            Source.markChanged(ChangeType.View, $_('c.timeline-row-view'));
           }} />
         {style.name}
       </label>

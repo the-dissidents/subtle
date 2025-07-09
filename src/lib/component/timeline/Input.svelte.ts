@@ -13,6 +13,8 @@ import { Memorized } from "../../config/MemorizedValue.svelte";
 import { SubtitleTableHandle } from "../subtitleTable/Input.svelte";
 import * as z from "zod/v4-mini";
 import { contextMenu } from "./Menu";
+import { get } from "svelte/store";
+import { _ } from "svelte-i18n";
 
 export const TimelineHandle = {
   activeChannel: undefined as SubtitleStyle | undefined,
@@ -136,7 +138,7 @@ abstract class MoveResizeBase extends TimelineAction {
     this.self.alignmentLine = null;
     this.layout.manager.requestRender();
     if (this.changed)
-      Source.markChanged(ChangeType.Times);
+      Source.markChanged(ChangeType.Times, get(_)('c.drag-to-move-resize'));
     else
       this.afterEnd();
   }
@@ -276,7 +278,7 @@ class CreateEntry extends TimelineAction {
     if (this.entry.end == this.entry.start) {
       this.onDragInterrupted();
     } else {
-      Source.markChanged(ChangeType.Times);
+      Source.markChanged(ChangeType.Times, get(_)('c.drag-to-create'));
       // TODO: start editing?
     }
   }
@@ -358,7 +360,7 @@ class SplitEntry extends TimelineAction {
         newEntry.texts.set(style, text.substring(0, pos));
         target.texts.set(style, text.substring(pos));
       }
-      Source.markChanged(ChangeType.Times);
+      Source.markChanged(ChangeType.Times, get(_)('c.split-entry-timeline'));
 
       this.self.splitting = null;
       this.self.currentAction = undefined;

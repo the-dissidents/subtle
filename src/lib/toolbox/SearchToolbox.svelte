@@ -321,7 +321,7 @@ async function execute(type: SearchAction, option: SearchOption) {
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     } else if (type == "replace" || type === "replaceStyles") {
       status = $_('search.replaced-n-lines', {values: {n: nDone, nEntries}});
-      Source.markChanged(ChangeType.InPlace);
+      Source.markChanged(ChangeType.InPlace, $_('c.replace'));
     } else {
       status = $_('search.found-n-lines', {values: {n: nEntries}});
     }

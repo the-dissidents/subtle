@@ -100,11 +100,11 @@ function run(doit: boolean)
       Editing.clearSelection();
       for (let ent of selection.filter((x) => !done.has(x)))
         Editing.selection.submitted.add(ent);
-      Source.markChanged(ChangeType.Times);
+      Source.markChanged(ChangeType.Times, $_('c.combine-by-matching-time'));
     }
     if (marked.size > 0) {
       if (done.size == 0)
-        Source.markChanged(ChangeType.InPlace);
+        Source.markChanged(ChangeType.InPlace, $_('c.combine-by-matching-time'));
     }
   } else
     hasbeen = false;
