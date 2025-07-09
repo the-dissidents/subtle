@@ -1,43 +1,74 @@
+<script lang="ts" module>
+export type ReferencesHandler = {
+  readonly query: (term?: string) => void;
+  readonly focus: () => void;
+};
+</script>
+
 <script lang="ts">
 import { PencilLineIcon } from '@lucide/svelte';
 import { _ } from 'svelte-i18n';
-import { Reference, type ReferenceSource } from '../frontend/References';
 import Collapsible from '../ui/Collapsible.svelte';
-  import { Frontend, guardAsync } from '../frontend/Frontend';
-  import { Debug } from '../Debug';
+import { Reference, type ReferenceSource } from '../frontend/References';
+import { Frontend, guardAsync } from '../frontend/Frontend';
+import { Toolboxes } from '../frontend/Toolboxes';
+import { Memorized } from '../config/MemorizedValue.svelte';
+import * as z from 'zod/v4-mini';
 
 let keyword = $state('');
-let currentSource = $state<ReferenceSource>();
 let params = new Map<string, string>();
 let sources = Reference.sources;
+let currentSourceName = Memorized.$('currentReferenceSource', z.string(), '');
+let currentSource = $state<ReferenceSource>();
 let iframe = $state<HTMLIFrameElement>();
+let input = $state<HTMLInputElement>();
 
-function query() {
-  guardAsync(async () => {
-    if (currentSource === undefined || iframe === undefined) return;
-    Frontend.setStatus($_('msg.querying-source', {values: {source: currentSource.name}}));
-    await Reference.displayInFrame(currentSource, { keyword, variables: params }, iframe);
-    Frontend.setStatus($_('msg.query-successful'));
-  }, $_('msg.error-when-querying-reference-source'))
-}
+let toolboxFocus = Frontend.toolboxFocus;
+
+const handler: ReferencesHandler = {
+  query(term?: string) {
+    if (term) keyword = term;
+    if ($toolboxFocus !== 'references') $toolboxFocus = 'references';
+    guardAsync(async () => {
+      const k = keyword.trim();
+      if (currentSource === undefined || iframe === undefined || k.length == 0) return;
+      Frontend.setStatus($_('msg.querying-source', {values: {source: currentSource.name}}));
+      await Reference.displayInFrame(currentSource, { keyword: k, variables: params }, iframe);
+      Frontend.setStatus($_('msg.query-successful'));
+    }, $_('msg.error-when-querying-reference-source'))
+  },
+  focus() {
+    $toolboxFocus = 'references';
+    setTimeout(() => input?.focus(), 0);
+  },
+};
+Toolboxes.references = handler;
+
+currentSourceName.subscribe((x) => {
+  const s = $sources.find((a) => a.name == x);
+  if (s) currentSource = s;
+});
 </script>
 
 <div class='vlayout fill'>
   <div class='hlayout'>
-    <input type="text" class='flexgrow' bind:value={keyword}
-      onsubmit={query} />
-    <button onclick={query}
+    <input type="text" class='flexgrow' bind:value={keyword} bind:this={input}
+      onkeydown={(ev) => {
+        if (ev.key == 'Enter') handler.query();
+      }} />
+    <button onclick={() => handler.query()}
             disabled={currentSource === undefined || keyword.trim().length == 0}>
       {$_('refs.query')}
     </button>
   </div>
   <div class='hlayout'>
-    <select class='flexgrow' bind:value={currentSource}>
+    <select class='flexgrow' bind:value={currentSource} 
+            onchange={() => currentSourceName.set(currentSource!.name)}>
       {#each $sources as source}
         <option value={source}>{source.name}</option>
       {/each}
     </select>
-    <button>
+    <button onclick={() => Reference.sources.set(Reference.defaultSources)}>
       <PencilLineIcon />
     </button>
   </div>

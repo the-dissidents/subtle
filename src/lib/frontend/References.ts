@@ -73,6 +73,22 @@ const defaultSources: ReferenceSource[] = [
         variables: [ { name: 'language name', defaultValue: 'English' } ]
     },
     {
+        name: '有道词典',
+        url: ['https://dict.youdao.com/result?word=', { type: 'keyword' }, '&lang=en'],
+        selector: ['div.search_result'],
+        patchStyle: [{
+            selector: ['#searchLayout'],
+            patches: [['min-width', '0']]
+        }, {
+            selector: ['div.search_result'],
+            patches: [['min-width', '0'], ['padding', '0 10px 0 10px'], ['width', 'auto'], ['margin', '0']]
+        }, {
+            selector: ['div.search_result-dict'],
+            patches: [['width', 'auto']]
+        }],
+        variables: []
+    },
+    {
         name: '法语助手',
         url: ['https://www.frdic.com/dicts/fr/', { type: 'keyword' }],
         selector: ['#translate'],
@@ -103,6 +119,10 @@ const defaultSources: ReferenceSource[] = [
 
 export const Reference = {
     sources: Memorized.$('referenceSources', z.array(zRSource), [...defaultSources]),
+
+    get defaultSources() {
+        return defaultSources;
+    },
 
     async getUrl(source: ReferenceSource, ctx: ReferenceContext) {
         const url = new URL(substitute(source.url, source, ctx, encodeURIComponent));

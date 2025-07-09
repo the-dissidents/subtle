@@ -27,7 +27,6 @@ import { Debug } from "../Debug";
 import StyleSelect from '../StyleSelect.svelte';
 
 import { Editing, SelectMode } from '../frontend/Editing';
-import { Interface } from '../frontend/Interface';
 import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 
 import { _ } from 'svelte-i18n';

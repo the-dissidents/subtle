@@ -157,6 +157,29 @@ export const BasicCommands = {
         }
     }),
 
+    openReference: new UICommand(() => $_('category.references'),
+        [ CommandBinding.from(['CmdOrCtrl+R']), ],
+    {
+        name: () => $_('action.open-references'),
+        call: () => Toolboxes.references?.focus()
+    }),
+    referenceSearch: new UICommand(() => $_('category.references'),
+        [ CommandBinding.from(['CmdOrCtrl+T'], ['EditingField']), ],
+    {
+        name: () => $_('action.search-in-reference'),
+        isApplicable() {
+            const ctrl = Editing.focused.control;
+            if (!ctrl) return false;
+            return ctrl.selectionEnd - ctrl.selectionStart > 0;
+        },
+        call() {
+            const ctrl = Editing.focused.control;
+            if (!ctrl) return;
+            const term = ctrl.value.substring(ctrl.selectionStart, ctrl.selectionEnd);
+            Toolboxes.references?.query(term);
+        },
+    }),
+
     openSearch: new UICommand(() => $_('category.search'),
         [ CommandBinding.from(['CmdOrCtrl+F']), ],
     {

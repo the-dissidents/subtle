@@ -195,17 +195,17 @@ async function contextMenu() {
             <NumberInput width="100%" bind:value={$style.size} 
               onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-size'))}/>
             <label><input type='checkbox' bind:checked={$style.styles.bold}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}/>
-              <b>B</b></label>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
+              /><b>B</b></label>
             <label><input type='checkbox' bind:checked={$style.styles.italic}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}/>
-              <i>I</i></label>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
+              /><i>I</i></label>
             <label><input type='checkbox' bind:checked={$style.styles.underline}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}/>
-              <u>U</u></label>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
+              /><u>U</u></label>
             <label><input type='checkbox' bind:checked={$style.styles.strikethrough}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}/>
-              <s>S</s></label>
+              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
+              /><s>S</s></label>
           </td>
         </tr>
         <tr>
