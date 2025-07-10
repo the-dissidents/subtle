@@ -1,6 +1,6 @@
 [package]
 name = "subtle-subtitles"
-version = "0.5.0"
+version = "0.5.0-a0"
 description = "Cross-platform subtitle editor"
 authors = ["the_dissidents"]
 edition = "2021"

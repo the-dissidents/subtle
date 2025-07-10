@@ -205,8 +205,8 @@ export class TimelineRenderer {
     const UNITS = Playback.player
       ? [1 / Playback.player.frameRate, 1, 1, 10, 60, 600, 3600]
       : [0.05, 0.1, 1, 10, 60, 600, 3600];
-    for (let i = 0; i < UNITS.length - 3; i++)
-      if (scale * UNITS[i+2] > 200 / devicePixelRatio) return [
+    for (let i = 0; i <= UNITS.length - 3; i++)
+      if (scale * UNITS[i+2] > 170 / devicePixelRatio) return [
         UNITS[i], 
         UNITS[i+1], 
         UNITS[i+2]];
