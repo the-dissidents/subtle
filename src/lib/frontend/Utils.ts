@@ -220,7 +220,7 @@ export const Utils = {
         first.end = end;
         
         Editing.selectEntry(first, SelectMode.Single);
-        Source.markChanged(ChangeType.InPlace, $_('action.merge-entries'));
+        Source.markChanged(ChangeType.Times, $_('action.merge-entries'));
     },
 
     getAdjecentEntryWithThisStyle(dir: 'next' | 'previous') {

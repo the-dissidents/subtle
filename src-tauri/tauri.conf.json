@@ -29,7 +29,7 @@
         ],
         "enable": true
       },
-      "csp": "default-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src 'self' asset: https://asset.localhost; connect-src ipc: http://ipc.localhost"
+      "csp": "default-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' http: 'unsafe-inline'; img-src 'self' http: data:; media-src 'self' http: asset: https://asset.localhost; connect-src ipc: http://ipc.localhost"
     },
     "windows": [
       {

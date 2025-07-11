@@ -5,6 +5,7 @@ import { InterfaceConfig } from "../../config/Groups";
 import { Debug } from "../../Debug";
 import { EventHost } from "../../details/EventHost";
 import { Mutex } from "../../details/Mutex";
+import { Playback } from "../../frontend/Playback";
 import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
 
@@ -28,6 +29,7 @@ export class MediaPlayer2 {
      * Current position in video frames. This value serves to preserve the progress when the buffers are emptied due to seeking operations. If the buffers are not empty, it must be equal to `videoBuffer[0].position`.
      */
     #position = 0;
+    #internalPosition?: number;
 
     #videoBuffer: VideoFrameData[] = [];
     #lastFrame?: VideoFrameData;
@@ -184,6 +186,7 @@ export class MediaPlayer2 {
             return;
         this.#videoBuffer.push(frame);
         this.#lastFrame = frame;
+        this.#internalPosition = frame.position;
         if (this.#seekTarget > 0 && this.audio.bufferLength > 0)
             this.#seekDone();
         if (this.#videoBuffer.length == 1) {
@@ -445,17 +448,47 @@ export class MediaPlayer2 {
              || this.#seekTarget == index
              || this.#position == index) return;
 
-            Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}]`);
-            await this.#clearCache();
-            if (!(opt?.imprecise))
-                this.#seekTarget = index;
-            await this.media.seekVideo(Math.max(0, index - 2));
-            if (this.#seekFrameVersion != myVersion) return;
+            const audioIndex = Math.floor(this.#vpos2apos(index));
+            if (this.#videoBuffer.length > 2
+             && index > this.#videoBuffer[0].position
+             && index <= this.#videoBuffer.at(-1)!.position)
+            {
+                // inside cache
+                while (this.#videoBuffer[0].position < index)
+                    this.#videoBuffer.shift();
+                await this.audio.shiftUntil(audioIndex);
+                const frame = this.#videoBuffer[0];
+                this.#internalPosition = frame.position;
+                this.#position = frame.position;
+                MediaPlayerInterface2.onPlayback.dispatch(frame.time);
+                Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] inside cache`);
+            } else {
+                await this.#clearCache();
 
-            if (!(opt?.imprecise)) {
-                const audioIndex = Math.floor(this.#vpos2apos(index));
-                const frame = await this.media.skipUntil(index, audioIndex);
-                await this.#receiveFrame(frame, 0);
+                const realTarget = Math.max(0, index - 2);
+                let lastKeyframe: number | null;
+                if (this.#internalPosition === undefined
+                 || index <= this.#internalPosition
+                 || !Playback.sampler 
+                 || (lastKeyframe = await Playback.sampler.getKeyframeBefore(realTarget)) === null
+                 || lastKeyframe > this.#internalPosition)
+                {
+                    // must seek
+                    if (!(opt?.imprecise))
+                        this.#seekTarget = index;
+                    this.#internalPosition = undefined;
+                    await this.media.seekVideo(realTarget);
+                    if (this.#seekFrameVersion != myVersion) return;
+                    Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] seeked`);
+                } else {
+                    // no need to seek
+                    this.#seekTarget = index;
+                    Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] not seeked`);
+                }
+                if (!(opt?.imprecise)) {
+                    const frame = await this.media.skipUntil(index, audioIndex);
+                    await this.#receiveFrame(frame, 0);
+                }
             }
             if (!this.#populateBufferRunning)
                 this.#populateBuffer();
@@ -475,6 +508,7 @@ export class MediaPlayer2 {
             if (ow === cw && oh === ch) return;
 
             await Debug.debug(`resize: ${ow}x${oh}`);
+            if (this.#playing) await this.stop();
             await this.media.setVideoSize(ow, oh);
             await this.#clearCache();
             this.seekToFrame(this.#position);
