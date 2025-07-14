@@ -74,8 +74,10 @@ function findBoundingRect(element: HTMLElement): DOMRect {
     </span>
   {/if}
 </div>
-<Popup style="tooltip" bind:handler={handler} {position}>
-  {text}
+<Popup style='tooltip' bind:handler={handler} {position}>
+  <div class="content">
+    {text}
+  </div>
 </Popup>
 
 <style>
@@ -86,6 +88,11 @@ function findBoundingRect(element: HTMLElement): DOMRect {
     max-height: 16px;
     color: gray;
     vertical-align: middle;
+  }
+
+  .content {
+    font-weight: normal;
+    text-transform: none;
   }
 
   /* :global(.tooltip-container:first-child > span > .lucide) {
