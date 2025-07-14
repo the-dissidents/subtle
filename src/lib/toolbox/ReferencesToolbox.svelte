@@ -12,6 +12,7 @@ import Collapsible from '../ui/Collapsible.svelte';
 import { Reference, type ReferenceSource } from '../frontend/References';
 import { Frontend, guardAsync } from '../frontend/Frontend';
 import { Toolboxes } from '../frontend/Toolboxes';
+import { Dialogs } from '../frontend/Dialogs';
 import { Memorized } from '../config/MemorizedValue.svelte';
 import * as z from 'zod/v4-mini';
 
@@ -68,7 +69,7 @@ currentSourceName.subscribe((x) => {
         <option value={source}>{source.name}</option>
       {/each}
     </select>
-    <button onclick={() => Reference.sources.set(Reference.defaultSources)}>
+    <button onclick={() => Dialogs.referenceSources.showModal!()}>
       <PencilLineIcon />
     </button>
   </div>

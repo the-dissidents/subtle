@@ -277,20 +277,22 @@ select {
   appearance: none;
 
   border-radius: 3px;
-  padding: 2px 17px 2px 5px;
+  padding: 2px 5px 2px 5px;
   margin: 1px;
 
   text-align: start;
   text-decoration: none;
   font-family: var(--fontFamily);
   font-size: 0.85rem;
-  line-height: normal;
+  line-height: 1.3em;
 
-  /* background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24"><path d="M 0 0 M 24 0 M 12 24 z" fill="transparent" stroke="black"/></svg>'); */
-  background-image: url("data:image/svg+xml;charset=utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='10px' width='15px'><text x='0' y='10' fill='gray'>▾</text></svg>");
-  background-repeat: no-repeat;
-  background-position: right 0 center;
-  background-size: 12px;
+  &:not([multiple]) {
+    padding: 2px 17px 2px 5px;
+    background-image: url("data:image/svg+xml;charset=utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='10px' width='15px'><text x='0' y='10' fill='gray'>▾</text></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0 center;
+    background-size: 12px;
+  }
 }
 
 textarea {
@@ -424,6 +426,7 @@ table.config td:first-child {
   text-align: right;
   padding-right: 5px;
   font-size: 90%;
+  white-space: nowrap;
   /* text-transform: uppercase; */
   /* font-weight: bold; */
 }

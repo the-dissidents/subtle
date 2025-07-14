@@ -3,38 +3,37 @@ import { Memorized } from "../config/MemorizedValue.svelte";
 import { Debug } from "../Debug";
 import { fetch } from "@tauri-apps/plugin-http";
 
-const zRStringSubstitute = z.union([
+const zReferenceString = z.array(z.union([
+    z.string(), 
     z.object({
         type: z.literal('keyword')
     }),
     z.object({
         type: z.literal('variable'),
-        name: z.string()
+        id: z.int()
     })
-]);
+]));
 
-const zRString = z.array(z.union([z.string(), zRStringSubstitute]));
-
-export type ReferenceString = z.infer<typeof zRString>;
+export type ReferenceString = z.infer<typeof zReferenceString>;
 
 // const ZRStrategy = z.enum(['iframe-load'])
 
-const zRSource = z.object({
+export const zReferenceSource = z.object({
     name: z.string(),
-    url: zRString,
-    scrollTo: z.optional(zRString),
-    selector: z.optional(zRString),
-    patchStyle: z.optional(z.array(z.object({
-        selector: zRString,
+    url: zReferenceString,
+    scrollTo: z.optional(zReferenceString),
+    selector: z.optional(zReferenceString),
+    patchStyle: z.array(z.object({
+        selector: zReferenceString,
         patches: z.array(z.tuple([z.string(), z.string()]))
-    }))),
+    })),
     variables: z.array(z.object({
         name: z.string(),
         defaultValue: z.string()
     }))
 });
 
-export type ReferenceSource = z.infer<typeof zRSource>;
+export type ReferenceSource = z.infer<typeof zReferenceSource>;
 
 export type ReferenceContext = {
     keyword: string,
@@ -53,12 +52,12 @@ function substitute(
             result += elem;
         else if (elem.type == 'keyword')
             result += encoder(ctx.keyword);
-        else if (elem.type == 'variable')
+        else if (elem.type == 'variable') {
+            const variable = source.variables[elem.id];
             result += encoder(
-                   ctx.variables.get(elem.name) 
-                ?? source.variables.find((x) => x.name == elem.name)?.defaultValue 
-                ?? '');
-        else
+                   ctx.variables.get(variable.name) 
+                ?? variable.defaultValue ?? '');
+        } else
             Debug.never(elem);
     }
     return result;
@@ -68,9 +67,10 @@ const defaultSources: ReferenceSource[] = [
     {
         name: 'Wiktionary',
         url: ['https://en.wiktionary.org/wiki/', { type: 'keyword' }],
-        scrollTo: ['#', { type: 'variable', name: 'language name' }],
+        scrollTo: ['#', { type: 'variable', id: 0 }],
         selector: ['.mw-body-content'],
-        variables: [ { name: 'language name', defaultValue: 'English' } ]
+        variables: [ { name: 'language name', defaultValue: 'English' } ],
+        patchStyle: [],
     },
     {
         name: '有道词典',
@@ -113,12 +113,17 @@ const defaultSources: ReferenceSource[] = [
         url: [
             'https://www.thefreedictionary.com/', { type: 'keyword' }],
         selector: ['#MainTxt'],
-        variables: []
+        variables: [],
+        patchStyle: [],
     },
 ];
 
+const sources = Memorized.$('referenceSources', z.array(zReferenceSource), [...defaultSources])
+
 export const Reference = {
-    sources: Memorized.$('referenceSources', z.array(zRSource), [...defaultSources]),
+    get sources() {
+        return sources;
+    },
 
     get defaultSources() {
         return defaultSources;

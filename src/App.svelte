@@ -30,6 +30,7 @@ import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
 import KeybindingDialog from './lib/dialog/KeybindingDialog.svelte';
 import KeybindingInputDialog from './lib/dialog/KeybindingInputDialog.svelte';
 import BugDialog from './lib/dialog/BugDialog.svelte';
+import ReferenceSourcesDialog from './lib/dialog/ReferenceSourcesDialog.svelte';
 
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
@@ -235,16 +236,17 @@ Debug.onError.bind({}, (origin, _msg) => {
 {:else}
 
 <!-- dialogs -->
-<TimeAdjustmentDialog handler={Dialogs.timeTransform}/>
-<ImportOptionsDialog  handler={Dialogs.importOptions}/>
-<CombineDialog        handler={Dialogs.combine}/>
-<SplitByLineDialog    handler={Dialogs.splitByLine}/>
-<EncodingDialog       handler={Dialogs.encoding}/>
-<ExportDialog         handler={Dialogs.export}/>
-<ConfigDialog         handler={Dialogs.configuration}/>
-<KeybindingDialog     handler={Dialogs.keybinding}/>
-<KeybindingInputDialog handler={Dialogs.keybindingInput}/>
-<BugDialog             handler={Dialogs.bugs}/>
+<TimeAdjustmentDialog   handler={Dialogs.timeTransform}/>
+<ImportOptionsDialog    handler={Dialogs.importOptions}/>
+<CombineDialog          handler={Dialogs.combine}/>
+<SplitByLineDialog      handler={Dialogs.splitByLine}/>
+<EncodingDialog         handler={Dialogs.encoding}/>
+<ExportDialog           handler={Dialogs.export}/>
+<ConfigDialog           handler={Dialogs.configuration}/>
+<KeybindingDialog       handler={Dialogs.keybinding}/>
+<KeybindingInputDialog  handler={Dialogs.keybindingInput}/>
+<BugDialog              handler={Dialogs.bugs}/>
+<ReferenceSourcesDialog handler={Dialogs.referenceSources}/>
 
 <Banner style='error' bind:open={errorBanner.open}
   text={$_('msg.errorbanner')}

@@ -61,10 +61,11 @@ function parseEntry(
         for (let i = 1; ; i++) {
             const name = from.name + ` (${i})`;
             if (!subs.styles.find((x) => x.name == name)) {
-                let duplicate = structuredClone(from);
-                duplicate.name = name;
-                subs.styles.push(duplicate);
-                return duplicate;
+                const copy = $state.snapshot(from);
+                const style = $state(copy);
+                style.name = name;
+                subs.styles.push(style);
+                return style;
             }
         }
     }
@@ -77,8 +78,9 @@ function parseEntry(
         if (!style) throw new DeserializationError(`invalid style name: ${styleName}`);
 
         if (entry.texts.has(style)) {
-            if (version >= '000400') throw new DeserializationError(
-                `style appeared multiple time in one entry: ${styleName}`);
+            if (version >= '000400') {
+                Debug.warn('note: style appeared multiple time in one entry: ${styleName}: in', o);
+            }
 
             // migrate pre-0.4 styles
             let duplicated = MigrationDuplicatedStyles.get(style);

@@ -59,7 +59,7 @@ export class Memorized<T extends z.core.$ZodType> {
                 if (key in memorizedData) {
                     const result = z.safeParse(memorizedData[key].type, value);
                     if (!result.success)
-                        Debug.warn('type mismatch in memorized data file', key, value);
+                        Debug.warn('type mismatch in memorized data file', key, value, z.prettifyError(result.error));
                     else
                         memorizedData[key].set(result.data);
                 } else {
@@ -91,6 +91,7 @@ export class Memorized<T extends z.core.$ZodType> {
             }
             await writeTextFile(configPath, 
                 JSON.stringify(data), {baseDir: BaseDirectory.AppConfig});
+            await Debug.debug('saved memorized values');
         }, get(_)('msg.error-saving-private-config'));
     }
 
@@ -115,6 +116,10 @@ export class Memorized<T extends z.core.$ZodType> {
     set(value: z.infer<T>) {
         this.value = value;
         this.subscriptions.forEach((x) => x(value));
+    }
+
+    markChanged() {
+        this.subscriptions.forEach((x) => x(this.value));
     }
 }
 
