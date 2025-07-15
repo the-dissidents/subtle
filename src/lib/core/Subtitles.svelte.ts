@@ -65,8 +65,6 @@ export function parseSubtitleStyle(obj: any): SubtitleStyle {
 
 export type SubtitleMetadata = z.infer<typeof ZMetadata>;
 
-export const MigrationDuplicatedStyles = new WeakMap<SubtitleStyle, SubtitleStyle[]>();
-
 export class SubtitleEntry {
     label: LabelType = $state('none');
     texts = new SvelteMap<SubtitleStyle, string>();

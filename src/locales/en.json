@@ -83,7 +83,7 @@
     "up": "up"
   },
   "action-all-styles": "all styles",
-  "assimportdialog": {
+  "assimport": {
     "duplicate-style-definition": "duplicate style definition",
     "header": "Import ASS",
     "ignored-drawing-command": "ignored drawing commands",

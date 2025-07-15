@@ -68,7 +68,10 @@ async function readTextFile(path: string) {
 async function parseSubtitleSourceInteractive(path: string, text: string) {
     return guardAsync(async () => {
         if (JSONSubtitles.detect(text)) {
-            return JSONSubtitles.parse(text).done();
+            const parser =  JSONSubtitles.parse(text);
+            if (!await ImportFormatDialogs.JSON(parser))
+                return null;
+            return parser.done();
         }
         if (ASSSubtitles.detect(text)) {
             const parser = ASSSubtitles.parse(text);
@@ -101,12 +104,6 @@ export const Interface = {
         if (!newSubs) return;
         await Debug.debug('opening document');
         await Source.openDocument(newSubs, path);
-        if (newSubs.migrated == 'olderVersion') 
-            await dialog.message(
-                $_('msg.note-file-is-migrated-path', {values: {path}}));
-        if (newSubs.migrated == 'newerVersion') 
-            await dialog.message(
-                $_('msg.note-file-is-from-newer-version-path', {values: {path}}));
         const data = Source.recentOpened.get().find((x) => x.name == path);
         if (data?.video) {
             await this.openVideo(data.video, data.audioStream);

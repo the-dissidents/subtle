@@ -1,7 +1,7 @@
 import { Basic } from "../Basic";
 import { DeserializationError } from "../Serialization";
 import { SubtitleLinearFormatWriter } from "./SimpleFormats";
-import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParseMessage, type SubtitleParser } from "./Subtitles.svelte";
+import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser } from "./Subtitles.svelte";
 
 function getTime(h: string, m: string, s: string, ms: string) {
     return Number.parseInt(h) * 3600 
@@ -20,7 +20,7 @@ export type SRTParseMessage = {
     type: 'ignored-coordinates',
     category: 'ignored',
     occurrence: number
-}
+};
 
 export class SRTParser implements SubtitleParser {
     #subs: Subtitles;

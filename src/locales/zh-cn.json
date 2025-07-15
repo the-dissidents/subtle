@@ -83,7 +83,7 @@
     "up": "向上"
   },
   "action-all-styles": "所有样式",
-  "assimportdialog": {
+  "assimport": {
     "duplicate-style-definition": "重复定义样式",
     "header": "导入 ASS 字幕",
     "ignored-drawing-command": "忽略了图形指令",
@@ -375,6 +375,16 @@
     "styles": "样式",
     "use-for-all": "全都使用这个样式：",
     "use-local-styles-when-names-match": "名称匹配时使用本地样式"
+  },
+  "jsonimport": {
+    "fixed-style": "修复了重叠的样式",
+    "fixed-style-d": "除非打开的文件来自于很旧版本的subtle，或者之前编辑此文件时有bug出现，你就不应该看到这条信息。subtle将会复制出一些新的样式来解决冲突，这通常不会带来很大的问题。",
+    "fixed-style-item": "{a}（复制了 {b} 次）",
+    "header": "导入 JSON 存档",
+    "migrated-newer-from": "正在打开由新版本软件（{from}）创建的存档",
+    "migrated-newer-from-d": "建议您更新软件。如果仍然选择继续，文件中的新功能将在保存时丢失。",
+    "migrated-older": "正在打开旧版本（{from, select, 0 {<0.4.0} other {{from}}}）存档文件",
+    "migrated-older-d": "我们会自动将其转换为新版，过程中可能会产生一些样式上的变化。如果保存更新的文件，旧版本软件很可能将无法打开它。"
   },
   "keybindingdialog": {
     "filter": "搜索"
