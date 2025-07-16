@@ -34,6 +34,9 @@ where
     /// # Panics
     ///
     /// Panics if `length` is not greater than 1.
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_sign_loss)]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn new(length: usize, aggregator: F, initial: N) -> Self {
         assert!(length > 1, "Length must be greater than 1");
 
@@ -123,8 +126,16 @@ where
 
     /// Propagates changes from a range of updated nodes up to the root.
     fn propagate_up(&mut self, first_idx: usize, last_idx: usize) {
-        let mut first = self.parent(first_idx);
-        let mut last = self.parent(last_idx);
+        fn parent(index: usize) -> Option<usize> {
+            if index == 0 {
+                None
+            } else {
+                Some((index - 1) / 2)
+            }
+        }
+
+        let mut first = parent(first_idx);
+        let mut last = parent(last_idx);
 
         while let (Some(f), Some(l)) = (first, last) {
             for i in f..=l {
@@ -133,17 +144,8 @@ where
             if f == 0 {
                 break;
             }
-            first = self.parent(f);
-            last = self.parent(l);
-        }
-    }
-
-    /// Calculates the index of a node's parent.
-    fn parent(&self, index: usize) -> Option<usize> {
-        if index == 0 {
-            None
-        } else {
-            Some((index - 1) / 2)
+            first = parent(f);
+            last = parent(l);
         }
     }
 

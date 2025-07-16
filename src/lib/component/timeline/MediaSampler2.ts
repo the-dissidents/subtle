@@ -139,9 +139,12 @@ export class MediaSampler2 {
         let doSampling = async () => {
             const ok = await this.#mutex.use(async () => {
                 const result = await this.media.sampleAutomatic2(20);
-                this.#sampleProgress = result.audio.position;
-                this.#intensity.set(result.audio.intensity, result.audio.start);
-                this.#keyframes.set(result.video.keyframes, result.video.start);
+                if (result.audio) {
+                    this.#sampleProgress = result.audio.position;
+                    this.#intensity.set(result.audio.intensity, result.audio.start);
+                }
+                if (result.video)
+                    this.#keyframes.set(result.video.keyframes, result.video.start);
                 this.onProgress?.();
                 if (result.isEof) {
                     Debug.trace(`sampling done upon EOF`);

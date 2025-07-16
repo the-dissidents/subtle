@@ -11,7 +11,7 @@ export type AudioStatus = {
     index: number,
     length: number,
     sampleRate: number
-}
+};
 
 export type VideoStatus = {
     index: number,
@@ -19,20 +19,20 @@ export type VideoStatus = {
     framerate: number,
     sampleAspectRatio: number,
     size: [width: number, height: number],
-}
+};
 
 export type SampleResult = {
     audio: {
         start: number,
         position: number,
         intensity: number[]
-    },
+    } | null,
     video: {
         start: number,
         keyframes: number[]
-    },
+    } | null,
     isEof: boolean
-}
+};
 
 export type MediaEvent = {
     event: 'done'
@@ -75,9 +75,6 @@ export type MediaEvent = {
 } | {
     event: 'keyframeData',
     data: { pos: number | null }
-} | {
-    event: 'sampleDone',
-    data: { pos: number }
 } | {
     event: 'sampleDone2',
     data: SampleResult
@@ -367,29 +364,6 @@ export class MMedia {
                         if (x.byteLength > 0)
                             resolve(this.#readFrameData(x))
                     });
-            });
-        } finally {
-            this.#currentJobs -= 1;
-        }
-    }
-
-    /** returns null on EOF */
-    async sampleAutomatic(targetWorkingTimeMs: number) {
-        Debug.assert(!this.#destroyed);
-        Debug.assert(this.#currentJobs == 0);
-        let channel: Channel<MediaEvent> | undefined;
-        this.#currentJobs += 1;
-        try {
-            return await new Promise<number | null>((resolve, reject) => {
-                channel = createChannel('sampleAutomatic', {
-                    'EOF': () => {
-                        Debug.debug('at eof');
-                        this.#eof = true;
-                        resolve(null);
-                    },
-                    sampleDone: (data) => resolve(data.pos)
-                }, reject);
-                invoke('sample_automatic', { id: this.id, targetWorkingTimeMs, channel });
             });
         } finally {
             this.#currentJobs -= 1;

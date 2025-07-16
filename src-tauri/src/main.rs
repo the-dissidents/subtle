@@ -1,5 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::used_underscore_binding)]
 
 extern crate ffmpeg_next as ffmpeg;
 mod encoding;
@@ -41,7 +43,7 @@ fn main() {
                         record.level(),
                         record.target(),
                         message
-                    ))
+                    ));
                 })
                 .level(log::LevelFilter::Trace)
                 .filter(|metadata| 
@@ -85,7 +87,6 @@ fn main() {
             media::seek_audio,
             media::seek_video,
             media::skip_until,
-            media::sample_automatic,
             media::sample_automatic2,
             media::get_next_frame_data,
             media::get_audio_sampler_data,
@@ -126,10 +127,8 @@ async fn init_complete(
     if state_lock.backend_task && state_lock.frontend_task {
         // Setup is complete, we can close the splashscreen
         // and unhide the main window!
-        let splash_window = match app.get_webview_window("splashscreen") {
-            Some(w) => w,
-            None => return Ok(()),
-        };
+        let Some(splash_window) = 
+            app.get_webview_window("splashscreen") else { return Ok(()) };
         let main_window = app.get_webview_window("main").unwrap();
         splash_window.close().unwrap();
         main_window.show().unwrap();

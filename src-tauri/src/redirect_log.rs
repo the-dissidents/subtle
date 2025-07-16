@@ -1,4 +1,3 @@
-use ffmpeg_sys_next;
 use log::Level;
 use std::ffi::{c_char, c_int, c_void};
 use lazy_static::lazy_static;

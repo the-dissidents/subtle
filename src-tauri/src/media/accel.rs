@@ -53,7 +53,7 @@ impl HardwareDecoder {
                 av_hwdevice_find_type_by_name(CString::new(name).unwrap().as_ptr());
             if hwtype == AVHWDeviceType::AV_HWDEVICE_TYPE_NONE {
                 return Err(MediaError::InternalError(
-                    format!("device not supported: {}", name).to_owned()));
+                    format!("device not supported: {name}").to_owned()));
             }
             let name = 
                 CStr::from_ptr(av_hwdevice_get_type_name(hwtype))
@@ -80,11 +80,11 @@ impl HardwareDecoder {
             };
             let data = 
                 Box::new(GetFormatCallbackContext { pixel_format });
-            (*cxt.as_mut_ptr()).opaque = Box::into_raw(data) as *mut c_void;
+            (*cxt.as_mut_ptr()).opaque = Box::into_raw(data).cast::<c_void>();
             (*cxt.as_mut_ptr()).get_format = Some(get_format_callback);
             
             let mut device_ctx: *mut AVBufferRef = null_mut();
-            match av_hwdevice_ctx_create(&mut device_ctx as *mut *mut _, 
+            match av_hwdevice_ctx_create(&raw mut device_ctx, 
                 hwtype, null(), null_mut(), 0) {
                 x if x < 0 => 
                     return Err(MediaError::InternalError("failed to create device".to_owned())),
@@ -96,7 +96,7 @@ impl HardwareDecoder {
         }
     }
 
-    pub fn transfer_frame(&self, src: &Frame, dst: &mut Frame) -> Result<(), ffmpeg::Error> {
+    pub fn transfer_frame(src: &Frame, dst: &mut Frame) -> Result<(), ffmpeg::Error> {
         unsafe {
             match av_hwframe_transfer_data(dst.as_mut_ptr(), src.as_ptr(), 0) {
                 e if e < 0 => Err(ffmpeg::Error::from(e)),
@@ -106,7 +106,7 @@ impl HardwareDecoder {
     }
 
     pub fn name(&self) -> String {
-        return self.name.clone();
+        self.name.clone()
     }
 }
 
@@ -114,7 +114,7 @@ impl HardwareDecoder {
 impl Drop for HardwareDecoder {
     fn drop(&mut self) {
         unsafe {
-            av_buffer_unref(&mut self.device_ctx as *mut *mut _);
+            av_buffer_unref(&raw mut self.device_ctx);
         }
     }
 }

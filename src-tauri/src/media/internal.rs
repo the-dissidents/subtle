@@ -16,6 +16,7 @@ use log::trace;
 use log::warn;
 
 use crate::media::accel;
+use crate::media::accel::HardwareDecoder;
 use crate::media::aggregation_tree::AggregationTree;
 
 #[derive(Debug)]
@@ -31,8 +32,10 @@ pub enum MediaError {
 impl fmt::Display for MediaError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MediaError::FFMpegError { func, e, line } => write!(f, "at {}: {}: {}", line, func, e),
-            MediaError::InternalError(msg) => write!(f, "internal error: {}", msg),
+            MediaError::FFMpegError { func, e, line } 
+                => write!(f, "at {line}: {func}: {e}"),
+            MediaError::InternalError(msg) 
+                => write!(f, "internal error: {msg}"),
         }
     }
 }
@@ -67,14 +70,14 @@ pub struct DecodedAudioFrame {
 
 #[derive(Clone, Serialize, Debug)]
 pub struct AudioSampleData {
-    pub start: i64,
+    pub start: usize,
     pub position: i64,
     pub intensity: Vec<f32>
 }
 
 #[derive(Clone, Serialize, Debug)]
 pub struct VideoSampleData {
-    pub start: i64,
+    pub start: usize,
     pub keyframes: Vec<u8>
 }
 
@@ -184,7 +187,7 @@ impl MediaPlayback {
 
     pub fn from_file(path: &str) -> Result<MediaPlayback, MediaError> {
         let input = Box::new(check!(format::input(&path))?);
-        debug!("got input from {}", path);
+        debug!("got input from {path}");
         Ok(MediaPlayback {
             input,
             audio: None,
@@ -202,9 +205,8 @@ impl MediaPlayback {
                     media::Type::Video => StreamType::Video,
                     media::Type::Audio => StreamType::Audio,
                     media::Type::Subtitle => StreamType::Subtitle,
-                    media::Type::Data => StreamType::Unknown,
-                    media::Type::Unknown => StreamType::Unknown,
-                    media::Type::Attachment => StreamType::Unknown,
+                    media::Type::Data | media::Type::Unknown | media::Type::Attachment
+                        => StreamType::Unknown,
                 },
                 index: stream.index(),
                 description: format!("[{}] {}", stream.index(), lang),
@@ -213,6 +215,7 @@ impl MediaPlayback {
         streams
     }
 
+    #[allow(clippy::cast_precision_loss)]
     pub fn duration(&self) -> f64 {
         self.input.duration() as f64 * f64::from(rescale::TIME_BASE)
     }
@@ -289,7 +292,7 @@ impl MediaPlayback {
         };
 
         if sample_aspect_ratio != Rational(1, 1) {
-            debug!("create_video_base: note: SAR is {:?}", sample_aspect_ratio);
+            debug!("create_video_base: note: SAR is {sample_aspect_ratio:?}");
         }
 
         let length: usize = match stream.duration() {
@@ -319,7 +322,7 @@ impl MediaPlayback {
     ) -> Result<(), MediaError> {
         let base = self.create_video_base(index, accel)?;
 
-        let format = if let Some(_) = base.accelerator.as_ref() {
+        let format = if base.accelerator.as_ref().is_some() {
             Pixel::NV12 // TODO: I just guessed one
         } else {
             base.decoder.format()
@@ -355,7 +358,7 @@ impl MediaPlayback {
         let base = self.create_video_base(index, accel)?;
 
         let front = VideoFront::Sampler(VideoSamplerFront {
-            keyframes: AggregationTree::new(base.length, |a, b| cmp::max(a, b), 0),
+            keyframes: AggregationTree::new(base.length, cmp::max, 0),
         });
 
         self.video = Some(VideoContext { base, front });
@@ -434,11 +437,11 @@ impl MediaPlayback {
     pub fn open_audio_sampler(
         &mut self,
         index: Option<usize>,
-        resolution: usize,
+        resolution: u32,
     ) -> Result<(), MediaError> {
         let base = self.create_audio_base(index)?;
 
-        let step = base.decoder.rate().div_ceil(resolution as u32);
+        let step = base.decoder.rate().div_ceil(resolution);
         let front = AudioFront::Sampler(AudioSamplerFront {
             resampler: check!(software::resampler(
                 (
@@ -454,7 +457,7 @@ impl MediaPlayback {
             ))?,
             intensities: AggregationTree::new(
                 base.length.div_ceil(step as usize),
-                |a, b| a.max(b),
+                f32::max,
                 f32::NAN,
             ),
             step
@@ -494,8 +497,8 @@ impl MediaPlayback {
 
     // returns false at eof
     pub fn sample_next(&mut self, 
-        audio_data: Option<&mut AudioSampleData>,
-        video_data: Option<&mut VideoSampleData>
+        audio_data: &mut Option<AudioSampleData>,
+        video_data: &mut Option<VideoSampleData>
     ) -> Result<Option<Frame>, MediaError> {
         assert!(self.audio.is_some() || self.video.is_some());
         match self.get_next()? {
@@ -505,16 +508,16 @@ impl MediaPlayback {
                     s.process(&f, audio_data)?;
                     Ok(Some(Frame::Audio(f)))
                 }
-                _ => return Err(MediaError::InternalError(
+                AudioFront::Player(_) => Err(MediaError::InternalError(
                     "audio not opened as sampler".to_string()))
             },
             Some(Frame::Video(f)) => 
             match self.video_mut().unwrap().front_mut() {
                 VideoFront::Sampler(s) => {
-                    s.process(&f, video_data)?;
+                    s.process(&f, video_data);
                     Ok(Some(Frame::Video(f)))
                 }
-                _ => return Err(MediaError::InternalError(
+                VideoFront::Player(_) => Err(MediaError::InternalError(
                     "video not opened as sampler".to_string()))
             },
             None => Ok(None),
@@ -529,22 +532,20 @@ impl MediaPlayback {
         cxt.flush();
 
         let rescaled = position.rescale(cxt.base.pos_timebase, cxt.base.stream_timebase);
-        trace!("seek video: pos={}, rescaled={}", position, rescaled);
+        trace!("seek video: pos={position}, rescaled={rescaled}");
 
         unsafe {
             match ffmpeg_sys_next::avformat_seek_file(
                 self.input.as_mut_ptr(),
-                cxt.base.stream_i as i32,
+                cxt.base.stream_i.try_into().unwrap(),
                 0,
                 rescaled,
                 rescaled,
                 ffmpeg_sys_next::AVSEEK_FLAG_BACKWARD,
             ) {
                 s if s >= 0 => Ok(()),
-                e => Err(MediaError::InternalError(format!(
-                    "seek_video: avformat_seek_file -> {}",
-                    e
-                ))),
+                e => Err(MediaError::InternalError(
+                    format!("seek_video: avformat_seek_file -> {e}"))),
             }
         }
     }
@@ -557,22 +558,20 @@ impl MediaPlayback {
         cxt.flush();
 
         let rescaled = position.rescale(cxt.base.pos_timebase, cxt.base.stream_timebase);
-        trace!("seek audio: pos={}, rescaled={}", position, rescaled);
+        trace!("seek audio: pos={position}, rescaled={rescaled}");
 
         unsafe {
             match ffmpeg_sys_next::avformat_seek_file(
                 self.input.as_mut_ptr(),
-                cxt.base.stream_i as i32,
+                cxt.base.stream_i.try_into().unwrap(),
                 0,
                 rescaled,
                 rescaled,
                 ffmpeg_sys_next::AVSEEK_FLAG_BACKWARD,
             ) {
                 s if s >= 0 => Ok(()),
-                e => Err(MediaError::InternalError(format!(
-                    "seek_audio: avformat_seek_file -> {}",
-                    e
-                ))),
+                e => Err(MediaError::InternalError(
+                    format!("seek_audio: avformat_seek_file -> {e}"))),
             }
         }
     }
@@ -593,50 +592,53 @@ impl AudioPlayerFront {
 impl AudioSamplerFront {
     pub fn process(
         &mut self, frame: &DecodedAudioFrame, 
-        mut sampler_data: Option<&mut AudioSampleData>
+        sampler_data: &mut Option<AudioSampleData>
     ) -> Result<(), MediaError> {
-        let index_start = match frame.position / self.step as i64 {
-            y if y >= self.intensities.length as i64 => {
+        let index_start: usize = match frame.position / i64::from(self.step) {
+            y if y >= 0 && usize::try_from(y).unwrap() >= self.intensities.length => {
                 log::debug!("AudioSamplerFront.process: unexpected {y}, expecting < {}", self.intensities.length);
                 return Ok(());
             },
-            y if y >= 0 => y as usize,
+            y if y >= 0 => y.try_into().unwrap(),
             _ => return Ok(())
         };
-        if let Some(sd) = sampler_data.as_mut() {
-            if sd.start < 0 {
-                sd.start = index_start as i64;
-            }
-            match sd.start as usize + sd.intensity.len() {
-                x if x < index_start => {
-                    log::debug!("AudioSamplerFront.process: unexpected {x}, expecting >= {index_start}; filling with zeroes");
-                    while sd.start as usize + sd.intensity.len() < index_start {
-                        sd.intensity.push(0.);
-                    }
-                },
-                _ => ()
-            }
+        if sampler_data.is_none() {
+            *sampler_data = Some(AudioSampleData {
+                start: index_start,
+                position: 0,
+                intensity: Vec::<f32>::new()
+            });
+        }
+        let sd = sampler_data.as_mut().unwrap();
+        
+        match sd.start + sd.intensity.len() {
+            x if x < index_start => {
+                log::debug!("AudioSamplerFront.process: unexpected {x}, expecting >= {index_start}; filling with zeroes");
+                while sd.start + sd.intensity.len() < index_start {
+                    sd.intensity.push(0.);
+                }
+            },
+            _ => ()
         }
 
         let mut processed = frame::Audio::empty();
         check!(self.resampler.run(&frame.decoded, &mut processed))?;
         
         let data: &[f32] = processed.plane(0);
-        let mut counter = frame.position as u32 % self.step;
+        let step = i64::from(self.step);
+        let mut counter = frame.position % step;
         let mut sum: f32 = self.intensities.at(index_start);
         let mut index = index_start;
         for sample in data {
             sum = sum.max(sample.abs());
             counter += 1;
-            if counter == self.step {
+            if counter == step {
                 self.intensities.set(&[sum], index);
-                sampler_data.as_mut().map(|x| {
-                    if x.start as usize + x.intensity.len() <= index {
-                        x.intensity.push(sum);
-                    } else {
-                        x.intensity[index - x.start as usize] = sum;
-                    }
-                });
+                if sd.start + sd.intensity.len() <= index {
+                    sd.intensity.push(sum);
+                } else {
+                    sd.intensity[index - sd.start] = sum;
+                }
                 counter = 0;
                 index += 1;
                 if index >= self.intensities.length {
@@ -646,14 +648,14 @@ impl AudioSamplerFront {
             }
         }
         self.intensities.set(&[sum], index);
-        sampler_data.as_mut().map(|x| {
-            if x.start as usize + x.intensity.len() <= index {
+        if let Some(x) = sampler_data.as_mut() {
+            if x.start + x.intensity.len() <= index {
                 x.intensity.push(sum);
             } else {
-                x.intensity[index - x.start as usize] = sum;
+                x.intensity[index - x.start] = sum;
             }
-            x.position = frame.position + frame.decoded.samples() as i64;
-        });
+            x.position = frame.position + i64::try_from(frame.decoded.samples()).unwrap();
+        };
         Ok(())
     }
 
@@ -665,7 +667,7 @@ impl AudioSamplerFront {
 impl AudioContext {
     fn feed(&mut self, packet: &codec::packet::Packet) -> Result<(), MediaError> {
         match self.base.decoder.send_packet(packet) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 // discard buffer
                 warn!("fill: EAGAIN met in sending audio pkt, flushing");
@@ -680,10 +682,11 @@ impl AudioContext {
         self.base.decoder.flush();
     }
 
+    #[allow(clippy::cast_precision_loss)]
     pub fn decode(&mut self) -> Result<Option<DecodedAudioFrame>, MediaError> {
         let mut decoded = frame::Audio::empty();
         match self.base.decoder.receive_frame(&mut decoded) {
-            Ok(_) => (),
+            Ok(()) => (),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 return Ok(None);
             }
@@ -775,40 +778,30 @@ impl VideoPlayerFront {
 
 impl VideoSamplerFront {
     pub fn process(&mut self, frame: &DecodedVideoFrame, 
-        mut sampler_data: Option<&mut VideoSampleData>
-    ) -> Result<(), MediaError> {
+        sampler_data: &mut Option<VideoSampleData>
+    ) {
         let index: usize = match frame.position {
-            y if y >= self.keyframes.length as i64 => {
+            y if y >= 0 && usize::try_from(y).unwrap() >= self.keyframes.length => {
                 log::debug!("VideoSamplerFront.process: unexpected {y}, expecting < {}", self.keyframes.length);
-                return Ok(());
+                return;
             },
             x if x >= 0 => x.try_into().unwrap(),
-            _ => return Ok(()),
+            _ => return
         };
-        if let Some(sd) = sampler_data.as_mut() {
-            if sd.start < 0 {
-                sd.start = index as i64;
-            }
-            match sd.start as usize + sd.keyframes.len() {
-                x if x < index => {
-                    log::debug!("VideoSamplerFront.process: unexpected {x}, expecting >= {index}");
-                    while sd.start as usize + sd.keyframes.len() < index {
-                        sd.keyframes.push(1);
-                    }
-                },
-                _ => ()
-            }
+        if sampler_data.is_none() {
+            *sampler_data = Some(VideoSampleData { 
+                start: index, 
+                keyframes: Vec::<u8>::new()
+            });
         }
+        let sd = sampler_data.as_mut().unwrap();
         let value = if frame.decoded.is_key() { 2 } else { 1 };
         self.keyframes.set(&[value], index);
-        sampler_data.as_mut().map(|x| {
-            if x.start as usize + x.keyframes.len() <= index {
-                x.keyframes.push(value);
-            } else {
-                x.keyframes[index - x.start as usize] = value;
-            }
-        });
-        Ok(())
+        if sd.start + sd.keyframes.len() <= index {
+            sd.keyframes.push(value);
+        } else {
+            sd.keyframes[index - sd.start] = value;
+        }
     }
 
     pub fn data_view(&self, level: usize) -> &[u8] {
@@ -835,7 +828,7 @@ impl VideoSamplerFront {
 impl VideoContext {
     fn feed(&mut self, packet: &codec::packet::Packet) -> Result<(), MediaError> {
         match self.base.decoder.send_packet(packet) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 // discard buffer
                 warn!("fill: EAGAIN met in sending video pkt, flushing");
@@ -850,6 +843,7 @@ impl VideoContext {
         self.base.decoder.flush();
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn decode(&mut self) -> Result<Option<DecodedVideoFrame>, MediaError> {
         let mut decoded = frame::Video::empty();
         match self.base.decoder.receive_frame(&mut decoded) {
@@ -868,9 +862,9 @@ impl VideoContext {
             .rescale(self.base.stream_timebase, self.base.pos_timebase);
         let time = f64::from(self.base.pos_timebase) * position as f64;
 
-        if let Some(accel) = &self.base.accelerator {
+        if self.base.accelerator.is_some() {
             let mut sw_frame = frame::Video::empty();
-            check!(accel.transfer_frame(&decoded, &mut sw_frame))?;
+            check!(HardwareDecoder::transfer_frame(&decoded, &mut sw_frame))?;
             decoded = sw_frame;
         }
 
