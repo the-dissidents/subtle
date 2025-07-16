@@ -4,7 +4,7 @@ import { type Readable, type Writable } from "svelte/store";
 export type TabAPIType = {};
 export type TabPageData = {
   readonly id: string,
-  readonly name: Readable<string>
+  readonly header: Snippet
 };
 export const TabAPIContext: TabAPIType = {};
 
@@ -47,7 +47,6 @@ setContext<TabAPI>(TabAPIContext, {
     }
     Pages.set(data.id, data);
     $Selected = $Selected ?? data.id;
-    data.name.subscribe(() => update++);
     update++;
 
     onDestroy(() => {
@@ -68,7 +67,10 @@ setContext<TabAPI>(TabAPIContext, {
     {#each Pages as [id, data]}
     <button 
       class:selected="{$Selected === id}"
-      onclick={() => $Selected = id}>{get(data.name)}</button>
+      class='hlayout'
+      onclick={() => $Selected = id}>
+      {@render data.header()}
+    </button>
     {/each}
     {/key}
   </div>
@@ -82,14 +84,16 @@ setContext<TabAPI>(TabAPIContext, {
       border-bottom: 1px solid var(--uchu-blue-4);
     }
     button {
-      color: #a6a6a6;
+      color: var(--uchu-yin);
+      &:not(.selected) {
+        filter: contrast(10%) !important;
+      }
       &:not(.selected):hover {
-        filter: brightness(90%) !important;
+        filter: contrast(50%) !important;
       }
     }
     .selected {
       border-bottom: 2px solid var(--uchu-blue-4);
-      color: var(--uchu-yin);
     }
   }
   
@@ -98,14 +102,16 @@ setContext<TabAPI>(TabAPIContext, {
       border-bottom: 1px solid darkslategray;
     }
     button {
-      color: #a6a6a6;
+      color: var(--uchu-yang);
+      &:not(.selected) {
+        filter: contrast(10%) !important;
+      }
       &:not(.selected):hover {
-        filter: brightness(110%) !important;
+        filter: contrast(50%) !important;
       }
     }
     .selected {
       border-bottom: 2px solid darkslategray;
-      color: var(--uchu-yang);
     }
   }
 

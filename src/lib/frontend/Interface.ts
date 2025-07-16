@@ -129,14 +129,14 @@ export const Interface = {
     },
 
     async askImportFile() {
-        const selected = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
-        if (typeof selected != 'string') return;
-        const text = await readTextFile(selected);
+        const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
+        if (typeof path != 'string') return;
+        const text = await readTextFile(path);
         if (!text) return;
-        let newSubs = parseSubtitleSource(text);
+        let newSubs = await parseSubtitleSourceInteractive(path, text);
         if (!newSubs) {
             Frontend.setStatus(
-                $_('msg.failed-to-parse-as-subtitles-path', {values: {path: selected}}), 'error');
+                $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
             return;
         }
         const options = await Dialogs.importOptions.showModal!(newSubs.migrated != 'text');

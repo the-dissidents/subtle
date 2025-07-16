@@ -5,20 +5,17 @@ import { writable } from "svelte/store";
 
 interface Props {
   id: string;
-  name?: string;
+  header: Snippet;
   children?: Snippet;
 }
 
-let { id, name = $bindable("Tab"), children }: Props = $props();
+let { id, header, children }: Props = $props();
 
 const tabApi: TabAPI = getContext(TabAPIContext);
-const writableName = writable(name);
-const page: TabPageData = {id, name: writableName};
+const page: TabPageData = {id, header};
 
 tabApi.registerPage(page);
 const selection = tabApi.selected();
-
-$effect(() => { $writableName = name; });
 </script>
 
 <div class={['page', 'fill', {active: $selection === id}]}>

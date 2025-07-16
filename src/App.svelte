@@ -63,7 +63,7 @@ import { Source, SourceCommands } from './lib/frontend/Source';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 import { Frontend } from './lib/frontend/Frontend';
 
-import { BugIcon, CommandIcon, FilmIcon, SettingsIcon } from '@lucide/svelte';
+import { BugIcon, CommandIcon, FilmIcon, SettingsIcon, TriangleAlertIcon } from '@lucide/svelte';
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { MAPI } from './lib/API';
 import * as z from "zod/v4-mini";
@@ -334,19 +334,28 @@ Debug.onError.bind({}, (origin, _msg) => {
       <!-- toolbox -->
       <div class="flexgrow fixminheight">
         <TabView bind:value={$toolboxFocus}>
-          <TabPage name={$_('tab.properties')} id='properties'>
+          <TabPage id='properties'>
+            {#snippet header()}{$_('tab.properties')}{/snippet}
             <PropertiesToolbox/>
           </TabPage>
-          <TabPage name={$_('tab.untimed-text')} id='untimed'>
+          <TabPage id='untimed'>
+            {#snippet header()}{$_('tab.untimed-text')}{/snippet}
             <UntimedToolbox/>
           </TabPage>
-          <TabPage name={$_('tab.search-replace')} id='search'>
+          <TabPage id='search'>
+            {#snippet header()}{$_('tab.search-replace')}{/snippet}
             <SearchToolbox/>
           </TabPage>
-          <TabPage name="Test" id='test'>
+          <TabPage id='test'>
+            {#snippet header()}Test{/snippet}
             <TestToolbox/>
           </TabPage>
-          <TabPage name={$_('tab.references')} id='references'>
+          <TabPage id='references'>
+            {#snippet header()}
+              <Tooltip position='top' text={$_('msg.experimental')}>
+                {$_('tab.references')}<span><TriangleAlertIcon/></span>
+              </Tooltip>
+            {/snippet}
             <ReferencesToolbox/>
           </TabPage>
         </TabView>

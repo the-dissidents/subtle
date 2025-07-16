@@ -115,7 +115,12 @@
     "true": "真"
   },
   "bugdialog": {
-    "header": "报告问题"
+    "create-issue": "新增GitHub issue",
+    "header": "报告问题",
+    "open-log-directory": "打开运行日志文件夹",
+    "p1": "如果遇到行为异常或故障，请联系微信或豆瓣<code>emfrosztovis</code>。我们有一个用来交流问题和发布测试版本的微信群。如有可能请提供运行日志（其中可能包含一些个人信息，如打开的文档和视频的完整地址，但它不包含任何文档的内容）：",
+    "p2": "如果比较熟悉开发，也可以前往GitHub Issues页面直接提交问题说明。为了减轻开发人员压力，请在提交issue之前尽量确认之前没有人已经报告过同样的问题。",
+    "view-issues": "查看目前待处理的issues"
   },
   "c": {
     "add-style": "新建样式",
@@ -472,6 +477,7 @@
     "errorbanner": "发生了内部错误！如果可能，请向开发者报告并提交运行日志",
     "errorbanner-more": "如何报告问题？",
     "errorbanner-open": "开发者工具",
+    "experimental": "实验性功能，某些部分可能无法正常工作",
     "exported-to-file": "已导出：{file}",
     "failed-to-clean-autosave": "清理自动保存文件时出错",
     "failed-to-parse-as-subtitles-path": "无法解析字幕：{path}",
@@ -537,6 +543,7 @@
     "display-options-d": "如果启用以下选项，应填写有效的CSS选择器",
     "error-parsing-file": "解析文件时遇到错误",
     "export": "导出",
+    "header": "编辑参考资料",
     "import": "导入",
     "keyword": "关键词",
     "name": "名称",
@@ -545,7 +552,7 @@
     "no-parameters-defined": "没有参数",
     "only-show-specified-element": "仅显示特定元素",
     "parameters": "参数",
-    "reference-source-editor": "编辑参考资料",
+    "placeholder": "请输入",
     "reset-all": "全部重置",
     "successfully-exported": "导出成功",
     "text": "文本",

@@ -130,18 +130,24 @@ async function importJSON() {
   {#each r as component, i}
     <span class="r">
       {#if typeof component == 'string'}
-        <span class="text" contenteditable='plaintext-only' bind:textContent={r[i] as string}
+        <span class="text" contenteditable='plaintext-only'
+          style='--placeholder: "{$_('refsourcedialog.placeholder')}"'
+          bind:textContent={r[i] as string}
           oninput={() => update()}></span>
       {:else if component.type == 'keyword'}
-        <SquareAsteriskIcon class='type' />
-        <span class="keyword">{$_('refsourcedialog.keyword')}</span>
+        <span style="white-space: nowrap;">
+          <SquareAsteriskIcon class='type' />
+          <span class="keyword">{$_('refsourcedialog.keyword')}</span>
+        </span>
       {:else if component.type == 'variable'}
-        <SquareFunctionIcon class='type' />
-        <select bind:value={vars[component.id]}>
-        {#each vars as v}
-          <option value={v}>{v.name}</option>
-        {/each}
-        </select>
+        <span style="white-space: nowrap;">
+          <SquareFunctionIcon class='type' />
+          <select bind:value={vars[component.id]}>
+          {#each vars as v}
+            <option value={v}>{v.name}</option>
+          {/each}
+          </select>
+        </span>
       {/if}
       <button class="noborder" onclick={() => r.splice(i, 1)}>
         <XIcon />
@@ -206,12 +212,12 @@ async function importJSON() {
   localizedName: () => $_('ok')
 }]}>
   {#snippet header()}
-    <h3>{$_('refsourcedialog.reference-source-editor')}</h3>
+    <h3>{$_('refsourcedialog.header')}</h3>
   {/snippet}
   <div class="hlayout" style="max-height: 60vh;">
     <div class="vlayout" style="height: auto">
       <div class="hlayout">
-        <button class="flexgrow"
+        <button class="flexgrow left"
           onclick={() => {
             let name: string;
             for (let i = 1; ; i++) {
@@ -223,7 +229,7 @@ async function importJSON() {
           }}>
           <PlusIcon />
         </button>
-        <button class="flexgrow"
+        <button class="flexgrow middle"
           disabled={selectedIndex < 0}
           onclick={() => {
             let name: string;
@@ -236,7 +242,7 @@ async function importJSON() {
           }}>
           <CopyPlusIcon />
         </button>
-        <button class="flexgrow"
+        <button class="flexgrow middle"
           disabled={selectedIndex <= 0}
           onclick={() => {
             $sources.splice(selectedIndex, 1);
@@ -246,7 +252,7 @@ async function importJSON() {
           }}>
           <ArrowUpIcon />
         </button>
-        <button class="flexgrow"
+        <button class="flexgrow middle"
           disabled={selectedIndex < 0 || selectedIndex == $sources.length - 1}
           onclick={() => {
             $sources.splice(selectedIndex, 1);
@@ -256,7 +262,7 @@ async function importJSON() {
           }}>
           <ArrowDownIcon />
         </button>
-        <button class="flexgrow"
+        <button class="flexgrow right"
           disabled={activeSource.length == 0}
           onclick={async () => {
             if (!await confirm($_('refsourcedialog.are-you-sure-to-delete-n-sources', 
@@ -270,7 +276,7 @@ async function importJSON() {
         </button>
       </div>
       <div class="hlayout">
-        <button class="flexgrow"
+        <button class="flexgrow left"
           onclick={async () => {
             if (!await confirm($_('refsourcedialog.confirm-reset'))) return;
             $sources = structuredClone(Reference.defaultSources);
@@ -278,10 +284,10 @@ async function importJSON() {
           }}>
           {$_('refsourcedialog.reset-all')}
         </button>
-        <button class="flexgrow" onclick={() => importJSON()}>
+        <button class="flexgrow middle" onclick={() => importJSON()}>
           {$_('refsourcedialog.import')}
         </button>
-        <button class="flexgrow" onclick={() => exportJSON()}>
+        <button class="flexgrow right" onclick={() => exportJSON()}>
           {$_('refsourcedialog.export')}
         </button>
       </div>
@@ -384,6 +390,24 @@ async function importJSON() {
 </DialogBase>
 
 <style>
+@media (prefers-color-scheme: light) {
+  .r {
+    background-color: var(--uchu-gray-2);
+    & :global(.lucide.type) {
+      color: var(--uchu-blue-5);
+    }
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .r {
+    background-color: var(--uchu-yin-7);
+    & :global(.lucide.type) {
+      color: var(--uchu-blue-3);
+    }
+  }
+}
+
 tr {
   padding: 3px 0;
 }
@@ -412,15 +436,17 @@ label {
   /* outline: none; */
   cursor: text;
   &:empty::before {
-    content: "请输入";
+    content: var(--placeholder);
     color: gray;
+    word-break: normal;
+    font-family: var(--fontFamily);
+    font-style: italic;
   }
 }
 .r {
   font-size: 90%;
-  background-color: var(--uchu-gray-2);
   vertical-align: text-bottom;
-  padding: 3px;
+  padding: 3px 3px 3px 5px;
   margin: 0 5px 0 0;
   border-radius: 5px;
   line-height: 1.5;
@@ -432,7 +458,6 @@ label {
     vertical-align: text-bottom;
     height: 1.2em;
     stroke-width: 1.5px;
-    color: var(--uchu-blue-5);
     margin: 0;
   }
   & .text {
@@ -456,6 +481,9 @@ label {
 }
 .patch2 {
   padding-left: 3em;
+  & div {
+    margin-top: 2px;
+  }
   & span {
     font-family: var(--monospaceFontFamily);
     font-size: 85%;

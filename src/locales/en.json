@@ -85,7 +85,7 @@
   "action-all-styles": "all styles",
   "assimport": {
     "duplicate-style-definition": "duplicate style definition",
-    "header": "Import ASS",
+    "header": "import ASS",
     "ignored-drawing-command": "ignored drawing commands",
     "ignored-embedded-fonts": "ignored embedded fonts",
     "ignored-event-field": "ignored event field",
@@ -115,7 +115,12 @@
     "true": "true"
   },
   "bugdialog": {
-    "header": "Report issues"
+    "create-issue": "Create issue",
+    "header": "report issues",
+    "open-log-directory": "Open application log directory",
+    "p1": "In case of bugs, contact WeChat or Douban <code>emfrosztovis</code>, or email <code>emfrosztovis@gmail.com</code>. We have a WeChat group for beta-testing. Provide the application log if possible, but note that it may contain personal information such as file paths.",
+    "p2": "If you are familiar with the development process, you can submit an issue directly to the GitHub repository. However, try to make sure that the same problem has not already been reported before.",
+    "view-issues": "View open issues"
   },
   "c": {
     "add-style": "add style",
@@ -311,7 +316,7 @@
     "combine-strategy": "combine strategy",
     "copy-to-clipboard": "copy to clipboard",
     "format": "format",
-    "header": "Export to a linear format",
+    "header": "export to a linear format",
     "keep-order": "keep order",
     "plaintext": "plaintext",
     "recombine": "recombine",
@@ -375,6 +380,9 @@
     "styles": "styles",
     "use-for-all": "use for all:",
     "use-local-styles-when-names-match": "use local styles when names match"
+  },
+  "jsonimport": {
+    "header": "import JSON"
   },
   "keybindingdialog": {
     "filter": "filter"
@@ -460,6 +468,7 @@
     "errorbanner": "An internal error has occurred. If possible, please report it to the developers with a log file attached.",
     "errorbanner-more": "How do I report?",
     "errorbanner-open": "Open devtools",
+    "experimental": "This is an experimental feature. Some things may not work.",
     "exported-to-file": "exported to {file}",
     "failed-to-clean-autosave": "Failed to clean autosave files",
     "failed-to-parse-as-subtitles-path": "failed to parse as subtitles: {path}",
@@ -525,6 +534,7 @@
     "display-options-d": "Should be valid CSS selectors when enabled.",
     "error-parsing-file": "Error when parsing file",
     "export": "export",
+    "header": "reference source editor",
     "import": "import",
     "keyword": "keyword",
     "name": "name",
@@ -533,13 +543,13 @@
     "no-parameters-defined": "no parameters defined",
     "only-show-specified-element": "only show specified element",
     "parameters": "parameters",
-    "reference-source-editor": "Reference source editor",
+    "placeholder": "click to enter",
     "reset-all": "reset all",
     "successfully-exported": "Successfully exported",
     "text": "text",
     "url": "URL",
     "url-d": "Anchors (e.g. #English) are not supported. To automatically navigate to a specified element, enable \"Use auto-scroll\"",
-    "use-auto-scroll": "Use auto-scroll"
+    "use-auto-scroll": "use auto-scroll"
   },
   "search": {
     "advanced": "advanced",
@@ -589,7 +599,7 @@
   },
   "srtimport": {
     "coordinates-info": "subtle does not yet support individual positioning of entries. Such data will not be imported.",
-    "header": "Import SRT",
+    "header": "import SRT",
     "ignored-coordinates": "ignored coordinates",
     "ignored-format-tags": "ignored HTML format tags",
     "info": "Some players support HTML format tags in SRT subtitles. This is nonstandard. If the \"preserve format tags\" option is enabled, such tags will be retained, although subtle cannot display them correctly."
