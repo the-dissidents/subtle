@@ -161,7 +161,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
               focused.texts.delete(style);
               Source.markChanged(ChangeType.InPlace, $_('c.change-style'));
             }} />
-          <button onclick={async () => {
+          <button tabindex="-1" onclick={async () => {
             let otherUsed = [...focused.texts.keys()].filter((x) => x !== style);
             const menu = await Menu.new({
               items: [

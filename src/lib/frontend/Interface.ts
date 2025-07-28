@@ -166,7 +166,8 @@ export const Interface = {
 
     async askOpenVideo() {
         const selected = await dialog.open({multiple: false, 
-            filters: [{name: $_('filter.video-file'), extensions: ['avi', 'mp4', 'webm', 'mkv']}]});
+            filters: [{name: $_('filter.video-file'), 
+                extensions: ['avi', 'mp4', 'webm', 'mkv', 'mov']}]});
         if (typeof selected != 'string') return;
         await this.openVideo(selected);
     },
