@@ -28,6 +28,15 @@ export const MediaConfig = new PublicConfigGroup(
         bounds: [0, 20],
         default: 3
     },
+    subtitleRenderer: {
+        localizedName: () => $_('config.subtitle-renderer'),
+        type: 'dropdown',
+        options: {
+            canvas: { localizedName: () => $_('config.subtitle-renderer-canvas') },
+            dom: { localizedName: () => $_('config.subtitle-renderer-dom') },
+        },
+        default: 'dom'
+    },
     showDebug: {
         localizedName: () => $_('config.show-debug-info'),
         type: 'boolean',

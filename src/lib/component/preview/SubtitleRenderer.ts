@@ -1,7 +1,10 @@
 import { Basic } from "../../Basic";
 import type { CanvasManager } from "../../CanvasManager";
 import { SubtitleEntry, type SubtitleStyle, Subtitles, AlignMode } from "../../core/Subtitles.svelte";
+import { EventHost } from "../../details/EventHost";
 import { Typography } from "../../details/Typography";
+import { MediaConfig } from "./Config";
+import type { EntryBox } from "./SubtitleView.svelte";
 
 type WrappedEntry = {
     oldIndex: number,
@@ -25,7 +28,7 @@ function getBoxFromMetrics(metrics: TextMetrics, x: number, y: number): Box {
     };
 }
 
-function boxIntersects(a: Box, b: Box) {
+function boxIntersects(a: EntryBox, b: Box) {
     // more lenient on X-axis because we only shift boxes around on Y, and we want to deal with empty lines (zero-width boxes) correctly
     const h = a.x + a.w >= b.x && b.x + b.w >= a.x;
     const v = a.y + a.h > b.y && b.y + b.h > a.y;
@@ -81,6 +84,8 @@ export class SubtitleRenderer {
     get currentTime() {
         return this.#currentTime;
     }
+
+    readonly getBoxes = new EventHost<[EntryBox[]]>();
 
     constructor(
         private readonly manager: CanvasManager,
@@ -183,6 +188,8 @@ export class SubtitleRenderer {
     }
 
     render(ctx: CanvasRenderingContext2D) {
+        let boxes: EntryBox[] = [];
+
         const [width, height] = this.manager.physicalSize;
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
@@ -200,7 +207,6 @@ export class SubtitleRenderer {
             return [style, `${style.styles.bold ? 'bold ' : ''} ${style.styles.italic ? 'italic ' : ''} ${cssSize}px ${fontFamily}`];
         }));
 
-        const boxes: Box[] = [];
         const reverseStyles = this.#subs.styles.toReversed();
         for (const ent of this.#currentEntries)
         for (const style of reverseStyles) {
@@ -234,20 +240,31 @@ export class SubtitleRenderer {
                         ? Math.max(newBox.y + 1, overlapping.y + overlapping.h)
                         : Math.min(newBox.y - 1, overlapping.y - overlapping.h);
                 }
-                boxes.push(newBox);
-                ctx.beginPath();
-                ctx.rect(newBox.x, newBox.y, newBox.w, newBox.h);
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                if (style.outline) {
-                    ctx.strokeStyle = style.outlineColor || 'black';
-                    ctx.lineWidth = style.outline * this.#scale;
-                    ctx.strokeText(line, x, newBox.y + newBox.diffy);
+
+                if (MediaConfig.data.subtitleRenderer != 'dom') {
+                    ctx.beginPath();
+                    ctx.rect(newBox.x, newBox.y, newBox.w, newBox.h);
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    if (style.outline) {
+                        ctx.strokeStyle = style.outlineColor || 'black';
+                        ctx.lineWidth = style.outline * this.#scale;
+                        ctx.strokeText(line, x, newBox.y + newBox.diffy);
+                    }
+                    ctx.fillText(line, x, newBox.y + newBox.diffy);
                 }
-                ctx.fillText(line, x, newBox.y + newBox.diffy);
+
+                boxes.push({
+                    ...newBox,
+                    ascent: newBox.diffy,
+                    text: line, style,
+                    font: styleFonts.get(style)!
+                });
             }
         }
+
+        this.getBoxes.dispatch(boxes);
     }
 
     setTime(time: number) {

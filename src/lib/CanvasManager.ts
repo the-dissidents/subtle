@@ -50,6 +50,8 @@ export class CanvasManager {
 
     readonly onDisplaySizeChanged = 
         new EventHost<[w: number, h: number, rw: number, rh: number]>();
+    readonly onViewportChanged =
+        new EventHost();
     readonly onMouseDown =
         new EventHost<[ev: MouseEvent]>();
     readonly onMouseWheel =
@@ -103,6 +105,7 @@ export class CanvasManager {
         if (p.r !== undefined) this.#contentR = p.r;
         if (p.b !== undefined) this.#contentD = p.b;
         this.#constrainScroll();
+        this.onViewportChanged.dispatch();
         this.requestRender();
     }
 
@@ -114,6 +117,7 @@ export class CanvasManager {
         if (p.x !== undefined) this.#scrollX = p.x;
         if (p.y !== undefined) this.#scrollY = p.y;
         this.#constrainScroll();
+        this.onViewportChanged.dispatch();
         this.requestRender();
     }
 
@@ -127,6 +131,7 @@ export class CanvasManager {
         this.#scale = Math.min(s, this.#maxZoom);
         if (this.#scale !== oldScale) {
             this.#constrainScroll();
+            this.onViewportChanged.dispatch();
             this.requestRender();
         }
     }
@@ -280,6 +285,7 @@ export class CanvasManager {
                     (offsetX - this.#dragStartX) 
                     / (this.#width - this.#hscrollerLength) * this.#hscrollSpace;
                 this.#constrainScroll();
+                this.onViewportChanged.dispatch();
                 this.requestRender();
                 return;
             } else if (this.#dragType == 'vscroll') {
@@ -287,6 +293,7 @@ export class CanvasManager {
                     (offsetY - this.#dragStartY) 
                     / (this.#height - this.#vscrollerLength) * this.#vscrollSpace;
                 this.#constrainScroll();
+                this.onViewportChanged.dispatch();
                 this.requestRender();
                 return;
             }
@@ -316,7 +323,6 @@ export class CanvasManager {
     #onMouseWheel(ev: WheelEvent) {
         let handled = false;
         const tr = translateWheelEvent(ev);
-        // console.log(tr, ev);
         if (tr.isZoom) {
             const centerX = ev.offsetX / this.#scale + this.#scrollX;
             const centerY = ev.offsetY / this.#scale + this.#scrollY;
@@ -326,6 +332,7 @@ export class CanvasManager {
             this.#scrollX = centerX - ev.offsetX / this.#scale;
             this.#scrollY = centerY - ev.offsetY / this.#scale;
             this.#constrainScroll();
+            this.onViewportChanged.dispatch();
             if (this.#scale !== oldscale) {
                 handled = true;
                 this.requestRender();
@@ -336,6 +343,7 @@ export class CanvasManager {
             this.#scrollX += tr.amountX * 0.1;
             this.#scrollY += tr.amountY * 0.1;
             this.#constrainScroll();
+            this.onViewportChanged.dispatch();
             if (this.#scrollX !== x || this.#scrollY !== y) {
                 handled = true;
                 this.requestRender();

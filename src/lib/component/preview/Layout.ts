@@ -9,6 +9,14 @@ export class PreviewLayout {
     #manager: CanvasManager;
     #subsRenderer: SubtitleRenderer;
 
+    get manager() {
+        return this.#manager;
+    }
+    
+    get subsRenderer() {
+        return this.#subsRenderer;
+    }
+
     constructor(public readonly canvas: HTMLCanvasElement) {
         this.#manager = new CanvasManager(canvas);
         this.#manager.doNotPrescaleHighDPI = true;
