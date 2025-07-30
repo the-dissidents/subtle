@@ -26,8 +26,9 @@ function getBoxFromMetrics(metrics: TextMetrics, x: number, y: number): Box {
 }
 
 function boxIntersects(a: Box, b: Box) {
-    let h = a.x + a.w > b.x && b.x + b.w > a.x;
-    let v = a.y + a.h > b.y && b.y + b.h > a.y;
+    // more lenient on X-axis because we only shift boxes around on Y, and we want to deal with empty lines (zero-width boxes) correctly
+    const h = a.x + a.w >= b.x && b.x + b.w >= a.x;
+    const v = a.y + a.h > b.y && b.y + b.h > a.y;
     return h && v;
 }
 
