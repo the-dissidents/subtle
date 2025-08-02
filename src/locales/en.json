@@ -504,6 +504,7 @@
     "subtitle-is-empty": "subtitle file is empty",
     "unable-to-read-file-path": "unable to read file {path}",
     "undone": "operation undone: {op}",
+    "untimed-first-line-very-long": "You have enabled \"Consume first line of untimed text to fill newly drawn entries\", but the first line is very long, probably indicating a mistake. Do you want to proceed?",
     "very-large-file-warning": "The file you're opening is very large and likely not a supported subtitle file.\nDo you really want to proceed?\nThis may crash the application.",
     "waiting-for-chord-after-pressing": "waiting for chord following {key} ...",
     "you-cant-delete-a-default-style": "You can't delete a default style. If you want to delete it, make something other default first."
@@ -680,7 +681,7 @@
   "untimed": {
     "channel": "channel",
     "clear": "clear",
-    "display": "Display",
+    "display": "Settings",
     "fuzzy-match-found": "fuzzy match found ({x, number, ::percent .#})",
     "fuzzy-search-failed-to-find-anything": "fuzzy search failed to find anything",
     "justify": "justify",
@@ -691,6 +692,7 @@
     "syllable-cjk-character": "syllable / CJK character",
     "text-size": "text size",
     "tokenizer": "tokenizer",
+    "use-in-new-entries": "consume first line to fill newly drawn entries",
     "word-cjk-character": "word / CJK character"
   },
   "untitled": "<untitled>"

@@ -18,10 +18,15 @@ import { Frontend } from "../frontend/Frontend";
 import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 
 import { _ } from 'svelte-i18n';
+import { Memorized } from "../config/MemorizedValue.svelte";
+import * as z from "zod/v4-mini";
 
-let locked = $state(false);
-let textsize = $state(14);
-let justify = $state(true);
+let locked = Memorized.$('untimedLocked', z.boolean(), false);
+let textsize = Memorized.$('untimedTextSize', z.number().check(z.positive()), 14);
+let justify = Memorized.$('untimedJustify', z.boolean(), true);
+let useForNew = Editing.useUntimedForNewEntires;
+
+let subs = $state(Source.subs);
 
 let fuzzy = $state({
   enabled: false,
@@ -36,29 +41,29 @@ let fuzzy = $state({
 
 $effect(() => {
   if (fuzzy.enabled) {
-    locked = true;
+    $locked = true;
     fuzzyMatch();
   }
 });
 
 let textarea: HTMLTextAreaElement;
+let changed = false;
 
 const me = {};
 onDestroy(() => EventHost.unbind(me));
 
-Source.onSubtitleObjectReload.bind(me, readFromSubs);
+Source.onSubtitleObjectReload.bind(me, () => {
+  subs = Source.subs;
+  fuzzy.useStyle = Source.subs.defaultStyle;
+});
+
 Editing.onSelectionChanged.bind(me, fuzzyMatch);
 
-function updateToSubs() {
-  if (Source.subs.metadata.special.untimedText == textarea.value) return;
-  Source.subs.metadata.special.untimedText = textarea.value;
+function markChanged() {
+  if (!changed) return;
+  changed = false;
   fuzzy.engine = null;
   Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
-}
-
-function readFromSubs() {
-  textarea.value = Source.subs.metadata.special.untimedText;
-  fuzzy.useStyle = Source.subs.defaultStyle;
 }
 
 function fuzzyMatch() {
@@ -160,13 +165,13 @@ async function paste() {
   if (text.length > 500000 && !await dialog.confirm(
     'The text in your clipboard is very long. Proceed to import?', 
     {kind: 'warning'})) return;
-  textarea.value = text;
-  updateToSubs();
+  Source.subs.metadata.special.untimedText = text;
+  markChanged();
 }
 
 function clear() {
-  textarea.value = '';
-  updateToSubs();
+  Source.subs.metadata.special.untimedText = '';
+  markChanged();
 }
 </script>
 
@@ -217,25 +222,31 @@ function clear() {
     <button class="flexgrow" onclick={() => clear()}>{$_('untimed.clear')}</button>
     <button class="flexgrow" onclick={() => paste()}>{$_('untimed.paste')}</button>
     <label class="flexgrow" for='lock'>
-      <input type='checkbox' class="button" bind:checked={locked} id='lock'/>
+      <input type='checkbox' class="button" bind:checked={$locked} id='lock'/>
       {$_('untimed.lock')}
     </label>
   </div>
   <textarea class="flexgrow" class:justify
-    readonly={locked}
-    style="min-height: 150px; font-size: {textsize}px"
-    onblur={() => updateToSubs()}
+    readonly={$locked}
+    style="min-height: 150px; font-size: {$textsize}px"
+    oninput={() => changed = true}
+    onblur={() => markChanged()}
+    bind:value={subs.metadata.special.untimedText}
     bind:this={textarea}></textarea>
   <Collapsible header={$_('untimed.display')}>
     <table class="config">
       <tbody>
         <tr>
           <td>{$_('untimed.text-size')}</td>
-          <td><input id='size' type='number' bind:value={textsize}/></td>
+          <td><input id='size' type='number' bind:value={$textsize}/></td>
         </tr>
         <tr>
           <td>{$_('untimed.justify')}</td>
-          <td><input id='just' type='checkbox' bind:checked={justify}/></td>
+          <td><input id='just' type='checkbox' bind:checked={$justify}/></td>
+        </tr>
+        <tr>
+          <td><input id='just' type='checkbox' bind:checked={$useForNew}/></td>
+          <td>{$_('untimed.use-in-new-entries')}</td>
         </tr>
       </tbody>
     </table>
@@ -278,7 +289,7 @@ function clear() {
           </tr>
           <tr>
             <td>
-              <input id='snap' type='checkbox' bind:checked={justify}/>
+              <input id='snap' type='checkbox' bind:checked={fuzzy.snapToPunct}/>
             </td>
             <td>
               <label for='snap'>{$_('untimed.snap-to-following-punctuation')}</label>

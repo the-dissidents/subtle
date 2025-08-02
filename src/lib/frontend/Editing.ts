@@ -10,6 +10,7 @@ import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";
 import { Metric, Metrics } from "../core/Filter";
 import { Frontend } from "./Frontend";
+import { ask } from "@tauri-apps/plugin-dialog";
 const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
@@ -83,6 +84,8 @@ export const Editing = {
 
     editChanged: false,
     isEditingVirtualEntry: writable(false),
+    useUntimedForNewEntires: writable(false),
+
     styleToEditor: new WeakMap<SubtitleStyle, HTMLTextAreaElement>(),
 
     onSelectionChanged: new EventHost<[cause: ChangeCause]>(),
@@ -138,6 +141,19 @@ export const Editing = {
         Source.subs.entries.splice(index, 0, entry);
         setTimeout(() => this.selectEntry(entry, SelectMode.Single), 0);
         return entry;
+    },
+
+    async fillWithFirstLineOfUntimed(entry: SubtitleEntry, style: SubtitleStyle) {
+        const untimed = Source.subs.metadata.special.untimedText;
+        const firstNewline = untimed.indexOf('\n');
+        const line = firstNewline < 0 ? untimed : untimed.substring(0, firstNewline);
+        if (line.length > 0 && (line.length < 500 
+            || await ask($_('msg.untimed-first-line-very-long'))))
+        {
+            entry.texts.set(style, line);
+            Source.subs.metadata.special.untimedText = 
+                firstNewline < 0 ? '' : untimed.substring(firstNewline+1);
+        }
     },
 
     startEditingNewVirtualEntry() {

@@ -513,6 +513,7 @@
     "subtitle-is-empty": "字幕文件为空",
     "unable-to-read-file-path": "无法读取文件：{path}",
     "undone": "已撤销：{op}",
+    "untimed-first-line-very-long": "你启用了“用无时间文本的第一行来填充画出的新条目”，但是无时间文本的第一行非常长。这可能是个错误。确定要继续吗？",
     "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的要继续吗？这可能会使应用程序崩溃。",
     "waiting-for-chord-after-pressing": "已按下 {key}，等待下一个键…",
     "you-cant-delete-a-default-style": "无法删除默认样式；请先把另一个样式设置为默认"
@@ -689,7 +690,7 @@
   "untimed": {
     "channel": "频道",
     "clear": "清除",
-    "display": "显示",
+    "display": "设置",
     "fuzzy-match-found": "发现模糊匹配（{x, number, ::percent .#}）",
     "fuzzy-search-failed-to-find-anything": "未发现模糊匹配",
     "justify": "均匀排版",
@@ -700,6 +701,7 @@
     "syllable-cjk-character": "音节或CJK字符",
     "text-size": "字号",
     "tokenizer": "分词方法",
+    "use-in-new-entries": "用无时间文本的第一行来填充画出的新条目",
     "word-cjk-character": "单词或CJK字符"
   },
   "untitled": "「未命名」"

@@ -10,7 +10,7 @@ import { Playback } from '../../frontend/Playback';
 import { ChangeType, Source } from '../../frontend/Source';
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { SubtitleEntry } from "../../core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
 import { TimelineHandle } from "./Input.svelte";
 import { MediaPlayerInterface2 } from "../preview/MediaPlayer2";
 const $_ = unwrapFunctionStore(_);
@@ -74,10 +74,11 @@ async function make(other: UICommand<any>) {
         await other.end();
     Debug.assert(TimelineHandle.activeChannel !== undefined);
     const pos = Playback.position;
-    const entry = Editing.insertAtTime(pos, pos, TimelineHandle.activeChannel);
+    const style = TimelineHandle.activeChannel;
+    const entry = Editing.insertAtTime(pos, pos, style);
     MediaPlayerInterface2.onPlayback.bind(entry, 
         (newpos) => { entry.end = Math.max(entry.end, newpos) });
-    return entry;
+    return [entry, style] as const;
 }
 
 export const TimelineCommands = {
@@ -85,10 +86,13 @@ export const TimelineCommands = {
         [ CommandBinding.from(['J'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-1'),
-        isApplicable: () => Playback.isPlaying && TimelineHandle.activeChannel !== null,
-        call: (): Promise<SubtitleEntry> => make(TimelineCommands.holdToCreateEntry2),
-        onDeactivate: (entry) => {
+        isApplicable: () => Playback.isPlaying && TimelineHandle.activeChannel !== undefined,
+        call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> => 
+            make(TimelineCommands.holdToCreateEntry2),
+        onDeactivate: ([entry, style]) => {
             EventHost.unbind(entry);
+            if (get(Editing.useUntimedForNewEntires))
+                Editing.fillWithFirstLineOfUntimed(entry, style);
             Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
         }
     }),
@@ -96,10 +100,13 @@ export const TimelineCommands = {
         [ CommandBinding.from(['K'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-2'),
-        isApplicable: () => Playback.isPlaying && TimelineHandle.activeChannel !== null,
-        call: (): Promise<SubtitleEntry> => make(TimelineCommands.holdToCreateEntry1),
-        onDeactivate: (entry) => {
+        isApplicable: () => Playback.isPlaying && TimelineHandle.activeChannel !== undefined,
+        call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> => 
+            make(TimelineCommands.holdToCreateEntry1),
+        onDeactivate: ([entry, style]) => {
             EventHost.unbind(entry);
+            if (get(Editing.useUntimedForNewEntires))
+                Editing.fillWithFirstLineOfUntimed(entry, style);
             Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
         }
     }),

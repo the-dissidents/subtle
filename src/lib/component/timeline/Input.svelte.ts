@@ -260,11 +260,13 @@ class DragResize extends MoveResizeBase {
 
 class CreateEntry extends TimelineAction {
   entry: SubtitleEntry;
+  style: SubtitleStyle;
 
-  constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, style: SubtitleStyle) {
+  constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, style_: SubtitleStyle) {
     super(self, layout, e0);
     const startPos = this.self.alignmentLine?.pos ?? this.origPos;
-    this.entry = Editing.insertAtTime(startPos, startPos, style);
+    this.entry = Editing.insertAtTime(startPos, startPos, style_);
+    this.style = style_;
   }
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
@@ -274,11 +276,14 @@ class CreateEntry extends TimelineAction {
     this.layout.manager.requestRender();
   }
 
-  onDragEnd(): void {
+  async onDragEnd() {
     this.self.currentAction = undefined;
     if (this.entry.end == this.entry.start) {
       this.onDragInterrupted();
     } else {
+      if (get(Editing.useUntimedForNewEntires)) {
+        Editing.fillWithFirstLineOfUntimed(this.entry, this.style);
+      }
       Source.markChanged(ChangeType.Times, get(_)('c.drag-to-create'));
       // TODO: start editing?
     }
