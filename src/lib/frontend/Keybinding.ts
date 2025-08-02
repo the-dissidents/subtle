@@ -152,6 +152,7 @@ const ConfigFile = 'keybinding.json';
 
 let initialized = false;
 let commands = new Map<string, UICommand<any>>();
+let hotkeyWasPressed = false;
 
 export const KeybindingManager = {
     get commands(): ReadonlyMap<string, UICommand<any>> {
@@ -172,7 +173,7 @@ export const KeybindingManager = {
         this.update();
         document.addEventListener('keydown', (ev) => {
             const result = this.processKeydown(ev);
-            // Debug.trace('result:', result);
+            hotkeyWasPressed = false;
             switch (result.type) {
                 case 'incomplete':
                 case 'disabled': break;
@@ -186,10 +187,12 @@ export const KeybindingManager = {
                     break;
                 case "activate":
                     ev.preventDefault();
+                    hotkeyWasPressed = true;
                     result.command.start(result.key);
                     break;
                 case "waitNext":
                     ev.preventDefault();
+                    hotkeyWasPressed = true;
                     Frontend.setStatus($_('msg.waiting-for-chord-after-pressing', 
                         { values: { key: 
                             result.currentSequence.map((x) => x.toString()).join(' ')
@@ -210,6 +213,13 @@ export const KeybindingManager = {
                     break;
                 default:
                     Debug.never(result);
+            }
+        });
+        document.addEventListener('beforeinput', (ev) => {
+            if (hotkeyWasPressed) {
+                console.log(ev);
+                ev.preventDefault();
+                hotkeyWasPressed = false;
             }
         });
     },

@@ -35,20 +35,21 @@
 <div class="vlayout fill">
   <div class='player-container fixminsize'>
     <canvas class="fill" use:setup></canvas>
-    <SubtitleView manager={layout?.manager}
-      disabled={MediaConfig.data.subtitleRenderer != 'dom'} {boxes}/>
+    {#if MediaConfig.data.subtitleRenderer == 'dom'}
+      <SubtitleView manager={layout?.manager} {boxes}/>
+    {/if}
     {#if MediaConfig.data.showDebug}
-    <label style="position: absolute; left: 0; top: 0;">
-      <input type="checkbox" checked={MediaConfig.data.subtitleRenderer == 'dom'}
-        onchange={(x) => {
-          if (x.currentTarget.checked)
-            MediaConfig.data.subtitleRenderer = 'dom';
-          else
-            MediaConfig.data.subtitleRenderer = 'canvas';
-          layout?.manager.requestRender();
-        }}/>
-      dom
-    </label>
+      <label style="position: absolute; left: 0; top: 0;">
+        <input type="checkbox" checked={MediaConfig.data.subtitleRenderer == 'dom'}
+          onchange={(x) => {
+            if (x.currentTarget.checked)
+              MediaConfig.data.subtitleRenderer = 'dom';
+            else
+              MediaConfig.data.subtitleRenderer = 'canvas';
+            layout?.manager.requestRender();
+          }}/>
+        dom
+      </label>
     {/if}
   </div>
 

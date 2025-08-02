@@ -137,7 +137,8 @@ export const PlaybackCommands = {
                     ? ' ' + $_('menu.audio-stream-current') : ''),
                 isApplicable: () => x.index != Playback.player?.currentAudioStream,
                 async call() {
-                    await guardAsync(() => Playback.setAudioStream(x.index),
+                    if (Playback.player) await guardAsync(
+                        () => Playback.setAudioStream(x.index),
                         $_('msg.failed-to-set-audio-stream'))
                 }
             })),
@@ -148,7 +149,10 @@ export const PlaybackCommands = {
           CommandBinding.from(['Alt+Space']), ],
     {
         name: () => $_('action.toggle-play'),
-        call: () => Playback.toggle()
+        call: () => {
+            if (Playback.player)
+                Playback.toggle();
+        }
     }),
     toggleInPoint: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['I'], ['Table', 'Timeline']),

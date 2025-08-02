@@ -670,6 +670,7 @@
     "filter-styles": "选择要显示的样式",
     "lock-cursor": "播放时固定光标位置",
     "select-tool": "选择工具",
+    "snap-to-frame": "吸附到帧",
     "split-tool": "切割工具"
   },
   "transformdialog": {

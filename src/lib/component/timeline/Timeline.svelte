@@ -9,12 +9,13 @@ import { TimelineRenderer } from "./Render.svelte";
 import Tooltip from '../../ui/Tooltip.svelte';
 import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
-import { AlignCenterVerticalIcon, MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
+import { AlignCenterVerticalIcon, FrameIcon, MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
 import { Frontend } from '../../frontend/Frontend';
 
 let currentMode = TimelineHandle.currentMode;
 let useSnap = TimelineHandle.useSnap;
 let lockCursor = TimelineHandle.lockCursor;
+let snapToFrame = TimelineHandle.snapToFrame;
 
 let rowPopup: PopupHandler = $state({});
 let styleRefreshCounter = $state(0);
@@ -105,9 +106,16 @@ function updateSnapOverride(ev: KeyboardEvent) {
     <Tooltip text={$_('timeline.lock-cursor')} position="right">
       <label>
         <input type="checkbox" class="button"
-          checked={$lockCursor}
-          onclick={() => lockCursor.set(!lockCursor.get())} />
+          bind:checked={$lockCursor} />
         <AlignCenterVerticalIcon />
+      </label>
+    </Tooltip>
+
+    <Tooltip text={$_('timeline.snap-to-frame')} position="right">
+      <label>
+        <input type="checkbox" class="button"
+          bind:checked={$snapToFrame} />
+        <FrameIcon />
       </label>
     </Tooltip>
   </div>
@@ -210,6 +218,10 @@ h5 {
 .toolbox {
   padding: 0 3px 0 3px;
   justify-items: end;
+
+  & hr {
+    margin: 7px 0px;
+  }
 }
 
 .container {

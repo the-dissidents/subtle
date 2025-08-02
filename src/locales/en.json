@@ -661,6 +661,7 @@
     "filter-styles": "filter styles",
     "lock-cursor": "lock cursor position when playing",
     "select-tool": "select tool",
+    "snap-to-frame": "snap to frame",
     "split-tool": "split tool"
   },
   "transformdialog": {

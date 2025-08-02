@@ -19,6 +19,7 @@ import { _ } from "svelte-i18n";
 export const TimelineHandle = {
   activeChannel: undefined as SubtitleStyle | undefined,
   lockCursor: Memorized.$('lockCursor', z.boolean(), false),
+  snapToFrame: Memorized.$('snapToFrame', z.boolean(), false),
   useSnap: Memorized.$overridable('useSnap', z.boolean(), true),
   currentMode: Memorized.$('currentMode', 
     z.union([z.literal('select'), z.literal('create'), z.literal('split')]), 'select'),

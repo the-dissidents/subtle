@@ -427,6 +427,7 @@ export class CanvasManager {
         this.#height = this.canvas.clientHeight;
         this.canvas.width = Math.floor(this.#width * factor);
         this.canvas.height = Math.floor(this.#height * factor);
+        this.requestRender();
         this.onDisplaySizeChanged.dispatch(
             this.#width, this.#height, 
             this.#width * factor, this.#height * factor);

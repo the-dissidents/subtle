@@ -10,38 +10,45 @@
 </script>
 
 <script lang="ts">
+  import { onMount } from "svelte";
+
   import type { CanvasManager } from "../../CanvasManager";
   import type { SubtitleStyle } from "../../core/Subtitles.svelte";
+  import { EventHost } from "../../details/EventHost";
 
   interface Props {
     manager?: CanvasManager,
-    disabled?: boolean,
     boxes: EntryBox[]
   }
 
-  let {manager, disabled = false, boxes}: Props = $props();
+  let {manager, boxes}: Props = $props();
 
   let width = $state(0);
   let height = $state(0);
   let transform = $state('scale(0.5)');
+  let me = {};
 
   $effect(() => {
     if (manager) {
       [width, height] = manager.size;
-      manager.onDisplaySizeChanged.bind(manager, (w, h) => {
+      manager.onDisplaySizeChanged.bind(me, (w, h) => {
         width = w;
         height = h;
       });
-      manager.onViewportChanged.bind(manager, updateTransform);
+      manager.onViewportChanged.bind(me, updateTransform);
     }
-  })
+  });
+
+  onMount(() => () => {
+    EventHost.unbind(me);
+  });
 
   function updateTransform() {
     transform = `scale(${manager!.scale}) translate(${-manager!.scroll[0]}px, ${-manager!.scroll[1]}px) scale(0.5)`;
   }
 </script>
 
-<div class={{disabled, subview: true}} style="width: {width}px; height: {height}px;">
+<div class="subview" style="width: {width}px; height: {height}px;">
   <div style="transform: {transform}; transform-origin: left top;">
   {#each boxes as box}
   {@const bold = box.style.styles.bold ? 'bold' : 'normal'}
@@ -95,17 +102,12 @@
 
 <style>
   .subview {
-    display: block; /* to get rid of extra spacing at the bottom */
     box-sizing: border-box;
     position: absolute;
     left: 3px;
     top: 3px;
     pointer-events: none;
     overflow: hidden;
-  }
-
-  .disabled {
-    display: none;
   }
 
   .text {
