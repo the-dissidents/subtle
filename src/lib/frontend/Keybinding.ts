@@ -10,6 +10,7 @@ import * as fs from "@tauri-apps/plugin-fs";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import * as z from "zod/v4-mini";
+import { platform } from "@tauri-apps/plugin-os";
 const $_ = unwrapFunctionStore(_);
 
 export class KeyBinding {
@@ -216,8 +217,20 @@ export const KeybindingManager = {
             }
         });
         document.addEventListener('beforeinput', (ev) => {
-            if (hotkeyWasPressed) {
-                console.log(ev);
+            console.log(ev);
+            // handle the very special case:
+            // ... the user pressed Option+Space
+            // ... and with Chinese IME enabled
+            // ... and is on Safari
+            // ... and this is a hotkey
+            if (ev.inputType == 'insertText' && ev.data == '　'
+                && platform() == 'macos'
+                && (currentNode?.children ?? bindingTree).get(
+                    new KeyBinding('Space', new Set(['Alt']))) !== undefined
+            ) {
+                hotkeyWasPressed = true;
+            }
+            if (hotkeyWasPressed && ev.inputType == 'insertText') {
                 ev.preventDefault();
                 hotkeyWasPressed = false;
             }
@@ -279,7 +292,7 @@ export const KeybindingManager = {
         const key = this.parseKey(ev);
         const focus = Frontend.getUIFocus();
         if (!key) return { type: 'incomplete' };
-        Debug.trace('key:', key, focus);
+        // console.log(key, focus);
         currentSequence.push(key);
 
         const map = currentNode?.children ?? bindingTree;
