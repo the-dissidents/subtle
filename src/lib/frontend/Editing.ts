@@ -222,9 +222,9 @@ export const Editing = {
         this.focused.entry.set(null);
     },
 
-    setSelection(entries: SubtitleEntry[]) {
+    setSelection(entries: readonly SubtitleEntry[]) {
         this.selection.submitted.clear();
-        for (let ent of entries)
+        for (const ent of entries)
             Editing.selection.submitted.add(ent);
         Editing.selection.focused = entries[0];
         Editing.selection.currentGroup.clear();

@@ -38,12 +38,19 @@ export const TimelineConfig = new PublicConfigGroup(
         description: () => get(_)('config.show-keyframes-d'),
         default: true
     },
+    dragSeamArea: {
+        localizedName: () => get(_)('config.seam-area-size'),
+        type: 'number',
+        description: () => get(_)('config.seam-area-size-d'),
+        bounds: [1, 15],
+        default: 2
+    },
     dragResizeArea: {
         localizedName: () => get(_)('config.resize-area-size'),
         type: 'number',
         description: () => get(_)('config.resize-area-size-d'),
-        bounds: [1, 10],
-        default: 5
+        bounds: [1, 15],
+        default: 6
     },
     snapDistance: {
         localizedName: () => get(_)('config.snap-distance'),

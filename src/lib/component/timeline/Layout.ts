@@ -57,7 +57,7 @@ export class TimelineLayout {
     this.manager = new CanvasManager(canvas);
     this.manager.onDisplaySizeChanged.bind(this, 
       (w, h) => this.#processDisplaySizeChanged(w, h));
-    this.setScale(10);
+    setTimeout(() => this.setScale(10), 0);
 
     Playback.onLoad.bind(this, async (rawurl, audio) => {
       Debug.assert(this.#samplerMedia === undefined || this.#samplerMedia.isClosed)
@@ -154,6 +154,7 @@ export class TimelineLayout {
     v = Math.max(v, this.width / this.maxPosition, 0.15);
     v = Math.min(v, 500);
     if (v == this.scale) return;
+
     this.#scale = v;
     this.#updateContentArea();
     this.manager.requestRender();
@@ -192,7 +193,7 @@ export class TimelineLayout {
     });
   }
 
-  getChannelFromY(y: number, clamp = false): SubtitleStyle | undefined {
+  getChannelFromOffsetY(y: number, clamp = false): SubtitleStyle | undefined {
     let i = Math.floor((y + this.manager.scroll[1] 
       - TimelineLayout.HEADER_HEIGHT - TimelineLayout.TRACKS_PADDING) / this.entryHeight);
     if (clamp) return this.#shownStyles[Math.min(Math.max(i, this.shownStyles.length - 1), 0)];

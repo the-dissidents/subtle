@@ -220,6 +220,38 @@ class DragMove extends MoveResizeBase {
   }
 }
 
+class DragSeam extends MoveResizeBase {
+  origVal: number;
+
+  constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent,
+    private first: SubtitleEntry, private second: SubtitleEntry,
+    afterEnd: () => void)
+  {
+    super(self, layout, e0, new Map([
+      [first, {start: first.start, end: first.end}],
+      [second, {start: second.start, end: second.end}]
+    ]), afterEnd);
+    Debug.assert(Basic.approx(first.end, second.start));
+    this.origVal = first.end;
+  }
+
+  onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
+    const val = this.origVal + this.self.convertX(offsetX) - this.origPos;
+    let newVal = val;
+    if (TimelineHandle.useSnap.get())
+      newVal = this.self.snapVisible([val]);
+    if (Basic.approx(newVal, val) && TimelineHandle.snapToFrame.get())
+      newVal = Playback.snapPositionToFrame(val, 'round');
+    newVal = Math.max(this.first.start, Math.min(this.second.end, newVal));
+    this.first.end = newVal;
+    this.second.start = newVal;
+
+    this.changed = newVal != this.origVal;
+    this.layout.keepPosInSafeArea(newVal);
+    this.layout.manager.requestRender();
+  }
+}
+
 class DragResize extends MoveResizeBase {
   origVal: number;
   start: number;
@@ -277,7 +309,7 @@ class CreateEntry extends TimelineAction {
   }
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
-    const curPos = this.self.makeAlignmentLine(offsetX, true);
+    const curPos = this.self.makeAlignmentLine(offsetX, {always: true});
     if (curPos >= this.entry.start)
       this.entry.end = curPos;
     this.layout.manager.requestRender();
@@ -459,7 +491,7 @@ export class TimelineInput {
     return result;
   }
 
-  snapVisible(points: number[], reference = points[0]) {
+  snapVisible(points: number[], reference = points[0], includeSelection = false) {
     const data = {
       minDist: TimelineConfig.data.snapDistance / this.layout.scale,
       reference: reference,
@@ -470,7 +502,7 @@ export class TimelineInput {
     snapped = this.trySnap(data, points, Playback.position) ?? snapped;
     snapped = this.trySnap(data, points, 0) ?? snapped;
     for (const e of this.layout.getVisibleEntries()) {
-      if (this.selection.has(e)) continue;
+      if (this.selection.has(e) && !includeSelection) continue;
       snapped = this.trySnap(data, points, e.start) ?? snapped;
       snapped = this.trySnap(data, points, e.end) ?? snapped;
     }
@@ -535,7 +567,7 @@ export class TimelineInput {
 
   #onMouseDown(e: MouseEvent) {
     if (e.offsetX < this.layout.leftColumnWidth) {
-      const style = this.layout.getChannelFromY(e.offsetY);
+      const style = this.layout.getChannelFromOffsetY(e.offsetY);
       if (style) {
         if (TimelineHandle.activeChannel == style)
           TimelineHandle.activeChannel = undefined;
@@ -564,13 +596,13 @@ export class TimelineInput {
     }
   }
 
-  makeAlignmentLine(x: number, always = false) {
+  makeAlignmentLine(x: number, {always = false, includeSelection = false}) {
     const pos = this.convertX(x);
     const old = this.alignmentLine?.pos;
     const snap = TimelineHandle.useSnap.get();
     let newPos = pos;
     if (snap)
-      newPos = this.snapVisible([pos]);
+      newPos = this.snapVisible([pos], pos, includeSelection);
     if (Basic.approx(newPos, pos) && TimelineHandle.snapToFrame.get())
       newPos = Playback.snapPositionToFrame(newPos, 'round');
     
@@ -600,11 +632,11 @@ export class TimelineInput {
       e.offsetX + this.manager.scroll[0], e.offsetY + this.manager.scroll[1]);
 
     if (TimelineHandle.currentMode.get() == 'split') {
-      this.makeAlignmentLine(e.offsetX, true);
+      this.makeAlignmentLine(e.offsetX, {always: true});
       return;
     }
     if (TimelineHandle.currentMode.get() == 'create' && under.length == 0) {
-      this.makeAlignmentLine(e.offsetX, true);
+      this.makeAlignmentLine(e.offsetX, {always: true, includeSelection: true});
       return;
     }
 
@@ -617,28 +649,60 @@ export class TimelineInput {
       return;
     canvas.style.cursor = 'move';
   
-    const ctrlKey = Basic.ctrlKey() == 'Meta' ? e.metaKey : e.ctrlKey;
+    const multiselecting = Basic.ctrlKey() == 'Meta' ? e.metaKey : e.ctrlKey;
     const resizeArea = TimelineConfig.data.dragResizeArea;
-    if ((this.selection.size > 1 || ctrlKey)
+    const seamArea = TimelineConfig.data.dragSeamArea;
+
+    const ent = under.find((x) => this.selection.has(x)) ?? under[0];
+    if ((ent.end - ent.start) * this.layout.scale < resizeArea * 2)
+      return; // use move when entry is too small
+    
+    let distL: number, distR: number;
+    if ((this.selection.size > 1 || multiselecting)
      && under.some((x) => this.selection.has(x)))
     {
-      if (!ctrlKey) {
+      if (multiselecting) {
+        // only show move cursor
+        return;
+      } else {
         let [first, last] = this.selectionFirstLast();
         const [ _, x1] = this.layout.getHorizontalPos(first, {local: true});
         const [w2, x2] = this.layout.getHorizontalPos(last, {local: true});
-        if (under.includes(first) && e.offsetX - x1 < resizeArea)
-          canvas.style.cursor = 'e-resize';
-        else if (under.includes(last) && x2 + w2 - e.offsetX < resizeArea)
-          canvas.style.cursor = 'w-resize';
+        distL = under.includes(first) ? e.offsetX - x1 : Infinity;
+        distR = under.includes(last) ? x2 + w2 - e.offsetX : Infinity;
       }
     } else {
-      let ent = under.find((x) => this.selection.has(x)) ?? under[0];
       const [w, x] = this.layout.getHorizontalPos(ent, {local: true});
-      if (e.offsetX - x < resizeArea)
-        canvas.style.cursor = 'e-resize';
-      else if (x + w - e.offsetX < resizeArea)
-        canvas.style.cursor = 'w-resize';
+      distL = e.offsetX - x;
+      distR = x + w - e.offsetX;
+      const seam =
+          distL < seamArea ? this.#getConnected(e, ent, 'start')
+        : distR < seamArea ? this.#getConnected(e, ent, 'end')
+        : undefined;
+      if (seam) {
+        canvas.style.cursor = 'col-resize';
+        return;
+      }
     }
+
+    if (distL < resizeArea)
+      canvas.style.cursor = 'e-resize';
+    else if (distR < resizeArea)
+      canvas.style.cursor = 'w-resize';
+  }
+
+  #getConnected(e0: MouseEvent, current: SubtitleEntry, pos: 'start' | 'end') {
+      // check seams
+      const channel = this.layout.getChannelFromOffsetY(e0.offsetY);
+      if (!channel) return undefined;
+      for (const ent of Source.subs.entries) {
+        if (ent == current || !ent.texts.has(channel)) continue;
+        if (pos == 'start' && Basic.approx(ent.end, current.start))
+          return [ent, current] as const;
+        else if (pos == 'end' && Basic.approx(ent.start, current.end))
+          return [current, ent] as const;
+      }
+      return undefined;
   }
 
   #initializeDrag(e0: MouseEvent, afterEnd: () => void, underMouse: SubtitleEntry[]) {
@@ -650,6 +714,31 @@ export class TimelineInput {
       sels.map((x) => [x, { start: x.start, end: x.end }]));
     const [first, last] = this.selectionFirstLast();
     const origPos = this.convertX(e0.offsetX);
+
+    const ent = underMouse.find((x) => this.selection.has(x)) ?? underMouse[0];
+    if ((ent.end - ent.start) * this.layout.scale < TimelineConfig.data.dragResizeArea * 2) {
+      // use move when entry is too small
+      this.currentAction = new DragMove(this, this.layout, e0, 
+        origPositions, afterEnd, underMouse);
+      return true;
+    }
+
+    // drag seam
+    if (sels.length <= 2 || !this.selection.has(ent)) {
+      const distL = (origPos - ent.start) * this.layout.scale, 
+            distR = (ent.end - origPos) * this.layout.scale;
+      const seams = 
+          distL <= TimelineConfig.data.dragSeamArea ? this.#getConnected(e0, ent, 'start')
+        : distR <= TimelineConfig.data.dragSeamArea ? this.#getConnected(e0, ent, 'end')
+        : undefined;
+      if (seams) {
+        // drag seam
+        Editing.setSelection(seams);
+        this.currentAction = new DragSeam(this, this.layout, e0, seams[0], seams[1], afterEnd);
+        return true;
+      }
+    }
+
     const distL = (origPos - first.start) * this.layout.scale, 
           distR = (last.end - origPos) * this.layout.scale;
     if (distL > TimelineConfig.data.dragResizeArea 
@@ -709,7 +798,7 @@ export class TimelineInput {
           }
           if (TimelineHandle.currentMode.get() == 'create') {
             // create entry
-            const style = this.layout.getChannelFromY(e0.offsetY);
+            const style = this.layout.getChannelFromOffsetY(e0.offsetY);
             if (!style) return false;
             this.currentAction = new CreateEntry(this, this.layout, e0, style);
             return true;
