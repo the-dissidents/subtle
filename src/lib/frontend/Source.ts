@@ -172,38 +172,34 @@ export const Source = {
         this.onSubtitlesChanged.dispatch(type);
     },
 
-    clearUndoRedo() {
-        redoStack = [];
-        redoStack = [];
-        this.onUndoBufferChanged.dispatch();
-    },
-
     canUndo() { return undoStack.length > 1; },
     canRedo() { return redoStack.length > 0; },
 
     undo() {
         if (!this.canUndo()) {
-            Frontend.setStatus($_('msg.nothing-to-undo'), 'info');
+            Frontend.setStatus($_('msg.nothing-to-undo'), 'error');
             return false;
         }
-        redoStack.push(undoStack.pop()!);
-        let snap = undoStack.at(-1)!;
+        const top = undoStack.pop()!;
+        redoStack.push(top);
+        const snap = undoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();
-        Frontend.setStatus($_('msg.undone', {values: {op: snap.description}}), 'info');
+        Frontend.setStatus($_('msg.undone', {values: {op: top.description}}), 'info');
         return true;
     },
 
     redo() {
         if (!this.canRedo()) {
-            Frontend.setStatus($_('msg.nothing-to-redo'), 'info');
+            Frontend.setStatus($_('msg.nothing-to-redo'), 'error');
             return false;
         }
-        redoStack.push(redoStack.pop()!);
-        let snap = redoStack.at(-1)!;
+        const top = redoStack.pop()!;
+        redoStack.push(top);
+        const snap = redoStack.at(-1)!;
         readSnapshot(snap);
         this.onUndoBufferChanged.dispatch();
-        Frontend.setStatus($_('msg.redone', {values: {op: snap.description}}), 'info');
+        Frontend.setStatus($_('msg.redone', {values: {op: top.description}}), 'info');
         return true;
     },
 
@@ -212,7 +208,6 @@ export const Source = {
         this.subs = newSubs;
         Editing.clearFocus(false);
         Editing.clearSelection();
-        this.clearUndoRedo();
         Editing.focused.style.set(newSubs.defaultStyle);
         currentFile.set(
             (newSubs.migrated !== 'none' 
@@ -220,8 +215,17 @@ export const Source = {
         fileChanged.set(newSubs.migrated == 'olderVersion');
         changedSinceLastAutosave = false;
 
+        undoStack = [{
+            archive: Format.JSON.write(this.subs).toString(), 
+            change: ChangeType.General,
+            saved: !get(fileChanged),
+            description: 'You should NOT see this unless there is a bug'
+        }];
+        redoStack = [];
+
         this.onSubtitleObjectReload.dispatch();
         this.onSubtitlesChanged.dispatch(ChangeType.General);
+        this.onUndoBufferChanged.dispatch();
     },
 
     async exportTo(file: string, text: string) {
@@ -271,7 +275,6 @@ export const SourceCommands = {
           CommandBinding.from(['CmdOrCtrl+Alt+Z']) ],
     {
         name: () => $_('menu.undo'),
-        isApplicable: () => Source.canUndo(),
         call: () => { Source.undo() }
     }),
     redo: new UICommand(() => $_('category.document'),
@@ -279,7 +282,6 @@ export const SourceCommands = {
           CommandBinding.from(['CmdOrCtrl+Alt+Shift+Z']) ],
     {
         name: () => $_('menu.redo'),
-        isApplicable: () => Source.canRedo(),
         call: () => { Source.redo() }
     }),
 }
