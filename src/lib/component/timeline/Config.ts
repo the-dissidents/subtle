@@ -79,9 +79,9 @@ export const TimelineConfig = new PublicConfigGroup(
 async function make(other: UICommand<any>) {
     if (other.activated)
         await other.end();
-    Debug.assert(TimelineHandle.activeChannel !== undefined);
+    const style = Source.subs.view.timelineActiveChannel;
+    Debug.assert(style !== null);
     const pos = Playback.position;
-    const style = TimelineHandle.activeChannel;
     const entry = Editing.insertAtTime(pos, pos, style);
     MediaPlayerInterface2.onPlayback.bind(entry, 
         (newpos) => { entry.end = Math.max(entry.end, newpos) });
@@ -93,7 +93,8 @@ export const TimelineCommands = {
         [ CommandBinding.from(['J'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-1'),
-        isApplicable: () => Playback.isPlaying && TimelineHandle.activeChannel !== undefined,
+        isApplicable: () => Playback.isPlaying 
+            && Source.subs.view.timelineActiveChannel !== null,
         call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> => 
             make(TimelineCommands.holdToCreateEntry2),
         onDeactivate: ([entry, style]) => {
@@ -107,7 +108,8 @@ export const TimelineCommands = {
         [ CommandBinding.from(['K'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-2'),
-        isApplicable: () => Playback.isPlaying && TimelineHandle.activeChannel !== undefined,
+        isApplicable: () => Playback.isPlaying 
+            && Source.subs.view.timelineActiveChannel !== null,
         call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> => 
             make(TimelineCommands.holdToCreateEntry1),
         onDeactivate: ([entry, style]) => {

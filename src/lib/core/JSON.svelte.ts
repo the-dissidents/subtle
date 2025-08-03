@@ -12,8 +12,9 @@ import * as z from "zod/v4-mini";
  *  - 000402 (minor) styles have validators
  *  - 000403 (minor) scaling factor in metadata
  *  - 000404 (minor) view in archive
+ *  - 000501 (minor) timelineActiveChannel in view
  */
-export const SubtitleFormatVersion = '000404';
+export const SubtitleFormatVersion = '000501';
 
 export type JSONParseMessage = {
     type: 'fixed-style',
@@ -33,14 +34,16 @@ export type JSONParseMessage = {
 const ZView = z.object({
     perEntryColumns: z.array(z.string()),
     perChannelColumns: z.array(z.string()),
-    timelineExcludeStyles: z.array(z.string())
+    timelineExcludeStyles: z.array(z.string()),
+    timelineActiveChannel: z._default(z.nullable(z.string()), null)
 });
 
 function serializeView(view: Subtitles['view']) {
     return {
         perEntryColumns: view.perEntryColumns,
         perChannelColumns: view.perChannelColumns,
-        timelineExcludeStyles: [...view.timelineExcludeStyles].map((x) => x.name)
+        timelineExcludeStyles: [...view.timelineExcludeStyles].map((x) => x.name),
+        timelineActiveChannel: view.timelineActiveChannel?.name ?? null
     };
 }
 
@@ -126,6 +129,12 @@ export class JSONParser implements SubtitleParser {
             throw new DeserializationError('invalid item in timelineExcludeStyles');
         this.#subs.view.timelineExcludeStyles = 
             new SvelteSet(sv.timelineExcludeStyles.map((x) => styleMap.get(x)!));
+        
+        if (sv.timelineActiveChannel) {
+            if (!styleMap.has(sv.timelineActiveChannel))
+                throw new DeserializationError('invalid timelineActiveChannel');
+            this.#subs.view.timelineActiveChannel = styleMap.get(sv.timelineActiveChannel)!;
+        }
     }
 
     #parseStyles() {

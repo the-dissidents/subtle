@@ -2,7 +2,6 @@ console.info('core/Subtitles loading');
 
 import { Debug } from "../Debug";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
-import type { LinearFormatCombineStrategy } from "./SubtitleUtil.svelte";
 import { parseFilter, type MetricFilter } from "./Filter";
 import { parseObjectZ } from "../Serialization";
 
@@ -92,7 +91,8 @@ export class Subtitles {
     view = $state({
         perEntryColumns: ['startTime', 'endTime'],
         perChannelColumns: ['style', 'content'],
-        timelineExcludeStyles: new SvelteSet<SubtitleStyle>()
+        timelineExcludeStyles: new SvelteSet<SubtitleStyle>(),
+        timelineActiveChannel: null as SubtitleStyle | null
     });
 
     static createStyle(name: string): SubtitleStyle {

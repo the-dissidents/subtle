@@ -17,7 +17,6 @@ import { get } from "svelte/store";
 import { _ } from "svelte-i18n";
 
 export const TimelineHandle = {
-  activeChannel: undefined as SubtitleStyle | undefined,
   lockCursor: Memorized.$('lockCursor', z.boolean(), false),
   snapToFrame: Memorized.$('snapToFrame', z.boolean(), false),
   useSnap: Memorized.$overridable('useSnap', z.boolean(), true),
@@ -458,11 +457,9 @@ export class TimelineInput {
     });
 
     this.layout.onLayout.bind(this, () => {
-      if (TimelineHandle.activeChannel 
-       && !this.layout.shownStyles.includes(TimelineHandle.activeChannel))
-      {
-        TimelineHandle.activeChannel = undefined;
-      }
+      const active = Source.subs.view.timelineActiveChannel;
+      if (active && !this.layout.shownStyles.includes(active))
+        Source.subs.view.timelineActiveChannel = null;
     });
   }
 
@@ -569,10 +566,10 @@ export class TimelineInput {
     if (e.offsetX < this.layout.leftColumnWidth) {
       const style = this.layout.getChannelFromOffsetY(e.offsetY);
       if (style) {
-        if (TimelineHandle.activeChannel == style)
-          TimelineHandle.activeChannel = undefined;
+        if (Source.subs.view.timelineActiveChannel == style)
+          Source.subs.view.timelineActiveChannel = null;
         else 
-          TimelineHandle.activeChannel = style;
+          Source.subs.view.timelineActiveChannel = style;
         this.manager.requestRender();
       }
       return;
