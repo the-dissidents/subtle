@@ -9,6 +9,10 @@ export const Basic = {
     pathSeparator: path.sep(),
     ctrlKey: () => Basic.OSType == 'macos' ? 'Meta' : 'Control',
 
+    approx(a: number, b: number, d = 0.0001) {
+        return Math.abs(a - b) < d;
+    },
+
     getFilename(p: string) { 
         return p.split(Basic.pathSeparator).at(-1);
     },

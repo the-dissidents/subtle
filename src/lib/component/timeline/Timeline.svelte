@@ -103,19 +103,18 @@ function updateSnapOverride(ev: KeyboardEvent) {
         <MagnetIcon />
       </label>
     </Tooltip>
-    <Tooltip text={$_('timeline.lock-cursor')} position="right">
-      <label>
-        <input type="checkbox" class="button"
-          bind:checked={$lockCursor} />
-        <AlignCenterVerticalIcon />
-      </label>
-    </Tooltip>
-
     <Tooltip text={$_('timeline.snap-to-frame')} position="right">
       <label>
         <input type="checkbox" class="button"
           bind:checked={$snapToFrame} />
         <FrameIcon />
+      </label>
+    </Tooltip>
+    <Tooltip text={$_('timeline.lock-cursor')} position="right">
+      <label>
+        <input type="checkbox" class="button"
+          bind:checked={$lockCursor} />
+        <AlignCenterVerticalIcon />
       </label>
     </Tooltip>
   </div>

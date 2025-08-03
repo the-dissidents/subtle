@@ -70,8 +70,10 @@ class MoveCursor extends TimelineAction {
   }
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
-    const curPos = 
+    let curPos = 
       (offsetX - this.layout.leftColumnWidth) / this.layout.scale + this.layout.offset;
+    // always snap to frame, it's only valid that way with video loaded
+    curPos = Playback.snapPositionToFrame(curPos, 'round');
     if (curPos == Playback.position) return;
     Playback.setPosition(curPos);
   }
@@ -159,7 +161,7 @@ class DragMove extends MoveResizeBase {
   points: number[];
   start: number;
 
-  getEachStylesReferencePoints(sels: SubtitleEntry[]) {
+  getReferencePoints(sels: SubtitleEntry[]) {
     const map = sels.reduce(
       (prev, current) => {
         const start = current.start;
@@ -193,7 +195,7 @@ class DragMove extends MoveResizeBase {
     const one = underMouse.find((x) => this.self.selection.has(x))!;
     this.points = 
         ref == 'eachStyleofWhole' 
-          ? this.getEachStylesReferencePoints([...this.self.selection])
+          ? this.getReferencePoints([...this.self.selection])
       : ref == 'whole' 
           ? [first.start, last.end]
       : ref == 'one'
@@ -203,15 +205,16 @@ class DragMove extends MoveResizeBase {
 }
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
-    let dval = this.self.convertX(offsetX) - this.origPos;
-
-    // TODO: maybe make it a command ('toggle snap') instead?
+    const dval = this.self.convertX(offsetX) - this.origPos;
+    let newDval = dval;
     if (TimelineHandle.useSnap.get())
-      dval = this.self.snapVisible(this.points, this.start + dval) - this.start;
-    this.changed = dval != 0;
+      newDval = this.self.snapVisible(this.points, this.start + dval) - this.start;
+    if (Basic.approx(newDval, dval) && TimelineHandle.snapToFrame.get())
+      newDval = Playback.snapPositionToFrame(this.start + dval, 'round') - this.start;
+    this.changed = newDval != 0;
     for (const [ent, pos] of this.origPositions.entries()) {
-      ent.start = pos.start + dval;
-      ent.end = pos.end + dval;
+      ent.start = pos.start + newDval;
+      ent.end = pos.end + newDval;
     }
     this.layout.manager.requestRender();
   }
@@ -235,16 +238,20 @@ class DragResize extends MoveResizeBase {
   }
 
   onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
-    let val = this.origVal + this.self.convertX(offsetX) - this.origPos;
+    const val = this.origVal + this.self.convertX(offsetX) - this.origPos;
+    let newVal = val;
     if (TimelineHandle.useSnap.get())
-      val = this.self.snapVisible([val]);
+      newVal = this.self.snapVisible([val]);
+    if (Basic.approx(newVal, val) && TimelineHandle.snapToFrame.get())
+      newVal = Playback.snapPositionToFrame(val, 'round');
+
     let newStart: number, newEnd: number;
     if (this.where == 'start') {
-      newStart = Math.min(this.end, val);
+      newStart = Math.min(this.end, newVal);
       newEnd = this.end;
     } else {
       newStart = this.start;
-      newEnd = Math.max(this.start, val);
+      newEnd = Math.max(this.start, newVal);
     }
     // transform selection
     const factor = (newEnd - newStart) / (this.end - this.start);
@@ -252,8 +259,8 @@ class DragResize extends MoveResizeBase {
       ent.start = (pos.start - this.start) * factor + newStart;
       ent.end = (pos.end - this.start) * factor + newStart;
     }
-    this.changed = val != this.origVal;
-    this.layout.keepPosInSafeArea(val);
+    this.changed = newVal != this.origVal;
+    this.layout.keepPosInSafeArea(newVal);
     this.layout.manager.requestRender();
   }
 }
@@ -461,6 +468,7 @@ export class TimelineInput {
     let snapped = reference;
     this.alignmentLine = null;
     snapped = this.trySnap(data, points, Playback.position) ?? snapped;
+    snapped = this.trySnap(data, points, 0) ?? snapped;
     for (const e of this.layout.getVisibleEntries()) {
       if (this.selection.has(e)) continue;
       snapped = this.trySnap(data, points, e.start) ?? snapped;
@@ -560,13 +568,17 @@ export class TimelineInput {
     const pos = this.convertX(x);
     const old = this.alignmentLine?.pos;
     const snap = TimelineHandle.useSnap.get();
+    let newPos = pos;
     if (snap)
-      this.snapVisible([pos]);
+      newPos = this.snapVisible([pos]);
+    if (Basic.approx(newPos, pos) && TimelineHandle.snapToFrame.get())
+      newPos = Playback.snapPositionToFrame(newPos, 'round');
+    
     if (!snap || (always && this.alignmentLine === null))
-      this.alignmentLine = { pos, rows: new Set() };
+      this.alignmentLine = { pos: newPos, rows: new Set() };
     if (this.alignmentLine?.pos !== old)
       this.manager.requestRender();
-    return this.alignmentLine?.pos ?? pos;
+    return this.alignmentLine?.pos ?? newPos;
   }
 
   #onMouseMove(e: MouseEvent) {

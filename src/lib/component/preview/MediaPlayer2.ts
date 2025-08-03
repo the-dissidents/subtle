@@ -427,7 +427,7 @@ export class MediaPlayer2 {
     async seekToTime(t: number, opt?: SetPositionOptions) {
         if (t < 0) t = 0;
         if (t > this.duration) t = this.duration;
-        const index = Math.ceil(t * this.media.video!.framerate);
+        const index = Math.round(t * this.media.video!.framerate);
         await this.seekToFrame(index, opt)
     }
 

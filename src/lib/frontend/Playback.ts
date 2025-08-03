@@ -103,6 +103,15 @@ export const Playback = {
             this.player.requestSeekToTime(pos, opt);
     },
 
+    snapPositionToFrame(pos: number, rounding: 'left' | 'right' | 'round') {
+        if (!this.player) return pos;
+        const i = Math.max(0, pos * this.player.frameRate);
+        return (rounding == 'left' ? Math.floor(i)
+              : rounding == 'right' ? Math.ceil(i)
+              : rounding == 'round' ? Math.round(i)
+              : Debug.never(rounding)) / this.player.frameRate;
+    },
+
     async forceSetPosition(pos: number) {
         if (this.player === null) {
             position = pos;
