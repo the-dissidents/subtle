@@ -56,6 +56,7 @@
   <!-- video playback controls -->
   <div class='hlayout'>
     <button aria-label="play/pause"
+      disabled={!$isMediaLoaded}
       onclick={() => Playback.toggle()}>
       {#if isPlaying}
         <PauseIcon />

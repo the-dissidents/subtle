@@ -15,6 +15,7 @@ import * as z from "zod/v4-mini";
  *  - 000501 (minor) timelineActiveChannel in view
  */
 export const SubtitleFormatVersion = '000501';
+export const SubtitleCompatibleVersion = '000400';
 
 export type JSONParseMessage = {
     type: 'fixed-style',
@@ -81,7 +82,7 @@ export class JSONParser implements SubtitleParser {
                 category: 'migrated',
                 from: this.#version
             });
-        } else if (this.#version < SubtitleFormatVersion) {
+        } else if (this.#version < SubtitleCompatibleVersion) {
             this.#messages.push({
                 type: 'migrated-older',
                 category: 'migrated',
