@@ -39,7 +39,7 @@
       <SubtitleView manager={layout?.manager} {boxes}/>
     {/if}
     {#if MediaConfig.data.showDebug}
-      <label style="position: absolute; left: 0; top: 0;">
+      <label style="position: absolute; left: 0; bottom: 0;">
         <input type="checkbox" checked={MediaConfig.data.subtitleRenderer == 'dom'}
           onchange={(x) => {
             if (x.currentTarget.checked)
@@ -95,6 +95,7 @@
 }
 
 .player-container {
+  position: relative;
   min-height: 0;
   min-width: 0;
   height: 100%;

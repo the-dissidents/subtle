@@ -72,10 +72,10 @@ export class MediaSampler2 {
         if (id == this.media.audio!.index) return;
         if (this.isSampling)
             this.tryCancelSampling();
-        await this.#mutex.acquire();
-        await this.media.openAudio(id);
-        this.#initAudioData();
-        this.#mutex.release();
+        await this.#mutex.use(async () => {
+            await this.media.openAudio(id);
+            this.#initAudioData();
+        });
     }
 
     async close() {
@@ -83,9 +83,7 @@ export class MediaSampler2 {
             return Debug.early('already closed');
         if (this.isSampling)
             this.tryCancelSampling();
-        await this.#mutex.acquire();
-        await this.media.close();
-        this.#mutex.release();
+        await this.#mutex.use(() => this.media.close());
     }
 
     tryCancelSampling() {

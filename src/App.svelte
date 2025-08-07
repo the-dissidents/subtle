@@ -118,7 +118,7 @@ MainConfig.hook(() => InterfaceConfig.data.monospaceFontFamily,
 
 MainConfig.hook(() => InterfaceConfig.data.language, (lang) => {
   locale.set(lang);
-  console.log('language =', lang);
+  Debug.debug('language =', lang);
 });
 
 MainConfig.hook(() => InterfaceConfig.data.autosaveInterval, (v) => {
