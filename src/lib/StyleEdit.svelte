@@ -35,6 +35,8 @@ function isDuplicate(name: string) {
   return false;
 }
 
+let savedStyles = Source.savedStyles;
+
 async function contextMenu() {
   let isDefault = $style == subtitles.defaultStyle;
   let used = subtitles.entries.filter((x) => x.texts.has($style));
@@ -60,7 +62,7 @@ async function contextMenu() {
     {
       text: $_('style.duplicate'),
       action() {
-        let clone = structuredClone($state.snapshot($style));
+        let clone = $state.snapshot($style);
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
         // subtitles.styles = subtitles.styles;
@@ -74,10 +76,10 @@ async function contextMenu() {
       items: withoutThis.map((x, i) => ({
         id: i.toString(),
         text: x.name,
-        async action(id) {
+        action(id) {
           let n = Number.parseInt(id);
           let other = withoutThis[n];
-          await Utils.replaceStyle(subtitles.entries, $style, other);
+          Utils.replaceStyle(subtitles.entries, $style, other);
         }
       }))
     },
@@ -94,6 +96,42 @@ async function contextMenu() {
         }
       }))
     },
+    {
+      item: 'Separator'
+    },
+    {
+      text: $_('style.presets'),
+      items: [
+        {
+          text: $_('style.replace-by'),
+          items: $savedStyles.length > 0
+            ? $savedStyles.map((x) => ({
+                text: x.name,
+                action() {
+                  Object.assign($style, x);
+                  $style = $style;
+                  Source.markChanged(ChangeType.StyleDefinitions, $_('action.replace-style-by-preset'));
+                }
+              }))
+            : [{
+                text: $_('msg.no-saved-styles'),
+                enabled: false
+              }]
+        },
+        {
+          text: $_('style.save-as-preset'),
+          async action() {
+            const i = $savedStyles.findIndex((x) => x.name == $style.name);
+            if (i >= 0) {
+              if (!await dialog.ask($_('msg.overwrite-preset-with-same-name'))) return;
+              $savedStyles.splice(i, 1);
+            }
+            $savedStyles.push($state.snapshot($style));
+            savedStyles.markChanged();
+          }
+        }
+      ]
+    }
   ]});
   menu.popup();
 }

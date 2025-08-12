@@ -1,7 +1,7 @@
 console.info('Source loading');
 
 import { Debug } from "../Debug";
-import { Subtitles } from "../core/Subtitles.svelte";
+import { parseSubtitleStyle, Subtitles, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Format } from "../core/SimpleFormats";
 import { InterfaceConfig } from "../config/Groups";
 import { Memorized } from "../config/MemorizedValue.svelte";
@@ -43,6 +43,33 @@ export enum ChangeType {
     StyleDefinitions,
     General,   // TODO: this is unclear
     Metadata
+}
+
+
+class MemorizedStyles extends Memorized<SubtitleStyle[]> {
+  constructor(protected key: string) {
+    super(key, []);
+  }
+  protected get type(): string {
+    return 'MemorizedStyle';
+  }
+  protected serialize() {
+    return this.value;
+  }
+  protected deserialize(value: unknown): void {
+    if (!Array.isArray(value)) {
+      Debug.warn('unable to deserialize styles');
+      return;
+    }
+    this.value = value.flatMap((x) => {
+      try {
+        return [parseSubtitleStyle(x)];
+      } catch {
+        Debug.warn('unable to deserialize style', x);
+        return [];
+      }
+    });
+  }
 }
 
 function readSnapshot(s: Snapshot) {
@@ -118,6 +145,7 @@ const zFileSaveState = z.object({
 });
 
 let recentOpened = Memorized.$('recentOpened', z.array(zFileSaveState), []);
+let savedStyles = new MemorizedStyles('savedStyles');
 let intervalId = 0;
 let changedSinceLastAutosave = false;
 let currentFile = writable('');
@@ -144,6 +172,7 @@ export const Source = {
     get currentFile() { return readonly(currentFile); },
     get fileChanged() { return readonly(fileChanged); },
     get recentOpened() { return recentOpened; },
+    get savedStyles() { return savedStyles; },
 
     onUndoBufferChanged: new EventHost(),
     onSubtitlesChanged: new EventHost<[type: ChangeType]>(),

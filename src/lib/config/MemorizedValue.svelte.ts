@@ -11,29 +11,29 @@ import { _ } from 'svelte-i18n';
 import { get } from "svelte/store";
 
 const configPath = 'memorized.json';
-let memorizedData: Record<string, Memorized<z.core.$ZodType>> = {};
+let memorizedData: Record<string, Memorized<any, any>> = {};
 let initialized = false;
 let onInitCallbacks: (() => void)[] = [];
 
-export class Memorized<T extends z.core.$ZodType> {
-    protected subscriptions = new Set<(value: z.infer<T>) => void>();
+export abstract class Memorized<S, Orig = S> {
+    protected subscriptions = new Set<(value: Orig) => void>();
 
     static $<T extends z.core.$ZodType>(key: string, ztype: T, initial: z.infer<T>) {
         if (key in memorizedData) {
             const otherType = memorizedData[key].type;
             Debug.assert(
-                JSON.stringify(ztype._zod.def) === JSON.stringify(otherType._zod.def), 
+                JSON.stringify(ztype._zod.def) === otherType, 
                 'type mismatch');
-            return memorizedData[key] as Memorized<T>;
+            return memorizedData[key] as SimpleMemorized<T>;
         }
-        return new Memorized(key, ztype, initial);
+        return new SimpleMemorized(key, ztype, initial);
     }
 
     static $overridable<T extends z.core.$ZodType>(key: string, ztype: T, initial: z.infer<T>) {
         if (key in memorizedData) {
             const otherType = memorizedData[key].type;
             Debug.assert(
-                JSON.stringify(ztype._zod.def) === JSON.stringify(otherType._zod.def), 
+                JSON.stringify(ztype._zod.def) === otherType, 
                 'type mismatch');
             Debug.assert(memorizedData[key] instanceof OverridableMemorized);
             return memorizedData[key] as OverridableMemorized<T>;
@@ -57,11 +57,7 @@ export class Memorized<T extends z.core.$ZodType> {
                 configPath, {baseDir: BaseDirectory.AppConfig}));
             for (const [key, value] of Object.entries(obj)) {
                 if (key in memorizedData) {
-                    const result = z.safeParse(memorizedData[key].type, value);
-                    if (!result.success)
-                        Debug.warn('type mismatch in memorized data file', key, value, z.prettifyError(result.error));
-                    else
-                        memorizedData[key].set(result.data);
+                    memorizedData[key].deserialize(value);
                 } else {
                     Debug.warn('unrecognized pair in memorized data file', key, value);
                 }
@@ -87,7 +83,7 @@ export class Memorized<T extends z.core.$ZodType> {
         await guardAsync(async () => {
             let data: Record<string, any> = {};
             for (const [key, value] of Object.entries(memorizedData)) {
-                data[key] = value.get();
+                data[key] = value.serialize();
             }
             await writeTextFile(configPath, 
                 JSON.stringify(data), {baseDir: BaseDirectory.AppConfig});
@@ -95,25 +91,28 @@ export class Memorized<T extends z.core.$ZodType> {
         }, get(_)('msg.error-saving-private-config'));
     }
 
-    protected constructor(key: string, protected ztype: T, protected value: z.infer<T>) {
+    protected constructor(
+        protected key: string, 
+        protected value: Orig,
+    ) {
         memorizedData[key] = this;
     }
 
-    subscribe(subscription: (value: z.infer<T>) => void): (() => void) {
+    protected abstract get type(): string;
+    protected abstract serialize(): S;
+    protected abstract deserialize(value: unknown): void;
+
+    subscribe(subscription: (value: Orig) => void): (() => void) {
         this.subscriptions.add(subscription);
         subscription(this.get());
         return () => this.subscriptions.delete(subscription);
     }
 
-    get type() {
-        return this.ztype;
-    }
-
-    get(): z.infer<T> {
+    get(): Orig {
         return this.value;
     }
 
-    set(value: z.infer<T>) {
+    set(value: Orig) {
         this.value = value;
         this.subscriptions.forEach((x) => x(value));
     }
@@ -123,7 +122,37 @@ export class Memorized<T extends z.core.$ZodType> {
     }
 }
 
-export class OverridableMemorized<T extends z.core.$ZodType> extends Memorized<T> {
+export class SimpleMemorized<T extends z.core.$ZodType> extends Memorized<z.infer<T>> {
+    #typeid: string;
+
+    constructor(
+        key: string, 
+        protected ztype: T,
+        value: z.infer<T>
+    ) {
+        super(key, value);
+        this.#typeid = JSON.stringify(ztype._zod.def);
+    }
+
+    protected override get type() {
+        return this.#typeid;
+    }
+
+    protected override serialize(): z.infer<T> {
+        return this.value;
+    }
+
+    protected override deserialize(value: unknown) {
+        const result = z.safeParse(this.ztype, value);
+        if (!result.success)
+            Debug.warn('type mismatch in memorized data file', 
+                this.key, value, z.prettifyError(result.error));
+        else
+            this.set(result.data);
+    }
+}
+
+export class OverridableMemorized<T extends z.core.$ZodType> extends SimpleMemorized<T> {
     #override: z.infer<T> | undefined;
 
     override get() {

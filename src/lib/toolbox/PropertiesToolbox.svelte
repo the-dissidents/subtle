@@ -18,6 +18,8 @@ import { ChangeType, Source } from '../frontend/Source';
 import { onDestroy } from 'svelte';
 import { flip } from 'svelte/animate';
 import { _ } from 'svelte-i18n';
+import { Menu } from '@tauri-apps/api/menu';
+import { PackageOpenIcon, PlusIcon } from '@lucide/svelte';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
@@ -54,6 +56,40 @@ function removeUnusedStyles() {
 
 function markMetadataChange() {
   Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
+}
+
+let savedStyles = Source.savedStyles;
+
+async function manageSavedStyles() {
+  (await Menu.new({
+    items: $savedStyles.length > 0
+      ? $savedStyles.map((x) => ({
+        text: x.name,
+        items: [
+          {
+            text: $_('ppty.add-to-project'),
+            action() {
+              let style = $state($state.snapshot(x));
+              style.name = SubtitleTools.getUniqueStyleName(Source.subs, style.name);
+              Source.subs.styles.push(style);
+            }
+          },
+          {
+            text: $_('ppty.delete'),
+            action() {
+              const i = $savedStyles.indexOf(x);
+              Debug.assert(i >= 0);
+              $savedStyles.splice(i, 1);
+              savedStyles.markChanged();
+            }
+          }
+        ],
+      }))
+      : [{
+        text: $_('msg.no-saved-styles'),
+        enabled: false
+      }]
+  })).popup();
 }
 </script>
 
@@ -118,10 +154,17 @@ function markMetadataChange() {
         </div>
       {/each}
     {/key}
-    <button style="width: 25px"
-      onclick={newStyle}>+</button>
-    <button
-      onclick={removeUnusedStyles}>{$_('ppty.remove-all-unused')}</button>
+    <div class='hlayout'>
+      <button onclick={newStyle}>
+        <PlusIcon/>
+      </button>
+      <button onclick={manageSavedStyles}>
+        <PackageOpenIcon/>
+      </button>
+      <button onclick={removeUnusedStyles}>
+        {$_('ppty.remove-all-unused')}
+      </button>
+    </div>
   </Collapsible>
 </div>
 
