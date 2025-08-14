@@ -68,7 +68,7 @@ async function readTextFile(path: string) {
 async function parseSubtitleSourceInteractive(path: string, text: string) {
     return guardAsync(async () => {
         if (JSONSubtitles.detect(text)) {
-            const parser =  JSONSubtitles.parse(text);
+            const parser = JSONSubtitles.parse(text);
             if (!await ImportFormatDialogs.JSON(parser))
                 return null;
             return parser.done();

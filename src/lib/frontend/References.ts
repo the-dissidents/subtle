@@ -160,7 +160,6 @@ export const Reference = {
             doc.querySelectorAll<HTMLElement>(substitute(s.selector, source, ctx)).forEach((x) => {
                 for (const [k, v] of s.patches)
                     x.style.setProperty(k, v, 'important');
-                console.log(x);
             });
         }
         doc.querySelectorAll('script').forEach((x) => 

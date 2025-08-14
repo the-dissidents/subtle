@@ -130,10 +130,10 @@ export const SubtitleTools = {
         }
         return subs;
     },
-    getUniqueStyleName: (subs: Subtitles, base: string) => {
+    getUniqueStyleName: (subs: Subtitles, base: string, ignore?: SubtitleStyle) => {
         let i = 1;
         let newName = base;
-        while (subs.styles.find((x) => x.name == newName)) {
+        while (subs.styles.find((x) => x.name == newName && x !== ignore)) {
             newName = base + `_${i}`;
             i++;
         }
@@ -158,7 +158,7 @@ export const SubtitleUtil = {
 
         const styleMap = new Map<SubtitleStyle, SubtitleStyle>();
         const overrideStyle = options.overrideStyle ?? original.defaultStyle;
-        Debug.assert(original.styles.includes(overrideStyle));
+        Debug.assert(original.styles.includes(overrideStyle), 'invalid overrideStyle');
         const orginalStyleSerialized = original.styles.map((x) => JSON.stringify(x));
         let processStyle = (s: SubtitleStyle) => {
             if (styleMap.has(s)) return styleMap.get(s)!;

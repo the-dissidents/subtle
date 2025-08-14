@@ -217,7 +217,6 @@ export const KeybindingManager = {
             }
         });
         document.addEventListener('beforeinput', (ev) => {
-            console.log(ev);
             // handle the very special case:
             // ... the user pressed Option+Space
             // ... and with Chinese IME enabled

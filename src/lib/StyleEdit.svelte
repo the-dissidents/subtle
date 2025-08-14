@@ -109,6 +109,7 @@ async function contextMenu() {
                 text: x.name,
                 action() {
                   Object.assign($style, x);
+                  $style.name = SubtitleTools.getUniqueStyleName(Source.subs, x.name, $style);
                   $style = $style;
                   Source.markChanged(ChangeType.StyleDefinitions, $_('action.replace-style-by-preset'));
                 }

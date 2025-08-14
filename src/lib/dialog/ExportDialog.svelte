@@ -8,6 +8,7 @@ import { _ } from 'svelte-i18n';
 import { LinearFormatCombineStrategy } from '../core/SubtitleUtil.svelte';
 import { Format } from '../core/SimpleFormats';
 import { Frontend } from '../frontend/Frontend';
+import Tooltip from '../ui/Tooltip.svelte';
 
 interface Props {
   handler: DialogHandler<void, {content: string, ext: string} | null>;
@@ -75,7 +76,7 @@ async function copy() {
 }
 </script>
 
-<DialogBase handler={inner} maxWidth="48em">
+<DialogBase handler={inner} maxWidth="40em">
   {#snippet header()}
     <h4>{$_('exportdialog.header')}</h4>
   {/snippet}
@@ -107,16 +108,22 @@ async function copy() {
             value={LinearFormatCombineStrategy.KeepOrder}
             onchange={() => makePreview()} />
         {$_('exportdialog.keep-order')}
+        <Tooltip position="right"
+          text={$_('exportdialog.keep-order-d')}/>
       </label><br/>
       <label><input type="radio" bind:group={combine}
             value={LinearFormatCombineStrategy.Sorted}
             onchange={() => makePreview()} />
         {$_('exportdialog.sorted')}
+        <Tooltip position="right"
+          text={$_('exportdialog.sorted-d')}/>
       </label><br/>
       <label><input type="radio" bind:group={combine}
             value={LinearFormatCombineStrategy.Recombine}
             onchange={() => makePreview()} />
         {$_('exportdialog.recombine')}
+        <Tooltip position="right"
+          text={$_('exportdialog.recombine-d')}/>
       </label><br/>
 
       <h5>{$_('exportdialog.format')}</h5>
@@ -132,9 +139,12 @@ async function copy() {
             onchange={() => makePreview()} />
         {$_('exportdialog.tab-delimited')}
       </label><br/>
+      <p style="font-size: 90%; margin: 5px;">
+        {$_('exportdialog.format-d')}
+      </p>
     </div>
     <div class='vlayout rightpane'>
-      <textarea class="preview" readonly>{preview}</textarea>
+      <textarea class="preview flexgrow" readonly>{preview}</textarea>
       <button onclick={() => copy()}>{$_('exportdialog.copy-to-clipboard')}</button>
     </div>
   </div>

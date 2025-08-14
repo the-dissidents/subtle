@@ -51,6 +51,7 @@ import ReferencesToolbox from './lib/toolbox/ReferencesToolbox.svelte';
 
 import { Basic } from './lib/Basic';
 
+import { onMount } from 'svelte';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
@@ -208,11 +209,18 @@ Memorized.onInitialize(() => {
   leftPane!.style.width = `${$leftPaneW}px`;
 });
 
-let errorBanner = $state({open: false, text: ''});
+let errorBanner = $state({open: false});
 Debug.onError.bind({}, (origin, _msg) => {
   if (origin == 'ffmpeg') return;
-  errorBanner.text = '';
   errorBanner.open = true;
+});
+
+let versionBanner = $state({open: false});
+onMount(() => {
+  const popoverSupported = HTMLElement.prototype.hasOwnProperty('popover');
+  if (!popoverSupported) {
+    versionBanner.open = true;
+  }
 });
 </script>
 
@@ -259,6 +267,9 @@ Debug.onError.bind({}, (origin, _msg) => {
     if (x == 'open') await MAPI.openDevtools();
     if (x == 'more') Dialogs.bugs.showModal!();
   }}/>
+
+<Banner style='error' bind:open={versionBanner.open}
+  text={$_('msg.versionbanner')}/>
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->
