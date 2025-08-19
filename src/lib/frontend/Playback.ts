@@ -3,7 +3,7 @@ console.info('Playback loading');
 import { tick } from "svelte";
 import { get, writable, type Readable } from "svelte/store";
 import { Debug } from "../Debug";
-import { EventHost } from "../details/EventHost";
+import { AsyncEventHost, EventHost } from "../details/EventHost";
 import { Overridable } from "../details/Overridable.svelte";
 import type { MediaSampler2 } from "../component/timeline/MediaSampler2";
 import { InputConfig } from "../config/Groups";
@@ -68,10 +68,11 @@ export const Playback = {
         loop: false
     }),
 
-    onLoad: new EventHost<[rawurl: string, id: number]>(),
+    onLoad: new AsyncEventHost<[rawurl: string, id: number]>(),
+    onClose: new AsyncEventHost<[]>(),
+    
     onLoaded: new EventHost<[]>(),
     onSetAudioStream: new EventHost<[id: number]>(),
-    onClose: new EventHost<[]>(),
     onPositionChanged: new EventHost<[pos: number]>(),
 
     async load(rawurl: string, audio: number) {
