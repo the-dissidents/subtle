@@ -15,13 +15,15 @@ import { MediaPlayerInterface2, type MediaPlayer2, type SetPositionOptions } fro
 
 const $_ = unwrapFunctionStore(_);
 
+export type LoadState = 'empty' | 'loading' | 'loaded';
+
 export type PlayArea = {
     start: number | undefined,
     end: number | undefined,
     loop: boolean
 }
 
-let isLoaded = writable(false),
+let loadState = writable<LoadState>('empty'),
     position = 0,
     duration = 0;
 
@@ -53,7 +55,8 @@ tick().then(() => {
 export const Playback = {
     get position() { return position; },
     get duration() { return duration; },
-    get isLoaded(): Readable<boolean> { return isLoaded; },
+    get loaded() { return get(loadState) == 'loaded'; },
+    get loadState(): Readable<LoadState> { return loadState; },
     get isPlaying() { return this.player?.isPlaying ?? false; },
 
     player: null as MediaPlayer2 | null,
@@ -72,10 +75,27 @@ export const Playback = {
     onPositionChanged: new EventHost<[pos: number]>(),
 
     async load(rawurl: string, audio: number) {
-        await this.onLoad.dispatchAndAwaitAll(rawurl, audio);
-        isLoaded.set(true);
-        Debug.assert(this.player !== null);
+        if (get(loadState) === 'loaded')
+            return Debug.early('already loaded');
+
+        await Debug.debug('loadState -> loading');
+        loadState.set('loading');
+        try {
+            await this.onLoad.dispatchAndAwaitAll(rawurl, audio);
+            Debug.assert(this.player !== null);
+        } catch (err) {
+            await Debug.forwardError(err);
+            await Debug.info('An error occurred when trying to load media. We now attempt to close it.');
+            await this.close(true);
+            if (get(loadState) == 'loading') {
+                await Debug.info('To prevent loadState being still `loading`, we reset it to `empty`.')
+                loadState.set('empty');
+            }
+            return;
+        }
         duration = this.player.duration!;
+        await Debug.debug('loadState -> loaded');
+        loadState.set('loaded');
         Playback.onLoaded.dispatch();
     },
 
@@ -87,13 +107,27 @@ export const Playback = {
         ]);
     },
 
-    async close() {
-        if (!get(isLoaded)) return Debug.early('not loaded');
+    async close(force = false) {
+        if (!force && get(loadState) != 'loaded')
+            return Debug.early('not loaded');
         
-        isLoaded.set(false);
-        await this.onClose.dispatchAndAwaitAll()
-        duration = 0;
-        await this.forceSetPosition(0);
+        try {
+            await this.onClose.dispatchAndAwaitAll()
+            await this.forceSetPosition(0);
+            Debug.assert(this.player === null);
+        } catch (err) {
+            await Debug.forwardError(err);
+            await Debug.info('An error occurred when trying to close media.');
+            if (this.player === null)
+                await Debug.info('However, since the player is null, we consider the media closed.');
+            else
+                await Debug.info('Since the player is not null, we do not change loadState.');
+        } finally {
+            if (this.player === null) {
+                loadState.set('empty');
+                duration = 0;
+            }
+        }
     },
 
     setPosition(pos: number, opt?: SetPositionOptions) {
@@ -137,7 +171,7 @@ export const PlaybackCommands = {
         [ ],
     {
         name: () => $_('menu.select-audio-stream'),
-        isApplicable: () => get(Playback.isLoaded),
+        isApplicable: () => get(Playback.loadState) == 'loaded',
         items: () => Playback.player!.streams
             .filter((x) => x.type == 'audio')
             .map((x) => ({

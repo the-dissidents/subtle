@@ -51,7 +51,7 @@ class MemorizedStyles extends Memorized<SubtitleStyle[]> {
     super(key, []);
   }
   protected get type(): string {
-    return 'MemorizedStyle';
+    return 'MemorizedStyles';
   }
   protected serialize() {
     return this.value;
@@ -75,7 +75,7 @@ class MemorizedStyles extends Memorized<SubtitleStyle[]> {
 function readSnapshot(s: Snapshot) {
     Source.subs = Format.JSON.parse(s.archive).done();
     fileChanged.set(!s.saved);
-    Source.onSubtitleObjectReload.dispatch();
+    Source.onSubtitleObjectReload.dispatch(false);
     Source.onSubtitlesChanged.dispatch(s.change);
 }
 
@@ -105,6 +105,7 @@ async function doAutoSave() {
         const autoSaveName =
             (currentFile == '' ? 'untitled' : await basename(currentFile, '.json'))
             + '_' + autosaveTimestamp() + '.json';
+        Source.onSubtitleWillSave.dispatch(true);
         const text = Format.JSON.write(Source.subs).toString();
         await fs.writeTextFile(
             await join('autosave', autoSaveName), text, 
@@ -176,7 +177,8 @@ export const Source = {
 
     onUndoBufferChanged: new EventHost(),
     onSubtitlesChanged: new EventHost<[type: ChangeType]>(),
-    onSubtitleObjectReload: new EventHost(),
+    onSubtitleObjectReload: new EventHost<[newFile: boolean]>(),
+    onSubtitleWillSave: new EventHost<[disk: boolean]>(),
 
     init() {
         this.markChanged(ChangeType.General, '');
@@ -189,13 +191,18 @@ export const Source = {
         changedSinceLastAutosave = true;
 
         Editing.editChanged = false;
+
+        // TODO: why?
         Editing.isEditingVirtualEntry.set(false);
+
+        Source.onSubtitleWillSave.dispatch(true);
         undoStack.push({
             archive: Format.JSON.write(this.subs).toString(), 
             change: type,
             saved: false,
             description
-        }); // TODO
+        });
+
         redoStack = [];
         this.onUndoBufferChanged.dispatch();
         this.onSubtitlesChanged.dispatch(type);
@@ -252,7 +259,7 @@ export const Source = {
         }];
         redoStack = [];
 
-        this.onSubtitleObjectReload.dispatch();
+        this.onSubtitleObjectReload.dispatch(true);
         this.onSubtitlesChanged.dispatch(ChangeType.General);
         this.onUndoBufferChanged.dispatch();
     },

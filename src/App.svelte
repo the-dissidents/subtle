@@ -84,7 +84,7 @@ let statusTwinkling = $state(false);
 let status = Frontend.status;
 let uiFocus = Frontend.uiFocus;
 let toolboxFocus = Frontend.toolboxFocus;
-let isMediaLoaded = Playback.isLoaded;
+let loadState = Playback.loadState;
 let filenameDisplay = 
   derived([Source.currentFile, Source.fileChanged, _], 
     ([x, y]) => `${x ? Basic.getFilename(x) : $_('untitled')}${y ? '*' : ''}`);
@@ -294,11 +294,11 @@ onMount(() => {
         <FilmIcon />
         &nbsp;{$_('menu.open-video')}
       </button></li>
-      <li><button disabled={!$isMediaLoaded} 
+      <li><button disabled={$loadState !== 'loaded'} 
           onclick={() => PlaybackCommands.selectAudioStream.call()}>
         {$_('menu.select-audio-stream')}
       </button></li>
-      <li><button disabled={!$isMediaLoaded}
+      <li><button disabled={$loadState !== 'loaded'}
           onclick={() => InterfaceCommands.closeVideo.call()}>
         {$_('menu.close-video')}
       </button></li>

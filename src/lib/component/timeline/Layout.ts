@@ -9,6 +9,8 @@ import { TimelineConfig } from "./Config";
 import { EventHost } from "../../details/EventHost";
 import { MediaSampler2 } from "./MediaSampler2";
 import { TimelineHandle } from "./Input.svelte";
+import { Basic } from "../../Basic";
+import { get } from "svelte/store";
 
 const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
@@ -124,9 +126,28 @@ export class TimelineLayout {
         this.manager.requestRender();
     });
 
-    Source.onSubtitleObjectReload.bind(this, () => {
+    Source.onSubtitleObjectReload.bind(this, (newFile) => {
       this.requestedLayout = true;
       this.manager.requestRender();
+
+      const state = Source.subs.metadata.uiState;
+      if (!state || !newFile) return;
+
+      const callback = () => {
+        if (state.timelineScale !== null)
+          this.setScale(state.timelineScale);
+        if (state.timelineOffset !== null)
+          this.setOffset(state.timelineOffset);
+      }
+      requestAnimationFrame(() => {
+        if (get(Playback.loadState) == 'loading')
+          Playback.onLoaded.bind(this, callback, {once: true});
+        else callback();
+      });
+    });
+    Source.onSubtitleWillSave.bind(this, () => {
+      Source.subs.metadata.uiState.timelineOffset = this.offset;
+      Source.subs.metadata.uiState.timelineScale = this.scale;
     });
   }
 
@@ -155,6 +176,8 @@ export class TimelineLayout {
     v = Math.min(v, 500);
     if (v == this.scale) return;
 
+    console.log('scale', v);
+
     this.#scale = v;
     this.#updateContentArea();
     this.manager.requestRender();
@@ -163,6 +186,9 @@ export class TimelineLayout {
 
   setOffset(v: number) {
     if (v < 0) v = 0;
+
+    console.log('offset', v);
+
     v = Math.min(v, this.maxPosition - this.width / this.scale);
     this.manager.setScroll({x: v * this.scale});
     this.manager.requestRender();

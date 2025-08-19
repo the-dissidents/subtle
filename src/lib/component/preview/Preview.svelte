@@ -10,7 +10,7 @@
   let isPlaying = $state(false);
   let playPos = $state(0);
   let playPosInput = $state(0);
-  let isMediaLoaded = Playback.isLoaded;
+  let loadState = Playback.loadState;
   let layout = $state<PreviewLayout>();
 
   let boxes = $state<EntryBox[]>([]);
@@ -23,7 +23,7 @@
   const me = {};
 
   Playback.onPositionChanged.bind(me, () => {
-    playPos = $isMediaLoaded ? Playback.position / Playback.duration : 0;
+    playPos = $loadState == 'loaded' ? Playback.position / Playback.duration : 0;
     playPosInput = Playback.position;
   });
 
@@ -56,7 +56,7 @@
   <!-- video playback controls -->
   <div class='hlayout'>
     <button aria-label="play/pause"
-      disabled={!$isMediaLoaded}
+      disabled={$loadState !== 'loaded'}
       onclick={() => Playback.toggle()}>
       {#if isPlaying}
         <PauseIcon />
@@ -66,17 +66,17 @@
     </button>
     <input type='range' class='play-pointer flexgrow'
       step="any" max="1" min="0"
-      disabled={!$isMediaLoaded}
+      disabled={$loadState !== 'loaded'}
       bind:value={playPos}
       oninput={() => {
-        if (!$isMediaLoaded) {
+        if ($loadState !== 'loaded') {
           playPos = 0;
           return;
         }
         Playback.setPosition(playPos * Playback.duration, {imprecise: true});
       }}/>
     <TimestampInput bind:timestamp={playPosInput}
-      disabled={!$isMediaLoaded}
+      disabled={$loadState !== 'loaded'}
       onchange={() => Playback.setPosition(playPosInput)}/>
   </div>
 </div>

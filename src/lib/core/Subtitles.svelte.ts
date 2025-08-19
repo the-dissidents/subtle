@@ -50,6 +50,11 @@ export const ZMetadata = z.object({
   special: z.object({
     untimedText: z._default(z.string(), ''),
   }),
+  uiState: z.object({
+    tableScrollIndex:   z._default(z.int().check(z.nonnegative()), 0),
+    timelineOffset:     z._default(z.nullable(z.number().check(z.nonnegative())), null),
+    timelineScale:      z._default(z.nullable(z.number().check(z.positive())), null)
+  })
 });
 
 export type SubtitleStyle = z.infer<typeof ZStyleBase> & {
@@ -100,7 +105,7 @@ export class Subtitles {
     };
 
     static #createMetadata(): SubtitleMetadata {
-        return ZMetadata.parse({ special: {} });
+        return ZMetadata.parse({ special: {}, uiState: {} });
     }
 
     /** Note: only copies styles from base */

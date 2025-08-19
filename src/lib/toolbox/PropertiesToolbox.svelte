@@ -26,7 +26,7 @@ let styles = $state(Source.subs.styles);
 let subtitles = $state(Source.subs);
 let updateCounter = $state(0);
 
-let playbackLoaded = Playback.isLoaded;
+let loadState = Playback.loadState;
 
 const me = {};
 onDestroy(() => EventHost.unbind(me));
@@ -120,7 +120,7 @@ async function manageSavedStyles() {
           <NumberInput class='res' bind:value={metadata.height} 
             min={1} max={10000}
             onchange={markMetadataChange}/>
-          <button disabled={!$playbackLoaded} onclick={() => {
+          <button disabled={$loadState !== 'loaded'} onclick={() => {
             Debug.assert(Playback.player?.videoSize !== undefined);
             Debug.assert(Playback.player?.sampleAspectRatio !== undefined);
             const [w, h] = Playback.player.videoSize;

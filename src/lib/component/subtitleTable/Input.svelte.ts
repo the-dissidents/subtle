@@ -3,7 +3,7 @@ import type { CanvasManager } from "../../CanvasManager";
 import { filterDescription, type SimpleMetricFilter } from "../../core/Filter";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
-import { ChangeCause } from "../../frontend/Source";
+import { ChangeCause, Source } from "../../frontend/Source";
 import type { PopupHandler } from "../../ui/Popup.svelte";
 
 import type { TableLayout, TextLayout } from "./Layout.svelte";
@@ -15,9 +15,10 @@ import { get } from "svelte/store";
 import { Playback } from "../../frontend/Playback";
 import { Frontend } from "../../frontend/Frontend";
 import { contextMenu } from "./Menu";
+import { Basic } from "../../Basic";
 
 export const SubtitleTableHandle = {
-    processDoubleClick: undefined as (undefined | (() => Promise<void>))
+    processDoubleClick: undefined as (undefined | (() => Promise<void>)),
 };
 
 export class TableInput {
@@ -80,6 +81,23 @@ export class TableInput {
         });
 
         SubtitleTableHandle.processDoubleClick = () => this.#handleDoubleClick();
+
+        Source.onSubtitleObjectReload.bind(this, (newFile) => {
+            const state = Source.subs.metadata.uiState;
+            if (!state || !newFile) return;
+            requestAnimationFrame(() => {
+                if (state.tableScrollIndex >= layout.lines.length) return;
+                const entryLayout = layout.lines[state.tableScrollIndex];
+                this.manager.setScroll({y: entryLayout.line * layout.lineHeight})
+                this.manager.requestRender();
+            })
+        });
+        Source.onSubtitleWillSave.bind(this, () => {
+            const i = this.#getLineFromOffset(0);
+            const result = layout.lines.findIndex((x) => x.line > i);
+            Source.subs.metadata.uiState.tableScrollIndex = Math.max(0, result);
+        });
+
         this.manager.canvas.addEventListener('dblclick', () => this.#handleDoubleClick());
         this.manager.canvas.addEventListener('contextmenu', (ev) => {
             ev.preventDefault();
@@ -106,7 +124,7 @@ export class TableInput {
                     break;
                 case 'play':
                     await Playback.forceSetPosition(focused.start);
-                    if (get(Playback.isLoaded)) Playback.play(true);
+                    if (Playback.loaded) Playback.play(true);
                     break;
                 default:
                     Debug.never(<never>TableConfig.data.doubleClickPlaybackBehavior);
@@ -121,23 +139,27 @@ export class TableInput {
             / this.layout.lineHeight;
     }
 
+    #getTextFromLineIndex(i: number) {
+        let result: [TextLayout, SubtitleEntry] | [undefined, undefined] = [undefined, undefined];
+        if (this.layout.totalLines < i) return result;
+        outer: for (const entryLayout of this.layout.lines) {
+            for (const text of entryLayout.texts) {
+                if (text.line > i) break outer;
+                result = [text, entryLayout.entry];
+            }
+        }
+        return result;
+    }
+
     #onMouseMove(ev: MouseEvent) {
         if (ev.offsetY < this.layout.headerHeight / this.manager.scale) return;
         
-        const [cx, cy] = this.manager.convertPosition('offset', 'canvas', ev.offsetX, ev.offsetY);
-        const currentLine = Math.floor((cy - this.layout.headerHeight) / this.layout.lineHeight);
-
-        let channelColumnStart = this.layout.channelColumns[0].layout?.position ?? Infinity;
-        let currentText: TextLayout | undefined;
-        if (currentLine <= this.layout.totalLines && cx > channelColumnStart) {
-            outer: for (const {texts} of this.layout.lines) {
-                for (const text of texts) {
-                    if (currentLine < text.line)
-                    break outer;
-                    currentText = text;
-                }
-            }
-        }
+        const [cx, _cy] = this.manager.convertPosition('offset', 'canvas', ev.offsetX, ev.offsetY);
+        const channelColumnStart = this.layout.channelColumns[0].layout?.position ?? Infinity;
+        const currentLine = this.#getLineFromOffset(ev.offsetY);
+        const currentText = cx > channelColumnStart 
+            ? this.#getTextFromLineIndex(currentLine)?.[0]
+            : undefined;
 
         if (currentText?.failed !== this.currentFails) {
             this.currentFails = currentText?.failed ?? [];
@@ -168,11 +190,9 @@ export class TableInput {
             if (this.currentLine > this.layout.totalLines) {
                 Editing.selectVirtualEntry();
                 return;
-            } else if (this.layout.lines.length > 0) {
-                let i = 1;
-                for (; i < this.layout.lines.length 
-                    && this.layout.lines[i].line <= this.currentLine; i++);
-                Editing.toggleEntry(this.layout.lines[i-1].entry, getSelectMode(ev), ChangeCause.UIList);
+            } else {
+                const [_, entry] = this.#getTextFromLineIndex(this.currentLine);
+                if (entry) Editing.toggleEntry(entry, getSelectMode(ev), ChangeCause.UIList);
             }
         }
     }
@@ -191,10 +211,8 @@ export class TableInput {
             const line = this.#getLineFromOffset((this.autoScrollY < 0) ? 0 : this.manager.size[1]);
             if (line != this.currentLine && this.layout.lines.length > 0) {
                 this.currentLine = line;
-                let i = 1;
-                for (; i < this.layout.lines.length 
-                    && this.layout.lines[i].line < this.currentLine; i++);
-                Editing.selectEntry(this.layout.lines[i-1].entry, SelectMode.Sequence);
+                const [_, entry] = this.#getTextFromLineIndex(line);
+                if (entry) Editing.selectEntry(entry, SelectMode.Sequence);
             }
 
             this.manager.requestRender();
@@ -226,10 +244,8 @@ export class TableInput {
         const line = this.#getLineFromOffset(offsetY);
         if (line != this.currentLine && this.layout.lines.length > 0) {
             this.currentLine = line;
-            let i = 1;
-            for (; i < this.layout.lines.length 
-                && this.layout.lines[i].line < this.currentLine; i++);
-            Editing.selectEntry(this.layout.lines[i-1].entry, SelectMode.Sequence);
+            const [_, entry] = this.#getTextFromLineIndex(line);
+            if (entry) Editing.selectEntry(entry, SelectMode.Sequence);
         }
     }
 

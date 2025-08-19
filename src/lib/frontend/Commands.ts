@@ -407,7 +407,7 @@ export const BasicCommands = {
             const index = Source.subs.entries.indexOf(ent);
             Debug.assert(index >= 0);
 
-            const pos = get(Playback.isLoaded) ? Playback.position : Infinity;
+            const pos = Playback.loaded ? Playback.position : Infinity;
             let start: number, end: number;
             if (Source.subs.entries.length == 0) {
                 start = 0;
@@ -441,7 +441,7 @@ export const BasicCommands = {
             let index = ent ? Source.subs.entries.indexOf(ent) + 1 : Source.subs.entries.length;
             Debug.assert(index >= 0);
 
-            const pos = get(Playback.isLoaded) ? Playback.position : Infinity;
+            const pos = Playback.loaded ? Playback.position : Infinity;
             let start: number, end: number;
             if (index == Source.subs.entries.length) {
                 let last = Source.subs.entries.at(-1);

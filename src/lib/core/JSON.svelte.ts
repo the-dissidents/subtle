@@ -13,8 +13,9 @@ import * as z from "zod/v4-mini";
  *  - 000403 (minor) scaling factor in metadata
  *  - 000404 (minor) view in archive
  *  - 000501 (minor) timelineActiveChannel in view
+ *  - 000502 (minor) uiState structure in metadata
  */
-export const SubtitleFormatVersion = '000501';
+export const SubtitleFormatVersion = '000502';
 export const SubtitleCompatibleVersion = '000400';
 
 export type JSONParseMessage = {
@@ -90,8 +91,11 @@ export class JSONParser implements SubtitleParser {
             });
         }
 
-        if (this.#obj.metadata)
+        if (this.#obj.metadata) {
+            if (!this.#obj.metadata.uiState)
+                this.#obj.metadata.uiState = {};
             this.#subs.metadata = parseObjectZ(this.#obj.metadata, ZMetadata);
+        }
         this.#parseStyles();
         this.#parseView();
         const entries = this.#obj.entries;

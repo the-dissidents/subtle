@@ -92,7 +92,7 @@ async function parseSubtitleSourceInteractive(path: string, text: string) {
 export const Interface = {
     async newFile() {
         await Source.openDocument(new Subtitles());
-        if (get(Playback.isLoaded)) await Playback.close();
+        if (Playback.loaded) await Playback.close();
         Frontend.setStatus($_('msg.created-new-file'));
     },
 
@@ -107,17 +107,17 @@ export const Interface = {
         const data = Source.recentOpened.get().find((x) => x.name == path);
         if (data?.video) {
             await this.openVideo(data.video, data.audioStream);
-        } else if (get(Playback.isLoaded))
+        } else if (Playback.loaded)
             await Playback.close();
         Frontend.setStatus($_('msg.opened-path', {values: {path}}));
     },
 
     async openVideo(path: string, audio?: number) {
-        if (get(Playback.isLoaded))
+        if (Playback.loaded)
             await Playback.close();
         await guardAsync(() => Playback.load(path, audio ?? -1), 
             $_('msg.error-opening-video-path', {values: {path}}));
-        if (!get(Playback.isLoaded)) return;
+        if (!Playback.loaded) return;
         
         let source = get(Source.currentFile);
         if (source != '')
@@ -182,6 +182,7 @@ export const Interface = {
             if (typeof selected != 'string') return;
             file = selected;
         }
+        Source.onSubtitleWillSave.dispatch(true);
         const text = Format.JSON.write(Source.subs).toString();
         if (await Source.saveTo(file, text)) {
             await this.saveFileData();
@@ -271,7 +272,7 @@ export const InterfaceCommands = {
         [ ],
     {
         name: () => $_('menu.close-video'),
-        isApplicable: () => get(Playback.isLoaded),
+        isApplicable: () => Playback.loaded,
         call: () => Playback.close()
     }),
     import: new UICommand(() => $_('category.document'),
