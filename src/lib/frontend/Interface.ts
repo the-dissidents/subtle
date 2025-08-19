@@ -11,7 +11,7 @@ import { Format } from "../core/SimpleFormats";
 import { Dialogs } from "./Dialogs";
 import { ChangeType, Source } from "./Source";
 import { Editing } from "./Editing";
-import { Frontend, guardAsync, parseSubtitleSource } from "./Frontend";
+import { Frontend, guardAsync } from "./Frontend";
 import { Playback } from "./Playback";
 import { MainConfig } from "../config/Groups";
 import { Basic } from "../Basic";

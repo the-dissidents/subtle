@@ -5,6 +5,7 @@ import { InterfaceConfig } from "../../config/Groups";
 import { Debug } from "../../Debug";
 import { EventHost } from "../../details/EventHost";
 import { Mutex } from "../../details/Mutex";
+import { RestartableTask } from "../../details/RestartableTask";
 import { Playback } from "../../frontend/Playback";
 import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
@@ -410,43 +411,37 @@ export class MediaPlayer2 {
     requestNextFrame() {
         Debug.assert(!this.media.isClosed);
         if (this.#playEOF) return;
-        this.requestSeekToFrame(this.#position + 1);
+        this.#seekToFrame.request(this.#position + 1);
     }
 
     requestPreviousFrame() {
         Debug.assert(!this.media.isClosed);
         if (this.#position == 0) return;
-        this.requestSeekToFrame(this.#position - 1);
-    }
-
-    requestSeekToTime(t: number, opt?: SetPositionOptions) {
-        // todo
-        this.seekToTime(t, opt);
+        this.#seekToFrame.request(this.#position - 1);
     }
 
     async seekToTime(t: number, opt?: SetPositionOptions) {
         if (t < 0) t = 0;
         if (t > this.duration) t = this.duration;
         const index = Math.round(t * this.media.video!.framerate);
-        await this.seekToFrame(index, opt)
+        return await this.#seekToFrame.request(index, opt);
     }
 
-    requestSeekToFrame(index: number, opt?: SetPositionOptions) {
-        // todo
-        this.seekToFrame(index, opt);
-    }
-
-    #seekFrameVersion = 0;
     async seekToFrame(index: number, opt?: SetPositionOptions) {
-        this.#seekFrameVersion += 1;
-        const myVersion = this.#seekFrameVersion;
-        if (this.#playing) await this.stop();
+        return await this.#seekToFrame.request(index, opt);
+    }
 
-        await this.#mutex.use(async () => {
-            if (this.#closed 
-             || this.#seekFrameVersion != myVersion
+    #seekToFrame = 
+    new RestartableTask<[index: number, opt?: SetPositionOptions]>(
+        async ([index, opt], tok) => await this.#mutex.use(async () => {
+            if (this.#closed
              || this.#seekTarget == index
-             || this.#position == index) return;
+             || this.#position == index)
+            {
+                await Debug.debug(`seek: aborted`);
+                return;
+            }
+            if (tok.isCancelled) return;
 
             const audioIndex = Math.floor(this.#vpos2apos(index));
             if (this.#videoBuffer.length > 2
@@ -461,7 +456,7 @@ export class MediaPlayer2 {
                 this.#internalPosition = frame.position;
                 this.#position = frame.position;
                 MediaPlayerInterface2.onPlayback.dispatch(frame.time);
-                Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] inside cache`);
+                await Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] inside cache`);
             } else {
                 await this.#clearCache();
 
@@ -478,13 +473,14 @@ export class MediaPlayer2 {
                         this.#seekTarget = index;
                     this.#internalPosition = undefined;
                     await this.media.seekVideo(realTarget);
-                    if (this.#seekFrameVersion != myVersion) return;
-                    Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] seeked`);
+                    await Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] seeked -> ${realTarget}`);
                 } else {
                     // no need to seek
                     this.#seekTarget = index;
-                    Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] not seeked`);
+                    await Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] not seeked`);
                 }
+                if (tok.isCancelled) return;
+
                 if (!(opt?.imprecise)) {
                     const frame = await this.media.skipUntil(index, audioIndex);
                     await this.#receiveFrame(frame, 0);
@@ -492,10 +488,11 @@ export class MediaPlayer2 {
             }
             if (!this.#populateBufferRunning)
                 this.#populateBuffer();
-        });
-        
-        if (!this.#presenting) this.#present();
-    }
+
+            if (!this.#presenting) this.#present();
+        }),
+        ([a, b], [c, d]) => a === c && b === d
+    )
 
     #resizeVersion = 0;
     async #resize(ow: number, oh: number) {
@@ -511,7 +508,7 @@ export class MediaPlayer2 {
             if (this.#playing) await this.stop();
             await this.media.setVideoSize(ow, oh);
             await this.#clearCache();
-            this.seekToFrame(this.#position);
+            this.#seekToFrame.request(this.#position);
         });
         
         if (!this.#presenting) this.#present();
@@ -533,7 +530,7 @@ export class MediaPlayer2 {
             }
 
             await this.#clearCache();
-            this.seekToFrame(this.#position);
+            this.#seekToFrame.request(this.#position);
         });
     }
 }
