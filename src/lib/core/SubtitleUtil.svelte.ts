@@ -154,7 +154,6 @@ export const SubtitleUtil = {
         if (options.overrideMetadata) {
             other.metadata = JSON.parse(JSON.stringify(original.metadata));
         }
-        console.log(options);
 
         const styleMap = new Map<SubtitleStyle, SubtitleStyle>();
         const overrideStyle = options.overrideStyle ?? original.defaultStyle;
@@ -176,7 +175,7 @@ export const SubtitleUtil = {
 
             switch (options.style ?? 'KeepDifferent') {
                 case 'UseOverrideForAll':
-                    console.log('UseOverrideForAll:', 
+                    Debug.debug('UseOverrideForAll:', 
                         $state.snapshot(s), '->', $state.snapshot(overrideStyle));
                     styleMap.set(s, overrideStyle);
                     return overrideStyle;
@@ -187,7 +186,7 @@ export const SubtitleUtil = {
                         newStyle.name = SubtitleTools.getUniqueStyleName(original, s.name);
                         original.styles.push(newStyle);
                         styleMap.set(s, newStyle);
-                        console.log('KeepAll:', 
+                        Debug.debug('KeepAll:', 
                             $state.snapshot(s), '->', $state.snapshot(newStyle));
                         return newStyle;
                     }

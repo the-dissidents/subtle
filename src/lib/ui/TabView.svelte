@@ -40,7 +40,6 @@ $effect(() => {
 
 setContext<TabAPI>(TabAPIContext, {
   registerPage(data) {
-    // console.log('register page:', get(data.name));
     if (Pages.has(data.id)) {
       Debug.error('duplicate tab id:', data.id);
       return;

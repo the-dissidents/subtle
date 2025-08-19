@@ -18,7 +18,6 @@ type Box = {
 }
 
 function getBoxFromMetrics(metrics: TextMetrics, x: number, y: number): Box {
-    //console.log(metrics);
     return {
         x: x - metrics.actualBoundingBoxLeft,
         y: y - metrics.fontBoundingBoxDescent - metrics.fontBoundingBoxAscent,
@@ -269,8 +268,6 @@ export class SubtitleRenderer {
 
     setTime(time: number) {
         if (time == this.currentTime) return;
-
-        // console.log('time ->', time);
         this.#currentTime = time;
         this.#searchCurrentEntries();
     }

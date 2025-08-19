@@ -176,8 +176,6 @@ export class TimelineLayout {
     v = Math.min(v, 500);
     if (v == this.scale) return;
 
-    console.log('scale', v);
-
     this.#scale = v;
     this.#updateContentArea();
     this.manager.requestRender();
@@ -186,8 +184,6 @@ export class TimelineLayout {
 
   setOffset(v: number) {
     if (v < 0) v = 0;
-
-    console.log('offset', v);
 
     v = Math.min(v, this.maxPosition - this.width / this.scale);
     this.manager.setScroll({x: v * this.scale});

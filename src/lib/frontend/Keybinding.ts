@@ -291,7 +291,6 @@ export const KeybindingManager = {
         const key = this.parseKey(ev);
         const focus = Frontend.getUIFocus();
         if (!key) return { type: 'incomplete' };
-        // console.log(key, focus);
         currentSequence.push(key);
 
         const map = currentNode?.children ?? bindingTree;

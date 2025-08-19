@@ -72,7 +72,6 @@ function fuzzyMatch() {
   fuzzy.currentEntry = Editing.selection.focused;
   let current = fuzzy.currentEntry?.texts?.get(fuzzy.useStyle);
   if (!current || textarea.value == '') {
-    console.log('no current', Editing.selection);
     fuzzy.currentEntry = null;
     textarea.selectionEnd = textarea.selectionStart;
     return;

@@ -101,7 +101,6 @@ function createChannel(
     const channel = new Channel<MediaEvent>;
     channel.onmessage = (msg) => {
         let h = handler[msg.event];
-        // console.log('received message:', msg);
         // 'as any' because (A => C) | (B => C) will not accept A | B as the parameter
         if (h) {
             h(msg.data as any);

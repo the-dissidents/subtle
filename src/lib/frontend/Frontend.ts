@@ -60,7 +60,6 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
         };
     } else if (isTrackpad(e.deltaX, e.deltaY)) {
         // trackpad scroll
-        // console.log('trackpad scroll', e.deltaX, e.deltaY);
         return {
             isZoom: false,
             isTrackpad: true,
@@ -69,7 +68,6 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
         };
     } else {
         // mouse scroll
-        // console.log('mouse scroll', e.deltaX, e.deltaY);
         return {
             isZoom: false,
             isTrackpad: false,

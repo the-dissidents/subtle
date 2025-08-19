@@ -29,12 +29,10 @@ export class EventHost<T extends unknown[] = []> {
         if (!this.#listeners.has(obj))
             this.#listeners.set(obj, []);
         this.#listeners.get(obj)!.push([f, options]);
-        // console.log(`bind`, obj, f, this);
     }
 
     static unbind(obj: object) {
         for (const host of EventHost.globalEventHosts) {
-            // console.log(`unbind`, host.#listeners.get(obj), this);
             host.#listeners.delete(obj);
         }
     }

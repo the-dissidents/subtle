@@ -62,10 +62,6 @@ function match(A: number[], Z: number[]) {
         }
     }
 
-    // for (let i = 0; i <= m; i++) {
-    //     console.log(DP[i].map((x) => x!.op[0] + x!.score.toString()))
-    // }
-
     // backtrack
     let current_j = 0;
     let bestScore = Infinity;
