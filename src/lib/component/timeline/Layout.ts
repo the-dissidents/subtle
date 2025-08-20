@@ -75,9 +75,7 @@ export class TimelineLayout {
     });
 
     Playback.onLoaded.bind(this, () => {
-      this.setScale(Math.max(this.width / Playback.duration, 10));
-      this.setOffset(0);
-      Playback.setPosition(0);
+      // Playback.setPosition(0);
       this.requestedSampler = true;
       this.manager.requestRender();
     })
@@ -104,9 +102,10 @@ export class TimelineLayout {
           Playback.setPosition(pos);
           return;
         }
-      } else if (!this.keepPosInSafeArea(pos) 
-               && Playback.isPlaying && TimelineHandle.lockCursor.get()) {
-        this.setOffset(this.offset + (pos - this.#previousPos));
+      } else if (Playback.isPlaying) {
+        const moved = this.keepPosInSafeArea(pos);
+        if (!moved && TimelineHandle.lockCursor.get())
+          this.setOffset(this.offset + (pos - this.#previousPos));
       }
       this.#previousPos = pos;
       this.manager.requestRender();
@@ -134,10 +133,13 @@ export class TimelineLayout {
       if (!state || !newFile) return;
 
       const callback = () => {
-        if (state.timelineScale !== null)
+        if (state.timelineScale !== null && state.timelineOffset !== null) {
           this.setScale(state.timelineScale);
-        if (state.timelineOffset !== null)
           this.setOffset(state.timelineOffset);
+        } else {
+          this.setScale(10);
+          this.setOffset(0);
+        }
       }
       requestAnimationFrame(() => {
         if (get(Playback.loadState) == 'loading')
@@ -176,6 +178,7 @@ export class TimelineLayout {
     v = Math.min(v, 500);
     if (v == this.scale) return;
 
+    // Debug.warn('scale', v);
     this.#scale = v;
     this.#updateContentArea();
     this.manager.requestRender();
@@ -185,6 +188,7 @@ export class TimelineLayout {
   setOffset(v: number) {
     if (v < 0) v = 0;
 
+    // Debug.warn('offset', v);
     v = Math.min(v, this.maxPosition - this.width / this.scale);
     this.manager.setScroll({x: v * this.scale});
     this.manager.requestRender();

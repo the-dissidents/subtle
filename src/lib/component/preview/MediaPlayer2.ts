@@ -14,6 +14,7 @@ const DAMPING = 0.5;
 
 export type SetPositionOptions = {
     imprecise?: boolean;
+    force?: boolean;
 };
 
 export const MediaPlayerInterface2 = {
@@ -112,7 +113,7 @@ export class MediaPlayer2 {
             ow = Math.max(1, Math.round(ow));
             oh = Math.max(1, Math.round(oh));
         }
-        this.#resize(ow, oh);
+        this.#resizeTask.request(ow, oh);
     }
 
     static async create(manager: CanvasManager, rawurl: string, audioId: number) {
@@ -411,32 +412,31 @@ export class MediaPlayer2 {
     requestNextFrame() {
         Debug.assert(!this.media.isClosed);
         if (this.#playEOF) return;
-        this.#seekToFrame.request(this.#position + 1);
+        this.#seekToFrameTask.request(this.#position + 1);
     }
 
     requestPreviousFrame() {
         Debug.assert(!this.media.isClosed);
         if (this.#position == 0) return;
-        this.#seekToFrame.request(this.#position - 1);
+        this.#seekToFrameTask.request(this.#position - 1);
     }
 
     async seekToTime(t: number, opt?: SetPositionOptions) {
         if (t < 0) t = 0;
         if (t > this.duration) t = this.duration;
         const index = Math.round(t * this.media.video!.framerate);
-        return await this.#seekToFrame.request(index, opt);
+        return await this.#seekToFrameTask.request(index, opt);
     }
 
     async seekToFrame(index: number, opt?: SetPositionOptions) {
-        return await this.#seekToFrame.request(index, opt);
+        return await this.#seekToFrameTask.request(index, opt);
     }
 
-    #seekToFrame = 
+    #seekToFrameTask = 
     new RestartableTask<[index: number, opt?: SetPositionOptions]>(
         async ([index, opt], tok) => await this.#mutex.use(async () => {
             if (this.#closed
-             || this.#seekTarget == index
-             || this.#position == index)
+             || (!opt?.force && (this.#seekTarget == index || this.#position == index)))
             {
                 await Debug.debug(`seek: aborted`);
                 return;
@@ -459,6 +459,7 @@ export class MediaPlayer2 {
                 await Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] inside cache`);
             } else {
                 await this.#clearCache();
+                if (tok.isCancelled) return;
 
                 const realTarget = Math.max(0, index - 2);
                 let lastKeyframe: number | null;
@@ -479,40 +480,37 @@ export class MediaPlayer2 {
                     this.#seekTarget = index;
                     await Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] not seeked`);
                 }
-                if (tok.isCancelled) return;
 
                 if (!(opt?.imprecise)) {
                     const frame = await this.media.skipUntil(index, audioIndex);
                     await this.#receiveFrame(frame, 0);
                 }
             }
-            if (!this.#populateBufferRunning)
-                this.#populateBuffer();
-
+            if (!this.#populateBufferRunning) this.#populateBuffer();
             if (!this.#presenting) this.#present();
         }),
         ([a, b], [c, d]) => a === c && b === d
     )
 
-    #resizeVersion = 0;
-    async #resize(ow: number, oh: number) {
-        this.#resizeVersion += 1;
-        const myVersion = this.#resizeVersion;
-
-        await this.#mutex.use(async () => {
-            if (this.#closed || this.#resizeVersion != myVersion) return;
+    #resizeTask = 
+    new RestartableTask<[ow: number, oh: number]>(
+        async ([ow, oh], tok) => {
+            if (this.#closed) return;
             const [cw, ch] = this.media.outputSize;
-            if (ow === cw && oh === ch) return;
-
-            await Debug.debug(`resize: ${ow}x${oh}`);
+            if (ow === cw && oh === ch) {
+                if (!this.#presenting) this.#present();
+                return;
+            }
             if (this.#playing) await this.stop();
-            await this.media.setVideoSize(ow, oh);
-            await this.#clearCache();
-            this.#seekToFrame.request(this.#position);
-        });
-        
-        if (!this.#presenting) this.#present();
-    }
+
+            await this.#mutex.use(async () => {
+                await Debug.debug(`resize: ${ow}x${oh}`);
+                await this.media.setVideoSize(ow, oh);
+                this.#seekToFrameTask.request(this.#position, { force: true });
+            })
+        },
+        ([a, b], [c, d]) => a == c && b == d
+    );
 
     async setAudioStream(id: number) {
         Debug.assert(!this.#closed);
@@ -530,7 +528,7 @@ export class MediaPlayer2 {
             }
 
             await this.#clearCache();
-            this.#seekToFrame.request(this.#position);
+            this.#seekToFrameTask.request(this.#position);
         });
     }
 }

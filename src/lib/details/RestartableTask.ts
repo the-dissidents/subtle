@@ -4,23 +4,26 @@ export type CancellationToken = {
     readonly isCancelled: boolean;
 };
 
-type CancellationTokenImpl = {
-    isCancelled: boolean;
+type Request<Arg> = {
+    arg: Arg,
     onDone: () => void;
     onReject: (err: unknown) => void;
-}
+    isCancelled: boolean;
+};
 
 type State<Arg> = {
     type: 'running',
-    arg: Arg
-    token: CancellationTokenImpl
+    current: Request<Arg>
+} | {
+    type: 'cancelling',
+    current: Request<Arg>,
+    new: Request<Arg>
 } | {
     type: 'idle'
 };
 
 export class RestartableTask<Arg extends any[]> {
     private state: State<Arg> = { type: 'idle' };
-    private pending?: [Arg, CancellationTokenImpl];
 
     constructor(
         private executor: (arg: Arg, token: CancellationToken) => Promise<void>,
@@ -28,41 +31,46 @@ export class RestartableTask<Arg extends any[]> {
     ) {}
 
     async request(...arg: Arg) {
-        let old = this.pending?.[0];
-        if (!old && this.state.type == 'running') old = this.state.arg;
+        let old = this.state.type == 'running' ? this.state.current.arg
+                : this.state.type == 'cancelling' ? this.state.new.arg
+                : undefined
         if (old && this.deduplicator(old, arg)) return;
 
         return new Promise<void>((resolve, reject) => {
-            const token: CancellationTokenImpl = { 
+            const request: Request<Arg> = { 
+                arg,
                 isCancelled: false, 
                 onDone: () => resolve(),
                 onReject: (err) => reject(err)
             };
             if (this.state.type == 'idle')
-                this.#execute(arg, token);
+                this.#execute(request);
             else {
-                this.state.token.isCancelled = true;
-                this.pending = [arg, token];
+                this.state = { 
+                    type: 'cancelling', 
+                    current: this.state.current, 
+                    new: request
+                };
+                this.state.current.isCancelled = true;
             }
         })
     }
 
-    async #execute(arg: Arg, token: CancellationTokenImpl) {
-        Debug.assert(this.state.type == 'idle');
-        this.state = { type: 'running', arg, token };
+    async #execute(request: Request<Arg>) {
+        Debug.assert(this.state.type !== 'running');
+        this.state = { type: 'running', current: request };
         try {
-            await this.executor(arg, token);
-            token.onDone();
+            await this.executor(request.arg, request);
+            request.onDone();
         } catch (e) {
-            await Debug.forwardError(e);
-            token.onReject(e);
+            Debug.forwardError(e);
+            request.onReject(e);
         } finally {
-            this.state = { type: 'idle' };
-            if (this.pending !== undefined) {
-                const pending = this.pending;
-                this.pending = undefined;
-                this.#execute(...pending);
-            }
+            const state = this.state as State<Arg>;
+            if (state.type === 'cancelling')
+                this.#execute(state.new);
+            else
+                this.state = { type: 'idle' };
         }
     }
 }
