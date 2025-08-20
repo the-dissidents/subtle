@@ -670,7 +670,7 @@ impl AudioContext {
             Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 // discard buffer
-                warn!("fill: EAGAIN met in sending audio pkt, flushing");
+                warn!("fill: EAGAIN met when sending audio pkt, flushing");
                 self.base.decoder.flush();
                 Ok(())
             }
@@ -831,7 +831,7 @@ impl VideoContext {
             Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 // discard buffer
-                warn!("fill: EAGAIN met in sending video pkt, flushing");
+                warn!("fill: EAGAIN met when sending video pkt, flushing");
                 self.base.decoder.flush();
                 Ok(())
             }
@@ -849,7 +849,7 @@ impl VideoContext {
         match self.base.decoder.receive_frame(&mut decoded) {
             Ok(()) => {}
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
-                trace!("receive: EAGAIN");
+                // trace!("receive: EAGAIN");
                 return Ok(None);
             }
             receive_frame_error => check!(receive_frame_error)?,

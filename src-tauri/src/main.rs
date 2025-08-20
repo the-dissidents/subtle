@@ -106,7 +106,7 @@ fn main() {
 
 #[tauri::command]
 fn open_devtools(app: AppHandle) {
-    #[cfg(debug_assertions)]
+    // #[cfg(debug_assertions)]
     app.get_webview_window("main").unwrap().open_devtools();
 }
 
