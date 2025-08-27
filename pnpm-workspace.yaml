@@ -1,0 +1,3 @@
+onlyBuiltDependencies:
+  - es5-ext
+  - esbuild
