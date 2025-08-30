@@ -1,5 +1,5 @@
 import { Debug } from "../Debug";
-import { parseSubtitleStyle, SubtitleEntry, Subtitles, ZMetadata, type SubtitleFormat, type SubtitleStyle, type SubtitleParser } from "./Subtitles.svelte";
+import { parseSubtitleStyle, SubtitleEntry, Subtitles, ZMetadata, type SubtitleFormat, type SubtitleStyle, type SubtitleParser, cloneSubtitleStyle, serializeSubtitleStyle } from "./Subtitles.svelte";
 import { DeserializationError, parseObjectZ } from "../Serialization";
 import { Metrics } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
@@ -14,6 +14,7 @@ import * as z from "zod/v4-mini";
  *  - 000404 (minor) view in archive
  *  - 000501 (minor) timelineActiveChannel in view
  *  - 000502 (minor) uiState structure in metadata
+ *  - 000503 (major) colors are specified in RGBA
  */
 export const SubtitleFormatVersion = '000502';
 export const SubtitleCompatibleVersion = '000400';
@@ -175,8 +176,7 @@ export class JSONParser implements SubtitleParser {
         for (let i = 1; ; i++) {
             const name = from.name + ` (${i})`;
             if (!this.#subs.styles.find((x) => x.name == name)) {
-                const copy = $state.snapshot(from);
-                const style = $state(copy);
+                const style = $state(cloneSubtitleStyle(from));
                 style.name = name;
                 this.#subs.styles.push(style);
                 return style;
@@ -244,7 +244,7 @@ export const JSONSubtitles = {
                 version: SubtitleFormatVersion,
                 metadata: subs.metadata,
                 defaultStyle: subs.defaultStyle.name,
-                styles: subs.styles,
+                styles: subs.styles.map(serializeSubtitleStyle),
                 view: serializeView(subs.view),
                 entries: (options.useEntries ?? subs.entries)
                     .map((x) => serializeEntry(x)),

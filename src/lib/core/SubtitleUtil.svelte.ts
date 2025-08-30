@@ -1,6 +1,6 @@
 import { SvelteMap } from "svelte/reactivity";
 import { Debug } from "../Debug";
-import { type SubtitleStyle, SubtitleEntry, Subtitles } from "./Subtitles.svelte";
+import { type SubtitleStyle, cloneSubtitleStyle, SubtitleEntry, Subtitles } from "./Subtitles.svelte";
 
 export type MergeStyleSelection =
     'UsedOnly' | 'All' | 'OnlyStyles';
@@ -176,18 +176,18 @@ export const SubtitleUtil = {
             switch (options.style ?? 'KeepDifferent') {
                 case 'UseOverrideForAll':
                     Debug.debug('UseOverrideForAll:', 
-                        $state.snapshot(s), '->', $state.snapshot(overrideStyle));
+                        cloneSubtitleStyle(s), '->', cloneSubtitleStyle(overrideStyle));
                     styleMap.set(s, overrideStyle);
                     return overrideStyle;
                 case 'KeepAll':
                     // generate unqiue name
                     {
-                        let newStyle = $state($state.snapshot(s));
+                        let newStyle = $state(cloneSubtitleStyle(s));
                         newStyle.name = SubtitleTools.getUniqueStyleName(original, s.name);
                         original.styles.push(newStyle);
                         styleMap.set(s, newStyle);
                         Debug.debug('KeepAll:', 
-                            $state.snapshot(s), '->', $state.snapshot(newStyle));
+                            cloneSubtitleStyle(s), '->', cloneSubtitleStyle(newStyle));
                         return newStyle;
                     }
                 case 'KeepDifferent':

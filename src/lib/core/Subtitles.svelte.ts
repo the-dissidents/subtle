@@ -6,6 +6,7 @@ import { parseFilter, type MetricFilter } from "./Filter";
 import { parseObjectZ } from "../Serialization";
 
 import * as z from "zod/v4-mini";
+import Color from "colorjs.io";
 
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelType = typeof Labels[number];
@@ -16,12 +17,32 @@ export enum AlignMode {
     TopLeft, TopCenter, TopRight,
 }
 
+const ZColor = z.codec(z.union([
+    z.string(),
+    z.tuple([z.number(), z.number(), z.number(), z.number()])
+]), z.instanceof(Color), {
+    decode: (x) => {
+        if (typeof x == 'string') {
+            try {
+                return new Color(Color.parse(x));
+            } catch (e) {
+                Debug.info('error parsing color:', e);
+                return new Color('black');
+            }
+        } else {
+            let [r, g, b, a] = x;
+            return new Color('srgb', [r, g, b], a);
+        }
+    },
+    encode: (x) => [x.r, x.g, x.b, x.a] as any
+});
+
 const ZStyleBase = z.object({
   name:                    z.string(),
   font:         z._default(z.string(), ''),
   size:         z._default(z.number().check(z.positive()), 72),
-  color:        z._default(z.string(), 'white'),
-  outlineColor: z._default(z.string(), 'black'),
+  color:        z._default(ZColor, new Color('white')),
+  outlineColor: z._default(ZColor, new Color('black')),
   outline:      z._default(z.number().check(z.gte(0)), 1),
   shadow:       z._default(z.number().check(z.gte(0)), 0),
   styles: z.object({
@@ -61,10 +82,25 @@ export type SubtitleStyle = z.infer<typeof ZStyleBase> & {
     validator: MetricFilter | null
 };
 
+export function serializeSubtitleStyle(s: SubtitleStyle) {
+    return {
+        ...z.encode(ZStyleBase, s),
+        validator: structuredClone(s.validator)
+    }
+}
+
 export function parseSubtitleStyle(obj: any): SubtitleStyle {
     const base = parseObjectZ(obj, ZStyleBase);
     const validator = obj.validator ? parseFilter(obj.validator) : null;
     return { ...base, validator };
+}
+
+export function cloneSubtitleStyle(s: SubtitleStyle): SubtitleStyle {
+    let x = structuredClone(z.encode(ZStyleBase, s));
+    return {
+        ...z.decode(ZStyleBase, x),
+        validator: structuredClone(s.validator)
+    };
 }
 
 export type SubtitleMetadata = z.infer<typeof ZMetadata>;
@@ -113,7 +149,7 @@ export class Subtitles {
         if (base) {
             let def: SubtitleStyle | undefined;
             this.styles = base.styles.map((x) => {
-                let clone = $state($state.snapshot(x));
+                let clone = $state(cloneSubtitleStyle(x));
                 if (x == base.defaultStyle) def = clone;
                 return clone;
             });

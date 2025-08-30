@@ -3,7 +3,7 @@
 -->
 <script lang="ts">
 import { Debug } from '../Debug';
-import { Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { cloneSubtitleStyle, Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { SubtitleTools } from '../core/SubtitleUtil.svelte';
 
 import Collapsible from '../ui/Collapsible.svelte';
@@ -69,7 +69,7 @@ async function manageSavedStyles() {
           {
             text: $_('ppty.add-to-project'),
             action() {
-              let style = $state($state.snapshot(x));
+              let style = $state(cloneSubtitleStyle(x));
               style.name = SubtitleTools.getUniqueStyleName(Source.subs, style.name);
               Source.subs.styles.push(style);
             }

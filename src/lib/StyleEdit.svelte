@@ -1,5 +1,5 @@
 <script lang="ts">
-import { AlignMode, type SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
+import { AlignMode, type SubtitleStyle, Subtitles, cloneSubtitleStyle } from "./core/Subtitles.svelte";
 import { SubtitleTools } from "./core/SubtitleUtil.svelte";
 
 import { Menu } from "@tauri-apps/api/menu";
@@ -14,6 +14,7 @@ import { Utils } from "./frontend/Utils";
 import FilterEdit from "./FilterEdit.svelte";
 import NumberInput from "./ui/NumberInput.svelte";
 import { ArrowDown, ArrowUp, MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
+    import Colorpicker from "./ui/Colorpicker.svelte";
 
 interface Props {
   style: SubtitleStyle;
@@ -62,7 +63,7 @@ async function contextMenu() {
     {
       text: $_('style.duplicate'),
       action() {
-        let clone = $state.snapshot($style);
+        let clone = cloneSubtitleStyle($style);
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
         // subtitles.styles = subtitles.styles;
@@ -127,7 +128,7 @@ async function contextMenu() {
               if (!await dialog.ask($_('msg.overwrite-preset-with-same-name'))) return;
               $savedStyles.splice(i, 1);
             }
-            $savedStyles.push($state.snapshot($style));
+            $savedStyles.push(cloneSubtitleStyle($style));
             savedStyles.markChanged();
           }
         }
@@ -268,14 +269,14 @@ async function contextMenu() {
         <tbody>
           <tr>
             <td>{$_('style.text-color')}</td>
-            <td><input type="text" bind:value={$style.color}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
+            <td><Colorpicker bind:color={$style.color} 
+              onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
             </td>
           </tr>
           <tr>
             <td>{$_('style.line-color')}</td>
-            <td><input type="text" bind:value={$style.outlineColor}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
+            <td><Colorpicker bind:color={$style.color} 
+              onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
             </td>
           </tr>
           <tr>
