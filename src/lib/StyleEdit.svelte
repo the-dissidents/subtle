@@ -14,7 +14,7 @@ import { Utils } from "./frontend/Utils";
 import FilterEdit from "./FilterEdit.svelte";
 import NumberInput from "./ui/NumberInput.svelte";
 import { ArrowDown, ArrowUp, MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
-    import Colorpicker from "./ui/Colorpicker.svelte";
+import Colorpicker from "./ui/Colorpicker.svelte";
 
 interface Props {
   style: SubtitleStyle;
@@ -269,14 +269,16 @@ async function contextMenu() {
         <tbody>
           <tr>
             <td>{$_('style.text-color')}</td>
-            <td><Colorpicker bind:color={$style.color} 
-              onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
+            <td>
+              <Colorpicker color={$style.color} 
+                onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
             </td>
           </tr>
           <tr>
             <td>{$_('style.line-color')}</td>
-            <td><Colorpicker bind:color={$style.color} 
-              onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
+            <td>
+              <Colorpicker bind:color={$style.color} 
+                onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
             </td>
           </tr>
           <tr>
