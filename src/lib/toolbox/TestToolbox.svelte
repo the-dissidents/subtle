@@ -2,13 +2,12 @@
 import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
 
-import { MAPI, MMedia, type AudioFrameData, type VideoFrameData } from "../API";
+import { MAPI } from "../API";
 import { Debug } from '../Debug';
 import { Menu } from '@tauri-apps/api/menu';
 
 import { UICommand } from '../frontend/CommandBase';
 import { Dialogs } from '../frontend/Dialogs';
-import { Frontend } from "../frontend/Frontend";
 import { Source, SourceCommands } from '../frontend/Source';
 
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
@@ -136,10 +135,6 @@ const command = new UICommand(() => '', [], {
 <button
   onclick={() => Debug.info('integrity test:', Source.subs.debugTestIntegrity())}>
   integrity test
-</button>
-
-<button onclick={() => Frontend.toolboxFocus.set('search')}>
-  test toolbox focus
 </button>
 
 <br>

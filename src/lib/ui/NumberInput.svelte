@@ -10,7 +10,7 @@
   let { value = $bindable(), width, onchange, ...rest }: Props = $props();
 </script>
 
-<input type="number" value={value} {...rest}
+<input type="number" value={value}
   style={width ? `width: ${width};` : ''}
   onchange={(ev) => {
     if (ev.currentTarget.value !== '' && ev.currentTarget.validity.valid) {
@@ -19,4 +19,10 @@
     } else {
       ev.currentTarget.value = value.toString();
     }
-  }} />
+  }} {...rest}/>
+
+<style>
+  input {
+    font-family: var(--monospaceFontFamily);
+  }
+</style>

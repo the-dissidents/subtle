@@ -5,9 +5,6 @@ import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { parseFilter, type MetricFilter } from "./Filter";
 import { parseObjectZ } from "../Serialization";
 
-import * as z from "zod/v4-mini";
-import Color from "colorjs.io";
-
 export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
 export type LabelType = typeof Labels[number];
 
@@ -17,6 +14,9 @@ export enum AlignMode {
     TopLeft, TopCenter, TopRight,
 }
 
+import * as z from "zod/v4-mini";
+import Color from "colorjs.io";
+
 const ZColor = z.codec(z.union([
     z.string(),
     z.tuple([z.number(), z.number(), z.number(), z.number()])
@@ -24,7 +24,7 @@ const ZColor = z.codec(z.union([
     decode: (x) => {
         if (typeof x == 'string') {
             try {
-                return new Color(Color.parse(x));
+                return new Color(x);
             } catch (e) {
                 Debug.info('error parsing color:', e);
                 return new Color('black');
@@ -34,7 +34,12 @@ const ZColor = z.codec(z.union([
             return new Color('srgb', [r, g, b], a);
         }
     },
-    encode: (x) => [x.r, x.g, x.b, x.a] as any
+    encode: (x) => {
+        return [
+            // NB components can be `undefined` for colorjs.io `Color`s
+            x.r ?? 0, x.g ?? 0, x.b ?? 0, x.a ?? 1
+        ] satisfies [number, number, number, number]
+    }
 });
 
 const ZStyleBase = z.object({
@@ -57,9 +62,7 @@ const ZStyleBase = z.object({
     left:          z._default(z.number(), 10),
     right:         z._default(z.number(), 10),
   }),
-  alignment: z.pipe(
-    z._default(z.int().check(z.gte(0)).check(z.lte(9)), 2), 
-    z.transform((x) => x as AlignMode)),
+  alignment:       z._default(z.enum(AlignMode), AlignMode.BottomCenter),
 });
 
 export const ZMetadata = z.object({

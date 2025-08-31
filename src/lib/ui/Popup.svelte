@@ -3,12 +3,17 @@ import type { Snippet } from 'svelte';
 import { Debug } from '../Debug';
 
 export type PopupHandler = {
-  open?: (rect: {left: number, top: number, width?: number, height?: number}) => void;
+  open?: (rect: {
+    left: number, top: number, width?: number, height?: number,
+    popupWidth?: number, popupHeight?: number
+  }) => void;
+  openAt?: (x: number, y: number, w?: number, h?: number) => void;
   close?: () => void;
   isOpen?: () => boolean;
 };
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
+
 interface Props {
   handler: PopupHandler;
   style?: 'panel' | 'tooltip';
@@ -23,6 +28,7 @@ let {
 }: Props = $props();
 
 let id = $props.id();
+let transformClass = $state('');
 let isOpen = false;
 let tooltip: HTMLElement | undefined = $state();
 
@@ -42,14 +48,28 @@ function computePosition(rect: DOMRect, pos: TooltipPosition): [number, number] 
   }
 }
 
-handler.open = ({left, top, width = 0, height = 0}) => {
+handler.open = ({left, top, width = 0, height = 0, popupHeight, popupWidth}) => {
   Debug.assert(tooltip !== undefined);
   const [x1, y1] = computePosition(new DOMRect(left, top, width, height), position);
   tooltip.style.left = `${Math.round(x1)}px`;
   tooltip.style.top = `${Math.round(y1)}px`;
+  tooltip.style.width = popupWidth ? `${popupWidth}px` : '';
+  tooltip.style.height = popupHeight ? `${popupHeight}px` : '';
+  transformClass = position;
   tooltip.showPopover();
   isOpen = true;
 };
+
+handler.openAt = (x, y, w, h) => {
+  Debug.assert(tooltip !== undefined);
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y}px`;
+  tooltip.style.width = w ? `${w}px` : '';
+  tooltip.style.height = h ? `${h}px` : '';
+  transformClass = '';
+  tooltip.showPopover();
+  isOpen = true;
+}
 
 handler.close = () => {
   Debug.assert(tooltip !== undefined);
@@ -136,7 +156,7 @@ handler.isOpen = () => isOpen;
   style="max-width: {maxWidth};"
   role="tooltip"
   id={`${id}-tooltip`}
-  class='popup {style} {position}'
+  class='popup {style} {transformClass}'
 >
   {@render children?.()}
 </span>

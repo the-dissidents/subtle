@@ -1,5 +1,5 @@
+import Color from "colorjs.io";
 import { Basic } from "../Basic";
-import { CSSColors, parseCSSColor } from "../colorparser";
 import { Debug } from "../Debug";
 import { DeserializationError } from "../Serialization";
 import { AlignMode, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser, type SubtitleStyle, type SubtitleWriter } from "./Subtitles.svelte";
@@ -192,7 +192,7 @@ export class ASSParser implements SubtitleParser {
                 if (!isNaN(n) && f(n) !== false) return;
                 this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
-            const color = (field: string, f: (x: string) => boolean | void) => {
+            const color = (field: string, f: (x: Color) => boolean | void) => {
                 if (!styleFieldMap!.has(field)) return;
                 const value = items[styleFieldMap.get(field)!];
                 const color = fromASSColor(value);
@@ -507,14 +507,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
 }
 
 // &HAABBGGRR
-export function toASSColor(str: string) {
-    let rgba = parseCSSColor(str);
-    if (!rgba) return '&H00FFFFFF';
+export function toASSColor(orginal: Color) {
+    const c = orginal.toGamut();
     return '&H' 
-        + ((1 - rgba[3]) * 255).toString(16).toUpperCase().padStart(2, '0')
-        + rgba[2].toString(16).toUpperCase().padStart(2, '0')
-        + rgba[1].toString(16).toUpperCase().padStart(2, '0')
-        + rgba[0].toString(16).toUpperCase().padStart(2, '0');
+        + ((1 - (c.a ?? 1)) * 255).toString(16).toUpperCase().padStart(2, '0')
+        + (c.b * 255).toString(16).toUpperCase().padStart(2, '0')
+        + (c.g * 255).toString(16).toUpperCase().padStart(2, '0')
+        + (c.r * 255).toString(16).toUpperCase().padStart(2, '0');
 }
 
 export function fromASSColor(str: string) {
@@ -528,12 +527,7 @@ export function fromASSColor(str: string) {
         Number.parseInt(str.slice(2, 4), 16)];
     if ([r, g, b, a].some((x) => Number.isNaN(x))) return null;
 
-    let cssColor = [...CSSColors.entries()].find(
-        ([_k, [_r, _g, _b, _a]]) => _r == r && _g == g && _b == b && _a == a);
-    if (cssColor !== undefined)
-        return cssColor[0];
-    else
-        return `rgba(${r}, ${g}, ${b}, ${a})`;
+    return new Color(`rgb(${r} ${g} ${b} / ${a / 255})`);
 }
 
 function getASSFormatFieldMap(section: string) {

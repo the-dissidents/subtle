@@ -270,15 +270,15 @@ async function contextMenu() {
           <tr>
             <td>{$_('style.text-color')}</td>
             <td>
-              <Colorpicker color={$style.color} 
-                onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
+              <Colorpicker bind:color={$style.color} 
+                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
             </td>
           </tr>
           <tr>
             <td>{$_('style.line-color')}</td>
             <td>
-              <Colorpicker bind:color={$style.color} 
-                onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
+              <Colorpicker bind:color={$style.outlineColor} 
+                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
             </td>
           </tr>
           <tr>
