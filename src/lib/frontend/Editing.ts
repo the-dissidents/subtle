@@ -38,7 +38,7 @@ export enum KeepInViewMode {
 
 export function getSelectMode(ev: MouseEvent | KeyboardEvent) {
     if (ev.shiftKey) return SelectMode.Sequence;
-    if (ev.getModifierState(Basic.ctrlKey())) return SelectMode.Multiple;
+    if (ev.getModifierState(Basic.ctrlKey)) return SelectMode.Multiple;
     return SelectMode.Single;
 }
 

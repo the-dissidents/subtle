@@ -3,11 +3,20 @@ console.info('Basic loading');
 import { path } from "@tauri-apps/api";
 import * as os from "@tauri-apps/plugin-os";
 import * as fs from "@tauri-apps/plugin-fs";
+import { getVersion } from "@tauri-apps/api/app";
+
+let version = '?';
+getVersion().then((x) => version = x);
+
+const osType = os.type(),
+      pathSeparator = path.sep(),
+      ctrlKey = os.type() == 'macos' ? 'Meta' : 'Control';
 
 export const Basic = {
-    OSType: os.type(),
-    pathSeparator: path.sep(),
-    ctrlKey: () => Basic.OSType == 'macos' ? 'Meta' : 'Control',
+    get version() { return version; },
+    get osType() { return osType; },
+    get pathSeparator() { return pathSeparator; },
+    get ctrlKey() { return ctrlKey; },
 
     approx(a: number, b: number, d = 0.0001) {
         return Math.abs(a - b) < d;
@@ -36,19 +45,6 @@ export const Basic = {
      */
     wait(n: number) {
         return new Promise<void>((resolve) => setTimeout(() => resolve(), n));
-    },
-
-    /**
-     * @deprecated This will not work correctly. Use `Mutex` instead!
-     */
-    waitUntil(cond: () => boolean): Promise<void> {
-        return new Promise((resolve) => {
-            const wait = () => {
-                if (cond()) resolve();
-                else setTimeout(wait, 1);
-            };
-            wait();
-        });
     },
 
     parseTimestamp: (t: string) => {

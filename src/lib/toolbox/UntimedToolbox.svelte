@@ -177,7 +177,7 @@ function clear() {
 <svelte:document 
   onkeydown={(ev) => {
     if (fuzzy.enabled) {
-      if (ev.getModifierState(Basic.ctrlKey()) || ev.altKey) return;
+      if (ev.getModifierState(Basic.ctrlKey) || ev.altKey) return;
       if (Frontend.modalOpenCounter > 0) return;
       if (document.activeElement !== textarea && Frontend.getUIFocus() !== 'Table') return;
 

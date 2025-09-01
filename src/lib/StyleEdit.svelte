@@ -288,6 +288,13 @@ async function contextMenu() {
             </td>
           </tr>
           <tr>
+            <td>{$_('style.shadow-color')}</td>
+            <td>
+              <Colorpicker bind:color={$style.shadowColor} 
+                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow-color'))}/>
+            </td>
+          </tr>
+          <tr>
             <td>{$_('style.shadow')}</td>
             <td><NumberInput width="100%" bind:value={$style.shadow}
               onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow'))}/>

@@ -49,6 +49,7 @@ const ZStyleBase = z.object({
   color:        z._default(ZColor, new Color('white')),
   outlineColor: z._default(ZColor, new Color('black')),
   outline:      z._default(z.number().check(z.gte(0)), 1),
+  shadowColor:  z._default(ZColor, new Color('black')),
   shadow:       z._default(z.number().check(z.gte(0)), 0),
   styles: z.object({
     bold:          z._default(z.boolean(), false),

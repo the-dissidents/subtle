@@ -217,7 +217,7 @@ export class SubtitleRenderer {
             if (isRight(style.alignment)) ctx.textAlign = 'right';
     
             ctx.font = styleFonts.get(style)!;
-            ctx.fillStyle = style.color || 'white';
+            ctx.fillStyle = style.color.toString();
 
             const textWidth = width - this.#hMargin * 2 - 
                 (style.margin.left + style.margin.right) * this.#scale;
@@ -247,7 +247,7 @@ export class SubtitleRenderer {
                     ctx.lineWidth = 1;
                     ctx.stroke();
                     if (style.outline) {
-                        ctx.strokeStyle = style.outlineColor || 'black';
+                        ctx.strokeStyle = style.outlineColor.toString();
                         ctx.lineWidth = style.outline * this.#scale;
                         ctx.strokeText(line, x, newBox.y + newBox.diffy);
                     }
@@ -256,6 +256,7 @@ export class SubtitleRenderer {
 
                 boxes.push({
                     ...newBox,
+                    scale: this.#scale,
                     ascent: newBox.diffy,
                     text: line, style,
                     font: styleFonts.get(style)!

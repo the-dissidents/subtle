@@ -75,9 +75,14 @@ const Filter = {
         !(stackFrame.getFileName()?.endsWith('src/lib/Debug.ts')) 
         && !(stackFrame.getFunctionName()?.includes('StackTrace$$')),
     offline: true
-}
+};
 
 async function stacktrace(from?: Error) {
+    // return {
+    //     file: '...',
+    //     func: '...',
+    //     trace: from?.stack ?? ''
+    // };
     const frames = from 
         ? await StackTrace.fromError(from, Filter) 
         : StackTrace.getSync(Filter);

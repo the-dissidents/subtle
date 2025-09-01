@@ -4,6 +4,7 @@
     w: number, h: number, 
     ascent: number,
     style: SubtitleStyle,
+    scale: number,
     text: string,
     font: string,
   };
@@ -56,6 +57,8 @@
   {@const deco = ((box.style.styles.underline ? 'underline' : '')
                 + (box.style.styles.strikethrough ? ' line-through' : ''))
               || 'none'}
+  {@const outline = box.style.outline / devicePixelRatio * 2 * box.scale}
+  {@const shadow = box.style.shadow / devicePixelRatio * box.scale}
     <div class="box" style="
       left: {box.x}px;
       top: {box.y}px;
@@ -70,13 +73,16 @@
       top: {box.y}px;
       width: {box.w}px;
       height: {box.h}px;
-      color: {box.style.outlineColor || 'black'};
+      color: {box.style.outlineColor};
       font: {box.font};
       font-weight: {bold};
       font-style: {italic};
       text-decoration: {deco};
-      -webkit-text-stroke-width: {box.style.outline / devicePixelRatio * 2}px;
-      -webkit-text-stroke-color: {box.style.outlineColor || 'black'};
+      -webkit-text-stroke-width: {outline}px;
+      -webkit-text-stroke-color: {box.style.outlineColor};
+      {shadow > 0 
+        ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${box.style.shadowColor});` 
+        : ''}
     ">
       {box.text}
     </div>

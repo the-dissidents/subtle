@@ -646,7 +646,7 @@ export class TimelineInput {
       return;
     canvas.style.cursor = 'move';
   
-    const multiselecting = Basic.ctrlKey() == 'Meta' ? e.metaKey : e.ctrlKey;
+    const multiselecting = Basic.ctrlKey == 'Meta' ? e.metaKey : e.ctrlKey;
     const resizeArea = TimelineConfig.data.dragResizeArea;
     const seamArea = TimelineConfig.data.dragSeamArea;
 
@@ -787,7 +787,7 @@ export class TimelineInput {
       } else if (e0.button == 0) {
         // left-clicked on nothing
         if (underMouse.length == 0) {
-          if (!e0.getModifierState(Basic.ctrlKey())) {
+          if (!e0.getModifierState(Basic.ctrlKey)) {
             // clear selection
             Editing.clearSelection(ChangeCause.Timeline);
             this.selection.clear();
@@ -808,7 +808,7 @@ export class TimelineInput {
         let afterEnd = () => {};
         // left-clicked on something
         // renew selection
-        if (e0.getModifierState(Basic.ctrlKey())) {
+        if (e0.getModifierState(Basic.ctrlKey)) {
           // multiple select. Only the first entry counts
           if (!this.selection.has(underMouse[0])) {
             this.selection.add(underMouse[0]);
