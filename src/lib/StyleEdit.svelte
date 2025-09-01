@@ -283,7 +283,7 @@ async function contextMenu() {
           </tr>
           <tr>
             <td>{$_('style.line-size')}</td>
-            <td><NumberInput width="100%" bind:value={$style.outline}
+            <td><NumberInput width="100%" bind:value={$style.outline} min='0'
               onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-size'))}/>
             </td>
           </tr>
@@ -296,7 +296,7 @@ async function contextMenu() {
           </tr>
           <tr>
             <td>{$_('style.shadow')}</td>
-            <td><NumberInput width="100%" bind:value={$style.shadow}
+            <td><NumberInput width="100%" bind:value={$style.shadow} min='0'
               onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow'))}/>
             </td>
           </tr>

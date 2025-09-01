@@ -86,10 +86,12 @@ export type SubtitleStyle = z.infer<typeof ZStyleBase> & {
     validator: MetricFilter | null
 };
 
+export type SerializedSubtitleStyle = ReturnType<typeof serializeSubtitleStyle>;
+
 export function serializeSubtitleStyle(s: SubtitleStyle) {
     return {
         ...z.encode(ZStyleBase, s),
-        validator: structuredClone(s.validator)
+        validator: $state.snapshot(s.validator)
     }
 }
 
@@ -103,7 +105,7 @@ export function cloneSubtitleStyle(s: SubtitleStyle): SubtitleStyle {
     let x = structuredClone(z.encode(ZStyleBase, s));
     return {
         ...z.decode(ZStyleBase, x),
-        validator: structuredClone(s.validator)
+        validator: $state.snapshot(s.validator)
     };
 }
 
