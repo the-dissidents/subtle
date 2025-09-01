@@ -1,7 +1,6 @@
 <script lang="ts">
 import { getContext, type Snippet } from "svelte";
 import { TabAPIContext, type TabAPI, type TabPageData } from "./TabView.svelte";
-import { writable } from "svelte/store";
 
 interface Props {
   id: string;
@@ -29,6 +28,7 @@ const selection = tabApi.selected();
   overflow-x: hidden;
   overflow-y: auto;
   display: none;
+  scrollbar-gutter: stable;
 }
 .active {
   display: block;

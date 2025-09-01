@@ -25,7 +25,7 @@ export type Snapshot = {
     change: ChangeType,
     saved: boolean,
     description: string
-}
+};
 
 export enum ChangeCause {
     UIForm,
@@ -44,7 +44,6 @@ export enum ChangeType {
     General,   // TODO: this is unclear
     Metadata
 }
-
 
 class MemorizedStyles extends Memorized<SerializedSubtitleStyle[], SubtitleStyle[]> {
   constructor(protected key: string) {

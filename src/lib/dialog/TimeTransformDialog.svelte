@@ -21,17 +21,18 @@ let {
 
 // constants
 let selectionStart = $state(0),
-    selectionEnd = $state(0);
+    selectionEnd   = $state(0);
   
 // variables
-let offset  = $state(0),
+let offset       = $state(0),
     fpsBefore    = $state(1),
     fpsAfter     = $state(1),
     transStart   = $state(0),
     transEnd     = $state(0);
 
 // options
-let check = $state(false);
+let modifySince = $state(false);
+let keepDuration = $state(true);
 let shiftOption: 'forward' | 'backward' = $state('forward');
 let customAnchor = $state(0);
 let anchorOption: 'zero' | 'start' | 'end' | 'custom' = $state('start');
@@ -48,7 +49,7 @@ handler.showModal = async () => {
     // t = t0 * scale + anchor + offset - anchor * scale
     selection: Editing.getSelection(),
     offset: cpAnchor + cpOffset - cpAnchor * cpScale,
-    modifySince: check,
+    modifySince,
     scale: cpScale
   };
 }
@@ -89,15 +90,18 @@ function fromTransformed() {
   fpsBefore = 1;
   fpsAfter = scale;
 
-  let offset = transStart - cpAnchor - (selectionStart - cpAnchor) * scale;
-  offset = Math.abs(offset);
-  shiftOption = offset < 0 ? 'backward' : 'forward';
+  const signedOffset = transStart - cpAnchor - (selectionStart - cpAnchor) * scale;
+  shiftOption = signedOffset < 0 ? 'backward' : 'forward';
+  offset = Math.abs(signedOffset);
 }
 </script>
 
 <DialogBase handler={inner}>
   <table class='config'>
     <tbody>
+      <tr>
+        <td colspan="2"><h5>平移</h5></td>
+      </tr>
       <tr>
         <td>{$_('transformdialog.shift-times')}</td>
         <td>
@@ -112,13 +116,12 @@ function fromTransformed() {
             bind:timestamp={offset}
             oninput={() => toTransformed()}/></label>
           <br/>
-          <label><input type='checkbox' bind:checked={check}/>
+          <label><input type='checkbox' bind:checked={modifySince}/>
             {$_('transformdialog.modify-everything-after-this')}</label><br/>
         </td>
       </tr>
       <tr>
-        <td></td>
-        <td><hr/></td>
+        <td colspan="2"><h5>缩放</h5></td>
       </tr>
       <tr>
         <td>{$_('transformdialog.fps-before-after')}</td>
@@ -154,23 +157,41 @@ function fromTransformed() {
         </td>
       </tr>
       <tr>
-        <td></td>
-        <td><hr/></td>
+        <td colspan="2"><h5>{$_('transformdialog.range')}</h5></td>
       </tr>
       <tr>
-        <td>{$_('transformdialog.range')}</td>
-        <td>
-          {Basic.formatTimestamp(selectionStart)}
+        <td colspan="2" style="text-align:start;font-size:100%;padding-left:5px">
+          <span class='pre'>{Basic.formatTimestamp(selectionStart)}</span>
           →
           <TimestampInput bind:timestamp={transStart}
-            oninput={() => fromTransformed()}/>
+            oninput={() => {
+              if (keepDuration)
+                transEnd = transStart + (selectionEnd - selectionStart) * cpScale;
+              fromTransformed();
+            }}/>
           <br/>
-          {Basic.formatTimestamp(selectionEnd)}
+          <span class='pre'>{Basic.formatTimestamp(selectionEnd)}</span>
           →
           <TimestampInput bind:timestamp={transEnd}
-            oninput={() => fromTransformed()}/>
+            oninput={() => {
+              if (keepDuration)
+                transStart = transEnd - (selectionEnd - selectionStart) * cpScale;
+              fromTransformed();
+            }}/>
+          <br/>
+          <label>
+            <input type='checkbox' bind:checked={keepDuration}>
+            保持时长
+          </label>
         </td>
       </tr>
     </tbody>
   </table>
 </DialogBase>
+
+<style>
+  .pre {
+    font-family: var(--monospaceFontFamily);
+    font-size: 95%;
+  }
+</style>

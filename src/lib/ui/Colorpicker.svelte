@@ -48,10 +48,13 @@
     if (match) {
       const newColor = new Color(hex);
       newColor.alpha = alpha;
+      changed = true;
       updateFromColor(newColor);
       computeBoundaries();
       oninput?.(color);
-    } else updateFromValues();
+    } else {
+      updateFromValues();
+    }
   }
 
   function computeBoundaries() {
@@ -62,8 +65,9 @@
 
   function updateFromValues() {
     color = new Color(colorModes[mode](value0, value1, value2, alpha));
-    oninput?.(color);
+    changed = true;
     updateTexts();
+    oninput?.(color);
   }
 
   function updateFromColor(c: Color) {
@@ -178,6 +182,8 @@
       range2: Boundary | null = $state([0, 1, false]),
       hex = $state(''),
       outOfGamut = $state(false);
+
+  let changed = false;
   
   let popupHandler: PopupHandler = {};
 </script>
@@ -188,12 +194,18 @@
   onclick={(e) => {
     const self = e.currentTarget;
     const rect = self.getBoundingClientRect();
+    changed = false;
     popupHandler.openAt?.(rect.left, rect.bottom, Math.max(300, rect.width));
   }}
 ></button>
 
 <Popup handler={popupHandler} maxWidth="none"
-       onclose={() => onchange?.(color)}>
+  onclose={() => {
+    if (changed) {
+      changed = false;
+      onchange?.(color);
+    }
+  }}>
   <div class="hlayout">
     <select value={mode} onchange={(ev) => convertMode(ev.currentTarget.value as ColorMode)}>
       {#each Object.keys(colorModes) as m}
