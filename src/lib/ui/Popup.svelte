@@ -19,12 +19,13 @@ interface Props {
   style?: 'panel' | 'tooltip';
   maxWidth?: string;
   position?: TooltipPosition;
+  onclose?: () => void;
   children?: Snippet;
 }
 
 let { 
   position = 'top', style = 'panel', maxWidth = '200px',
-  handler = $bindable(), children
+  handler = $bindable(), onclose, children
 }: Props = $props();
 
 let id = $props.id();
@@ -57,7 +58,6 @@ handler.open = ({left, top, width = 0, height = 0, popupHeight, popupWidth}) => 
   tooltip.style.height = popupHeight ? `${popupHeight}px` : '';
   transformClass = position;
   tooltip.showPopover();
-  isOpen = true;
 };
 
 handler.openAt = (x, y, w, h) => {
@@ -68,14 +68,12 @@ handler.openAt = (x, y, w, h) => {
   tooltip.style.height = h ? `${h}px` : '';
   transformClass = '';
   tooltip.showPopover();
-  isOpen = true;
 }
 
 handler.close = () => {
   Debug.assert(tooltip !== undefined);
   if (!isOpen) return Debug.early('popup already open');
   tooltip.hidePopover();
-  isOpen = false;
 };
 
 handler.isOpen = () => isOpen;
@@ -157,6 +155,10 @@ handler.isOpen = () => isOpen;
   role="tooltip"
   id={`${id}-tooltip`}
   class='popup {style} {transformClass}'
+  ontoggle={(e) => {
+    isOpen = e.newState == 'open';
+    if (!isOpen) onclose?.();
+  }}
 >
   {@render children?.()}
 </span>

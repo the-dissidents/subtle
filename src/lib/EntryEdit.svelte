@@ -29,7 +29,6 @@ const me = {};
 
 Source.onSubtitlesChanged.bind(me, (type: ChangeType) => {
   editFormUpdateCounter++;
-  Debug.debug(`changed - ${ChangeType[type]}`);
 });
 
 Editing.onSelectionChanged.bind(me, () => {

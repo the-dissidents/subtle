@@ -2,7 +2,7 @@
   import Color from "colorjs.io";
   import { untrack } from "svelte";
   import Popup, { type PopupHandler } from "./Popup.svelte";
-    import NumberInput from "./NumberInput.svelte";
+  import NumberInput from "./NumberInput.svelte";
 
   type Boundary = readonly [number, number, boolean];
 
@@ -51,7 +51,6 @@
       updateFromColor(newColor);
       computeBoundaries();
       oninput?.(color);
-      onchange?.(color);
     } else updateFromValues();
   }
 
@@ -193,7 +192,8 @@
   }}
 ></button>
 
-<Popup handler={popupHandler} maxWidth="none">
+<Popup handler={popupHandler} maxWidth="none"
+       onclose={() => onchange?.(color)}>
   <div class="hlayout">
     <select value={mode} onchange={(ev) => convertMode(ev.currentTarget.value as ColorMode)}>
       {#each Object.keys(colorModes) as m}
@@ -215,7 +215,6 @@
           </span>
           <input type="range" bind:value={value0}
             min="0" max={bounds[mode][0]} step="0.001"
-            onchange={() => onchange?.(color)}
             oninput={() => {
               updateFromValues();
               range1 = getGamutBoundary(bounds[mode][1], (x) => [value0, x, value2]);
@@ -223,8 +222,7 @@
             }} />
         </div>
         <NumberInput bind:value={value0} width="10ch"
-          min="0" max={bounds[mode][0]} step="0.001"
-          onchange={() => onchange?.(color)} />
+          min="0" max={bounds[mode][0]} step="0.001" />
       </div>
 
       <div class="value-group">
@@ -238,7 +236,6 @@
           </span>
           <input type="range" bind:value={value1}
             min="0" max={bounds[mode][1]} step="0.001"
-            onchange={() => onchange?.(color)}
             oninput={() => {
               updateFromValues();
               range0 = getGamutBoundary(bounds[mode][0], (x) => [x, value1, value2]);
@@ -246,8 +243,7 @@
             }} />
         </div>
         <NumberInput bind:value={value1} width="10ch"
-          min="0" max={bounds[mode][1]} step="0.001"
-          onchange={() => onchange?.(color)} />
+          min="0" max={bounds[mode][1]} step="0.001" />
       </div>
 
       <div class="value-group">
@@ -261,7 +257,6 @@
           </span>
           <input type="range" bind:value={value2}
             min="0" max={bounds[mode][2]} step="0.001"
-            onchange={() => onchange?.(color)}
             oninput={() => {
               updateFromValues();
               range0 = getGamutBoundary(bounds[mode][0], (x) => [x, value1, value2]);
@@ -269,8 +264,7 @@
             }} />
         </div>
         <NumberInput bind:value={value2} width="10ch"
-          min="0" max={bounds[mode][2]} step="0.001"
-          onchange={() => onchange?.(color)} />
+          min="0" max={bounds[mode][2]} step="0.001" />
       </div>
 
       <div class="value-group">
@@ -284,7 +278,6 @@
           </span>
           <input type="range" bind:value={alpha}
             min="0" max="1" step="0.001"
-            onchange={() => onchange?.(color)}
             oninput={() => {
               updateFromValues();
             }}

@@ -109,7 +109,6 @@ export const Debug: {
     filterLevel: LogLevelFilter.Debug,
     redirectNative: true,
     async setPersistentFilterLevel(level: LogLevelFilter) {
-        this.trace('set persistent filter level', LogLevelFilter[level]);
         await invoke('set_log_filter_level', { u: level });
     },
     async init() {
