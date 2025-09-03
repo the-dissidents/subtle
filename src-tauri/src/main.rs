@@ -30,6 +30,7 @@ fn main() {
 
     let ctx = tauri::generate_context!();
     tauri::Builder::default()
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -46,9 +47,10 @@ fn main() {
                     ));
                 })
                 .level(log::LevelFilter::Trace)
-                .filter(|metadata| 
+                .filter(|metadata| {
                     metadata.level() <= *redirect_log::LOG_LEVEL.read().unwrap()
-                 && !metadata.target().starts_with("tao::"))
+                        && !metadata.target().starts_with("tao::")
+                })
                 .clear_targets()
                 .target(tauri_plugin_log::Target::new(
                     tauri_plugin_log::TargetKind::Stderr,
@@ -127,8 +129,9 @@ async fn init_complete(
     if state_lock.backend_task && state_lock.frontend_task {
         // Setup is complete, we can close the splashscreen
         // and unhide the main window!
-        let Some(splash_window) = 
-            app.get_webview_window("splashscreen") else { return Ok(()) };
+        let Some(splash_window) = app.get_webview_window("splashscreen") else {
+            return Ok(());
+        };
         let main_window = app.get_webview_window("main").unwrap();
         splash_window.close().unwrap();
         main_window.show().unwrap();

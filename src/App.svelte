@@ -54,8 +54,8 @@ import { Basic } from './lib/Basic';
 import { onMount } from 'svelte';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
+import { restoreStateCurrent, saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state';
 
 import { DialogCommands, Dialogs } from './lib/frontend/Dialogs';
 import { Interface, InterfaceCommands, MEDIA_EXTENSIONS } from './lib/frontend/Interface';
@@ -164,20 +164,13 @@ appWindow.onCloseRequested(async (ev) => {
     return;
   }
 
-  const factor = await appWindow.scaleFactor();
-  const size = (await appWindow.innerSize()).toLogical(factor);
-  const pos = (await appWindow.position()).toLogical(factor);
-  if (size.width > 500 && size.height > 500) {
-    $windowW = size.width;
-    $windowH = size.height;
-  }
-  [$windowX, $windowY] = [pos.x, pos.y];
   $videoH = videoCanvasContainer!.clientHeight;
   $timelineH = timelineCanvasContainer!.clientHeight;
   $editorH = editTable!.clientHeight;
   $leftPaneW = leftPane!.clientWidth;
   await Memorized.save();
   await Interface.savePublicConfig();
+  await saveWindowState(StateFlags.ALL);
 });
 
 appWindow.onDragDropEvent(async (ev) => {
@@ -194,20 +187,14 @@ appWindow.onDragDropEvent(async (ev) => {
   }
 });
 
-let windowW = Memorized.$('windowW', z.number(), 1000);
-let windowH = Memorized.$('windowH', z.number(), 800);
-let windowX = Memorized.$('windowX', z.number(), 200);
-let windowY = Memorized.$('windowY', z.number(), 200);
 let editorH = Memorized.$('editorH', z.number(), 125);
 let timelineH = Memorized.$('timelineH', z.number(), 150);
 let leftPaneW = Memorized.$('leftPaneW', z.number(), 300);
 let videoH = Memorized.$('videoH', z.number(), 200);
 
 Memorized.init();
-Memorized.onInitialize(() => {
-  let w = $windowW, h = $windowH, x = $windowX, y = $windowY;
-  appWindow.setPosition(new LogicalPosition(x, y));
-  appWindow.setSize(new LogicalSize(Math.max(w, 500), Math.max(h, 500)));
+Memorized.onInitialize(async () => {
+  await restoreStateCurrent(StateFlags.ALL);
   videoCanvasContainer!.style.height = `${$videoH}px`;
   timelineCanvasContainer!.style.height = `${$timelineH}px`;
   editTable!.style.height = `${$editorH}px`;

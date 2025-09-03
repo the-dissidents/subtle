@@ -45,6 +45,9 @@ ffmpeg-sys-next = { version = "7.1.0", features = [] }
 [target.'cfg(not(windows))'.dependencies]
 pprof = { version = "0.14.0", features = ["flamegraph", "frame-pointer"] }
 
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-window-state = "2"
+
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
