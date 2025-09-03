@@ -1,5 +1,4 @@
 import { CanvasManager } from "../../CanvasManager";
-import { InterfaceConfig } from "../../config/Groups";
 import { Metrics } from "../../core/Filter";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { hook } from "../../details/Hook.svelte";
@@ -10,15 +9,16 @@ import { TableConfig } from "./Config";
 import { TableLayout } from "./Layout.svelte";
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
-  return e1 && e2 && e1.start < e2.end && e1.end > e2.start;
+    const EPSILON = 0.002;
+    return e1 && e2 && e1.start < e2.end - EPSILON && e1.end > e2.start + EPSILON;
 }
 
 const textColor           = $derived(theme.isDark ? '#fff'          : '#000');
 const gridColor           = $derived(theme.isDark ? '#444'          : '#bbb');
 const gridMajorColor      = $derived(theme.isDark ? '#666'          : '#999');
 const headerBackground    = $derived(theme.isDark ? '#555'          : '#ddd');
-const overlapColor        = $derived(theme.isDark ? 'lightpink'     : 'crimson');
-const focusBackground     = $derived(theme.isDark ? 'darkslategray' : 'lightblue');
+const overlapColor        = $derived(theme.isDark ? 'lightpink'       : 'crimson');
+const focusBackground     = $derived(theme.isDark ? 'darkslategray'   : 'lightblue');
 const selectedBackground  = $derived(theme.isDark ? '#444'          : '#e8e8e8');
 const errorBackground     = $derived(theme.isDark ? '#aa335599'     : '#eedd0099');
 
@@ -52,10 +52,10 @@ export class TableRenderer {
         const [width, height] = this.manager.size;
 
         // table
-        let selection = new Set(Editing.getSelection());
-        let focused = Editing.getFocusedEntry();
+        const selection = new Set(Editing.getSelection());
+        const focused = Editing.getFocusedEntry();
         let i = 0;
-        for (const {entry, line, height: lh, texts} of this.layout.lines) {
+        for (const { entry, line, height: lh, texts } of this.layout.lines) {
             i += 1;
             if ((line + lh) * this.layout.lineHeight < sy) continue;
             if (line * this.layout.lineHeight > sy + width) break;
@@ -64,71 +64,73 @@ export class TableRenderer {
             const y = line * this.layout.lineHeight + this.layout.headerHeight;
             const h = lh * this.layout.lineHeight;
             if (entry == focused) {
-            cxt.fillStyle = focusBackground;
-            cxt.fillRect(0, y+1, width + sx, h-2);
+                cxt.fillStyle = focusBackground;
+                cxt.fillRect(0, y+1, width + sx, h-2);
             } else if (selection.has(entry)) {
-            cxt.fillStyle = selectedBackground;
-            cxt.fillRect(0, y+1, width + sx, h-2);
+                cxt.fillStyle = selectedBackground;
+                cxt.fillRect(0, y+1, width + sx, h-2);
             }
 
             // label
             if (entry.label !== 'none') {
-            cxt.fillStyle = LabelColor(entry.label);
-            cxt.fillRect(0, y, this.layout.indexColumnLayout.width, h);
+                cxt.fillStyle = LabelColor(entry.label);
+                cxt.fillRect(0, y, this.layout.indexColumnLayout.width, h);
             }
 
             // texts
-            const textFillStyle = 
-                (entry !== focused 
-                    && focused instanceof SubtitleEntry 
+            const textFillStyle =
+                (entry !== focused
+                    && focused instanceof SubtitleEntry
                     && overlappingTime(focused, entry)) ? overlapColor : textColor;
             cxt.strokeStyle = gridColor;
-            let y0 = y;
-            
-            let j = 0;
+
             // lines; in the order of Source.subs.styles
-            for (const {style, failed, height} of texts) {
-            const xpos = this.layout.channelColumns[0].layout!.position;
-            
-            // background for failed validation
-            if (failed.length > 0) {
-                cxt.fillStyle = errorBackground;
-                cxt.fillRect(xpos, y0 + 1, width + sx - xpos, height * this.layout.lineHeight - 2);
-            }
+            let y0 = y;
+            let j = 0;
+            for (const { style, failed, height } of texts) {
+                const xpos = this.layout.channelColumns[0].layout!.position;
 
-            for (const col of this.layout.channelColumns) {
-                const value = Metrics[col.metric].stringValue(entry, style);
-                let splitLines = value.split('\n');
-                cxt.textBaseline = 'middle';
-                cxt.textAlign = col.layout!.align;
-                cxt.fillStyle = textFillStyle;
-                splitLines.forEach((x, i) => 
-                cxt.fillText(x, col.layout!.textX, y0 + (i + 0.5) * this.layout.lineHeight));
-            }
+                // background for failed validation
+                if (failed.length > 0) {
+                    cxt.fillStyle = errorBackground;
+                    cxt.fillRect(xpos, y0 + 1, 
+                        width + sx - xpos, height * this.layout.lineHeight - 2);
+                }
 
-            // inner horizontal lines
-            y0 += height * this.layout.lineHeight;
-            if (j != entry.texts.size - 1)
-                drawLine(xpos, y0, width + sx, y0);
-            j++;
+                for (const col of this.layout.channelColumns) {
+                    const value = Metrics[col.metric].stringValue(entry, style);
+                    let splitLines = value.split('\n');
+                    cxt.textBaseline = 'middle';
+                    cxt.textAlign = col.layout!.align;
+                    cxt.fillStyle = textFillStyle;
+                    splitLines.forEach((x, i) => cxt.fillText(x, 
+                        col.layout!.textX, 
+                        y0 + (i + 0.5) * this.layout.lineHeight));
+                }
+
+                // inner horizontal lines
+                y0 += height * this.layout.lineHeight;
+                if (j != entry.texts.size - 1)
+                    drawLine(xpos, y0, width + sx, y0);
+                j++;
             }
 
             // entry cells
             for (const col of this.layout.entryColumns) {
-            const value = Metrics[col.metric].stringValue(entry, Source.subs.defaultStyle);
-            let splitLines = value.split('\n');
-            cxt.textBaseline = 'middle';
-            cxt.textAlign = col.layout!.align;
-            cxt.fillStyle = textFillStyle;
-            splitLines.forEach((line, i) => 
-                cxt.fillText(line, col.layout!.textX, y + (i + 0.5) * this.layout.lineHeight));
+                const value = Metrics[col.metric].stringValue(entry, Source.subs.defaultStyle);
+                let splitLines = value.split('\n');
+                cxt.textBaseline = 'middle';
+                cxt.textAlign = col.layout!.align;
+                cxt.fillStyle = textFillStyle;
+                splitLines.forEach((line, i) =>
+                    cxt.fillText(line, col.layout!.textX, y + (i + 0.5) * this.layout.lineHeight));
             }
 
             // index
             cxt.textAlign = 'end';
             cxt.fillStyle = textFillStyle;
-            cxt.fillText(i.toString(), 
-                this.layout.indexColumnLayout.width - this.layout.cellPadding, 
+            cxt.fillText(i.toString(),
+                this.layout.indexColumnLayout.width - this.layout.cellPadding,
                 y + 0.5 * this.layout.lineHeight);
 
             // outer horizontal line
@@ -140,17 +142,17 @@ export class TableRenderer {
             // virtual entry
             const lastLine = this.layout.lines.at(-1);
             const y = (lastLine 
-                ? (lastLine.line + lastLine.height) * this.layout.lineHeight 
-                : 0) + this.layout.headerHeight;
+                        ? (lastLine.line + lastLine.height) * this.layout.lineHeight 
+                        : 0) + this.layout.headerHeight;
             if (focused == 'virtual') {
-            cxt.fillStyle = focusBackground;
-            cxt.fillRect(0, y, width + sx, this.layout.lineHeight);
+                cxt.fillStyle = focusBackground;
+                cxt.fillRect(0, y, width + sx, this.layout.lineHeight);
             }
             cxt.fillStyle = textColor;
             cxt.textBaseline = 'middle';
             cxt.textAlign = 'end';
-            cxt.fillText(`*`, 
-                this.layout.indexColumnLayout.width - this.layout.cellPadding, 
+            cxt.fillText(`*`,
+                this.layout.indexColumnLayout.width - this.layout.cellPadding,
                 y + this.layout.lineHeight * 0.5);
         }
 
@@ -164,12 +166,12 @@ export class TableRenderer {
 
         cxt.shadowColor = 'transparent';
         cxt.strokeStyle = gridMajorColor;
-        drawLine(0, this.manager.scroll[1] + this.layout.headerHeight, 
+        drawLine(0, this.manager.scroll[1] + this.layout.headerHeight,
             width + sx, this.manager.scroll[1] + this.layout.headerHeight);
 
         cxt.fillStyle = textColor;
-        const cols = [this.layout.indexColumnLayout, 
-            ...this.layout.entryColumns.map((x) => x.layout!), 
+        const cols = [this.layout.indexColumnLayout,
+            ...this.layout.entryColumns.map((x) => x.layout!),
             ...this.layout.channelColumns.map((x) => x.layout!)];
         for (const col of cols) {
             cxt.textBaseline = 'middle';
@@ -180,11 +182,11 @@ export class TableRenderer {
         // vertical lines
         cxt.strokeStyle = gridMajorColor;
         const maxY = this.manager.contentRect.b;
-        drawLine(this.layout.indexColumnLayout.width, sy, 
-            this.layout.indexColumnLayout.width, 
+        drawLine(this.layout.indexColumnLayout.width, sy,
+            this.layout.indexColumnLayout.width,
             Math.min(sy + height, maxY - this.manager.scrollerSize));
 
-        const bottom = Math.min(sy + height, 
+        const bottom = Math.min(sy + height,
             maxY - this.layout.lineHeight - this.manager.scrollerSize);
         cols.slice(1).map((x) => drawLine(x.position, sy, x.position, bottom));
 

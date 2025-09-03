@@ -31,11 +31,14 @@ import { JSONSubtitles } from "../core/JSON.svelte";
 const $_ = unwrapFunctionStore(_);
 
 const IMPORT_FILTERS = () => [
-    { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', 'vtt', 'ssa', 'ass'] },
+    { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', /*'vtt',*/ 'ssa', 'ass'] },
     { name: $_('filter.srt-subtitles'), extensions: ['srt'] },
-    { name: $_('filter.vtt-subtitles'), extensions: ['vtt'] },
+    // { name: $_('filter.vtt-subtitles'), extensions: ['vtt'] },
     { name: $_('filter.ssa-subtitles'), extensions: ['ssa', 'ass'] },
     { name: $_('filter.subtle-archive'), extensions: ['json'] }];
+
+export const MEDIA_EXTENSIONS = 
+    ['avi', 'mp4', 'm4v', 'ts', 'flv', 'webm', 'mkv', 'mov', 'rmvb'];
 
 async function readTextFile(path: string) {
     try {
@@ -166,8 +169,7 @@ export const Interface = {
 
     async askOpenVideo() {
         const selected = await dialog.open({multiple: false, 
-            filters: [{name: $_('filter.video-file'), 
-                extensions: ['avi', 'mp4', 'webm', 'mkv', 'mov']}]});
+            filters: [{name: $_('filter.video-file'), extensions: MEDIA_EXTENSIONS}]});
         if (typeof selected != 'string') return;
         await this.openVideo(selected);
     },

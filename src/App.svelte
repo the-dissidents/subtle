@@ -58,7 +58,7 @@ import { LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
 
 import { DialogCommands, Dialogs } from './lib/frontend/Dialogs';
-import { Interface, InterfaceCommands } from './lib/frontend/Interface';
+import { Interface, InterfaceCommands, MEDIA_EXTENSIONS } from './lib/frontend/Interface';
 import { Playback, PlaybackCommands } from './lib/frontend/Playback';
 import { Source, SourceCommands } from './lib/frontend/Source';
 import { KeybindingManager } from './lib/frontend/Keybinding';
@@ -184,8 +184,13 @@ appWindow.onDragDropEvent(async (ev) => {
   if (ev.payload.type == 'drop') {
     const path = ev.payload.paths.at(0);
     if (!path) return Debug.early('no path in dropped payload');
-    if (!await Interface.warnIfNotSaved()) return;
-    await Interface.openFile(path);
+
+    if (MEDIA_EXTENSIONS.includes(path.split('.').at(-1)!)) {
+      await Interface.openVideo(path);
+    } else {
+      if (!await Interface.warnIfNotSaved()) return;
+      await Interface.openFile(path);
+    }
   }
 });
 
