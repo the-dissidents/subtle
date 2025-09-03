@@ -16,12 +16,18 @@ let {
   disabled = false, 
   onchange, oninput 
 }: Props = $props();
+
 let value = $state('00:00:00.000');
 
 // FIXME: this is useless
 let changed = false;
 
 $effect(() => {
+  if (timestamp < 0) {
+    timestamp = 0;
+    oninput?.(0);
+  }
+
   let newValue = Basic.formatTimestamp(timestamp);
   if (newValue != value) {
     changed = true;

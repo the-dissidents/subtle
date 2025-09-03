@@ -203,13 +203,14 @@ export const Editing = {
     },
 
     submitFocusedEntry() {
-        let focused = this.getFocusedEntry();
-        Debug.assert(focused instanceof SubtitleEntry);
+        const focused = this.getFocusedEntry();
+        Debug.assert(focused instanceof SubtitleEntry, 'focused is not an entry');
         if (!this.editChanged) return;
 
         const style = get(this.focused.style);
         const control = this.focused.control;
-        Debug.assert(style !== null && control !== null);
+        Debug.assert(style !== null, 'focused style is null');
+        Debug.assert(control !== null, 'focused control is null');
         focused.texts.set(style, control.value);
         Source.markChanged(ChangeType.InPlace, $_('c.edit-entry'));
     },

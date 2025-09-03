@@ -16,7 +16,7 @@ import { _ } from 'svelte-i18n';
 import { Debug } from './Debug';
 
 let editFormUpdateCounter = $state(0);
-let editMode = $state(0);
+let editAnchor: 'start' | 'end' = $state('start');
 let keepDuration = $state(false);
 let editingT0 = $state(0);
 let editingT1 = $state(0);
@@ -29,17 +29,15 @@ const me = {};
 
 Source.onSubtitlesChanged.bind(me, (type: ChangeType) => {
   editFormUpdateCounter++;
+  updateForm();
 });
 
 Editing.onSelectionChanged.bind(me, () => {
   editFormUpdateCounter++;
-  let focused = Editing.getFocusedEntry();
+  const focused = Editing.getFocusedEntry();
   if (focused instanceof SubtitleEntry) {
-    editingT0 = focused.start;
-    editingT1 = focused.end;
-    editingDt = editingT1 - editingT0;
-    editingLabel = focused.label;
-    let isEditingNow = Frontend.getUIFocus() == 'EditingField';
+    updateForm();
+    const isEditingNow = Frontend.getUIFocus() == 'EditingField';
     tick().then(() => {
       let col = document.getElementsByClassName('contentarea');
       for (const target of col) {
@@ -49,6 +47,15 @@ Editing.onSelectionChanged.bind(me, () => {
     });
   }
 });
+
+function updateForm() {
+  let focused = Editing.getFocusedEntry();
+  if (!(focused instanceof SubtitleEntry)) return;
+  editingT0 = focused.start;
+  editingT1 = focused.end;
+  editingDt = editingT1 - editingT0;
+  editingLabel = focused.label;
+}
 
 function applyEditForm() {
   let focused = Editing.getFocusedEntry();
@@ -84,10 +91,9 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
 {#key `${editFormUpdateCounter}`}
 <fieldset disabled={!(Editing.getFocusedEntry() instanceof SubtitleEntry)}>
   <span class="hlayout center-items">
-    <select
-      oninput={(ev) => editMode = ev.currentTarget.selectedIndex}>
-      <option>{$_('editbox.anchor-start')}</option>
-      <option>{$_('editbox.anchor-end')}</option>
+    <select bind:value={editAnchor}>
+      <option value="start">{$_('editbox.anchor-start')}</option>
+      <option value="end">{$_('editbox.anchor-end')}</option>
     </select>
     <input type='checkbox' id='keepd' bind:checked={keepDuration}/>
     <label for='keepd'>{$_('editbox.keep-duration')}</label>
@@ -95,20 +101,20 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   <TimestampInput bind:timestamp={editingT0}
     stretch={true}
     oninput={() => {
-      if (editMode == 0 && keepDuration)
+      if (editAnchor == 'start' && keepDuration)
         editingT1 = editingT0 + editingDt;
-      applyEditForm(); 
-      Editing.editChanged = true;}} 
+      applyEditForm();
+    }} 
     onchange={() => 
       Source.markChanged(ChangeType.Times, $_('c.timestamp'))}/>
   <br>
   <TimestampInput bind:timestamp={editingT1}
     stretch={true}
     oninput={() => {
-      if (editMode == 1 && keepDuration)
+      if (editAnchor == 'end' && keepDuration)
         editingT0 = editingT1 - editingDt;
-      applyEditForm(); 
-      Editing.editChanged = true;}} 
+      applyEditForm();
+    }} 
     onchange={() => {
       if (editingT1 < editingT0) editingT1 = editingT0;
       applyEditForm();
@@ -117,12 +123,14 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   <TimestampInput bind:timestamp={editingDt}
     stretch={true}
     oninput={() => {
-      if (editMode == 0)
+      if (editAnchor == 'start')
         editingT1 = editingT0 + editingDt; 
-      else if (editMode == 1)
-        editingT0 = editingT1 - editingDt; 
+      else if (editAnchor == 'end')
+        editingT0 = editingT1 - editingDt;
+      else
+        Debug.never(editAnchor);
       applyEditForm();
-      Editing.editChanged = true;}}
+    }}
     onchange={() => 
       Source.markChanged(ChangeType.Times, $_('c.timestamp'))}/>
   <hr>
