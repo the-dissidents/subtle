@@ -206,6 +206,7 @@ export const KeybindingManager = {
         document.addEventListener('keyup', (ev) => {
             const result = this.processKeyUp(ev);
             // Debug.trace('keyup result:', result);
+            hotkeyWasPressed = false;
             switch (result.type) {
                 case 'deactivate':
                     result.commands.forEach((x) => x.end());
@@ -230,6 +231,7 @@ export const KeybindingManager = {
                 hotkeyWasPressed = true;
             }
             if (hotkeyWasPressed && ev.inputType == 'insertText') {
+                Debug.trace('preventing', ev);
                 ev.preventDefault();
                 hotkeyWasPressed = false;
             }

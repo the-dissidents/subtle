@@ -218,15 +218,15 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
       <tr>
         <td class="vlayout">
           <button 
-            onclick={async () => {
-              const menu = await Menu.new({
-                items: Source.subs.styles.filter((x) => !focused.texts.has(x)).map((x) => ({
-                  text: x.name,
-                  action: () => Editing.insertChannel(x)
-                }))
-              });
-              menu.popup();
-            }}
+            disabled={Source.subs.styles.find((x) => !focused.texts.has(x)) === undefined}
+            onclick={async () => (await Menu.new({
+                items: Source.subs.styles
+                  .filter((x) => !focused.texts.has(x))
+                  .map((x) => ({
+                    text: x.name,
+                    action: () => Editing.insertChannel(x)
+                  }))
+              })).popup()}
           ><PlusIcon />
           </button>
         </td>
