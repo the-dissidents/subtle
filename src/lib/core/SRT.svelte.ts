@@ -115,7 +115,7 @@ export class SRTParser implements SubtitleParser {
     }
 
     #createEntry(start: number, end: number, text: string) {
-        const tagRegex = /<\s*(\w+)(?:\s.+)?>(.+)<\/\1>/g;
+        const tagRegex = /<\s*(\w+)(?:\s.+)?>(.+)<\/\1>/gs;
         const stripped = text.replaceAll(tagRegex, '$2');
         if (stripped !== text) {
             this.#ignoredTags++;
