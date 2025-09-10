@@ -185,7 +185,7 @@ export class TimelineRenderer {
             if (lastGap < 0) lastGap = x;
             // this.layout.requestedSampler = true;
           } else {
-            if (lastGap >= 0) {
+            if (lastGap >= 0 && TimelineConfig.data.showDebug) {
               ctx.fillStyle = PENDING_KEYFRAME_COLOR;
               ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
               lastGap = -1;

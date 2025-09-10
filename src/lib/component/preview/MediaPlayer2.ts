@@ -334,7 +334,7 @@ export class MediaPlayer2 {
             }
             if (!frame) return 0;
             if (frame.position !== this.#position) {
-                await Debug.warn(`position=${this.#position}, frame=${frame.position}`);
+                await Debug.trace(`position=${this.#position}, frame=${frame.position}`);
                 // return 0;
             }
             await this.#drawFrame(frame);

@@ -129,15 +129,15 @@ export type VideoFrameData = {
     time: number,
     stride: number,
     size: [width: number, height: number],
-    content: Uint8ClampedArray
-}
+    content: Uint8ClampedArray<ArrayBuffer>
+};
 
 export type AudioFrameData = {
     type: 'audio',
     position: number,
     time: number,
     content: Float32Array
-}
+};
 
 export class MMedia {
     #destroyed = false;
@@ -528,6 +528,4 @@ export const MAPI = {
     async openDevtools() {
         await invoke<void>('open_devtools');
     }
-}
-
-
+};

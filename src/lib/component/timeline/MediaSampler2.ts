@@ -15,6 +15,8 @@ export class MediaSampler2 {
     #sampling = false;
     #mutex = new Mutex(1000);
 
+    #eofPosition = -1;
+
     #intensity: AggregationTree<Float32Array>;
     #keyframes: AggregationTree<Uint8Array>;
 
@@ -109,10 +111,17 @@ export class MediaSampler2 {
 
         const sampleRate = this.media.audio!.sampleRate;
         const length = this.media.audio!.length;
+
         let a = Math.floor(from * sampleRate);
         let b = Math.floor(to * sampleRate);
-        if (b > length) b = length;
         Debug.assert(b > a);
+        
+        if (this.#eofPosition >= 0) {
+            if (b > this.#eofPosition)
+                b = this.#eofPosition;
+        } else if (b > length) b = length;
+
+        if (a >= b) return;
 
         this.#sampling = true;
         this.#cancelling = false;
@@ -145,8 +154,11 @@ export class MediaSampler2 {
                     this.#keyframes.set(result.video.keyframes, result.video.start);
                 this.onProgress?.();
                 if (result.isEof) {
-                    Debug.trace(`sampling done upon EOF`);
+                    Debug.trace(`sampling done upon EOF`, result);
                     this.#sampling = false;
+                    if (result.audio) {
+                        this.#eofPosition = result.audio.position;
+                    }
                     return false;
                 }
                 if (this.#sampleProgress > this.#sampleEnd) {
