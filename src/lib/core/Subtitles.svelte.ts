@@ -34,12 +34,7 @@ const ZColor = z.codec(z.union([
             return new Color('srgb', [r, g, b], a);
         }
     },
-    encode: (x) => {
-        return [
-            // NB components can be `undefined` for colorjs.io `Color`s
-            x.r ?? 0, x.g ?? 0, x.b ?? 0, x.a ?? 1
-        ] satisfies [number, number, number, number]
-    }
+    encode: (x) => x.toString()
 });
 
 const ZStyleBase = z.object({

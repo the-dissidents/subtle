@@ -475,6 +475,7 @@
     "autosave-complete": "自动保存完成 {time}",
     "autosave-failed": "自动保存失败",
     "changed-n-entries": "{n,plural,=0 {没有可修改的东西} one {修改了 {n} 项} other {修改了 {n} 项}}",
+    "color-out-of-srgb-gamut": "此颜色处于sRGB空间所能表达的范围之外，你的屏幕很可能会使用距离最近的可表达颜色替代它。",
     "combined-n-entries": "合并了 {n} 项",
     "copied": "已复制",
     "copied-exported-data": "导出数据已复制",

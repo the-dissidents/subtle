@@ -1,44 +1,50 @@
 <script lang="ts">
   import Color from "colorjs.io";
   import { untrack } from "svelte";
+  import { _ } from "svelte-i18n";
+
   import Popup, { type PopupHandler } from "./Popup.svelte";
   import NumberInput from "./NumberInput.svelte";
+  import Tooltip from "./Tooltip.svelte";
 
   type Boundary = readonly [number, number, boolean];
+  type ModeInfo = {
+    bounds: readonly [number, number, number],
+    expr: (v0: number, v1: number, v2: number, alpha?: number) => string,
+    fromColorIo: (v0: number, v1: number, v2: number) => readonly [number, number, number],
+    interpolationMode: readonly [string, string, string],
+  };
 
-  const bounds = {
-    srgb: [255, 255, 255] as const,
-    hsl: [360, 100, 100] as const,
-    oklch: [1, 0.4, 360] as const
-  } as const;
-
-  const colorModes = {
-    srgb: (v0: number, v1: number, v2: number, alpha = 1) => 
-      `rgb(${v0.toFixed(2)} ${v1.toFixed(2)} ${v2.toFixed(2)} / ${alpha})`,
-    hsl: (v0: number, v1: number, v2: number, alpha = 1) => 
-      `hsl(${v0.toFixed(2)}deg ${v1.toFixed(3)}% ${v2.toFixed(3)}% / ${alpha})`,
-    oklch: (v0: number, v1: number, v2: number, alpha = 1) => 
-      `oklch(${v0.toFixed(3)} ${v1.toFixed(3)} ${v2.toFixed(2)} / ${alpha})`,
-  } as const;
-
-  const fromColorIo = {
-    srgb: (v0: number, v1: number, v2: number) => [v0 * 255, v1 * 255, v2 * 255] as const,
-    hsl: (v0: number, v1: number, v2: number) => [v0, v1, v2] as const,
-    oklch: (v0: number, v1: number, v2: number) => [v0, v1, v2] as const,
-  } as const;
-
-  const interpolationMode = {
-    srgb: 'in srgb',
-    hsl: 'in hsl longer hue',
-    oklch: 'in oklch longer hue'
-  }
+  const modes: Record<string, ModeInfo> = {
+    srgb: {
+      bounds: [255, 255, 255],
+      expr: (v0, v1, v2, alpha = 1) => 
+        `rgb(${v0.toFixed(2)} ${v1.toFixed(2)} ${v2.toFixed(2)} / ${alpha})`,
+      fromColorIo: (v0, v1, v2) => [v0 * 255, v1 * 255, v2 * 255],
+      interpolationMode: ['in srgb', 'in srgb', 'in srgb'],
+    },
+    hsl: {
+      bounds: [360, 100, 100],
+      expr: (v0, v1, v2, alpha = 1) => 
+        `hsl(${v0.toFixed(2)}deg ${v1.toFixed(3)}% ${v2.toFixed(3)}% / ${alpha})`,
+      fromColorIo: (v0, v1, v2) => [v0, v1, v2],
+      interpolationMode: ['in hsl longer hue', 'in hsl', 'in hsl'],
+    },
+    oklch: {
+      bounds: [1, 0.4, 360],
+      expr: (v0, v1, v2, alpha = 1) => 
+        `oklch(${v0.toFixed(3)} ${v1.toFixed(3)} ${v2.toFixed(2)} / ${alpha})`,
+      fromColorIo: (v0, v1, v2) => [v0, v1, v2],
+      interpolationMode: ['in oklch', 'in oklch', 'in oklch longer hue'],
+    },
+  };
   
-  type ColorMode = keyof typeof colorModes;
+  type ColorMode = keyof typeof modes;
 
   function convertMode(to: ColorMode) {
-    const newColor = new Color(colorModes[mode](value0, value1, value2));
+    console.log('converting to', to, mode);
+    const newColor = new Color(modes[mode].expr(value0, value1, value2)).to(to).toGamut();
     newColor.alpha = alpha;
-    mode = to;
     updateFromColor(newColor);
     computeBoundaries();
   }
@@ -58,13 +64,13 @@
   }
 
   function computeBoundaries() {
-    range0 = getGamutBoundary(bounds[mode][0], (x) => [x,value1,value2]);
-    range1 = getGamutBoundary(bounds[mode][1], (x) => [value0,x,value2]);
-    range2 = getGamutBoundary(bounds[mode][2], (x) => [value0,value1,x], mode == 'oklch');
+    range0 = getGamutBoundary(modes[mode].bounds[0], (x) => [x,value1,value2]);
+    range1 = getGamutBoundary(modes[mode].bounds[1], (x) => [value0,x,value2]);
+    range2 = getGamutBoundary(modes[mode].bounds[2], (x) => [value0,value1,x], mode == 'oklch');
   }
 
   function updateFromValues() {
-    color = new Color(colorModes[mode](value0, value1, value2, alpha));
+    color = new Color(modes[mode].expr(value0, value1, value2, alpha));
     changed = true;
     updateTexts();
     oninput?.(color);
@@ -72,13 +78,23 @@
 
   function updateFromColor(c: Color) {
     if (color !== c) color = c;
-    [value0, value1, value2] = fromColorIo[mode](...color.to(mode).toGamut().coords);
+
+    let modeChanged = false;
+    if (c.space.id !== mode && c.space.id in modes) {
+      mode = c.space.id as ColorMode;
+      modeChanged = true;
+    }
+
+    [value0, value1, value2] = modes[mode].fromColorIo(...color.to(mode).toGamut().coords);
     alpha = c.alpha ?? 1;
     // TODO: this isn't entirely correct, but is effective
     if (Number.isNaN(value0)) value0 = 0;
     if (Number.isNaN(value1)) value1 = 0;
     if (Number.isNaN(value2)) value2 = 0;
     updateTexts();
+
+    if (modeChanged)
+      computeBoundaries();
   }
 
   function updateTexts() {
@@ -95,7 +111,7 @@
     fun: (x: number) => [v1: number, v2: number, v3: number], precise = false
   ): null | Boundary {
     const EPISION = 1 / 256;
-    const isInside = (x: number) => new Color(colorModes[mode](...fun(x))).inGamut('srgb');
+    const isInside = (x: number) => new Color(modes[mode].expr(...fun(x))).inGamut('srgb');
 
     function findSample(insideness: boolean) {
       let division = 1;
@@ -189,8 +205,8 @@
 </script>
 
 <button class="preview-btn" aria-label="color"
-  style="--color: {colorModes[mode](value0, value1, value2, 1)};
-         --trspColor: {colorModes[mode](value0, value1, value2, alpha)};"
+  style="--color: {modes[mode].expr(value0, value1, value2, 1)};
+         --trspColor: {modes[mode].expr(value0, value1, value2, alpha)};"
   onclick={(e) => {
     const self = e.currentTarget;
     const rect = self.getBoundingClientRect();
@@ -208,7 +224,7 @@
   }}>
   <div class="hlayout">
     <select value={mode} onchange={(ev) => convertMode(ev.currentTarget.value as ColorMode)}>
-      {#each Object.keys(colorModes) as m}
+      {#each Object.keys(modes) as m}
         <option value={m}>{m}</option>
       {/each}
     </select>
@@ -218,65 +234,65 @@
     <div class='vlayout flexgrow'>
       <div class="value-group">
         <div class='slider-container'>
-          <span class='back' style="background: {getRangeGradient(range0, bounds[mode][0])}">
+          <span class='back' style="background: {getRangeGradient(range0, modes[mode].bounds[0])}">
             <span class='coloring'
-            style="background: linear-gradient(90deg {interpolationMode[mode]}, {
-              colorModes[mode](0, value1, value2)}, {
-              colorModes[mode](bounds[mode][0], value1, value2)});">
+            style="background: linear-gradient(90deg {modes[mode].interpolationMode[0]}, {
+              modes[mode].expr(0, value1, value2)}, {
+              modes[mode].expr(modes[mode].bounds[0], value1, value2)});">
             </span>
           </span>
           <input type="range" bind:value={value0}
-            min="0" max={bounds[mode][0]} step="0.001"
+            min="0" max={modes[mode].bounds[0]} step="0.001"
             oninput={() => {
               updateFromValues();
-              range1 = getGamutBoundary(bounds[mode][1], (x) => [value0, x, value2]);
-              range2 = getGamutBoundary(bounds[mode][2], (x) => [value0, value1, x], mode == 'oklch');
+              range1 = getGamutBoundary(modes[mode].bounds[1], (x) => [value0, x, value2]);
+              range2 = getGamutBoundary(modes[mode].bounds[2], (x) => [value0, value1, x], mode == 'oklch');
             }} />
         </div>
         <NumberInput bind:value={value0} width="10ch"
-          min="0" max={bounds[mode][0]} step="0.001" />
+          min="0" max={modes[mode].bounds[0]} step="0.001" />
       </div>
 
       <div class="value-group">
         <div class='slider-container'>
-          <span class='back' style="background: {getRangeGradient(range1, bounds[mode][1])}">
+          <span class='back' style="background: {getRangeGradient(range1, modes[mode].bounds[1])}">
             <span class='coloring'
-              style="background: linear-gradient(90deg {interpolationMode[mode]}, {
-              colorModes[mode](value0, 0, value2)}, {
-              colorModes[mode](value0, bounds[mode][1], value2)});">
+              style="background: linear-gradient(90deg {modes[mode].interpolationMode[1]}, {
+              modes[mode].expr(value0, 0, value2)}, {
+              modes[mode].expr(value0, modes[mode].bounds[1], value2)});">
             </span>
           </span>
           <input type="range" bind:value={value1}
-            min="0" max={bounds[mode][1]} step="0.001"
+            min="0" max={modes[mode].bounds[1]} step="0.001"
             oninput={() => {
               updateFromValues();
-              range0 = getGamutBoundary(bounds[mode][0], (x) => [x, value1, value2]);
-              range2 = getGamutBoundary(bounds[mode][2], (x) => [value0, value1, x], mode == 'oklch');
+              range0 = getGamutBoundary(modes[mode].bounds[0], (x) => [x, value1, value2]);
+              range2 = getGamutBoundary(modes[mode].bounds[2], (x) => [value0, value1, x], mode == 'oklch');
             }} />
         </div>
         <NumberInput bind:value={value1} width="10ch"
-          min="0" max={bounds[mode][1]} step="0.001" />
+          min="0" max={modes[mode].bounds[1]} step="0.001" />
       </div>
 
       <div class="value-group">
         <div class='slider-container'>
-          <span class='back' style="background: {getRangeGradient(range2, bounds[mode][2])}">
+          <span class='back' style="background: {getRangeGradient(range2, modes[mode].bounds[2])}">
             <span class='coloring'
-              style="background: linear-gradient(90deg {interpolationMode[mode]}, {
-              colorModes[mode](value0, value1, 0)}, {
-              colorModes[mode](value0, value1, bounds[mode][2])});">
+              style="background: linear-gradient(90deg {modes[mode].interpolationMode[2]}, {
+              modes[mode].expr(value0, value1, 0)}, {
+              modes[mode].expr(value0, value1, modes[mode].bounds[2])});">
             </span>
           </span>
           <input type="range" bind:value={value2}
-            min="0" max={bounds[mode][2]} step="0.001"
+            min="0" max={modes[mode].bounds[2]} step="0.001"
             oninput={() => {
               updateFromValues();
-              range0 = getGamutBoundary(bounds[mode][0], (x) => [x, value1, value2]);
-              range1 = getGamutBoundary(bounds[mode][1], (x) => [value0, x, value2]);
+              range0 = getGamutBoundary(modes[mode].bounds[0], (x) => [x, value1, value2]);
+              range1 = getGamutBoundary(modes[mode].bounds[1], (x) => [value0, x, value2]);
             }} />
         </div>
         <NumberInput bind:value={value2} width="10ch"
-          min="0" max={bounds[mode][2]} step="0.001" />
+          min="0" max={modes[mode].bounds[2]} step="0.001" />
       </div>
 
       <div class="value-group">
@@ -284,8 +300,8 @@
           <span class='back' style="background: transparent;">
             <span class='coloring alpha'
               style="--grad: linear-gradient(90deg, {
-              colorModes[mode](value0, value1, value2, 0)}, {
-              colorModes[mode](value0, value1, value2, 1)});">
+              modes[mode].expr(value0, value1, value2, 0)}, {
+              modes[mode].expr(value0, value1, value2, 1)});">
             </span>
           </span>
           <input type="range" bind:value={alpha}
@@ -302,9 +318,11 @@
   </div>
   <div class='value-group codes'>
     <input class="flexgrow" type="text" disabled
-      value={colorModes[mode](value0, value1, value2, alpha)} />
+      value={modes[mode].expr(value0, value1, value2, alpha)} />
     {#if outOfGamut}
-    <span class="warning" title="The sRGB color space cannot display this color accurately. Your monitor might be using the nearest representable color instead.">⚠️</span>
+    <Tooltip position="bottom" text={$_('msg.color-out-of-srgb-gamut')}>
+      <span class="warning">⚠️</span>
+    </Tooltip>
     {/if}
     <input type="text" bind:value={hex} onchange={() => parseHex()} />
   </div>

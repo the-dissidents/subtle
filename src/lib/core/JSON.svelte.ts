@@ -14,10 +14,10 @@ import * as z from "zod/v4-mini";
  *  - 000404 (minor) view in archive
  *  - 000501 (minor) timelineActiveChannel in view
  *  - 000502 (minor) uiState structure in metadata
- *  - 000503 (major) colors are specified in RGBA; add shadow color
+ *  - 000503 (minor) shadow color in style
  */
 export const SubtitleFormatVersion = '000503';
-export const SubtitleCompatibleVersion = '000503';
+export const SubtitleCompatibleVersion = '000400';
 
 export type JSONParseMessage = {
     type: 'fixed-style',

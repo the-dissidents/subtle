@@ -461,6 +461,7 @@
     "autosave-complete": "autosave complete at {time}",
     "autosave-failed": "autosave failed",
     "changed-n-entries": "{n,plural,=0 {changed nothing} one {changed {n} entry} other {changed {n} entries}}",
+    "color-out-of-srgb-gamut": "The sRGB color space cannot display this color accurately. Your monitor might be using the nearest representable color instead.",
     "combined-n-entries": "{n, plural,\n  one {combined {n, number} entry}\n  other {combined {n, number} entries}\n}",
     "copied": "copied",
     "copied-exported-data": "copied exported data",
