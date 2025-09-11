@@ -6,7 +6,7 @@ import { onDestroy } from "svelte";
 import { Basic } from "../Basic";
 import type { SubtitleEntry } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
-import * as fuzzyAlgorithm from "../details/Fuzzy";
+import * as fuzzyAlgorithm from "../details/Fuzzy2";
 import { EventHost } from "../details/EventHost";
 
 import StyleSelect from "../StyleSelect.svelte";
@@ -27,24 +27,23 @@ let justify = Memorized.$('untimedJustify', z.boolean(), true);
 let useForNew = Editing.useUntimedForNewEntires;
 
 let subs = $state(Source.subs);
+let threshold = Memorized.$('fuzzyThreshold', z.number(), 0.6);
+let snapToWord = Memorized.$('fuzzySnapToWord', z.boolean(), true);
+let snapToPunct = Memorized.$('fuzzySnapToPunct', z.boolean(), false);
 
 let fuzzy = $state({
   enabled: false,
-  maxSkip: 3,
-  minScore: 0.5,
-  snapToPunct: true,
-  tokenizer: 'default',
+  tokenizer: 'character' as keyof typeof tokenizers,
   useStyle: Source.subs.defaultStyle,
   engine: null as fuzzyAlgorithm.Searcher | null,
   currentEntry: null as SubtitleEntry | null
 });
 
-$effect(() => {
-  if (fuzzy.enabled) {
-    $locked = true;
-    fuzzyMatch();
-  }
-});
+const tokenizers = {
+  'default': fuzzyAlgorithm.DefaultTokenizer,
+  'character': fuzzyAlgorithm.CharacterTokenizer,
+  'syllable': fuzzyAlgorithm.SyllableTokenizer,
+};
 
 let textarea: HTMLTextAreaElement;
 let changed = false;
@@ -70,53 +69,57 @@ function fuzzyMatch() {
   if (!fuzzy.enabled) return;
 
   fuzzy.currentEntry = Editing.selection.focused;
-  let current = fuzzy.currentEntry?.texts?.get(fuzzy.useStyle);
-  if (!current || textarea.value == '') {
+  const current = fuzzy.currentEntry?.texts?.get(fuzzy.useStyle);
+  const haystack = textarea.value;
+
+  if (!current || haystack == '') {
     fuzzy.currentEntry = null;
     textarea.selectionEnd = textarea.selectionStart;
     return;
   }
 
   // create engine if necessary
-  if (fuzzy.engine === null) {
-    let tokenizer: fuzzyAlgorithm.Tokenizer;
-    switch (fuzzy.tokenizer) {
-      case 'syllable':
-        tokenizer = fuzzyAlgorithm.SyllableTokenizer; break;
-      case 'regexb':
-        tokenizer = new fuzzyAlgorithm.RegexTokenizer([/\b/]); break;
-      case 'default':
-      default:
-        tokenizer = fuzzyAlgorithm.DefaultTokenizer; break;
-    }
-    fuzzy.engine = new fuzzyAlgorithm.Searcher(textarea.value, tokenizer);
-  }
+  if (fuzzy.engine === null) fuzzy.engine = 
+    new fuzzyAlgorithm.Searcher(haystack, tokenizers[fuzzy.tokenizer]);
 
   // perform search
   const fail = () => {
     textarea.selectionEnd = textarea.selectionStart;
     Frontend.setStatus($_('untimed.fuzzy-search-failed-to-find-anything'));
   };
-  let result = fuzzy.engine.search(current, fuzzy.maxSkip);
-  if (!result) {
+
+  const result = fuzzy.engine.search(current);
+  if (!result || result.matchRatio < $threshold) {
     fail();
     return;
   }
-  let [i0, i1, n, m] = result;
-  if (n / m < fuzzy.minScore) {
-    fail();
-    return;
+
+  const latinOrNumber = /[\p{L}\d]/u;
+  const punctuation = /\p{P}/u;
+  const whitespace = /\s/;
+
+  let start = result.start,
+      end = result.end;      // not inclusive
+  // snap to whole words
+  if ($snapToWord) {
+    while (start > 0 
+        && latinOrNumber.test(haystack[start-1]) 
+        && latinOrNumber.test(haystack[start])) start--;
+    while (end < haystack.length
+        && latinOrNumber.test(haystack[end-1]) 
+        && latinOrNumber.test(haystack[end])) end++;
   }
   // snap to punctuation
-  if (fuzzy.snapToPunct && textarea.value.length > i1 
-    && !/\p{P}/u.test(textarea.value[i1-1]) && /\p{P}/u.test(textarea.value[i1])) i1++;
+  if ($snapToPunct && end < haystack.length
+    && !punctuation.test(haystack[end-1]) 
+    &&  punctuation.test(haystack[end])) end++;
   // trim whitespaces
-  while (i1 > 0 && /\s/.test(textarea.value[i1-1])) i1--;
-  while (i0 < textarea.value.length && /\s/.test(textarea.value[i0])) i0++;
+  while (end > 0 && whitespace.test(haystack[end-1])) end--;
+  while (start < haystack.length && whitespace.test(haystack[start])) start++;
   // display
-  if (i0 >= i1) fail(); else {
-    setSelectionAndScroll(i0, i1);
-    Frontend.setStatus($_('untimed.fuzzy-match-found', {values: {x: n / m}}));
+  if (start >= end) fail(); else {
+    setSelectionAndScroll(start, end);
+    Frontend.setStatus($_('untimed.fuzzy-match-found', {values: {x: result.matchRatio}}));
   }
 }
 
@@ -156,6 +159,7 @@ function setSelectionAndScroll(selectionStart: number, selectionEnd: number) {
     textarea.scrollTop = scrollTop;
 
     // Continue to set selection range
+    textarea.focus();
     textarea.setSelectionRange(selectionStart, selectionEnd);
 }
 
@@ -225,7 +229,7 @@ function clear() {
       {$_('untimed.lock')}
     </label>
   </div>
-  <textarea class="flexgrow" class:justify
+  <textarea class={{flexgrow: true, justify: $justify}}
     readonly={$locked}
     style="min-height: 150px; font-size: {$textsize}px"
     oninput={() => changed = true}
@@ -244,15 +248,21 @@ function clear() {
           <td><input id='just' type='checkbox' bind:checked={$justify}/></td>
         </tr>
         <tr>
-          <td><input id='just' type='checkbox' bind:checked={$useForNew}/></td>
           <td>{$_('untimed.use-in-new-entries')}</td>
+          <td><input id='just' type='checkbox' bind:checked={$useForNew}/></td>
         </tr>
       </tbody>
     </table>
   </Collapsible>
-  <Collapsible header='Fuzzy proofreading [EXPERIMENTAL]'
+  <Collapsible header={$_('untimed.fuzzy-proofreading-tool')}
     showCheck={true} bind:checked={fuzzy.enabled}
-    helpText="Matches currently selected subtitle text with phrases in the untimed text using a fuzzy algorithm. Usage: arrow keys to adjust selection; space to replace."
+    onCheckedChanged={(x) => {
+      if (x) {
+        $locked = true;
+        fuzzyMatch();
+      }
+    }}
+    helpText={$_('untimed.fuzzy-help')}
   >
     <fieldset disabled={!fuzzy.enabled}>
       <table class="config">
@@ -266,32 +276,32 @@ function clear() {
             <td>
               <select name="tokenizer" onchange={(x) => {
                 if (x.currentTarget.value != fuzzy.tokenizer) {
-                  fuzzy.tokenizer = x.currentTarget.value;
+                  fuzzy.tokenizer = x.currentTarget.value as keyof typeof tokenizers;
                   fuzzy.engine = null;
                   fuzzyMatch();
                 }
               }} >
+                <option value="character">{$_('untimed.each-character')}</option>
                 <option value="default">{$_('untimed.word-cjk-character')}</option>
                 <option value="syllable">{$_('untimed.syllable-cjk-character')}</option>
-                <option value="regexb">{$_('untimed.regex-b')}</option>
-                <!-- <option value="custom">custom</option> -->
               </select>
             </td>
           </tr>
           <tr>
-            <td>max skip</td>
-            <td><NumberInput bind:value={fuzzy.maxSkip} min='0' step='1'/></td>
+            <td>{$_('untimed.threshold')}</td>
+            <td><NumberInput bind:value={$threshold} onchange={() => fuzzyMatch()}
+              min='0' max='1' step='0.1'/></td>
           </tr>
           <tr>
-            <td>threshold</td>
-            <td><NumberInput bind:value={fuzzy.minScore} min='0' max='1'/></td>
-          </tr>
-          <tr>
+            <td>{$_('untimed.snap-to-whole-words')}</td>
             <td>
-              <input id='snap' type='checkbox' bind:checked={fuzzy.snapToPunct}/>
+              <input type='checkbox' bind:checked={$snapToWord} onchange={() => fuzzyMatch()}/>
             </td>
+          </tr>
+          <tr>
+            <td>{$_('untimed.snap-to-following-punctuation')}</td>
             <td>
-              <label for='snap'>{$_('untimed.snap-to-following-punctuation')}</label>
+              <input type='checkbox' bind:checked={$snapToPunct} onchange={() => fuzzyMatch()}/>
             </td>
           </tr>
         </tbody>

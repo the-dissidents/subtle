@@ -13,6 +13,7 @@ import { Source, SourceCommands } from '../frontend/Source';
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
+    import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy2";
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -21,6 +22,10 @@ MAPI.version().then((x) => {
 
 let hwaccel = $state(false);
 let tooltipPos: TooltipPosition = $state('bottom');
+
+let textarea = $state<HTMLTextAreaElement>();
+let haystack = $state('');
+let needle = $state('');
 
 let list = $state([
   {text: '123'}, 
@@ -44,6 +49,23 @@ const command = new UICommand(() => '', [], {
     }))
   }))
 });
+
+function testFuzzy(tok: Tokenizer) {
+  const [tks, _] = tok.tokenize(needle);
+  let text = tks.join('|') + '\n';
+
+  const engine = new Searcher(haystack, tok);
+  const res = engine.search(needle);
+  if (res) {
+    text += `${res.visualization} (${res.matchRatio.toFixed(3)})`;
+    textarea!.focus();
+    textarea!.setSelectionRange(res.start, res.end);
+    Debug.info(res);
+  } else {
+    text += 'no match';
+  }
+  result = text;
+}
 </script>
 
 <button
@@ -146,4 +168,12 @@ const command = new UICommand(() => '', [], {
 </OrderableList>
 
 <br>
-<span>{result}</span>
+
+<textarea bind:this={textarea} bind:value={haystack} style:width="100%"></textarea>
+<input type="text" bind:value={needle}/>
+<button onclick={() => testFuzzy(CharacterTokenizer)}>chartok</button>
+<button onclick={() => testFuzzy(DefaultTokenizer)}>deftok</button>
+<button onclick={() => testFuzzy(SyllableTokenizer)}>syltok</button>
+
+<br>
+<span style="white-space: pre-wrap;">{result}</span>
