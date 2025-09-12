@@ -146,6 +146,7 @@
     "remove-unused-styles": "删除未使用的样式",
     "reorder-styles": "重新排序样式",
     "replace": "替换",
+    "split-by-line": "按行拆分",
     "split-entry-timeline": "分割条目",
     "style-alignment": "编辑样式对齐方法",
     "style-color": "编辑样式文字颜色",

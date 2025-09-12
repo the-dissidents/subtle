@@ -146,6 +146,7 @@
     "remove-unused-styles": "remove unused styles",
     "reorder-styles": "reorder styles",
     "replace": "search and replace",
+    "split-by-line": "split by line",
     "split-entry-timeline": "split entry",
     "style-alignment": "edit style alignment",
     "style-color": "edit style color",

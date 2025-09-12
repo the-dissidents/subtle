@@ -73,7 +73,9 @@ handler.showModal = async () => {
     if (markLessThan.use && lines.length < markLessThan.n)
       ent.label = markLessThan.label;
   }
-  Source.markChanged(newStyles.size > 0 ? ChangeType.General: ChangeType.InPlace);
+  Source.markChanged(
+    newStyles.size > 0 ? ChangeType.General: ChangeType.InPlace,
+    $_('c.split-by-line'));
 }
 
 function makeData() {
