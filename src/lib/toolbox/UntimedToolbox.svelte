@@ -1,9 +1,97 @@
+<script lang="ts" module>
+import { UICommand } from "../frontend/CommandBase";
+import { CommandBinding, KeybindingManager } from '../frontend/Keybinding';
+import { get } from "svelte/store";
+
+const tokenizers = {
+  'default': fuzzyAlgorithm.DefaultTokenizer,
+  'character': fuzzyAlgorithm.CharacterTokenizer,
+  'syllable': fuzzyAlgorithm.SyllableTokenizer,
+};
+
+let textarea: HTMLTextAreaElement;
+
+let fuzzy = $state({
+  enabled: false,
+  tokenizer: 'character' as keyof typeof tokenizers,
+  useStyle: Source.subs.defaultStyle,
+  engine: null as fuzzyAlgorithm.Searcher | null,
+  currentEntry: null as SubtitleEntry | null
+});
+
+function offset(from: number, dir: 'left' | 'right') {
+  const text = textarea.value;
+  if (dir == 'right' && from == text.length) return from;
+  if (dir == 'left' && from == 0) return from;
+
+  if (!fuzzy.engine)
+    return from + (dir == 'right' ? 1 : -1);
+
+  const prefix = fuzzy.engine.prefixLengthList();
+  let result = dir == 'right' 
+    ? prefix.find((x) => x > from) 
+    : prefix.findLast((x) => x < from);
+  Debug.assert(result !== undefined);
+  return result;
+}
+
+const UntimedCommands = {
+  shiftStartPointLeft: new UICommand(() => get(_)('category.fuzzy'), 
+    [ CommandBinding.from(['Z'], ['Table', 'Other']) ],
+  {
+    name: () => get(_)('untimed.fuzzy-action-start-left'),
+    isApplicable: () => fuzzy.enabled,
+    call: () => textarea.selectionStart = offset(textarea.selectionStart, 'left')
+  }),
+  shiftStartPointRight: new UICommand(() => get(_)('category.fuzzy'), 
+    [ CommandBinding.from(['X'], ['Table', 'Other']) ],
+  {
+    name: () => get(_)('untimed.fuzzy-action-start-right'),
+    isApplicable: () => fuzzy.enabled,
+    call: () => textarea.selectionStart = offset(textarea.selectionStart, 'right')
+  }),
+  shiftEndPointLeft: new UICommand(() => get(_)('category.fuzzy'), 
+    [ CommandBinding.from(['C'], ['Table', 'Other']) ],
+  {
+    name: () => get(_)('untimed.fuzzy-action-end-left'),
+    isApplicable: () => fuzzy.enabled,
+    call: () => textarea.selectionEnd = offset(textarea.selectionEnd, 'left')
+  }),
+  shiftEndPointRight: new UICommand(() => get(_)('category.fuzzy'), 
+    [ CommandBinding.from(['V'], ['Table', 'Other']) ],
+  {
+    name: () => get(_)('untimed.fuzzy-action-end-right'),
+    isApplicable: () => fuzzy.enabled,
+    call: () => textarea.selectionEnd = offset(textarea.selectionEnd, 'right')
+  }),
+  applyMatch: new UICommand(() => get(_)('category.fuzzy'), 
+    [ CommandBinding.from(['A'], ['Table', 'Other']) ],
+  {
+    name: () => get(_)('untimed.fuzzy-action-apply-match'),
+    isApplicable: () => fuzzy.enabled,
+    call: () => {
+      if (fuzzy.currentEntry !== Editing.getFocusedEntry())
+        return Debug.early('current entry is not fuzzy.currentEntry');
+
+      Debug.assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
+      Editing.focused.style.set(fuzzy.useStyle);
+      const str = textarea.value
+        .substring(textarea.selectionStart, textarea.selectionEnd);
+      if (fuzzy.currentEntry.texts.get(fuzzy.useStyle) != str) {
+        fuzzy.currentEntry.texts.set(fuzzy.useStyle, str);
+        Source.markChanged(ChangeType.InPlace, get(_)('c.fuzzy-replace'));
+      }
+    }
+  }),
+};
+KeybindingManager.register(UntimedCommands);
+</script>
+
 <script lang="ts">
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import * as dialog from "@tauri-apps/plugin-dialog";
-import { onDestroy } from "svelte";
+import { onDestroy, tick } from "svelte";
 
-import { Basic } from "../Basic";
 import type { SubtitleEntry } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
 import * as fuzzyAlgorithm from "../details/Fuzzy2";
@@ -31,21 +119,6 @@ let threshold = Memorized.$('fuzzyThreshold', z.number(), 0.6);
 let snapToWord = Memorized.$('fuzzySnapToWord', z.boolean(), true);
 let snapToPunct = Memorized.$('fuzzySnapToPunct', z.boolean(), false);
 
-let fuzzy = $state({
-  enabled: false,
-  tokenizer: 'character' as keyof typeof tokenizers,
-  useStyle: Source.subs.defaultStyle,
-  engine: null as fuzzyAlgorithm.Searcher | null,
-  currentEntry: null as SubtitleEntry | null
-});
-
-const tokenizers = {
-  'default': fuzzyAlgorithm.DefaultTokenizer,
-  'character': fuzzyAlgorithm.CharacterTokenizer,
-  'syllable': fuzzyAlgorithm.SyllableTokenizer,
-};
-
-let textarea: HTMLTextAreaElement;
 let changed = false;
 
 const me = {};
@@ -123,44 +196,31 @@ function fuzzyMatch() {
   }
 }
 
-function offset(from: number, right: boolean) {
-  const text = textarea.value;
-  if (right && from == text.length) return from;
-  if (!right && from == 0) return from;
-
-  if (!fuzzy.engine)
-    return from + (right ? 1 : -1);
-
-  const prefix = fuzzy.engine.prefixLengthList();
-  let result = right 
-    ? prefix.find((x) => x > from) 
-    : prefix.findLast((x) => x < from);
-  Debug.assert(result !== undefined);
-  return result;
-}
-
 // per https://stackoverflow.com/a/55111246
 function setSelectionAndScroll(selectionStart: number, selectionEnd: number) {
-    // First scroll selection region to view
-    const fullText = textarea.value;
-    textarea.value = fullText.substring(0, selectionEnd);
-    // For some unknown reason, you must store the scollHeight to a variable
-    // before setting the textarea value. Otherwise it won't work for long strings
-    const scrollHeight = textarea.scrollHeight
-    textarea.value = fullText;
-    let scrollTop = scrollHeight;
-    const textareaHeight = textarea.clientHeight;
-    if (scrollTop > textareaHeight){
-        // scroll selection to center of textarea
-        scrollTop -= textareaHeight / 2;
-    } else{
-        scrollTop = 0;
-    }
-    textarea.scrollTop = scrollTop;
+  // First scroll selection region to view
+  const fullText = textarea.value;
+  textarea.value = fullText.substring(0, selectionEnd);
+  // For some unknown reason, you must store the scollHeight to a variable
+  // before setting the textarea value. Otherwise it won't work for long strings
+  const scrollHeight = textarea.scrollHeight
+  textarea.value = fullText;
+  let scrollTop = scrollHeight;
+  const textareaHeight = textarea.clientHeight;
+  if (scrollTop > textareaHeight){
+    // scroll selection to center of textarea
+    scrollTop -= textareaHeight / 2;
+  } else{
+    scrollTop = 0;
+  }
+  textarea.scrollTop = scrollTop;
 
-    // Continue to set selection range
-    textarea.focus();
-    textarea.setSelectionRange(selectionStart, selectionEnd);
+  // Since you must focus on the textarea in order to setSelectionRange, but doing 
+  // so changes the UIFocus, we must change it back afterwards.
+  const focus = Frontend.getUIFocus();
+  textarea.focus();
+  textarea.setSelectionRange(selectionStart, selectionEnd);
+  Frontend.uiFocus.set(focus);
 }
 
 async function paste() {
@@ -177,48 +237,6 @@ function clear() {
   markChanged();
 }
 </script>
-
-<svelte:document 
-  onkeydown={(ev) => {
-    if (fuzzy.enabled) {
-      if (ev.getModifierState(Basic.ctrlKey) || ev.altKey) return;
-      if (Frontend.modalOpenCounter > 0) return;
-      if (document.activeElement !== textarea && Frontend.getUIFocus() !== 'Table') return;
-
-      if (ev.key == 'z') {
-        textarea.selectionStart = offset(textarea.selectionStart, false);
-      } else if (ev.key == 'v') {
-        textarea.selectionEnd = offset(textarea.selectionEnd, true);
-      } else if (ev.key == 'x') {
-        textarea.selectionStart = offset(textarea.selectionStart, true);
-      } else if (ev.key == 'c') {
-        textarea.selectionEnd = offset(textarea.selectionEnd, false);
-      } else if (ev.key == 'a') {
-        let focused = Editing.getFocusedEntry();
-        if (fuzzy.currentEntry !== focused) {
-          Debug.warn('current entry is not fuzzy.currentEntry, but', focused);
-          return;
-        }
-
-        ev.preventDefault();
-        let str = textarea.value.substring(
-          textarea.selectionStart, textarea.selectionEnd);
-
-        Debug.assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
-        if (fuzzy.currentEntry.texts.get(fuzzy.useStyle) != str) {
-          fuzzy.currentEntry.texts.set(fuzzy.useStyle, str);
-          Source.markChanged(ChangeType.InPlace, $_('c.fuzzy-replace'));
-        }
-        // the above causes the UI to refresh, so we delay a bit
-        setTimeout(() => {
-          Editing.selection.focused = fuzzy.currentEntry;
-          Editing.focused.style.set(fuzzy.useStyle);
-          Editing.onSelectionChanged.dispatch(ChangeCause.Action);
-          Editing.startEditingFocusedEntry();
-        }, 0);
-      } 
-    }
-  }}/>
 
 <div class='vlayout fill'>
   <div class="hlayout">
