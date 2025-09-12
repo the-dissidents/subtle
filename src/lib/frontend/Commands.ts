@@ -1,6 +1,5 @@
 import { UICommand } from "./CommandBase";
 
-import { get } from "svelte/store";
 import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
@@ -13,7 +12,6 @@ import { Utils } from "./Utils";
 import { Dialogs } from "./Dialogs";
 import { InputConfig } from "../config/Groups";
 import { Format } from "../core/SimpleFormats";
-import { Toolboxes } from "./Toolboxes";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
@@ -157,61 +155,7 @@ export const BasicCommands = {
         }
     }),
 
-    openReference: new UICommand(() => $_('category.references'),
-        [ CommandBinding.from(['CmdOrCtrl+R']), ],
-    {
-        name: () => $_('action.open-references'),
-        call: () => Toolboxes.references?.focus()
-    }),
-    referenceSearch: new UICommand(() => $_('category.references'),
-        [ CommandBinding.from(['CmdOrCtrl+T'], ['EditingField']), ],
-    {
-        name: () => $_('action.search-in-reference'),
-        isApplicable() {
-            const ctrl = Editing.focused.control;
-            if (!ctrl) return false;
-            return ctrl.selectionEnd - ctrl.selectionStart > 0;
-        },
-        call() {
-            const ctrl = Editing.focused.control;
-            if (!ctrl) return;
-            const term = ctrl.value.substring(ctrl.selectionStart, ctrl.selectionEnd);
-            Toolboxes.references?.query(term);
-        },
-    }),
-
-    openSearch: new UICommand(() => $_('category.search'),
-        [ CommandBinding.from(['CmdOrCtrl+F']), ],
-    {
-        name: () => $_('action.open-search'),
-        call() {
-            Toolboxes.search!.focus();
-        }
-    }),
-    findNext: new UICommand(() => $_('category.search'),
-        [ CommandBinding.from(['CmdOrCtrl+G']), ],
-    {
-        name: () => $_('action.find-next'),
-        call: () => Toolboxes.search!.execute('select', 'next')
-    }),
-    findPrevious: new UICommand(() => $_('category.search'),
-        [ CommandBinding.from(['CmdOrCtrl+Shift+G']), ],
-    {
-        name: () => $_('action.find-previous'),
-        call: () => Toolboxes.search!.execute('select', 'previous')
-    }),
-    replaceNext: new UICommand(() => $_('category.search'),
-        [ CommandBinding.from(['CmdOrCtrl+H']), ],
-    {
-        name: () => $_('action.replace-next'),
-        call: () => Toolboxes.search!.execute('replace', 'next')
-    }),
-    replacePrevious: new UICommand(() => $_('category.search'),
-        [ CommandBinding.from(['CmdOrCtrl+Shift+H']), ],
-    {
-        name: () => $_('action.replace-previous'),
-        call: () => Toolboxes.search!.execute('replace', 'previous')
-    }),
+    
     
     playEntry: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['P'], ['Table', 'Timeline']),

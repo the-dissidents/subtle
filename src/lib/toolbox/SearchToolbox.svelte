@@ -1,23 +1,53 @@
 <!-- TODO: SearchToolbox.svelte
  1. only search for/replace one occurence at a time, and highlight it in the editing boxes
- 2. note that clicking replace should replace the current occurence, and select the next
- 2. make hotkeys for next/previous
 -->
 <script lang="ts" module>
-export type SearchAction = 'select' | 'replace' | 'replaceStyles';
-export type SearchOption = 'all' | 'next' | 'previous';
+import { Frontend } from '../frontend/Frontend';
+import { UICommand } from '../frontend/CommandBase';
+import { CommandBinding, KeybindingManager } from '../frontend/Keybinding';
+import { get } from 'svelte/store';
 
-export type SearchHandler = {
-  term: string,
-  replaceTerm: string,
-  useRegex: boolean,
-  useEscapeSequenceInReplacement: boolean,
-  caseSensitive: boolean,
-  replaceStyle: SubtitleStyle,
-  // todo: condition
-  readonly execute: (action: SearchAction, dir: SearchOption) => void,
-  readonly focus: () => void
+type SearchAction = 'select' | 'replace' | 'replaceStyles';
+type SearchOption = 'all' | 'next' | 'previous';
+type Handler = {
+  execute?: (type: SearchAction, option: SearchOption) => Promise<void>,
+  focus?: () => void
 };
+const handler: Handler = {};
+
+const SearchCommands = {
+    openSearch: new UICommand(() => get(_)('category.search'),
+      [ CommandBinding.from(['CmdOrCtrl+F']), ],
+  {
+      name: () => get(_)('action.open-search'),
+      call: () => handler.focus!()
+  }),
+  findNext: new UICommand(() => get(_)('category.search'),
+      [ CommandBinding.from(['CmdOrCtrl+G']), ],
+  {
+      name: () => get(_)('action.find-next'),
+      call: () => handler.execute!('select', 'next')
+  }),
+  findPrevious: new UICommand(() => get(_)('category.search'),
+      [ CommandBinding.from(['CmdOrCtrl+Shift+G']), ],
+  {
+      name: () => get(_)('action.find-previous'),
+      call: () => handler.execute!('select', 'previous')
+  }),
+  replaceNext: new UICommand(() => get(_)('category.search'),
+      [ CommandBinding.from(['CmdOrCtrl+H']), ],
+  {
+      name: () => get(_)('action.replace-next'),
+      call: () => handler.execute!('replace', 'next')
+  }),
+  replacePrevious: new UICommand(() => get(_)('category.search'),
+      [ CommandBinding.from(['CmdOrCtrl+Shift+H']), ],
+  {
+      name: () => get(_)('action.replace-previous'),
+      call: () => handler.execute!('replace', 'previous')
+  }),
+};
+KeybindingManager.register(SearchCommands);
 </script>
 
 <script lang="ts">
@@ -33,27 +63,22 @@ import { _ } from 'svelte-i18n';
 import Collapsible from '../ui/Collapsible.svelte';
 import FilterEdit from '../FilterEdit.svelte';
 import { evaluateFilter, type MetricFilter } from '../core/Filter';
-import { Toolboxes } from '../frontend/Toolboxes';
 import Tooltip from '../ui/Tooltip.svelte';
-    import { Frontend } from '../frontend/Frontend';
-// import { Menu } from '@tauri-apps/api/menu';
 
-const handler: SearchHandler = $state({
-  term: '',
-  replaceTerm: '',
-  useRegex: false,
-  useEscapeSequenceInReplacement: true,
-  caseSensitive: true,
-  replaceStyle: Source.subs.defaultStyle,
-  execute,
-  focus() {
-    Frontend.toolboxFocus.set('search');
-    setTimeout(() => termInput?.focus(), 0);
-  }
-});
-Toolboxes.search = handler;
+handler.execute = execute;
+handler.focus = () => {
+  Frontend.toolboxFocus.set('search');
+  setTimeout(() => termInput?.focus(), 0);
+};
 
 let termInput = $state<HTMLInputElement>();
+
+let term            = $state(''),
+    replaceTerm     = $state(''),
+    useRegex        = $state(false),
+    useEscape       = $state(true),
+    caseSensitive   = $state(true),
+    replaceStyle    = $state(Source.subs.defaultStyle);
 
 // condition (simple)
 let selectionOnly   = $state(false),
@@ -117,7 +142,7 @@ const replEscapedSequences = {
 }
 
 function processReplacement(original: string, match: RegExpExecArray, repl: string) {
-  if (!handler.useEscapeSequenceInReplacement)
+  if (!useEscape)
     return repl;
   let i = 0;
   let result = '';
@@ -189,12 +214,11 @@ async function execute(type: SearchAction, option: SearchOption) {
 
   let expr: RegExp;
   let usingEmptyTerm = false;
-  if (handler.term !== '') {
+  if (term !== '') {
     // construct regex from search term
     try {
-      expr = new RegExp(
-        handler.useRegex ? handler.term : Basic.escapeRegexp(handler.term), 
-        `g${handler.caseSensitive ? '' : 'i'}`);
+      expr = new RegExp(useRegex ? term : Basic.escapeRegexp(term), 
+        `g${caseSensitive ? '' : 'i'}`);
     } catch (e) {
       Debug.assert(e instanceof Error);
       Frontend.setStatus($_('msg.search-failed') + e.message, 'error');
@@ -215,7 +239,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     Editing.clearSelection(ChangeCause.Action);
   }
 
-  const repl = type == "replace" ? handler.replaceTerm : '';
+  const repl = type == "replace" ? replaceTerm : '';
   const startIndex = option == "all" 
     ? 0 : Math.max(entries.indexOf(focus), 0);
   const styleIndex = resumeFrom ? Source.subs.styles.indexOf(resumeFrom.style) : 0;
@@ -255,9 +279,9 @@ async function execute(type: SearchAction, option: SearchOption) {
     {
       // FIXME: should warn when overwriting? or add an option
       entry.texts.delete(style);
-      entry.texts.set(handler.replaceStyle, text);
+      entry.texts.set(replaceStyle, text);
       Debug.trace('replaced with style:', text);
-      newStyle = handler.replaceStyle;
+      newStyle = replaceStyle;
     }
 
     let match: RegExpExecArray | null;
@@ -338,13 +362,13 @@ async function execute(type: SearchAction, option: SearchOption) {
 
 <input class='wfill' type="text"
   spellcheck="false" autocomplete="off"
-  bind:value={handler.term}
+  bind:value={term}
   bind:this={termInput}
   id='expr' placeholder={$_('search.expression')}/>
 <div class="hlayout">
   <input class='wfill' type="text"
     spellcheck="false" autocomplete="off"
-    bind:value={handler.replaceTerm}
+    bind:value={replaceTerm}
     id='repl' placeholder={$_('search.replace-term')}/>
   <!-- TODO: make a menu for inserting common escape sequences,
     but problem is that text inputs lose cursor once unfocused
@@ -403,23 +427,23 @@ async function execute(type: SearchAction, option: SearchOption) {
 <div class='form vlayout'>
   <h5>{$_('search.options')}</h5>
   <label>
-    <input type='checkbox' bind:checked={handler.useRegex}/>
+    <input type='checkbox' bind:checked={useRegex}/>
     {$_('search.use-regular-expressions')}
     <Tooltip text={$_('search.regex-help')} />
   </label>
   <label>
-    <input type='checkbox' bind:checked={handler.useEscapeSequenceInReplacement}/>
+    <input type='checkbox' bind:checked={useEscape}/>
     {$_('search.use-escape-sequences-in-replacement')}
     <Tooltip text={$_('search.escape-sequence-help')} />
   </label>
-  <label><input type='checkbox' bind:checked={handler.caseSensitive}/>
+  <label><input type='checkbox' bind:checked={caseSensitive}/>
     {$_('search.case-sensitive')}
   </label>
   <label><input type='checkbox' bind:checked={useReplaceStyle}/>
     {$_('search.replace-by-style')}
     <StyleSelect
       onsubmit={() => useReplaceStyle = true}
-      bind:currentStyle={handler.replaceStyle}/>
+      bind:currentStyle={replaceStyle}/>
   </label>
 
   <h5>{$_('search.range')}</h5>
