@@ -63,7 +63,9 @@ function findBoundingRect(element: HTMLElement): DOMRect {
     const rect = findBoundingRect(container);
     handler.open!(rect);
   }}
-  onmouseleave={() => handler.close!()}
+  onmouseleave={() => {
+    if (handler.isOpen!()) handler.close!();
+  }}
   style="display: contents;"
 >
   {#if children}

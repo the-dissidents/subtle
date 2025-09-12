@@ -136,7 +136,7 @@ locale.subscribe(() => refresh = !refresh);
             <button aria-label="reset"
               disabled={isDefault(cmd)}
               onclick={() => {
-                cmd.bindings = structuredClone(cmd.defaultBindings) as CommandBinding[];
+                cmd.bindings = cmd.defaultBindings.map((x) => x.clone());
                 refresh = !refresh;
                 KeybindingManager.update();
               }}
