@@ -90,6 +90,10 @@ export class UICommand<TState = void> {
         return unwrap(this.options.name);
     }
 
+    get isApplicable() {
+        return this.options.isApplicable?.() ?? true;
+    }
+
     // FIXME: using command as menu item does not update its `activated` state
     toMenuItem(): SubmenuOptions {
         if ('call' in this.options) {
@@ -103,8 +107,8 @@ export class UICommand<TState = void> {
     }
 
     async menu() {
-        const enabled = this.options.isApplicable ? this.options.isApplicable() : true;
-        if (!enabled) return;
+        if (!this.isApplicable)
+            return Debug.early('command not applicable');
 
         let opt = commandOptionToMenu(this.options, this, []);
         if ('items' in opt) {
@@ -120,8 +124,8 @@ export class UICommand<TState = void> {
     }
 
     async #runCommand(item: CommandOptions<TState>) {
-        const enabled = item.isApplicable ? item.isApplicable() : true;
-        Debug.assert(enabled);
+        if (!this.isApplicable)
+            return Debug.early('command not applicable');
         if ('items' in item) {
             const items = unwrap(item.items);
             let n = await overlayMenu(
@@ -148,9 +152,7 @@ export class UICommand<TState = void> {
         // don't start if already running
         if (this.activated)
             return Debug.early(`already running: ${this.name}`);
-
-        const enabled = this.options.isApplicable ? this.options.isApplicable() : true;
-        if (!enabled) return false;
+        if (!this.isApplicable) return false;
 
         Debug.debug('executing command', this.name);
         UICommand.#activated.set(this, key);

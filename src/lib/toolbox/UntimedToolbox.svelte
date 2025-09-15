@@ -90,9 +90,9 @@ KeybindingManager.register(UntimedCommands);
 <script lang="ts">
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import * as dialog from "@tauri-apps/plugin-dialog";
-import { onDestroy, tick } from "svelte";
+import { onDestroy } from "svelte";
 
-import type { SubtitleEntry } from "../core/Subtitles.svelte";
+import { SubtitleEntry } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
 import * as fuzzyAlgorithm from "../details/Fuzzy2";
 import { EventHost } from "../details/EventHost";
@@ -101,13 +101,32 @@ import StyleSelect from "../StyleSelect.svelte";
 import Collapsible from "../ui/Collapsible.svelte";
 import NumberInput from "../ui/NumberInput.svelte";
 
-import { Editing } from "../frontend/Editing";
+import { Editing, SelectMode } from "../frontend/Editing";
 import { Frontend } from "../frontend/Frontend";
-import { ChangeCause, ChangeType, Source } from "../frontend/Source";
+import { ChangeType, Source } from "../frontend/Source";
 
 import { _ } from 'svelte-i18n';
 import { Memorized } from "../config/MemorizedValue.svelte";
 import * as z from "zod/v4-mini";
+
+let fillAsStyle = $state(Source.subs.defaultStyle);
+let selection = $state<SubtitleEntry[]>([]);
+let focusedEntry = Editing.focused.entry;
+
+async function fillIn(range: SubtitleEntry[]) {
+  const lines = Source.subs.metadata.special.untimedText.split('\n');
+  if (lines.length < range.length) {
+    if (!await dialog.confirm(`你选择的区域有${range.length}个条目，但无时间文本只有${lines.length}行。确定要继续填充？`)) return false;
+    range = range.slice(0, lines.length);
+  }
+  const already = range.filter((x) => x.texts.has(fillAsStyle));
+  if (already.length > 0
+   && !await dialog.confirm(`你选择的区域有${already.length}个条目已经包含样式${fillAsStyle.name}，确认继续？`)) return false;
+  range.forEach((x) => Editing.fillWithFirstLineOfUntimed(x, fillAsStyle));
+
+  Source.markChanged(ChangeType.InPlace, "用无时间文本填充条目");
+  return true;
+}
 
 let locked = Memorized.$('untimedLocked', z.boolean(), false);
 let textsize = Memorized.$('untimedTextSize', z.number().check(z.positive()), 14);
@@ -127,9 +146,13 @@ onDestroy(() => EventHost.unbind(me));
 Source.onSubtitleObjectReload.bind(me, () => {
   subs = Source.subs;
   fuzzy.useStyle = Source.subs.defaultStyle;
+  fillAsStyle = Source.subs.defaultStyle;
 });
 
-Editing.onSelectionChanged.bind(me, fuzzyMatch);
+Editing.onSelectionChanged.bind(me, () => {
+  selection = Editing.getSelection();
+  fuzzyMatch();
+});
 
 function markChanged() {
   if (!changed) return;
@@ -265,12 +288,30 @@ function clear() {
           <td>{$_('untimed.justify')}</td>
           <td><input id='just' type='checkbox' bind:checked={$justify}/></td>
         </tr>
-        <tr>
-          <td>{$_('untimed.use-in-new-entries')}</td>
-          <td><input id='just' type='checkbox' bind:checked={$useForNew}/></td>
-        </tr>
       </tbody>
     </table>
+  </Collapsible>
+  <Collapsible header={$_('untimed.general')}>
+    <h5>{$_('untimed.use-in-new-entries')}</h5>
+    <label>
+      <input id='just' type='checkbox' bind:checked={$useForNew}/>启用（每次一行）
+    </label>
+    <br />
+    <h5>填充到已有条目</h5>
+    <label>
+      填充为样式：<StyleSelect bind:currentStyle={fillAsStyle} />
+    </label>
+    <button disabled={!($focusedEntry instanceof SubtitleEntry)}
+      onclick={async () => {
+        if (!($focusedEntry instanceof SubtitleEntry))
+          return Debug.early('failed to fill in this line');
+        if (await fillIn([$focusedEntry]))
+          Editing.offsetFocus(1, SelectMode.Single);
+      }}
+    >填充这一行</button>
+    <button disabled={selection.length == 0}
+      onclick={() => fillIn(selection)}
+    >填充选择区域</button>
   </Collapsible>
   <Collapsible header={$_('untimed.fuzzy-proofreading-tool')}
     showCheck={true} bind:checked={fuzzy.enabled}

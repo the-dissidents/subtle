@@ -301,7 +301,7 @@ export const KeybindingManager = {
         if (node) {
             const cmd = node.values.find(
                 (x) => !x.contexts || x.contexts.has(focus));
-            if (cmd) {
+            if (cmd && cmd.command.isApplicable) {
                 currentSequence = [];
                 return {
                     type: 'activate',

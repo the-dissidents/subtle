@@ -27,7 +27,7 @@ export const Basic = {
     },
 
     escapeRegexp(str: string) {
-        return str.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+        return str.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
     },
 
     splitPrintingWords(str: string): string[] {

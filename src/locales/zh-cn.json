@@ -526,7 +526,7 @@
     "subtitle-is-empty": "字幕文件为空",
     "unable-to-read-file-path": "无法读取文件：{path}",
     "undone": "已撤销：{op}",
-    "untimed-first-line-very-long": "你启用了“用无时间文本的第一行来填充画出的新条目”，但是无时间文本的第一行非常长。这可能是个错误。确定要继续吗？",
+    "untimed-first-line-very-long": "你正在尝试用无时间文本中非常长的一行去填充单独一行字幕条。这可能是个错误。确定要继续吗？",
     "versionbanner": "建议升级系统版本，以免某些功能无法正常使用。",
     "very-large-file-warning": "您打开的文件非常大，很可能不是受支持的字幕文件。真的要继续吗？这可能会使应用程序崩溃。",
     "waiting-for-chord-after-pressing": "已按下 {key}，等待下一个键…",
@@ -720,6 +720,7 @@
     "fuzzy-match-found": "发现模糊匹配（{x, number, ::percent .#}）",
     "fuzzy-proofreading-tool": "模糊匹配校对工具",
     "fuzzy-search-failed-to-find-anything": "未发现模糊匹配",
+    "general": "通用",
     "justify": "均匀排版",
     "lock": "锁定",
     "paste": "粘贴",
@@ -730,7 +731,7 @@
     "text-size": "字号",
     "threshold": "模糊匹配阈值",
     "tokenizer": "分词方法",
-    "use-in-new-entries": "用无时间文本的第一行来填充画出的新条目",
+    "use-in-new-entries": "填充到画出的新条目",
     "word-cjk-character": "单词或CJK字符"
   },
   "untitled": "「未命名」"

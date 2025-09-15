@@ -218,7 +218,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     // construct regex from search term
     try {
       expr = new RegExp(useRegex ? term : Basic.escapeRegexp(term), 
-        `g${caseSensitive ? '' : 'i'}`);
+        `ug${caseSensitive ? '' : 'i'}`);
     } catch (e) {
       Debug.assert(e instanceof Error);
       Frontend.setStatus($_('msg.search-failed') + e.message, 'error');

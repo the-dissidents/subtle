@@ -705,6 +705,7 @@
     "fuzzy-match-found": "fuzzy match found ({x, number, ::percent .#})",
     "fuzzy-proofreading-tool": "Fuzzy proofreading tool",
     "fuzzy-search-failed-to-find-anything": "fuzzy search failed to find anything",
+    "general": "General",
     "justify": "justify",
     "lock": "lock",
     "paste": "paste",
