@@ -170,7 +170,9 @@ export class CanvasManager {
         Debug.assert(context !== null);
         this.#cxt = context;
 
-        new ResizeObserver(() => this.#updateSize()).observe(canvas);
+        new ResizeObserver(
+            () => requestAnimationFrame(() => this.#updateSize()))
+                .observe(canvas);
         this.#updateSize();
 
         canvas.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));

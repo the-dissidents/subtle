@@ -149,8 +149,13 @@ export const Debug: {
 
         window.addEventListener('error', async (ev) => {
             if (!HasStacktrace.has(ev.error)) {
-                Debug.error(`Unhandled error`, ev.error, 
-                        `: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`);
+                // hack: demote ResizeObserver errors
+                // see https://github.com/the-dissidents/subtle/issues/123
+                if (ev.message.startsWith('ResizeObserver loop completed with')) {
+                    Debug.warn('ResizeObserver loop completed with undelivered notifications');
+                    return true;
+                }
+                Debug.error(`Unhandled error: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`, ev.error);
             }
             return true;
         });
@@ -180,11 +185,10 @@ export const Debug: {
         callLog(LogLevel.Info, formatData(data), file);
     },
     async warn(...data: any[]) {
-        const { file, trace } = await stacktrace();
+        const { file, trace: _ } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Warn)
             console.warn(formatPrelude('WARN', file), ...data);
         callLog(LogLevel.Warn, formatData(data), file);
-        callLog(LogLevel.Info, `!!!WEBVIEW_STACKTRACE\n` + trace);
     },
     async error(...data: any[]) {
         const { file, trace } = await stacktrace();

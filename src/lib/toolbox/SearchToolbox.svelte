@@ -269,7 +269,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     if (type == 'select' && option == 'all') {
       Editing.selection.submitted.add(entry);
       res = gen.next(true);
-      Debug.trace('selected', text);
+      // Debug.trace('selected', text);
       continue; // selecting one channel suffices
     }
 
@@ -280,7 +280,7 @@ async function execute(type: SearchAction, option: SearchOption) {
       // FIXME: should warn when overwriting? or add an option
       entry.texts.delete(style);
       entry.texts.set(replaceStyle, text);
-      Debug.trace('replaced with style:', text);
+      // Debug.trace('replaced with style:', text);
       newStyle = replaceStyle;
     }
 
@@ -316,7 +316,7 @@ async function execute(type: SearchAction, option: SearchOption) {
         } else {
           // just replaced one, select next
           entry.texts.set(newStyle, newText);
-          Debug.trace('replaced 1:', text, '->', newText);
+          // Debug.trace('replaced 1:', text, '->', newText);
           newType = 'select';
           Debug.trace('just replaced, start selecting');
         }
@@ -325,7 +325,7 @@ async function execute(type: SearchAction, option: SearchOption) {
 
     if (type == 'replace') {
       entry.texts.set(newStyle, newText);
-      Debug.trace('replacing:', text, '->', newText);
+      // Debug.trace('replacing:', text, '->', newText);
     }
     
     res = gen.next(false);
