@@ -51,7 +51,7 @@ pub fn init_ffmpeg_logging() {
 }
 
 lazy_static! {
-    pub static ref LOG_LEVEL: RwLock<log::LevelFilter> = RwLock::new(log::LevelFilter::Off);
+    pub static ref LOG_LEVEL: RwLock<log::LevelFilter> = RwLock::new(log::LevelFilter::Trace);
 }
 
 #[tauri::command]

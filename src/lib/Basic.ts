@@ -14,6 +14,9 @@ const osType = os.type(),
 
 export const Basic = {
     get version() { return version; },
+    get platform() { return os.platform(); },
+    get architecture() { return os.arch(); },
+    get osVersion() { return os.version(); },
     get osType() { return osType; },
     get pathSeparator() { return pathSeparator; },
     get ctrlKey() { return ctrlKey; },

@@ -218,14 +218,14 @@ onMount(() => {
 
 <svelte:window
   onload={() => {
-    let time = performance.now();
-    Debug.info(`load time: ${time}`);
+    const time = performance.now();
+    getVersion().then((x) => Debug.info(`------ SUBTLE ${x} on ${Basic.architecture} ${Basic.platform} ${Basic.osVersion} | load time: ${time}`));
     Source.init();
   }}
   onbeforeunload={(ev) => {
     if (get(Source.fileChanged)) ev.preventDefault();
   }}
-  onfocusin={(ev) => {
+  onfocusin={() => {
     // TODO: this works but looks like nonsense
     if ($uiFocus != 'EditingField')
       $uiFocus = 'Other';
