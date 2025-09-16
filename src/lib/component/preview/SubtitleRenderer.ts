@@ -241,11 +241,13 @@ export class SubtitleRenderer {
                 }
 
                 if (MediaConfig.data.subtitleRenderer != 'dom') {
-                    ctx.beginPath();
-                    ctx.rect(newBox.x, newBox.y, newBox.w, newBox.h);
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
+                    if (MediaConfig.data.showBoundingBoxes) {
+                        ctx.beginPath();
+                        ctx.rect(newBox.x, newBox.y, newBox.w, newBox.h);
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
                     if (style.outline) {
                         ctx.strokeStyle = style.outlineColor.toString();
                         ctx.lineWidth = style.outline * this.#scale;

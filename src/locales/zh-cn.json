@@ -250,6 +250,8 @@
     "resize-area-size-d": "字幕块左侧和右侧可拖动调整区域的大小，以CSS像素为单位",
     "seam-area-size": "连接处可拖动区域大小",
     "seam-area-size-d": "相连的两个字幕块之间连接处可拖动区域的大小，以CSS像素为单位，应小于“边缘可拖动区域大小”",
+    "show-bounding-boxes": "显示字幕条边界框",
+    "show-bounding-boxes-d": "边界框不会在导出的ASS等文件中显示出来，作用只是使排版过程更清晰。",
     "show-debug-info": "显示调试信息",
     "show-keyframes": "显示关键帧",
     "show-keyframes-d": "显示关键帧标记。在许多视频文件中，关键帧常常对应于镜头切换，可以作为对齐字幕条的参考。",

@@ -16,6 +16,7 @@
   import type { CanvasManager } from "../../CanvasManager";
   import type { SubtitleStyle } from "../../core/Subtitles.svelte";
   import { EventHost } from "../../details/EventHost";
+  import { MediaConfig } from "./Config";
 
   interface Props {
     manager?: CanvasManager,
@@ -26,7 +27,7 @@
 
   let width = $state(0);
   let height = $state(0);
-  let transform = $state('scale(0.5)');
+  let transform = $state(`scale(${1/devicePixelRatio})`);
   let me = {};
 
   $effect(() => {
@@ -45,7 +46,7 @@
   });
 
   function updateTransform() {
-    transform = `scale(${manager!.scale}) translate(${-manager!.scroll[0]}px, ${-manager!.scroll[1]}px) scale(0.5)`;
+    transform = `scale(${manager!.scale}) translate(${-manager!.scroll[0]}px, ${-manager!.scroll[1]}px) scale(${1/devicePixelRatio})`;
   }
 </script>
 
@@ -64,6 +65,7 @@
       top: {box.y}px;
       width: {box.w}px;
       height: {box.h}px;
+      border: {MediaConfig.data.showBoundingBoxes ? '1px solid white' : 'none'};
     "></div>
 
     <!-- outline + shadow -->
@@ -125,6 +127,5 @@
   .box {
     position: absolute;
     box-sizing: border-box;
-    border: 1px solid white;
   }
 </style>

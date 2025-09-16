@@ -28,6 +28,12 @@ export const MediaConfig = new PublicConfigGroup(
         bounds: [0, 20],
         default: 3
     },
+    showBoundingBoxes: {
+        localizedName: () => $_('config.show-bounding-boxes'),
+        type: 'boolean',
+        description: () => $_('config.show-bounding-boxes-d'),
+        default: false
+    },
     subtitleRenderer: {
         localizedName: () => $_('config.subtitle-renderer'),
         type: 'dropdown',

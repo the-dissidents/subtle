@@ -249,6 +249,8 @@
     "resize-area-size": "draggable edge area size",
     "resize-area-size-d": "Size of the area around the left and right side of an entry in which you can drag to resize the entry, in CSS pixels.",
     "seam-area-size": "draggable seam area size",
+    "show-bounding-boxes": "show bounding boxes around entries",
+    "show-bounding-boxes-d": "The bounding boxes are just a visual aid and are not visible on exported formats such as ASS.",
     "show-debug-info": "show debug info",
     "show-keyframes": "show keyframes",
     "show-keyframes-d": "Color keyframes in the timeline. In many media files, keyframes can correspond to scene changes and are useful for aligning subtitles.",
