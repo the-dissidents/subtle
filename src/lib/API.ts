@@ -93,10 +93,10 @@ type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) 
 
 function createChannel(
     from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
-    reject: (e: any) => void, timeout = 1000
+    reject: (e: any) => void, timeout = 2000
 ) {
     if (timeout > 0) setTimeout(
-        () => reject(new MediaError('timed out', from)), timeout);
+        () => reject(new MediaError(`timed out [${timeout}ms]`, from)), timeout);
     
     const channel = new Channel<MediaEvent>;
     channel.onmessage = (msg) => {
@@ -262,7 +262,8 @@ export class MMedia {
     
     async waitUntilAvailable() {
         return await new Promise<void>((resolve, reject) => {
-            setTimeout(() => reject(new MediaError('timed out', 'waitUntilAvailable')), 1000);
+            setTimeout(() => reject(
+                new MediaError('timed out [1000ms]', 'waitUntilAvailable')), 1000);
             const wait = () => {
                 if (!this.hasJob) resolve();
                 else setTimeout(wait, 1);

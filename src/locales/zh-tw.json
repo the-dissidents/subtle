@@ -363,20 +363,22 @@
     "zero-time": "零時間"
   },
   "untimed": {
-    "channel": "頻道",
     "clear": "清除",
     "display": "顯示",
-    "fuzzy-match-found": "發現模糊匹配（{x, number, ::percent .#}）",
-    "fuzzy-search-failed-to-find-anything": "未發現模糊匹配",
+    "fuzzy": {
+      "channel": "頻道",
+      "match-found": "發現模糊匹配（{x, number, ::percent .#}）",
+      "search-failed-to-find-anything": "未發現模糊匹配",
+      "snap-to-following-punctuation": "吸附到後面的標點符號",
+      "syllable-cjk-character": "音節或 CJK 字元",
+      "tokenizer": "分詞方法",
+      "word-cjk-character": "單字或 CJK 字元"
+    },
     "justify": "均勻排版",
     "lock": "鎖定",
     "paste": "貼上",
     "regex-b": "正規 \\b",
-    "snap-to-following-punctuation": "吸附到後面的標點符號",
-    "syllable-cjk-character": "音節或 CJK 字元",
-    "text-size": "字型大小",
-    "tokenizer": "分詞方法",
-    "word-cjk-character": "單字或 CJK 字元"
+    "text-size": "字型大小"
   },
   "untitled": "「未命名」"
 }

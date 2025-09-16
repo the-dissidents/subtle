@@ -39,35 +39,35 @@ const UntimedCommands = {
   shiftStartPointLeft: new UICommand(() => get(_)('category.fuzzy'), 
     [ CommandBinding.from(['Z'], ['Table', 'Other']) ],
   {
-    name: () => get(_)('untimed.fuzzy-action-start-left'),
+    name: () => get(_)('untimed.fuzzy.action-start-left'),
     isApplicable: () => fuzzy.enabled,
     call: () => textarea.selectionStart = offset(textarea.selectionStart, 'left')
   }),
   shiftStartPointRight: new UICommand(() => get(_)('category.fuzzy'), 
     [ CommandBinding.from(['X'], ['Table', 'Other']) ],
   {
-    name: () => get(_)('untimed.fuzzy-action-start-right'),
+    name: () => get(_)('untimed.fuzzy.action-start-right'),
     isApplicable: () => fuzzy.enabled,
     call: () => textarea.selectionStart = offset(textarea.selectionStart, 'right')
   }),
   shiftEndPointLeft: new UICommand(() => get(_)('category.fuzzy'), 
     [ CommandBinding.from(['C'], ['Table', 'Other']) ],
   {
-    name: () => get(_)('untimed.fuzzy-action-end-left'),
+    name: () => get(_)('untimed.fuzzy.action-end-left'),
     isApplicable: () => fuzzy.enabled,
     call: () => textarea.selectionEnd = offset(textarea.selectionEnd, 'left')
   }),
   shiftEndPointRight: new UICommand(() => get(_)('category.fuzzy'), 
     [ CommandBinding.from(['V'], ['Table', 'Other']) ],
   {
-    name: () => get(_)('untimed.fuzzy-action-end-right'),
+    name: () => get(_)('untimed.fuzzy.action-end-right'),
     isApplicable: () => fuzzy.enabled,
     call: () => textarea.selectionEnd = offset(textarea.selectionEnd, 'right')
   }),
   applyMatch: new UICommand(() => get(_)('category.fuzzy'), 
     [ CommandBinding.from(['A'], ['Table', 'Other']) ],
   {
-    name: () => get(_)('untimed.fuzzy-action-apply-match'),
+    name: () => get(_)('untimed.fuzzy.action-apply-match'),
     isApplicable: () => fuzzy.enabled,
     call: () => {
       if (fuzzy.currentEntry !== Editing.getFocusedEntry())
@@ -116,15 +116,17 @@ let focusedEntry = Editing.focused.entry;
 async function fillIn(range: SubtitleEntry[]) {
   const lines = Source.subs.metadata.special.untimedText.split('\n');
   if (lines.length < range.length) {
-    if (!await dialog.confirm(`你选择的区域有${range.length}个条目，但无时间文本只有${lines.length}行。确定要继续填充？`)) return false;
+    if (!await dialog.confirm($_('untimed.fill-in.too-long-msg', 
+      {values: { a: range.length, b: lines.length }}))) return false;
     range = range.slice(0, lines.length);
   }
   const already = range.filter((x) => x.texts.has(fillAsStyle));
   if (already.length > 0
-   && !await dialog.confirm(`你选择的区域有${already.length}个条目已经包含样式${fillAsStyle.name}，确认继续？`)) return false;
+   && !await dialog.confirm($_('untimed.fill-in.already-has-style-msg', 
+    {values: { a: already.length, b: fillAsStyle.name }}))) return false;
   range.forEach((x) => Editing.fillWithFirstLineOfUntimed(x, fillAsStyle));
 
-  Source.markChanged(ChangeType.InPlace, "用无时间文本填充条目");
+  Source.markChanged(ChangeType.InPlace, $_('c.fill-with-untimed'));
   return true;
 }
 
@@ -181,7 +183,7 @@ function fuzzyMatch() {
   // perform search
   const fail = () => {
     textarea.selectionEnd = textarea.selectionStart;
-    Frontend.setStatus($_('untimed.fuzzy-search-failed-to-find-anything'));
+    Frontend.setStatus($_('untimed.fuzzy.search-failed-to-find-anything'));
   };
 
   const result = fuzzy.engine.search(current);
@@ -215,7 +217,7 @@ function fuzzyMatch() {
   // display
   if (start >= end) fail(); else {
     setSelectionAndScroll(start, end);
-    Frontend.setStatus($_('untimed.fuzzy-match-found', {values: {x: result.matchRatio}}));
+    Frontend.setStatus($_('untimed.fuzzy.match-found', {values: {x: result.matchRatio}}));
   }
 }
 
@@ -291,15 +293,15 @@ function clear() {
       </tbody>
     </table>
   </Collapsible>
-  <Collapsible header={$_('untimed.general')}>
-    <h5>{$_('untimed.use-in-new-entries')}</h5>
+  <Collapsible header={$_('untimed.fill-in.header')}>
+    <h5>{$_('untimed.fill-in.new-entries')}</h5>
     <label>
       <input id='just' type='checkbox' bind:checked={$useForNew}/>启用（每次一行）
     </label>
     <br />
-    <h5>填充到已有条目</h5>
+    <h5>{$_('untimed.fill-in.existing-entries')}</h5>
     <label>
-      填充为样式：<StyleSelect bind:currentStyle={fillAsStyle} />
+      {$_('untimed.fill-in.with-style')}<StyleSelect bind:currentStyle={fillAsStyle} />
     </label>
     <button disabled={!($focusedEntry instanceof SubtitleEntry)}
       onclick={async () => {
@@ -308,12 +310,12 @@ function clear() {
         if (await fillIn([$focusedEntry]))
           Editing.offsetFocus(1, SelectMode.Single);
       }}
-    >填充这一行</button>
+    >{$_('untimed.fill-in.this-entry')}</button>
     <button disabled={selection.length == 0}
       onclick={() => fillIn(selection)}
-    >填充选择区域</button>
+    >{$_('untimed.fill-in.selection')}</button>
   </Collapsible>
-  <Collapsible header={$_('untimed.fuzzy-proofreading-tool')}
+  <Collapsible header={$_('untimed.fuzzy.header')}
     showCheck={true} bind:checked={fuzzy.enabled}
     onCheckedChanged={(x) => {
       if (x) {
@@ -321,17 +323,17 @@ function clear() {
         fuzzyMatch();
       }
     }}
-    helpText={$_('untimed.fuzzy-help')}
+    helpText={$_('untimed.fuzzy.help')}
   >
     <fieldset disabled={!fuzzy.enabled}>
       <table class="config">
         <tbody>
           <tr>
-            <td>{$_('untimed.channel')}</td>
+            <td>{$_('untimed.fuzzy.channel')}</td>
             <td><StyleSelect bind:currentStyle={fuzzy.useStyle} /></td>
           </tr>
           <tr>
-            <td>{$_('untimed.tokenizer')}</td>
+            <td>{$_('untimed.fuzzy.tokenizer')}</td>
             <td>
               <select name="tokenizer" onchange={(x) => {
                 if (x.currentTarget.value != fuzzy.tokenizer) {
@@ -340,25 +342,25 @@ function clear() {
                   fuzzyMatch();
                 }
               }} >
-                <option value="character">{$_('untimed.each-character')}</option>
-                <option value="default">{$_('untimed.word-cjk-character')}</option>
-                <option value="syllable">{$_('untimed.syllable-cjk-character')}</option>
+                <option value="character">{$_('untimed.fuzzy.each-character')}</option>
+                <option value="default">{$_('untimed.fuzzy.word-cjk-character')}</option>
+                <option value="syllable">{$_('untimed.fuzzy.syllable-cjk-character')}</option>
               </select>
             </td>
           </tr>
           <tr>
-            <td>{$_('untimed.threshold')}</td>
+            <td>{$_('untimed.fuzzy.threshold')}</td>
             <td><NumberInput bind:value={$threshold} onchange={() => fuzzyMatch()}
               min='0' max='1' step='0.1'/></td>
           </tr>
           <tr>
-            <td>{$_('untimed.snap-to-whole-words')}</td>
+            <td>{$_('untimed.fuzzy.snap-to-whole-words')}</td>
             <td>
               <input type='checkbox' bind:checked={$snapToWord} onchange={() => fuzzyMatch()}/>
             </td>
           </tr>
           <tr>
-            <td>{$_('untimed.snap-to-following-punctuation')}</td>
+            <td>{$_('untimed.fuzzy.snap-to-following-punctuation')}</td>
             <td>
               <input type='checkbox' bind:checked={$snapToPunct} onchange={() => fuzzyMatch()}/>
             </td>

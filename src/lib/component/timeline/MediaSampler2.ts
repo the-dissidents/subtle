@@ -13,7 +13,7 @@ export class MediaSampler2 {
     #cancelling = false;
 
     #sampling = false;
-    #mutex = new Mutex(1000);
+    #mutex = new Mutex(1000, 'MediaSampler2');
 
     #eofPosition = -1;
 

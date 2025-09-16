@@ -11,7 +11,7 @@ export class Mutex {
         return this.#busy;
     }
 
-    constructor(private timeout = -1) {}
+    constructor(private timeout = -1, private debugName = '<unnamed>') {}
 
     /**
      * Acquire the mutex, possibly waiting for it to become available.
@@ -25,8 +25,8 @@ export class Mutex {
         return new Promise<void>((resolve) => {
             const id = this.timeout <= 0 
                 ? undefined 
-                : setTimeout(
-                    () => Debug.warn(`mutex has been waiting for ~${this.timeout}ms`),
+                : setTimeout(() => Debug.warn(
+                    `mutex ${this.debugName} has been waiting for ~${this.timeout}ms`),
                     this.timeout);
             this.#queue.push(() => {
                 this.#busy = true;

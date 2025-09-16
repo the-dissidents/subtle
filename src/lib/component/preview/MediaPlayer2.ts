@@ -25,7 +25,7 @@ export const MediaPlayerInterface2 = {
 export class MediaPlayer2 {
     #closed = false;
     #playing = false;
-    #mutex = new Mutex(1000);
+    #mutex = new Mutex(1000, 'MediaPlayer2');
 
     /**
      * Current position in video frames. This value serves to preserve the progress when the buffers are emptied due to seeking operations. If the buffers are not empty, it must be equal to `videoBuffer[0].position`.
