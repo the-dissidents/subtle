@@ -7,6 +7,7 @@ extern crate ffmpeg_next as ffmpeg;
 mod encoding;
 mod media;
 mod redirect_log;
+mod font;
 
 use std::sync::Mutex;
 use tauri::AppHandle;
@@ -100,6 +101,7 @@ fn main() {
             redirect_log::set_log_filter_level,
             encoding::decode_file_as,
             encoding::decode_or_detect_file,
+            font::resolve_family_name,
             open_devtools,
         ])
         .run(ctx)
