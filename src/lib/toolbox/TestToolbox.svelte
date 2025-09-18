@@ -28,6 +28,8 @@ let textarea = $state<HTMLTextAreaElement>();
 let haystack = $state('');
 let needle = $state('');
 
+let fontname = $state('Arial');
+
 let list = $state([
   {text: '123'}, 
   {text: 'abc'}, 
@@ -202,4 +204,10 @@ function testAssertion() {
 <button onclick={() => testFuzzy(SyllableTokenizer)}>syltok</button>
 
 <br>
+
+<input type='text' bind:value={fontname} />
+<button onclick={async () => {
+  Debug.info(await MAPI.resolveFontFamily(fontname));
+}}>resolve font family</button>
+
 <span style="white-space: pre-wrap;">{result}</span>

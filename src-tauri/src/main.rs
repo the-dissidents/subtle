@@ -8,6 +8,7 @@ mod encoding;
 mod media;
 mod media_api;
 mod redirect_log;
+mod font;
 
 use std::panic;
 use std::sync::{Arc, Mutex};
@@ -108,6 +109,7 @@ fn main() {
             redirect_log::set_log_filter_level,
             encoding::decode_file_as,
             encoding::decode_or_detect_file,
+            font::resolve_family_name,
             open_devtools,
             make_panic,
         ])

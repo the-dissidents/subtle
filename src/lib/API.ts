@@ -421,6 +421,22 @@ export class MMedia {
     }
 }
 
+export type FontStyle = 'normal' | 'italic' | 'oblique';
+
+export type ResolvedFontFamily = {
+    faces: ResolvedFontFace[],
+    familyName: string
+};
+
+export type ResolvedFontFace = {
+    url: string,
+    postscriptName: string,
+    real_height: number,
+    weight: number,
+    stretch: number,
+    style: FontStyle,
+};
+
 export const MAPI = {
     async version() {
         return await new Promise<string>((resolve, reject) => {
@@ -463,5 +479,9 @@ export const MAPI = {
 
     async openDevtools() {
         await invoke<void>('open_devtools');
+    },
+
+    async resolveFontFamily(name: string) {
+        return await invoke<ResolvedFontFamily | null>('resolve_family_name', { name });
     }
 };
