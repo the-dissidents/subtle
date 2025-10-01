@@ -210,4 +210,6 @@ function testAssertion() {
   Debug.info(await MAPI.resolveFontFamily(fontname));
 }}>resolve font family</button>
 
+<br>
+
 <span style="white-space: pre-wrap;">{result}</span>

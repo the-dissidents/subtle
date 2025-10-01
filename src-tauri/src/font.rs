@@ -1,3 +1,4 @@
+use font_kit::family_handle::FamilyHandle;
 use font_kit::source::SystemSource;
 use font_kit::{handle::Handle, properties::Style};
 use serde::Serialize;
@@ -50,52 +51,65 @@ pub struct ResolvedFontFace {
 //     }
 // }
 
+fn load_family(f: FamilyHandle) -> Option<ResolvedFontFamily> {
+    let mut faces = Vec::<ResolvedFontFace>::new();
+    let mut family_name: Option<String> = None;
+    for face in f.fonts() {
+        let path = match face {
+            Handle::Path { path, font_index: _ } => 
+                if let Some(s) = path.to_str() { s } else {
+                    log::error!("font path is invalid UTF-8");
+                    continue;
+                },
+            Handle::Memory { bytes: _, font_index: _ } => {
+                log::warn!("font face is Handle::Memory");
+                ""
+            },
+        };
+        face.load().map_or_else(
+            |e| log::error!("error loading font face: {e}"), 
+            |f| {
+                if let Some(name) = family_name.as_ref() {
+                    if *name != f.family_name() {
+                        log::warn!("faces inside a family have different family names: {name}, {}", f.family_name());
+                    }
+                } else {
+                    family_name = Some(f.family_name());
+                }
+                let metrics = f.metrics();
+                faces.push(ResolvedFontFace { 
+                    url: path.to_string(), 
+                    postscript_name: f.postscript_name().unwrap_or(f.full_name()), 
+                    real_height: metrics.ascent + metrics.descent.abs(), 
+                    weight: f.properties().weight.0, 
+                    stretch: f.properties().stretch.0, 
+                    style: f.properties().style.into()
+                });
+            });
+    }
+    family_name.map(|f| ResolvedFontFamily { 
+        faces, 
+        family_name: f
+    })
+}
+
+#[tauri::command]
+pub fn get_all_font_families() -> Vec<ResolvedFontFamily> {
+    let source = SystemSource::new();
+    match source.all_families() {
+        Ok(names) => names.iter()
+            .filter_map(|name| source.select_family_by_name(name).ok())
+            .filter_map(load_family)
+            .collect(),
+        Err(_) => vec![]
+    }
+}
+
 #[tauri::command]
 pub fn resolve_family_name(name: &str) -> Option<ResolvedFontFamily> {
     let source = SystemSource::new();
-    
     match source.select_family_by_name(name) {
-        Ok(f) => {
-            let mut faces = Vec::<ResolvedFontFace>::new();
-            let mut family_name: Option<String> = None;
-            for face in f.fonts() {
-                let path = match face {
-                    Handle::Path { path, font_index: _ } => 
-                        if let Some(s) = path.to_str() { s } else {
-                            log::error!("font path is invalid UTF-8");
-                            continue;
-                        },
-                    Handle::Memory { bytes: _, font_index: _ } => {
-                        log::error!("font face is Handle::Memory");
-                        continue;
-                    },
-                };
-                face.load().map_or_else(
-                    |e| log::error!("error loading font face: {e}"), 
-                    |f| {
-                        if let Some(name) = family_name.as_ref() {
-                            if *name != f.family_name() {
-                                log::warn!("faces inside a family have different family names: {name}, {}", f.family_name());
-                            }
-                        } else {
-                            family_name = Some(f.family_name());
-                        }
-                        let metrics = f.metrics();
-                        faces.push(ResolvedFontFace { 
-                            url: path.to_string(), 
-                            postscript_name: f.postscript_name().unwrap_or(f.full_name()), 
-                            real_height: metrics.ascent + metrics.descent.abs(), 
-                            weight: f.properties().weight.0, 
-                            stretch: f.properties().stretch.0, 
-                            style: f.properties().style.into()
-                        });
-                    });
-            }
-            family_name.map(|f| ResolvedFontFamily { 
-                faces, 
-                family_name: f
-            })
-        }
+        Ok(f) => load_family(f),
         Err(_) => None
     }
 }
