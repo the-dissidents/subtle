@@ -74,26 +74,20 @@ async function contextMenu() {
     {
       text: $_('style.replace-by'),
       enabled: Source.subs.styles.length > 1 && used.length > 0,
-      items: withoutThis.map((x, i) => ({
-        id: i.toString(),
+      items: withoutThis.map((x) => ({
         text: x.name,
-        action(id) {
-          let n = Number.parseInt(id);
-          let other = withoutThis[n];
-          Utils.replaceStyle(subtitles.entries, $style, other);
+        action() {
+          Utils.replaceStyle(subtitles.entries, $style, x);
         }
       }))
     },
     {
       text: $_('style.exchange-with'),
       enabled: Source.subs.styles.length > 1 && used.length > 0,
-      items: withoutThis.map((x, i) => ({
-        id: i.toString(),
+      items: withoutThis.map((x) => ({
         text: x.name,
-        action(id) {
-          let n = Number.parseInt(id);
-          let other = withoutThis[n];
-          Utils.exchangeStyle(subtitles.entries, $style, other);
+        action() {
+          Utils.exchangeStyle(subtitles.entries, $style, x);
         }
       }))
     },

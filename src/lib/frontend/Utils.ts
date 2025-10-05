@@ -120,6 +120,21 @@ export const Utils = {
             Source.markChanged(ChangeType.Times, $_('action.merge-overlapping-duplicates'));
     },
 
+    mergeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
+        let done = 0;
+        for (const ent of entries) {
+            let textA = ent.texts.get(a)?.trimEnd() ?? '';
+            let textB = ent.texts.get(b)?.trimStart();
+            if (textB == undefined) continue;
+            ent.texts.set(a, textA + ' ' + textB);
+            ent.texts.delete(b);
+            done++;
+        }
+        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace, $_('action.merge-channel'));
+    },
+
     exchangeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
@@ -137,21 +152,6 @@ export const Utils = {
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
             Source.markChanged(ChangeType.InPlace, $_('action.exchange-channel'));
-    },
-
-    mergeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
-        let done = 0;
-        for (const ent of entries) {
-            let textA = ent.texts.get(a)?.trimEnd() ?? '';
-            let textB = ent.texts.get(b)?.trimStart();
-            if (textB == undefined) continue;
-            ent.texts.set(a, textA + ' ' + textB);
-            ent.texts.delete(b);
-            done++;
-        }
-        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
-        if (done)
-            Source.markChanged(ChangeType.InPlace, $_('action.merge-channel'));
     },
 
     async replaceStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {

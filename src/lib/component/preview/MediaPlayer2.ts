@@ -85,12 +85,12 @@ export class MediaPlayer2 {
     }
 
     #updateOutputSize() {
-        Debug.assert(!this.#closed && this.media.video !== undefined);
+        Debug.assert(!this.#closed && this.media.video !== undefined, 'no video or closed');
 
         const [w, h] = this.manager.physicalSize;
         const width = this.media.video.size[0] * this.media.video.sampleAspectRatio;
         const height = this.media.video.size[1];
-        Debug.assert(height !== 0);
+        Debug.assert(height !== 0, 'height is zero');
         const ratio = width / height;
 
         let oh: number, ow: number;
@@ -146,7 +146,7 @@ export class MediaPlayer2 {
 
     // Must be called while locked
     async #clearCache() {
-        Debug.assert(!this.#closed);
+        Debug.assert(!this.#closed, 'player closed');
         this.#preloadEOF = false;
         this.#playEOF = false;
         this.#videoBuffer = [];
@@ -205,7 +205,7 @@ export class MediaPlayer2 {
             this.#preloadEOF = true;
             return false;
         }
-        Debug.assert(!this.#preloadEOF);
+        Debug.assert(!this.#preloadEOF, 'receiveFrame called at EOF');
         if (frame.type == 'audio') {
             this.#diag.fetchAudioTime = 
                 this.#diag.fetchAudioTime * DAMPING + elapsed * (1 - DAMPING);
@@ -253,7 +253,7 @@ export class MediaPlayer2 {
 
     #populateBufferRunning = false;
     async #populateBuffer() {
-        Debug.assert(!this.#populateBufferRunning);
+        Debug.assert(!this.#populateBufferRunning, 'already populating buffer');
         this.#populateBufferRunning = true;
         while (await this.#receiveNextFrame())
             await Basic.wait(0);
@@ -329,7 +329,7 @@ export class MediaPlayer2 {
         if (!this.#playing) {
             let frame = this.#videoBuffer.at(0);
             if (this.#playEOF) {
-                Debug.assert(this.#lastFrame !== undefined);
+                Debug.assert(this.#lastFrame !== undefined, 'no lastFrame');
                 frame = this.#lastFrame;
             }
             if (!frame) return 0;
@@ -374,7 +374,7 @@ export class MediaPlayer2 {
 
     #presenting = false;
     async #present() {
-        Debug.assert(!this.#presenting);
+        Debug.assert(!this.#presenting, 'already presenting');
         this.#presenting = true;
         while (true) {
             const delay = await this.#presentNext();
@@ -410,13 +410,13 @@ export class MediaPlayer2 {
     }
 
     requestNextFrame() {
-        Debug.assert(!this.media.isClosed);
+        Debug.assert(!this.#closed, 'player closed');
         if (this.#playEOF) return;
         this.#seekToFrameTask.request(this.#position + 1);
     }
 
     requestPreviousFrame() {
-        Debug.assert(!this.media.isClosed);
+        Debug.assert(!this.#closed, 'player closed');
         if (this.#position == 0) return;
         this.#seekToFrameTask.request(this.#position - 1);
     }
@@ -513,7 +513,7 @@ export class MediaPlayer2 {
     );
 
     async setAudioStream(id: number) {
-        Debug.assert(!this.#closed);
+        Debug.assert(!this.#closed, 'player closed');
         if (id == this.media.audio!.index) return;
         if (this.#playing) await this.stop();
 
