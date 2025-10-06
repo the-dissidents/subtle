@@ -344,6 +344,7 @@
     "usage": "使用量"
   },
   "filter": {
+    "all": "所有文件",
     "all-supported-formats": "所有支持格式",
     "between-exclusive": "在区间内（不含）",
     "between-inclusive": "在区间内（含）",

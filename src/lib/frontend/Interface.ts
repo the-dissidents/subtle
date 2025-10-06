@@ -35,10 +35,11 @@ const IMPORT_FILTERS = () => [
     { name: $_('filter.srt-subtitles'), extensions: ['srt'] },
     // { name: $_('filter.vtt-subtitles'), extensions: ['vtt'] },
     { name: $_('filter.ssa-subtitles'), extensions: ['ssa', 'ass'] },
-    { name: $_('filter.subtle-archive'), extensions: ['json'] }];
+    { name: $_('filter.subtle-archive'), extensions: ['json'] }
+];
 
 export const MEDIA_EXTENSIONS = 
-    ['avi', 'mp4', 'm4v', 'ts', 'flv', 'webm', 'mkv', 'mov', 'rmvb'];
+    ['avi', 'mp4', 'm4v', 'mpg', 'mpv', 'ts', 'mts', 'm2ts', 'flv', 'webm', 'mkv', 'mov', 'rmvb'];
 
 async function readTextFile(path: string) {
     try {
@@ -169,7 +170,10 @@ export const Interface = {
 
     async askOpenVideo() {
         const selected = await dialog.open({multiple: false, 
-            filters: [{name: $_('filter.video-file'), extensions: MEDIA_EXTENSIONS}]});
+            filters: [
+                { name: $_('filter.video-file'), extensions: MEDIA_EXTENSIONS },
+                { name: $_('filter.all'), extensions: ['*'] }
+            ]});
         if (typeof selected != 'string') return;
         await this.openVideo(selected);
     },

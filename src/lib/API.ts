@@ -1,7 +1,8 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
 import { Debug } from './Debug';
+import { BinaryReader } from './details/BinaryReader';
 
-export type StreamInfo = {
+export type StreamDescription = {
     type: 'audio' | 'video' | 'subtitle' | 'unknown',
     index: number,
     description: string
@@ -16,6 +17,7 @@ export type AudioStatus = {
 export type VideoStatus = {
     index: number,
     length: number,
+    startTime: number,
     framerate: number,
     sampleAspectRatio: number,
     size: [width: number, height: number],
@@ -49,7 +51,7 @@ export type MediaEvent = {
         audioIndex: number,
         videoIndex: number,
         duration: number,
-        streams: StreamInfo[]
+        streams: StreamDescription[]
     }
 } | {
     event: 'audioStatus',
@@ -135,6 +137,7 @@ export type VideoFrameData = {
 export type AudioFrameData = {
     type: 'audio',
     position: number,
+    pktpos: number,
     time: number,
     content: Float32Array
 };
@@ -159,7 +162,7 @@ export class MMedia {
         return this.#outSize;
     }
 
-    get streams(): readonly StreamInfo[] {
+    get streams(): readonly StreamDescription[] {
         return this._streams;
     }
 
@@ -179,28 +182,25 @@ export class MMedia {
     private constructor(
         private id: number,
         private _duration: number,
-        private _streams: StreamInfo[]
+        private _streams: StreamDescription[]
     ) {
         Debug.info(`media ${id} opened`);
     }
 
     #readFrameData(data: ArrayBuffer): AudioFrameData | VideoFrameData {
-        const view = new DataView(data);
-        const type = view.getUint32(0, true) == 0 ? 'audio' : 'video';
-        const position = view.getInt32(4, true);
-        const time = view.getFloat64(8, true);
+        const view = new BinaryReader(data);
+        const type = view.readU32() == 0 ? 'audio' : 'video';
+        const position = view.readI32();
+        const time = view.readF64();
         if (type == 'audio') {
-            const length = view.getUint32(16, true);
-            const content = new Float32Array(data, 20, length);
-            // Debug.debug('received:', `audio @${position}(${time})`)
-            // this.#_finalizationReg.register(data, `audio @${position}(${time})`);
-            return { type, position, time, content } satisfies AudioFrameData;
+            const pktpos = view.readI32();
+            const length = view.readU32();
+            const content = new Float32Array(data, view.pos, length);
+            return { type, position, pktpos, time, content } satisfies AudioFrameData;
         } else {
-            const stride = view.getUint32(16, true);
-            const length = view.getUint32(20, true);
-            const content = new Uint8ClampedArray(data, 24, length);
-            // Debug.debug('received:', `video @${position}(${time})`)
-            // this.#_finalizationReg.register(data, `video @${position}(${time})`);
+            const stride = view.readU32();
+            const length = view.readU32();
+            const content = new Uint8ClampedArray(data, view.pos, length);
             return { type, position, time, stride, content, 
                 size: [...this.#outSize] } satisfies VideoFrameData;
         }
@@ -231,7 +231,7 @@ export class MMedia {
             audioIndex: number,
             videoIndex: number,
             duration: number,
-            streams: StreamInfo[]
+            streams: StreamDescription[]
         }>((resolve, reject) => {
             let channel = createChannel('open/status', {
                 mediaStatus: (data) => resolve(data)

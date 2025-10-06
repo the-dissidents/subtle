@@ -2,7 +2,7 @@
 
 extern crate ffmpeg_next as ffmpeg;
 
-use internal::{Frame, StreamInfo};
+use internal::{Frame, StreamDescription};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -44,12 +44,13 @@ pub enum MediaEvent<'a> {
         audio_index: i32,
         video_index: i32,
         duration: f64,
-        streams: Vec<StreamInfo>,
+        streams: Vec<StreamDescription>,
     },
     #[serde(rename_all = "camelCase")]
     AudioStatus { 
         index: usize,
         length: usize, 
+        start_time: f64,
         sample_rate: u32 
     },
     #[serde(rename_all = "camelCase")]
@@ -57,6 +58,7 @@ pub enum MediaEvent<'a> {
         index: usize,
         length: usize,
         framerate: f64,
+        start_time: f64,
         sample_aspect_ratio: f64,
         size: (u32, u32),
     },
@@ -213,8 +215,9 @@ pub fn open_video(
 
     send(&channel, MediaEvent::VideoStatus {
         index: ctx.stream_index(),
-        length: ctx.length(),
+        length: ctx.n_frames(),
         framerate: ctx.framerate().into(),
+        start_time: ctx.start_time(),
         sample_aspect_ratio: ctx.sample_aspect_ratio().into(),
         size: ctx.original_size()
     });
@@ -242,7 +245,8 @@ pub fn open_video_sampler(
 
     send(&channel, MediaEvent::VideoStatus {
         index: ctx.stream_index(),
-        length: ctx.length(),
+        length: ctx.n_frames(),
+        start_time: ctx.start_time(),
         framerate: ctx.framerate().into(),
         sample_aspect_ratio: ctx.sample_aspect_ratio().into(),
         size: ctx.original_size()
@@ -272,6 +276,7 @@ pub fn open_audio(
     send(&channel, MediaEvent::AudioStatus {
         index: ctx.stream_index(),
         length: ctx.length(),
+        start_time: ctx.start_time(),
         sample_rate: ctx.sample_rate(),
     });
 }
@@ -299,6 +304,7 @@ pub fn open_audio_sampler(
     send(&channel, MediaEvent::AudioStatus {
         index: ctx.stream_index(),
         length: ctx.length(),
+        start_time: ctx.start_time(),
         sample_rate: ctx.sample_rate(),
     });
 }
@@ -470,6 +476,7 @@ pub fn send_video_frame(frame: internal::DecodedVideoFrame) -> ipc::Response {
  *  type        : [u32] = 0
  *  position    : [i32]
  *  time        : [f64]
+ *  pktpos      : [i32]
  *  length      : [u32]
  *  sample data : [f32]
  * ]
@@ -490,6 +497,7 @@ pub fn send_audio_frame(frame: internal::DecodedAudioFrame) -> ipc::Response {
     binary.extend(0_u32.to_le_bytes().iter());
     binary.extend(i32::try_from(pos).unwrap().to_le_bytes().iter());
     binary.extend(time.to_le_bytes().iter());
+    binary.extend(i32::try_from(frame.pktpos).unwrap().to_le_bytes().iter());
     binary.extend(i32::try_from(data.len()).unwrap().to_le_bytes().iter());
     binary.extend_from_slice(to_byte_slice(data));
 

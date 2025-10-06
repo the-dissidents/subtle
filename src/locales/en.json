@@ -339,6 +339,7 @@
     "usage": "Usage"
   },
   "filter": {
+    "all": "all files",
     "all-supported-formats": "All supported formats",
     "between-exclusive": "between (exclusive)",
     "between-inclusive": "between (inclusive)",

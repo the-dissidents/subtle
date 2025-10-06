@@ -4,6 +4,8 @@ use core::fmt;
 use ffmpeg::decoder;
 use ffmpeg::format::Pixel;
 use ffmpeg::threading::Type;
+use ffmpeg::Stream;
+use ffmpeg_sys_next::AV_NOPTS_VALUE;
 use serde::Serialize;
 use std::cmp;
 
@@ -50,7 +52,7 @@ pub enum StreamType {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct StreamInfo {
+pub struct StreamDescription {
     r#type: StreamType,
     index: usize,
     description: String,
@@ -64,6 +66,7 @@ pub struct DecodedVideoFrame {
 
 pub struct DecodedAudioFrame {
     pub position: i64,
+    pub pktpos: i64,
     pub time: f64,
     pub decoded: frame::Audio,
 }
@@ -81,10 +84,20 @@ pub struct VideoSampleData {
     pub keyframes: Vec<u8>
 }
 
+pub struct StreamInfo {
+    index: usize,
+    timebase: Rational,
+    /// in stream timebase
+    start_time: i64,
+}
+
 pub struct AudioBase {
-    stream_i: usize,
-    stream_timebase: Rational,
-    pos_timebase: Rational, // = rate ^ -1
+    stream: StreamInfo,
+
+    /// = `sample_rate` ^ -1 (assuming CFR)
+    sample_timebase: Rational,
+    sample_rate: u32,
+
     length: usize,
     decoder: codec::decoder::Audio,
 }
@@ -115,14 +128,18 @@ pub enum Frame {
 }
 
 pub struct VideoBase {
-    stream_i: usize,
-    stream_timebase: Rational,
-    pos_timebase: Rational, // = framerate ^ -1
+    stream: StreamInfo,
+
+    /// = rate ^ -1 (assuming CFR)
+    pos_timebase: Rational,
+
+    /// will be inaccurate in case of VFR
     framerate: Rational,
+
+    n_frames: usize,
+
     sample_aspect_ratio: Rational,
     original_size: (u32, u32),
-    length: usize,
-
     decoder: codec::decoder::Video,
     accelerator: Option<accel::HardwareDecoder>
 }
@@ -195,12 +212,12 @@ impl MediaPlayback {
         })
     }
 
-    pub fn describe_streams(&self) -> Vec<StreamInfo> {
-        let mut streams = Vec::<StreamInfo>::new();
+    pub fn describe_streams(&self) -> Vec<StreamDescription> {
+        let mut streams = Vec::<StreamDescription>::new();
         for stream in self.input.streams() {
             let metadata = stream.metadata();
             let lang = metadata.get("language").unwrap_or("--");
-            streams.push(StreamInfo {
+            streams.push(StreamDescription {
                 r#type: match stream.parameters().medium() {
                     media::Type::Video => StreamType::Video,
                     media::Type::Audio => StreamType::Audio,
@@ -220,37 +237,71 @@ impl MediaPlayback {
         self.input.duration() as f64 * f64::from(rescale::TIME_BASE)
     }
 
-    fn create_video_base(
-        &self, index: Option<usize>, accel: bool
-    ) -> Result<VideoBase, MediaError> {
+    fn create_stream_info(
+        &self, index: Option<usize>, kind: media::Type
+    ) -> Result<(StreamInfo, Stream<'_>), MediaError> {
         let index = match index {
             Some(x) => x,
             None => self
                 .input
                 .streams()
-                .best(media::Type::Video)
-                .ok_or(MediaError::InternalError("No video stream".to_string()))?
+                .best(kind)
+                .ok_or(MediaError::InternalError(
+                    format!("create_stream_info: no stream of type {kind:?}"))
+                )?
                 .index(),
         };
 
         let stream = self.input.stream(index).ok_or(MediaError::InternalError(
-            "invalid stream index".to_string(),
+            format!("create_stream_info: [{index}] invalid stream index"),
         ))?;
 
+        let timebase = stream.time_base();
+
+        let start_time: i64 = match stream.start_time() {
+            AV_NOPTS_VALUE => {
+                warn!("create_stream_info: [{index}] invalid start_time");
+                0
+            },
+            0 => 0,
+            x => {
+                warn!("create_stream_info: [{index}] stream has a start_time of {x}");
+                x
+            }
+        };
+
+        Ok((
+            StreamInfo {
+                index,
+                timebase,
+                start_time,
+            },
+            stream
+        ))
+    }
+
+    fn create_video_base(
+        &self, index: Option<usize>, accel: bool
+    ) -> Result<VideoBase, MediaError> {
+        let (stream_info, stream) = 
+            self.create_stream_info(index, media::Type::Video)?;
+        let index = stream_info.index;
+
         let codec = decoder::find(stream.parameters().id()).ok_or(
-            MediaError::InternalError(format!(
-                "codec not found: {:?}", stream.parameters().id()),
+            MediaError::InternalError(
+                format!("codec not found: {:?}", stream.parameters().id()),
         ))?;
 
         // create decoder
         let mut decoder_ctx = codec::Context::new_with_codec(codec).decoder();
-        debug!("codec: {:?}", decoder_ctx.codec().map(|x| x.id()));
 
         decoder_ctx.set_threading(codec::threading::Config { 
             kind: Type::Frame, 
             count: num_cpus::get()
         });
-        debug!("create_video_base: using {} threads", num_cpus::get());
+        debug!("create_video_base: codec = {:?}, using {} threads", 
+            decoder_ctx.codec().map(|x| x.id()),
+            num_cpus::get());
 
         let accelerator_name = 
             if !accel { "" }
@@ -268,23 +319,14 @@ impl MediaPlayback {
                         Some(x)
                     },
                     Err(e) => {
-                        debug!("create_video_base: error creating accelerator: {e}");
+                        debug!("create_video_base: error creating accelerator: {e}, falling back");
                         None
                     }
                 }
             } else { None };
 
         check!(decoder_ctx.set_parameters(stream.parameters()))?; // avcodec_parameters_to_context
-        let decoder = check!(decoder_ctx.video())?; // avcodec_open2
-
-        let stream_avgfr = stream.avg_frame_rate();
-        let stream_rfr = stream.rate();
-        let decoder_fr = decoder.frame_rate();
-        debug!(
-            "create_video_base: {:?}; avgfr={stream_avgfr}:rfr={stream_rfr}; decoder: fr={:?}",
-            decoder.format(), decoder_fr
-        );
-        // we decide to use r_frame_rate
+        let decoder = check!(decoder_ctx.video())?;        // avcodec_open2
 
         let sample_aspect_ratio = match decoder.aspect_ratio() {
             Rational(0, _) => Rational(1, 1),
@@ -292,28 +334,52 @@ impl MediaPlayback {
         };
 
         if sample_aspect_ratio != Rational(1, 1) {
-            debug!("create_video_base: note: SAR is {sample_aspect_ratio:?}");
+            debug!("create_video_base: [{index}] note: video has an SAR of {sample_aspect_ratio:?}");
         }
 
-        let length: usize = match stream.duration() {
-            x if x > 0 => x,
-            _ => self
-                .input
-                .duration()
-                .rescale(rescale::TIME_BASE, stream_rfr.invert()),
+        let timebase = stream.time_base();
+        let avg_framerate = stream.avg_frame_rate(); // avg_frame_rate
+        let framerate = stream.rate();            // r_frame_rate
+        if framerate != avg_framerate {
+            warn!("create_video_base: [{index}] note: stream is VFR, avg={avg_framerate}, rate={framerate}");
         }
-        .try_into()
-        .unwrap();
+        let pos_timebase = framerate.invert();
+
+        let duration: usize = match stream.duration() {
+            x if x > 0 => x,
+            _ => {
+                let duration = self.input.duration();
+                warn!("create_video_base: [{index}] falling back to context duration = {duration}");
+                duration.rescale(rescale::TIME_BASE, timebase)
+            },
+        }
+        .try_into().unwrap();
+
+        let n_frames: usize = match stream.frames() {
+            x if x > 0 => x,
+            _ => {
+                warn!("create_video_base: [{index}] deriving frame count from duration, may be inaccurate");
+                i64::try_from(duration)
+                    .unwrap()
+                    .rescale(timebase, pos_timebase)
+            }
+        }
+        .try_into().unwrap();
+
+        debug!(
+            "create_video_base: [{}] {:?}; decoder_fr={:?}",
+            stream_info.index,
+            decoder.format(), decoder.frame_rate()
+        );
 
         Ok(VideoBase {
-            stream_i: index,
-            stream_timebase: stream.time_base(),
-            pos_timebase: stream_rfr.invert(),
+            stream: stream_info,
+            pos_timebase,
+            framerate,
+            n_frames,
             original_size: (decoder.width(), decoder.height()),
-            framerate: stream_rfr,
             sample_aspect_ratio,
-            length,
-            decoder, accelerator
+            decoder, accelerator,
         })
     }
 
@@ -358,7 +424,7 @@ impl MediaPlayback {
         let base = self.create_video_base(index, accel)?;
 
         let front = VideoFront::Sampler(VideoSamplerFront {
-            keyframes: AggregationTree::new(base.length, cmp::max, 0),
+            keyframes: AggregationTree::new(base.n_frames, cmp::max, 0),
         });
 
         self.video = Some(VideoContext { base, front });
@@ -366,18 +432,8 @@ impl MediaPlayback {
     }
 
     fn create_audio_base(&self, index: Option<usize>) -> Result<AudioBase, MediaError> {
-        let index = match index {
-            Some(x) => x,
-            None => self
-                .input
-                .streams()
-                .best(media::Type::Audio)
-                .ok_or(MediaError::InternalError("No audio stream".to_string()))?
-                .index(),
-        };
-        let stream = self.input.stream(index).ok_or(MediaError::InternalError(
-            "invalid stream index".to_string(),
-        ))?;
+        let (stream_info, stream) = 
+            self.create_stream_info(index, media::Type::Audio)?;
 
         // create decoder
         let codecxt = check!(codec::Context::from_parameters(stream.parameters()))?;
@@ -385,29 +441,33 @@ impl MediaPlayback {
         check!(decoder.set_parameters(stream.parameters()))?;
         decoder.set_packet_time_base(stream.time_base());
 
+        let timebase = decoder.time_base();
+        if timebase != Rational(1, decoder.rate().try_into().unwrap()) {
+            warn!("create_audio_base: time_base = {timebase} but rate = {}", decoder.rate());
+        }
+
         let length: usize = self
             .input
             .duration()
-            .rescale(rescale::TIME_BASE, decoder.time_base())
+            .rescale(rescale::TIME_BASE, timebase)
             .try_into()
             .unwrap();
 
         debug!(
-            "audio {}:len={};stream_tb={};decoder_tb={};rate={};format={};layout=0x{:x}",
-            index,
+            "create_audio_base: [{}] len={}, decoder_tb={}, stream_tb={}, format={}, layout=0x{:x}",
+            stream_info.index,
             length,
+            timebase,
             stream.time_base(),
-            decoder.time_base(),
-            decoder.rate(),
             decoder.format().name(),
             decoder.channel_layout().bits()
         );
 
         Ok(AudioBase {
-            stream_i: index,
-            stream_timebase: stream.time_base(),
-            pos_timebase: decoder.time_base(),
+            stream: stream_info,
             length,
+            sample_timebase: timebase,
+            sample_rate: decoder.rate(),
             decoder,
         })
     }
@@ -420,12 +480,12 @@ impl MediaPlayback {
                 (
                     base.decoder.format(),
                     base.decoder.channel_layout(),
-                    base.decoder.rate()
+                    base.sample_rate
                 ),
                 (
                     format::Sample::F32(format::sample::Type::Packed),
                     ChannelLayout::MONO,
-                    base.decoder.rate(),
+                    base.sample_rate,
                 ),
             ))?,
         });
@@ -441,18 +501,18 @@ impl MediaPlayback {
     ) -> Result<(), MediaError> {
         let base = self.create_audio_base(index)?;
 
-        let step = base.decoder.rate().div_ceil(resolution);
+        let step = base.sample_rate.div_ceil(resolution);
         let front = AudioFront::Sampler(AudioSamplerFront {
             resampler: check!(software::resampler(
                 (
                     base.decoder.format(),
                     base.decoder.channel_layout(),
-                    base.decoder.rate()
+                    base.sample_rate
                 ),
                 (
                     format::Sample::F32(format::sample::Type::Packed),
                     ChannelLayout::MONO,
-                    base.decoder.rate(),
+                    base.sample_rate,
                 ),
             ))?,
             intensities: AggregationTree::new(
@@ -474,7 +534,7 @@ impl MediaPlayback {
 
         for (stream, packet) in self.input.packets() {
             if let Some(c) = self.audio.as_mut() {
-                if c.base.stream_i == stream.index() {
+                if c.base.stream.index == stream.index() {
                     // decode audio packet
                     c.feed(&packet)?;
                     if let Some(f) = c.decode()? {
@@ -483,7 +543,7 @@ impl MediaPlayback {
                 }
             }
             if let Some(c) = self.video.as_mut() {
-                if c.base.stream_i == stream.index() {
+                if c.base.stream.index == stream.index() {
                     // decode video packet
                     c.feed(&packet)?;
                     if let Some(f) = c.decode()? {
@@ -531,13 +591,15 @@ impl MediaPlayback {
             .ok_or(MediaError::InternalError("no video".to_string()))?;
         cxt.flush();
 
-        let rescaled = position.rescale(cxt.base.pos_timebase, cxt.base.stream_timebase);
+        let rescaled = position.rescale(
+            cxt.base.pos_timebase, 
+            cxt.base.stream.timebase);
         trace!("seek video: pos={position}, rescaled={rescaled}");
 
         unsafe {
             match ffmpeg_sys_next::avformat_seek_file(
                 self.input.as_mut_ptr(),
-                cxt.base.stream_i.try_into().unwrap(),
+                cxt.base.stream.index.try_into().unwrap(),
                 0,
                 rescaled,
                 rescaled,
@@ -557,13 +619,15 @@ impl MediaPlayback {
             .ok_or(MediaError::InternalError("no audio".to_string()))?;
         cxt.flush();
 
-        let rescaled = position.rescale(cxt.base.pos_timebase, cxt.base.stream_timebase);
+        let rescaled = position.rescale(
+            cxt.base.sample_timebase, 
+            cxt.base.stream.timebase);
         trace!("seek audio: pos={position}, rescaled={rescaled}");
 
         unsafe {
             match ffmpeg_sys_next::avformat_seek_file(
                 self.input.as_mut_ptr(),
-                cxt.base.stream_i.try_into().unwrap(),
+                cxt.base.stream.index.try_into().unwrap(),
                 0,
                 rescaled,
                 rescaled,
@@ -594,7 +658,7 @@ impl AudioSamplerFront {
         &mut self, frame: &DecodedAudioFrame, 
         sampler_data: &mut Option<AudioSampleData>
     ) -> Result<(), MediaError> {
-        let index_start: usize = match frame.position / i64::from(self.step) {
+        let mut index: usize = match frame.position / i64::from(self.step) {
             y if y >= 0 && usize::try_from(y).unwrap() >= self.intensities.length => {
                 log::debug!("AudioSamplerFront.process: unexpected {y}, expecting < {}", self.intensities.length);
                 return Ok(());
@@ -604,58 +668,52 @@ impl AudioSamplerFront {
         };
         if sampler_data.is_none() {
             *sampler_data = Some(AudioSampleData {
-                start: index_start,
+                start: index,
                 position: 0,
                 intensity: Vec::<f32>::new()
             });
         }
-        let sd = sampler_data.as_mut().unwrap();
-        
-        match sd.start + sd.intensity.len() {
-            x if x < index_start => {
-                log::debug!("AudioSamplerFront.process: unexpected {x}, expecting >= {index_start}; filling with zeroes");
-                while sd.start + sd.intensity.len() < index_start {
-                    sd.intensity.push(0.);
-                }
-            },
-            _ => ()
-        }
 
+        let sd = sampler_data.as_mut().unwrap();
         let mut processed = frame::Audio::empty();
         check!(self.resampler.run(&frame.decoded, &mut processed))?;
         
         let data: &[f32] = processed.plane(0);
         let step = i64::from(self.step);
-        let mut counter = frame.position % step;
-        let mut sum: f32 = self.intensities.at(index_start);
-        let mut index = index_start;
+        let mut position = frame.position;
+        let mut sum: f32 = self.intensities.at(index);
+
         for sample in data {
             sum = sum.max(sample.abs());
-            counter += 1;
-            if counter == step {
+            if position % step == 0 {
                 self.intensities.set(&[sum], index);
-                if sd.start + sd.intensity.len() <= index {
-                    sd.intensity.push(sum);
-                } else {
-                    sd.intensity[index - sd.start] = sum;
+
+                match sd.start + sd.intensity.len() {
+                    x if x > index => {
+                        // log::debug!("AudioSamplerFront.process: unexpected {x}, expecting {index}; revising");
+                        sd.intensity[index - sd.start] = sum;
+                    },
+                    x => { // x == index
+                        if x < index {
+                            // log::debug!("AudioSamplerFront.process: unexpected {x}, expecting {index}; filling with zeroes");
+                            while sd.start + sd.intensity.len() < index {
+                                sd.intensity.push(0.);
+                            }
+                        }
+                        sd.intensity.push(sum);
+                    }
                 }
-                counter = 0;
+                
                 index += 1;
                 if index >= self.intensities.length {
                     return Ok(());
                 }
                 sum = self.intensities.at(index);
             }
+            position += 1;
         }
         self.intensities.set(&[sum], index);
-        if let Some(x) = sampler_data.as_mut() {
-            if x.start + x.intensity.len() <= index {
-                x.intensity.push(sum);
-            } else {
-                x.intensity[index - x.start] = sum;
-            }
-            x.position = frame.position + i64::try_from(frame.decoded.samples()).unwrap();
-        };
+        sd.position = frame.position + i64::try_from(frame.decoded.samples()).unwrap();
         Ok(())
     }
 
@@ -698,26 +756,34 @@ impl AudioContext {
             .ok_or(MediaError::InternalError(
                 "decoded frame has no pts".to_owned(),
             ))?
-            .rescale(self.base.stream_timebase, self.base.pos_timebase);
-        let time = f64::from(self.base.pos_timebase) * position as f64;
+            .rescale(self.base.stream.timebase, 
+                self.base.sample_timebase);
+
+        let time = f64::from(self.base.sample_timebase) * position as f64;
 
         Ok(Some(DecodedAudioFrame {
             position,
             time,
+            pktpos: decoded.packet().position,
             decoded,
         }))
     }
 
     pub fn stream_index(&self) -> usize {
-        self.base.stream_i
+        self.base.stream.index
     }
 
     pub fn length(&self) -> usize {
         self.base.length
     }
 
+    #[allow(clippy::cast_precision_loss)]
+    pub fn start_time(&self) -> f64 {
+        f64::from(self.base.stream.timebase) * self.base.stream.start_time as f64
+    }
+
     pub fn sample_rate(&self) -> u32 {
-        self.base.decoder.rate()
+        self.base.sample_rate
     }
 
     pub fn front(&self) -> &AudioFront {
@@ -859,7 +925,9 @@ impl VideoContext {
             .pts()
             // fall back to packet's DTS if no pts available (as in AVI)
             .unwrap_or(decoded.packet().dts)
-            .rescale(self.base.stream_timebase, self.base.pos_timebase);
+            .rescale(self.base.stream.timebase, 
+                self.base.pos_timebase);
+
         let time = f64::from(self.base.pos_timebase) * position as f64;
 
         if self.base.accelerator.is_some() {
@@ -876,11 +944,16 @@ impl VideoContext {
     }
 
     pub fn stream_index(&self) -> usize {
-        self.base.stream_i
+        self.base.stream.index
     }
 
-    pub fn length(&self) -> usize {
-        self.base.length
+    #[allow(clippy::cast_precision_loss)]
+    pub fn start_time(&self) -> f64 {
+        f64::from(self.base.stream.timebase) * self.base.stream.start_time as f64
+    }
+
+    pub fn n_frames(&self) -> usize {
+        self.base.n_frames
     }
 
     pub fn original_size(&self) -> (u32, u32) {

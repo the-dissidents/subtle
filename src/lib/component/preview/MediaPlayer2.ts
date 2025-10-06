@@ -173,7 +173,7 @@ export class MediaPlayer2 {
                 this.#seekDone();
         }
         if (this.audio.bufferLength == 0)
-            await Debug.trace('receiveFrame: first audio at', frame.position, frame.time);
+            await Debug.trace('receiveFrame: first audio at', frame.position, frame.time, frame.content.length, frame.pktpos);
         await this.audio.pushFrame(frame);
     }
 
