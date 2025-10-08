@@ -362,7 +362,7 @@ pub fn skip_until(
     };
     loop {
         if let Some(data) = 
-            send_next_frame_data_if_before(time, playback, &channel)
+            send_next_frame_data_if_not_before(time, playback, &channel)
         {
             return data;
         }
@@ -380,10 +380,10 @@ pub fn get_next_frame_data(
         send_invalid_id(&channel);
         return Err(());
     };
-    send_next_frame_data_if_before(f64::NEG_INFINITY, playback, &channel).unwrap()
+    send_next_frame_data_if_not_before(f64::NEG_INFINITY, playback, &channel).unwrap()
 }
 
-fn send_next_frame_data_if_before(
+fn send_next_frame_data_if_not_before(
     time: f64,
     playback: &mut MediaPlayback,
     channel: &Channel<MediaEvent>

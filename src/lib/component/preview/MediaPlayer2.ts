@@ -32,7 +32,7 @@ export class MediaPlayer2 {
      */
     #timestamp = 0;
 
-    // TODO: document
+    // TODO: what's this?
     #internalTimestamp?: number;
 
     #videoBuffer: VideoFrameData[] = [];
@@ -48,7 +48,8 @@ export class MediaPlayer2 {
 
     #diag = {
         fetchVideoTime: 0,
-        fetchAudioTime: 0
+        fetchAudioTime: 0,
+        latencySquared: 0,
     }
 
     get source() { return this.rawurl; }
@@ -221,9 +222,8 @@ export class MediaPlayer2 {
             return false;
 
         const preloadAmount = MediaConfig.data.preloadAmount;
-        const sampleRate = this.media.audio!.sampleRate;
         if (this.audio.tail !== undefined
-         && this.audio.tail! - this.audio.head! > preloadAmount * sampleRate
+         && this.audio.tail! - this.audio.head! > preloadAmount
          && this.#videoBuffer.length > 1
          && this.#videoBuffer.at(-1)!.time - this.#videoBuffer[0].time > preloadAmount)
         {
@@ -283,13 +283,19 @@ export class MediaPlayer2 {
             .map((x) => x.content.length)
             .reduce((a, b) => a + b, 0);
         const audioSize = this.audio.bufferSize;
-        const sampleRate = this.media.audio!.sampleRate;
 
-        let audioTime = this.audio.head !== undefined
-            ? (this.audio.head / sampleRate).toFixed(3) : 'n/a';
-        let latency = this.audio.head !== undefined
-            ? (frame.time - this.audio.head / sampleRate).toFixed(3) : 'n/a';
-        if (!latency.startsWith('-')) latency = ' ' + latency;
+        let audioTime: string, latencyStr: string;
+        if (this.audio.head !== undefined) {
+            let latency = (frame.time - this.audio.head) * 1000;
+            this.#diag.latencySquared = this.#diag.latencySquared * DAMPING 
+                + (latency * latency * (1 - DAMPING));
+
+            audioTime = this.audio.head.toFixed(3);
+            latencyStr = latency.toFixed(1);
+        } else {
+            audioTime = 'n/a';
+            latencyStr = 'n/a';
+        }
         
         ctx.fillStyle = 'red';
         ctx.font = `${window.devicePixelRatio * 10}px Courier`;
@@ -299,11 +305,12 @@ export class MediaPlayer2 {
         ctx.fillText(
             `FPS ${this.frameRate.toFixed(3)} SPR ${this.media.audio!.sampleRate}`, x, 0);
         ctx.fillText(
-            `ATi ${audioTime.padEnd(9)}[${frame.time.toFixed(3).padStart(9)}]`, x, 20);
+            `ATi ${audioTime} s`, x, 20);
         ctx.fillText(
-            `VTi ${frame.time.toFixed(3)}`, x, 40);
+            `VTi ${frame.time.toFixed(3)} s`, x, 40);
         ctx.fillText(
-            `LAT${latency}`, x, 60);
+            `LAT${latencyStr.padStart(5)}`.padEnd(10)
+          + `STS ${Math.sqrt(this.#diag.latencySquared).toFixed(1).padStart(4)}`, x, 60);
         ctx.fillText(
             `DRW ${(performance.now() - start).toFixed(1)}`, x, 80);
         ctx.fillText(
@@ -324,50 +331,57 @@ export class MediaPlayer2 {
     async #presentNext() {
         if (this.#closed) return -1;
 
+        // if not playing, just display the current frame
         if (!this.#playing) {
             let frame = this.#videoBuffer.at(0);
             if (this.#playEOF) {
                 Debug.assert(this.#lastFrame !== undefined, 'no lastFrame');
                 frame = this.#lastFrame;
             }
+            // if no frames in buffer, wait for it to get populated
             if (!frame) return 0;
+            
             if (frame.time !== this.#timestamp) {
-                await Debug.trace(`ts=${this.#timestamp}, fts=${frame.time}`);
-                // return 0;
+                await Debug.warn(`presentNext: ts=${this.#timestamp} but fts=${frame.time}`);
             }
             await this.#drawFrame(frame);
             this.manager.requestRender();
             return -1;
         }
 
-        // playing
+        // if there's no video
         if (this.#videoBuffer.length == 0) {
+            // either it's EOF
             if (this.#preloadEOF) {
                 this.#playEOF = true;
                 await this.stop();
                 return 0; // render one more time
             }
-            // ensure preloading
+            // or the buffer is empty
             if (!this.#populateBufferRunning)
                 this.#populateBuffer();
             return 0;
         }
     
+        // if there's no audio, we can't synchronize and must wait for it
         if (this.audio.head === undefined)
             return 0;
 
-        // TODO: currently we never discard any video frames even when decoding is slow; also the synchronization can be better (currently latency is about 50ms)
+        // currently we never discard any video frames even when decoding is slow
         const frame = this.#videoBuffer.shift()!;
         this.#timestamp = frame.time;
         MediaPlayerInterface2.onPlayback.dispatch(frame.time);
         await this.#drawFrame(frame);
         this.manager.requestRender();
 
+        // ensure the buffer is refilling since we're consuming frames
         if (!this.#populateBufferRunning)
             this.#populateBuffer();
 
-        const clock = this.audio.head / this.media.audio!.sampleRate;
-        return Math.max(0, Math.min(frame.time - clock, 2 / this.media.video!.framerate));
+        // get next frame's time as target or fall back to this frame
+        const targetTime = (this.#videoBuffer.at(0) ?? frame).time;
+        const clock = this.audio.head;
+        return Math.max(0, Math.min(targetTime - clock, 2 / this.media.video!.framerate));
     }
 
     #presenting = false;
@@ -418,7 +432,7 @@ export class MediaPlayer2 {
         Debug.assert(!this.#closed, 'player closed');
         if (this.#timestamp == 0) return;
         // TODO!
-        // this.#seekToFrameTask.request(this.#position - 1);
+        this.#seekTask.request(this.#timestamp - 1);
     }
 
     async seek(t: number, opt?: SetPositionOptions) {
@@ -498,7 +512,7 @@ export class MediaPlayer2 {
             if (this.#playing) await this.stop();
 
             await this.#mutex.use(async () => {
-                await Debug.debug(`resize: ${ow}x${oh}`);
+                await Debug.trace(`resize: ${ow}x${oh}`);
                 await this.media.setVideoSize(ow, oh);
                 this.#seekTask.request(this.#timestamp, { force: true });
             })

@@ -18,7 +18,6 @@ impl DisjointIntervalSet {
         let mut left = OrderedFloat(left);
         let mut right = OrderedFloat(right);
         let mut to_remove = Vec::<Of64>::new();
-
         {
             let mut iter = self.map.range(..=right);
             while let Some((&a, &b)) = iter.next_back() {
