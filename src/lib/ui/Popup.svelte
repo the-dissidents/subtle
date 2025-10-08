@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { Snippet } from 'svelte';
 import { Debug } from '../Debug';
+    import type { HTMLAttributes } from 'svelte/elements';
 
 export type PopupHandler = {
   open?: (rect: {
@@ -14,9 +15,9 @@ export type PopupHandler = {
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 
-interface Props {
+interface Props extends HTMLAttributes<HTMLSpanElement> {
   handler: PopupHandler;
-  style?: 'panel' | 'tooltip';
+  kind?: 'panel' | 'tooltip';
   maxWidth?: string;
   position?: TooltipPosition;
   onclose?: () => void;
@@ -24,8 +25,8 @@ interface Props {
 }
 
 let { 
-  position = 'top', style = 'panel', maxWidth = '200px',
-  handler = $bindable(), onclose, children
+  position = 'top', kind = 'panel', maxWidth = '200px',
+  handler = $bindable(), onclose, children, ...rest
 }: Props = $props();
 
 let id = $props.id();
@@ -68,7 +69,7 @@ handler.openAt = (x, y, w, h) => {
   tooltip.style.height = h ? `${h}px` : '';
   transformClass = '';
   tooltip.showPopover();
-}
+};
 
 handler.close = () => {
   Debug.assert(tooltip !== undefined);
@@ -150,15 +151,16 @@ handler.isOpen = () => isOpen;
   }
 </style>
 
-<span popover bind:this={tooltip}
+<span popover="auto" bind:this={tooltip}
   style="max-width: {maxWidth};"
   role="tooltip"
   id={`${id}-tooltip`}
-  class='popup {style} {transformClass}'
+  class='popup {kind} {transformClass}'
   ontoggle={(e) => {
     isOpen = e.newState == 'open';
     if (!isOpen) onclose?.();
   }}
+  {...rest}
 >
   {@render children?.()}
 </span>

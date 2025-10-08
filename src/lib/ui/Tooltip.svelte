@@ -76,7 +76,7 @@ function findBoundingRect(element: HTMLElement): DOMRect {
     </span>
   {/if}
 </div>
-<Popup style='tooltip' bind:handler={handler} {position}>
+<Popup kind='tooltip' bind:handler={handler} {position}>
   <div class="content">
     {text}
   </div>

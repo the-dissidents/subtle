@@ -105,7 +105,7 @@ onMount(() => {
   {/if}
 </Popup>
 
-<Popup bind:handler={validationMessagePopup} position="left" style='tooltip'>
+<Popup bind:handler={validationMessagePopup} position="left" kind='tooltip'>
   <span style="white-space: pre-wrap;">
     {input?.popupMessage}
   </span>

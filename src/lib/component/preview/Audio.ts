@@ -3,11 +3,15 @@ import { Debug } from '../../Debug';
 import type { AudioFeedbackData, AudioInputData } from './worker/DecodedAudioLoader';
 import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 
+const VOLUME_POWER = 3;
+
 export class Audio {
     #onAudioFeedback?: (data: AudioFeedbackData) => void;
     #closed = false;
     #working: string | null = null;
     #worklet: AudioWorkletNode;
+    #volume = 1;
+
     #feedback: AudioFeedbackData = {
         type: 'ok',
         isPlaying: false,
@@ -35,6 +39,10 @@ export class Audio {
 
     get tail() {
         return this.#feedback.tailTime;
+    }
+
+    get volume() {
+        return this.#volume;
     }
 
     private constructor(private ctx: AudioContext) {
@@ -104,6 +112,12 @@ export class Audio {
         if (!this.#feedback.isPlaying)
             return Debug.early('already stopped');
         await this.#post({ type: 'suspend' });
+    }
+
+    async setVolume(value: number) {
+        if (value == this.#volume) return;
+        this.#volume = value;
+        await this.#post({ type: 'setVolume', value: Math.pow(value, VOLUME_POWER) });
     }
 
     async updateStatus() {

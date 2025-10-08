@@ -143,6 +143,14 @@ export class MediaPlayer2 {
         });
     }
 
+    get volume() {
+        return this.audio.volume;
+    }
+
+    async setVolume(value: number) {
+        await this.#mutex.use(() => this.audio.setVolume(value));
+    }
+
     // Must be called while locked
     async #clearCache() {
         Debug.assert(!this.#closed, 'player closed');

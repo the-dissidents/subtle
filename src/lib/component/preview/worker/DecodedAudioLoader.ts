@@ -11,6 +11,9 @@ export type AudioInputData = {
 } | {
     type: 'frame',
     frame: AudioFrameData
+} | {
+    type: 'setVolume',
+    value: number
 };
 
 export type AudioFeedbackData = {
@@ -25,6 +28,7 @@ export type AudioFeedbackData = {
 class DecodedAudioLoader extends AudioWorkletProcessor {
     #buffer: AudioFrameData[] = [];
     #currentPosition = 0;
+    #volume = 1;
     #playing: boolean = false;
     
     constructor(...args: any) {
@@ -55,7 +59,12 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                         this.#buffer.shift();
                     this.#postFeedback('ok');
                     break;
+                case "setVolume":
+                    this.#volume = e.data.value;
+                    this.#postFeedback('ok');
+                    break;
                 default:
+                    this.#log('unexpected data: ', e.data)
                     break;
             }
         };
@@ -72,7 +81,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
         } satisfies AudioFeedbackData);
     }
 
-    log(...args: any[]) {
+    #log(...args: any[]) {
         this.port.postMessage(args);
     }
 
@@ -96,9 +105,11 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                 let counter = 0;
                 while (newBuffer.length > 0) {
                     counter += 1;
-                    let content = newBuffer[0].content;
-                    let end = channel.length - fillPosition + newCurrentPosition;
-                    let part = content.subarray(newCurrentPosition, Math.min(content.length, end));
+                    const content = newBuffer[0].content;
+                    const end = channel.length - fillPosition + newCurrentPosition;
+                    const part = content
+                        .subarray(newCurrentPosition, Math.min(content.length, end))
+                        .map((x) => x * this.#volume);
                     channel.set(part, fillPosition);
                     fillPosition += end - newCurrentPosition;
                     if (end < content.length) {
@@ -108,9 +119,8 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                         // this buffer entry is used up
                         newBuffer.shift();
                         newCurrentPosition = 0;
-                        if (end == content.length) {
+                        if (end == content.length)
                             break;
-                        }
                         // else, don't break
                     }
                 }
@@ -118,10 +128,10 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
             this.#buffer = newBuffer;
             this.#currentPosition = newCurrentPosition;
             if (this.#buffer.length == 0) {
-                this.log('buffer exhausted!');
+                this.#log('buffer exhausted!');
             }
         } catch (e) {
-            this.log('worklet error:', e);
+            this.#log('worklet error:', e);
         }
 
         return true;
