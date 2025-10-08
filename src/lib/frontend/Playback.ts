@@ -135,7 +135,7 @@ export const Playback = {
         if (this.player === null)
             this.forceSetPosition(pos);
         else
-            this.player.seekToTime(pos, opt);
+            this.player.seek(pos, opt);
     },
 
     snapPositionToFrame(pos: number, rounding: 'left' | 'right' | 'round') {
@@ -152,7 +152,7 @@ export const Playback = {
             position = pos;
             Playback.onPositionChanged.dispatch(pos);
         } else {
-            await this.player.seekToTime(pos);
+            await this.player.seek(pos);
         }
     },
 

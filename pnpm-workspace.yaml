@@ -1,3 +1,5 @@
 onlyBuiltDependencies:
   - es5-ext
   - esbuild
+
+minimumReleaseAge: 1440

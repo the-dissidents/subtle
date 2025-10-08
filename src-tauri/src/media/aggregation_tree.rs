@@ -106,11 +106,13 @@ where
     //     self.propagate_up(first_leaf_idx, last_leaf_idx_exclusive - 1);
     // }
 
+    #[expect(unused)]
     pub fn get_leaf_level(&self) -> &[N] {
         &self.data[self.leaf_start..]
     }
 
     /// Retrieves a slice representing a single level of the tree.
+    #[expect(unused)]
     pub fn get_level(&self, resolution: usize) -> &[N] {
         debug_assert!(resolution.is_power_of_two(), "Resolution must be a power of 2");
         debug_assert!(resolution <= self.length, "Resolution cannot be greater than length");

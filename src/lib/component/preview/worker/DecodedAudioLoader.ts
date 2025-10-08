@@ -7,7 +7,7 @@ export type AudioInputData = {
     type: 'clearBuffer' | 'suspend' | 'play' | 'query'
 } | {
     type: 'shiftUntil',
-    position: number
+    time: number
 } | {
     type: 'frame',
     frame: AudioFrameData
@@ -18,8 +18,8 @@ export type AudioFeedbackData = {
     isPlaying: boolean,
     bufferLength: number,
     bufferSize: number,
-    headPosition: number | undefined,
-    tailPosition: number | undefined
+    headTime: number | undefined,
+    tailTime: number | undefined
 };
 
 class DecodedAudioLoader extends AudioWorkletProcessor {
@@ -51,7 +51,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                     this.#postFeedback('ok');
                     break;
                 case "shiftUntil":
-                    while (this.#buffer.length > 0 && e.data.position > this.#buffer[0].position)
+                    while (this.#buffer.length > 0 && e.data.time > this.#buffer[0].time)
                         this.#buffer.shift();
                     this.#postFeedback('ok');
                     break;
@@ -67,8 +67,8 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
             isPlaying: this.#playing,
             bufferLength: this.#buffer.length,
             bufferSize: this.#buffer.reduce((a, b) => a + b.content.length * 4, 0),
-            headPosition: this.#buffer[0]?.position,
-            tailPosition: this.#buffer.at(-1)?.position,
+            headTime: this.#buffer[0]?.time,
+            tailTime: this.#buffer.at(-1)?.time,
         } satisfies AudioFeedbackData);
     }
 

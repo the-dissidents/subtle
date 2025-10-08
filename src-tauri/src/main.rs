@@ -91,8 +91,6 @@ fn main() {
             media::skip_until,
             media::sample_automatic2,
             media::get_next_frame_data,
-            media::get_audio_sampler_data,
-            media::get_video_sampler_data,
             media::video_set_size,
             media::get_keyframe_before,
             media::test_performance,

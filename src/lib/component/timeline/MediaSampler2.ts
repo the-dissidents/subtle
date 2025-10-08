@@ -1,12 +1,25 @@
+import { OrderedMap } from "@js-sdsl/ordered-map";
 import { MMedia } from "../../API";
-import { Basic } from "../../Basic";
 import { InterfaceConfig } from "../../config/Groups";
 import { Debug } from "../../Debug";
 import { AggregationTree } from "../../details/AggregationTree";
 import { Mutex } from "../../details/Mutex";
 
+class Keyframes {
+    private set = new OrderedMap<number, undefined>();
+
+    add(t: number) {
+        this.set.setElement(t, undefined);
+    }
+
+    query(left: number, right: number) {
+        let it = this.set.lowerBound(left);
+        if (it.equals(this.set.rEnd())) return false;
+        return it.pointer[0] <= right;
+    }
+}
+
 export class MediaSampler2 {
-    #sampleLength: number;
     #samplerStart = 0;
     #sampleEnd = 0;
     #sampleProgress = 0;
@@ -15,32 +28,32 @@ export class MediaSampler2 {
     #sampling = false;
     #mutex = new Mutex(1000, 'MediaSampler2');
 
-    #eofPosition = -1;
+    #eofTimestamp = -1;
 
     #intensity: AggregationTree<Float32Array>;
-    #keyframes: AggregationTree<Uint8Array>;
+    #keyframes: Keyframes;
 
     onProgress?: () => void;
 
     /** points per second */
     get keyframeResolution() { return this.media.video!.framerate; }
     /** points per second */
-    get intensityResolution() { return this.media.audio!.sampleRate / this.#sampleLength; }
+    get intensityResolution() { return this.resolution; }
     get isSampling() { return this.#sampling; }
-    get sampleStart() { return this.#samplerStart / this.media.audio!.sampleRate; }
-    get sampleEnd() { return this.#sampleEnd / this.media.audio!.sampleRate; }
-    get sampleProgress() { return this.#sampleProgress / this.media.audio!.sampleRate; }
+    get sampleStart() { return this.#samplerStart; }
+    get sampleEnd() { return this.#sampleEnd; }
+    get sampleProgress() { return this.#sampleProgress; }
 
     intensityData(level: number, from: number, to: number) {
         return this.#intensity.getLevel(level).subarray(from, to);
     }
 
-    keyframeData(level: number, from: number, to: number) {
-        return this.#keyframes.getLevel(level).subarray(from, to);
-    }
+    // keyframeData(level: number, from: number, to: number) {
+    //     return this.#keyframes.getLevel(level).subarray(from, to);
+    // }
 
-    async getKeyframeBefore(pos: number) {
-        return await this.media.getKeyframeBefore(pos);
+    async getKeyframeBefore(time: number) {
+        return await this.media.getKeyframeBefore(time);
     }
 
     private constructor(
@@ -49,10 +62,8 @@ export class MediaSampler2 {
         private readonly resolution: number,
     ) {
         Debug.assert(media.audio !== undefined);
-        this.#sampleLength = Math.ceil(media.audio.sampleRate / resolution);
         this.#intensity = this.#initAudioData();
-        this.#keyframes = new AggregationTree(Uint8Array,
-            Math.ceil(this.media.video!.length), Math.max);
+        this.#keyframes = new Keyframes();
     }
 
     static async open(media: MMedia, audio: number, resolution: number) {
@@ -64,9 +75,8 @@ export class MediaSampler2 {
 
     #initAudioData() {
         Debug.assert(this.media.audio !== undefined);
-        this.#sampleLength = Math.ceil(this.media.audio.sampleRate / this.resolution);
         this.#intensity = new AggregationTree(Float32Array,
-            Math.ceil(this.media.audio.length / this.#sampleLength), Math.max);
+            Math.ceil(this.media.duration * this.resolution), Math.max);
         return this.#intensity;
     }
 
@@ -96,50 +106,44 @@ export class MediaSampler2 {
 
     extendSampling(to: number) {
         Debug.assert(this.#sampling);
-        let pos = Math.floor(to * this.media.audio!.sampleRate);
-        const length = this.media.audio!.length;
-        if (pos > length) pos = length;
-        if (this.#sampleEnd >= pos) return;
-        Debug.assert(this.#sampleProgress < pos);
-        Debug.trace('extending sampling to', pos);
-        this.#sampleEnd = pos;
+        const duration = this.media.duration;
+        if (to > duration) to = duration;
+        if (this.#sampleEnd >= to) return;
+        Debug.assert(this.#sampleProgress < to);
+        Debug.trace('extending sampling to', to);
+        this.#sampleEnd = to;
     }
 
     async startSampling(from: number, to: number): Promise<void> {
         Debug.assert(!this.media.isClosed);
         if (this.#sampling) return Debug.early('already sampling');
 
-        const sampleRate = this.media.audio!.sampleRate;
-        const length = this.media.audio!.length;
-
-        let a = Math.floor(from * sampleRate);
-        let b = Math.floor(to * sampleRate);
-        Debug.assert(b > a);
+        const duration = this.media.duration;
+        Debug.assert(to > from);
         
-        if (this.#eofPosition >= 0) {
-            if (b > this.#eofPosition)
-                b = this.#eofPosition;
-        } else if (b > length) b = length;
+        if (this.#eofTimestamp >= 0) {
+            if (to > this.#eofTimestamp)
+                to = this.#eofTimestamp;
+        } else if (to > duration)
+            to = duration;
 
-        if (a >= b) return;
+        if (from >= to) return;
 
         this.#sampling = true;
         this.#cancelling = false;
-        this.#samplerStart = a;
-        this.#sampleEnd = b;
+        this.#samplerStart = from;
+        this.#sampleEnd = to;
 
         await this.#mutex.use(async () => {
-            const framerate = this.media.video!.framerate;
-            const videoPos = Math.max(0, Math.floor(from * framerate - 1));
-            const prevKeyframe = await this.media.getKeyframeBefore(videoPos);
+            const prevKeyframe = await this.media.getKeyframeBefore(from);
             if (prevKeyframe === null
-            || this.#sampleProgress > videoPos / framerate
-            || this.#sampleProgress < prevKeyframe / framerate)
+            || this.#sampleProgress > from
+            || this.#sampleProgress < prevKeyframe)
             {
-                await Debug.trace(`startSampling: ${from}-${to} ${a}-${b}; -> [${videoPos}]`);
-                await this.media.seekVideo(videoPos);
+                await Debug.trace(`startSampling: ${from}-${to}`);
+                await this.media.seekVideo(from);
             } else {
-                await Debug.trace(`startSampling: ${from}-${to} ${a}-${b}`);
+                await Debug.trace(`startSampling: ${from}-${to} without seeking`);
             }
         });
 
@@ -147,17 +151,23 @@ export class MediaSampler2 {
             const ok = await this.#mutex.use(async () => {
                 const result = await this.media.sampleAutomatic2(20);
                 if (result.audio) {
-                    this.#sampleProgress = result.audio.position;
-                    this.#intensity.set(result.audio.intensity, result.audio.start);
+                    this.#sampleProgress = result.audio.start; // TODO: should be end
+                    this.#intensity.set(result.audio.intensity, result.audio.startIndex);
                 }
-                if (result.video)
-                    this.#keyframes.set(result.video.keyframes, result.video.start);
+                if (result.video) {
+                    for (const key of result.video.keyframes)
+                        this.#keyframes.add(key);
+                }
                 this.onProgress?.();
                 if (result.isEof) {
                     Debug.trace(`sampling done upon EOF`, result);
                     this.#sampling = false;
                     if (result.audio) {
-                        this.#eofPosition = result.audio.position;
+                        this.#eofTimestamp = result.audio.start;
+                    } else if (result.video) {
+                        this.#eofTimestamp = result.video.end;
+                    } else {
+                        Debug.assert(false, 'sampling EOF without audio or video data');
                     }
                     return false;
                 }

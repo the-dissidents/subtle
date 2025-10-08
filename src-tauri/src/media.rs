@@ -12,6 +12,7 @@ use tauri::State;
 
 mod internal;
 mod aggregation_tree;
+mod disjoint_interval_set;
 mod accel;
 
 pub(crate) use internal::MediaPlayback;
@@ -75,7 +76,7 @@ pub enum MediaEvent<'a> {
     #[serde(rename_all = "camelCase")]
     FfmpegVersion { value: String },
     #[serde(rename_all = "camelCase")]
-    KeyframeData { pos: Option<usize> },
+    KeyframeData { time: Option<f64> },
     #[serde(rename_all = "camelCase")]
     SampleDone2 { 
         audio: Option<AudioSampleData>,
@@ -285,7 +286,7 @@ pub fn open_audio(
 #[allow(clippy::cast_sign_loss)]
 pub fn open_audio_sampler(
     id: i32, audio_id: i32,
-    resolution: u32,
+    sample_per_second: usize,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
@@ -294,12 +295,12 @@ pub fn open_audio_sampler(
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
 
     let index = (audio_id > 0).then_some(audio_id as usize);
-    let ctx = match playback.open_audio_sampler(index, resolution) {
+    let ctx = match playback.open_audio_sampler(index, sample_per_second) {
         Ok(()) => playback.audio().unwrap(),
         Err(e) => return send_error!(&channel, e.to_string()),
     };
 
-    log::debug!("open_audio_sampler: {id} {audio_id} {resolution}");
+    log::debug!("open_audio_sampler: {id} [{audio_id}] {sample_per_second}");
 
     send(&channel, MediaEvent::AudioStatus {
         index: ctx.stream_index(),
@@ -312,7 +313,7 @@ pub fn open_audio_sampler(
 #[tauri::command]
 pub fn seek_audio(
     id: i32,
-    position: i64,
+    time: f64,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
@@ -322,7 +323,7 @@ pub fn seek_audio(
     if playback.audio().is_none() {
         return send(&channel, MediaEvent::NoStream {});
     };
-    if let Err(e) = playback.seek_audio(position) {
+    if let Err(e) = playback.seek_audio(time) {
         return send_error!(&channel, e.to_string());
     };
     send_done(&channel);
@@ -331,7 +332,7 @@ pub fn seek_audio(
 #[tauri::command]
 pub fn seek_video(
     id: i32,
-    position: i64,
+    time: f64,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) {
@@ -341,7 +342,7 @@ pub fn seek_video(
     if playback.video().is_none() {
         return send(&channel, MediaEvent::NoStream {});
     };
-    if let Err(e) = playback.seek_video(position) {
+    if let Err(e) = playback.seek_video(time) {
         return send_error!(&channel, e.to_string());
     };
     send_done(&channel);
@@ -350,8 +351,7 @@ pub fn seek_video(
 #[tauri::command]
 pub fn skip_until(
     id: i32,
-    video_position: i64,
-    audio_position: i64,
+    time: f64,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>,
 ) -> Result<ipc::Response, ()> {
@@ -362,7 +362,7 @@ pub fn skip_until(
     };
     loop {
         if let Some(data) = 
-            send_next_frame_data(playback, video_position, audio_position, &channel)
+            send_next_frame_data_if_before(time, playback, &channel)
         {
             return data;
         }
@@ -380,21 +380,16 @@ pub fn get_next_frame_data(
         send_invalid_id(&channel);
         return Err(());
     };
-    send_next_frame_data(playback, -1, -1, &channel).unwrap()
+    send_next_frame_data_if_before(f64::NEG_INFINITY, playback, &channel).unwrap()
 }
 
-fn send_next_frame_data(
+fn send_next_frame_data_if_before(
+    time: f64,
     playback: &mut MediaPlayback,
-    video_position: i64,
-    audio_position: i64,
     channel: &Channel<MediaEvent>
 ) -> Option<Result<ipc::Response, ()>> {
     match playback.get_next() {
-        Ok(Some(Frame::Video(f))) => {
-            if f.position < video_position {
-                return None;
-            }
-
+        Ok(Some(Frame::Video(f))) if f.time >= time => {
             match playback.video_mut().unwrap().front_mut() {
                 VideoFront::Player(p) => 
                     match p.process(f) {
@@ -410,11 +405,7 @@ fn send_next_frame_data(
                 }
             }
         },
-        Ok(Some(Frame::Audio(f))) => {
-            if f.position < audio_position {
-                return None;
-            }
-
+        Ok(Some(Frame::Audio(f))) if f.time >= time => {
             match playback.audio_mut().unwrap().front_mut() {
                 AudioFront::Player(p) => 
                     match p.process(f) {
@@ -430,6 +421,7 @@ fn send_next_frame_data(
                 }
             }
         },
+        Ok(Some(_)) => None,
         Ok(None) => {
             send(channel, MediaEvent::Eof);
             Some(Err(()))
@@ -444,7 +436,6 @@ fn send_next_frame_data(
 /**
  * returns: [
  *  type        : [u32] = 1
- *  position    : [i32]
  *  time        : [f64]
  *  stride      : [u32]
  *  length      : [u32]
@@ -456,14 +447,13 @@ pub fn send_video_frame(frame: internal::DecodedVideoFrame) -> ipc::Response {
         unsafe { std::slice::from_raw_parts(data.as_ptr().cast(), data.len() * 4) }
     }
 
-    let pos = frame.position;
     let time = frame.time;
     let data = to_byte_slice(frame.decoded.plane(0));
 
     let mut binary = Vec::<u8>::new();
     binary.extend(1_u32.to_le_bytes().iter());
-    binary.extend(i32::try_from(pos).unwrap().to_le_bytes().iter());
     binary.extend(time.to_le_bytes().iter());
+    binary.extend(i32::try_from(frame.pktpos).unwrap().to_le_bytes().iter());
     binary.extend(u32::try_from(frame.decoded.stride(0) / 4).unwrap().to_le_bytes().iter());
     binary.extend(u32::try_from(data.len()).unwrap().to_le_bytes().iter());
     binary.extend_from_slice(data);
@@ -474,7 +464,6 @@ pub fn send_video_frame(frame: internal::DecodedVideoFrame) -> ipc::Response {
 /**
  * returns: [
  *  type        : [u32] = 0
- *  position    : [i32]
  *  time        : [f64]
  *  pktpos      : [i32]
  *  length      : [u32]
@@ -489,35 +478,16 @@ pub fn send_audio_frame(frame: internal::DecodedAudioFrame) -> ipc::Response {
         }
     }
 
-    let pos = frame.position;
     let time = frame.time;
     let data: &[f32] = frame.decoded.plane(0);
 
     let mut binary = Vec::<u8>::new();
     binary.extend(0_u32.to_le_bytes().iter());
-    binary.extend(i32::try_from(pos).unwrap().to_le_bytes().iter());
     binary.extend(time.to_le_bytes().iter());
     binary.extend(i32::try_from(frame.pktpos).unwrap().to_le_bytes().iter());
     binary.extend(i32::try_from(data.len()).unwrap().to_le_bytes().iter());
     binary.extend_from_slice(to_byte_slice(data));
 
-    Response::new(InvokeResponseBody::Raw(binary))
-}
-
-/**
- * returns: [
- *  length : [u32]
- *  data   : [N]
- * ]
- * */
-pub fn send_data<N>(data: &[N]) -> ipc::Response {
-    let mut binary = Vec::<u8>::new();
-    binary.extend(i32::try_from(data.len()).unwrap().to_le_bytes().iter());
-    binary.extend_from_slice(unsafe {
-        std::slice::from_raw_parts(
-            data.as_ptr().cast::<u8>(), 
-            std::mem::size_of_val(data))
-    });
     Response::new(InvokeResponseBody::Raw(binary))
 }
 
@@ -559,58 +529,8 @@ pub fn sample_automatic2(
 }
 
 #[tauri::command]
-pub fn get_audio_sampler_data(
-    id: i32, level: usize, from: usize, to: usize,
-    state: State<Mutex<PlaybackRegistry>>,
-    channel: Channel<MediaEvent>,
-) -> Result<ipc::Response, ()> {
-    let ap = state.lock().unwrap();
-    let Some(playback) = ap.table.get(&id) else {
-        send_invalid_id(&channel);
-        return Err(());
-    };
-    let Some(ctx) = playback.audio() else {
-        send(&channel, MediaEvent::NoStream {});
-        return Err(());
-    };
-    let AudioFront::Sampler(front) = ctx.front() else {
-        send_error!(&channel, "audio opened not as sampler");
-        return Err(());
-    };
-    let data=  front.data_view(level);
-    let from = (data.len() - 1).min(from);
-    let to = (data.len() - 1).min(to);
-    Ok(send_data(&data[from..to]))
-}
-
-#[tauri::command]
-pub fn get_video_sampler_data(
-    id: i32, level: usize, from: usize, to: usize,
-    state: State<Mutex<PlaybackRegistry>>,
-    channel: Channel<MediaEvent>,
-) -> Result<ipc::Response, ()> {
-    let ap = state.lock().unwrap();
-    let Some(playback) = ap.table.get(&id) else {
-        send_invalid_id(&channel);
-        return Err(());
-    };
-    let Some(ctx) = playback.video() else {
-        send(&channel, MediaEvent::NoStream {});
-        return Err(());
-    };
-    let VideoFront::Sampler(front) = ctx.front() else {
-        send_error!(&channel, "video opened not as sampler");
-        return Err(());
-    };
-    let data=  front.data_view(level);
-    let from = (data.len() - 1).min(from);
-    let to = (data.len() - 1).min(to);
-    Ok(send_data(&data[from..to]))
-}
-
-#[tauri::command]
 pub fn get_keyframe_before(
-    id: i32, pos: usize,
+    id: i32, time: f64,
     state: State<Mutex<PlaybackRegistry>>,
     channel: Channel<MediaEvent>
 ) {
@@ -621,7 +541,7 @@ pub fn get_keyframe_before(
         playback.video() else { return send(&channel, MediaEvent::NoStream {}) };
     let VideoFront::Sampler(front) = 
         ctx.front() else { return send_error!(&channel, "video opened not as sampler") };
-    send(&channel, MediaEvent::KeyframeData { pos: front.get_keyframe_before(pos) });
+    send(&channel, MediaEvent::KeyframeData { time: front.get_keyframe_before(time) });
 }
 
 #[tauri::command]

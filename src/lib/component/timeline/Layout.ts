@@ -9,7 +9,6 @@ import { TimelineConfig } from "./Config";
 import { EventHost } from "../../details/EventHost";
 import { MediaSampler2 } from "./MediaSampler2";
 import { TimelineHandle } from "./Input.svelte";
-import { Basic } from "../../Basic";
 import { get } from "svelte/store";
 
 const PRELOAD_MARGIN = 3;

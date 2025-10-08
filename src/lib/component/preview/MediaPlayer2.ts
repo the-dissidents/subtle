@@ -28,14 +28,16 @@ export class MediaPlayer2 {
     #mutex = new Mutex(1000, 'MediaPlayer2');
 
     /**
-     * Current position in video frames. This value serves to preserve the progress when the buffers are emptied due to seeking operations. If the buffers are not empty, it must be equal to `videoBuffer[0].position`.
+     * Current timestamp. This value serves to preserve the progress when the buffers are emptied due to seeking operations. If the buffers are not empty, it must be equal to `videoBuffer[0].time`.
      */
-    #position = 0;
-    #internalPosition?: number;
+    #timestamp = 0;
+
+    // TODO: document
+    #internalTimestamp?: number;
 
     #videoBuffer: VideoFrameData[] = [];
     #lastFrame?: VideoFrameData;
-    #seekTarget = -1;
+    #seekTargetTime?: number;
     #preloadEOF = false;
     #playEOF = false;
 
@@ -47,10 +49,6 @@ export class MediaPlayer2 {
     #diag = {
         fetchVideoTime: 0,
         fetchAudioTime: 0
-    }
-
-    #vpos2apos(i: number) {
-        return i * this.media.audio!.sampleRate / this.media.video!.framerate;
     }
 
     get source() { return this.rawurl; }
@@ -155,46 +153,46 @@ export class MediaPlayer2 {
 
     #seekDone() {
         const frame = this.#videoBuffer[0];
-        this.#seekTarget = -1;
-        Debug.debug(`seeked to ${frame.position} [${frame.time.toFixed(3)}]`);
+        this.#seekTargetTime = undefined;
+        Debug.debug(`seekDone: seeked to [${frame.time.toFixed(3)}]`);
     }
 
     // Must be called while locked
     async #receiveAudioFrame(frame: AudioFrameData) {
-        if (this.audio.tail !== undefined && this.audio.tail > frame.position) {
-            await Debug.warn(`receiveFrame: abnormal audio frame ordering: ${frame.position} < ${this.audio.tail}`);
+        if (this.audio.tail !== undefined && this.audio.tail > frame.time) {
+            await Debug.warn(`receiveFrame: abnormal audio frame ordering: ${frame.time} < ${this.audio.tail}`);
             await this.#clearCache();
             return;
         }
-        if (this.#seekTarget >= 0) {
-            if (frame.position < this.#vpos2apos(this.#seekTarget))
+        if (this.#seekTargetTime !== undefined) {
+            if (frame.time < this.#seekTargetTime)
                 return;
             else if (this.#videoBuffer.length > 0)
                 this.#seekDone();
         }
         if (this.audio.bufferLength == 0)
-            await Debug.trace('receiveFrame: first audio at', frame.position, frame.time, frame.content.length, frame.pktpos);
+            await Debug.trace('receiveFrame: first audio at', frame.time, frame.content.length, frame.pktpos);
         await this.audio.pushFrame(frame);
     }
 
     // Must be called while locked
     async #receiveVideoFrame(frame: VideoFrameData) {
-        if (this.#videoBuffer.length > 0 && this.#videoBuffer.at(-1)!.position > frame.position) {
-            await Debug.warn(`receiveFrame: abnormal video frame ordering: ${frame.position} < ${this.#videoBuffer.at(-1)!.position}`);
+        if (this.#videoBuffer.length > 0 && this.#videoBuffer.at(-1)!.time > frame.time) {
+            await Debug.warn(`receiveFrame: abnormal video frame ordering: ${frame.time} < ${this.#videoBuffer.at(-1)!.time}`);
             await this.#clearCache();
             return;
         }
-        if (this.#seekTarget > 0 && frame.position < this.#seekTarget)
+        if (this.#seekTargetTime !== undefined && frame.time < this.#seekTargetTime)
             return;
         this.#videoBuffer.push(frame);
         this.#lastFrame = frame;
-        this.#internalPosition = frame.position;
-        if (this.#seekTarget > 0 && this.audio.bufferLength > 0)
+        this.#internalTimestamp = frame.time;
+        if (this.#seekTargetTime !== undefined && this.audio.bufferLength > 0)
             this.#seekDone();
         if (this.#videoBuffer.length == 1) {
-            this.#position = frame.position;
+            this.#timestamp = frame.time;
             MediaPlayerInterface2.onPlayback.dispatch(frame.time);
-            await Debug.trace('receiveFrame: first video at', frame.position, frame.time);
+            await Debug.trace('receiveFrame: first video at', frame.time);
             if (!this.#presenting) this.#present();
         }
     }
@@ -299,9 +297,9 @@ export class MediaPlayer2 {
 
         const x = dx;
         ctx.fillText(
-            `FPS ${this.media.video!.framerate.toFixed(3)} SPR ${this.media.audio!.sampleRate}`, x, 0);
+            `FPS ${this.frameRate.toFixed(3)} SPR ${this.media.audio!.sampleRate}`, x, 0);
         ctx.fillText(
-            `ATi ${audioTime.padEnd(9)}[${frame.position}]`, x, 20);
+            `ATi ${audioTime.padEnd(9)}[${frame.time.toFixed(3).padStart(9)}]`, x, 20);
         ctx.fillText(
             `VTi ${frame.time.toFixed(3)}`, x, 40);
         ctx.fillText(
@@ -333,8 +331,8 @@ export class MediaPlayer2 {
                 frame = this.#lastFrame;
             }
             if (!frame) return 0;
-            if (frame.position !== this.#position) {
-                await Debug.trace(`position=${this.#position}, frame=${frame.position}`);
+            if (frame.time !== this.#timestamp) {
+                await Debug.trace(`ts=${this.#timestamp}, fts=${frame.time}`);
                 // return 0;
             }
             await this.#drawFrame(frame);
@@ -360,7 +358,7 @@ export class MediaPlayer2 {
 
         // TODO: currently we never discard any video frames even when decoding is slow; also the synchronization can be better (currently latency is about 50ms)
         const frame = this.#videoBuffer.shift()!;
-        this.#position = frame.position;
+        this.#timestamp = frame.time;
         MediaPlayerInterface2.onPlayback.dispatch(frame.time);
         await this.#drawFrame(frame);
         this.manager.requestRender();
@@ -412,77 +410,73 @@ export class MediaPlayer2 {
     requestNextFrame() {
         Debug.assert(!this.#closed, 'player closed');
         if (this.#playEOF) return;
-        this.#seekToFrameTask.request(this.#position + 1);
+        // TODO!
+        // this.#seekToFrameTask.request(this.#timestamp + 1);
     }
 
     requestPreviousFrame() {
         Debug.assert(!this.#closed, 'player closed');
-        if (this.#position == 0) return;
-        this.#seekToFrameTask.request(this.#position - 1);
+        if (this.#timestamp == 0) return;
+        // TODO!
+        // this.#seekToFrameTask.request(this.#position - 1);
     }
 
-    async seekToTime(t: number, opt?: SetPositionOptions) {
+    async seek(t: number, opt?: SetPositionOptions) {
         if (t < 0) t = 0;
         if (t > this.duration) t = this.duration;
-        const index = Math.round(t * this.media.video!.framerate);
-        return await this.#seekToFrameTask.request(index, opt);
+        return await this.#seekTask.request(t, opt);
     }
 
-    async seekToFrame(index: number, opt?: SetPositionOptions) {
-        return await this.#seekToFrameTask.request(index, opt);
-    }
-
-    #seekToFrameTask = 
-    new RestartableTask<[index: number, opt?: SetPositionOptions]>(
-        async ([index, opt], tok) => await this.#mutex.use(async () => {
+    #seekTask = 
+    new RestartableTask<[target: number, opt?: SetPositionOptions]>(
+        async ([target, opt], tok) => await this.#mutex.use(async () => {
             if (this.#closed
-             || (!opt?.force && (this.#seekTarget == index || this.#position == index)))
+             || (!opt?.force && (this.#seekTargetTime == target || this.#timestamp == target)))
             {
                 await Debug.debug(`seek: aborted`);
                 return;
             }
             if (tok.isCancelled) return;
 
-            const audioIndex = Math.floor(this.#vpos2apos(index));
             if (this.#videoBuffer.length > 2
-             && index > this.#videoBuffer[0].position
-             && index <= this.#videoBuffer.at(-1)!.position)
+             && target >= this.#videoBuffer[0].time
+             && target <= this.#videoBuffer.at(-1)!.time)
             {
                 // inside cache
-                while (this.#videoBuffer[0].position < index)
+                while (this.#videoBuffer[0].time < target)
                     this.#videoBuffer.shift();
-                await this.audio.shiftUntil(audioIndex);
+                await this.audio.shiftUntil(target);
                 const frame = this.#videoBuffer[0];
-                this.#internalPosition = frame.position;
-                this.#position = frame.position;
+                this.#internalTimestamp = frame.time;
+                this.#timestamp = frame.time;
                 MediaPlayerInterface2.onPlayback.dispatch(frame.time);
-                await Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] inside cache`);
+                await Debug.debug(`seek: [${frame.time.toFixed(3)}] inside cache`);
             } else {
                 await this.#clearCache();
                 if (tok.isCancelled) return;
 
-                const realTarget = Math.max(0, index - 2);
+                const realTarget = target; // Math.max(0, target - 0.001);
                 let lastKeyframe: number | null;
-                if (this.#internalPosition === undefined
-                 || index <= this.#internalPosition
+                if (this.#internalTimestamp === undefined
+                 || target <= this.#internalTimestamp
                  || !Playback.sampler 
                  || (lastKeyframe = await Playback.sampler.getKeyframeBefore(realTarget)) === null
-                 || lastKeyframe > this.#internalPosition)
+                 || lastKeyframe > this.#internalTimestamp)
                 {
                     // must seek
                     if (!(opt?.imprecise))
-                        this.#seekTarget = index;
-                    this.#internalPosition = undefined;
+                        this.#seekTargetTime = target;
+                    this.#internalTimestamp = undefined;
                     await this.media.seekVideo(realTarget);
-                    await Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] seeked -> ${realTarget}`);
+                    await Debug.debug(`seek: [${target.toFixed(3)}] seeked`);
                 } else {
                     // no need to seek
-                    this.#seekTarget = index;
-                    await Debug.debug(`seek: ${index} [${index / this.media.video!.framerate}] not seeked`);
+                    this.#seekTargetTime = target;
+                    await Debug.debug(`seek: [${target.toFixed(3)}] not seeked`);
                 }
 
                 if (!(opt?.imprecise)) {
-                    const frame = await this.media.skipUntil(index, audioIndex);
+                    const frame = await this.media.skipUntil(target);
                     await this.#receiveFrame(frame, 0);
                 }
             }
@@ -506,7 +500,7 @@ export class MediaPlayer2 {
             await this.#mutex.use(async () => {
                 await Debug.debug(`resize: ${ow}x${oh}`);
                 await this.media.setVideoSize(ow, oh);
-                this.#seekToFrameTask.request(this.#position, { force: true });
+                this.#seekTask.request(this.#timestamp, { force: true });
             })
         },
         ([a, b], [c, d]) => a == c && b == d
@@ -528,7 +522,7 @@ export class MediaPlayer2 {
             }
 
             await this.#clearCache();
-            this.#seekToFrameTask.request(this.#position);
+            this.#seekTask.request(this.#timestamp);
         });
     }
 }

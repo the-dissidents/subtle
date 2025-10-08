@@ -13,8 +13,8 @@ export class Audio {
         isPlaying: false,
         bufferLength: 0,
         bufferSize: 0,
-        headPosition: undefined,
-        tailPosition: undefined
+        headTime: undefined,
+        tailTime: undefined
     };
 
     get isPlaying() {
@@ -30,11 +30,11 @@ export class Audio {
     }
 
     get head() {
-        return this.#feedback.headPosition;
+        return this.#feedback.headTime;
     }
 
     get tail() {
-        return this.#feedback.tailPosition;
+        return this.#feedback.tailTime;
     }
 
     private constructor(private ctx: AudioContext) {
@@ -90,8 +90,8 @@ export class Audio {
         await this.#post({ type: 'frame', frame });
     }
 
-    async shiftUntil(position: number) {
-        await this.#post({ type: 'shiftUntil', position });
+    async shiftUntil(time: number) {
+        await this.#post({ type: 'shiftUntil', time });
     }
 
     async play() {

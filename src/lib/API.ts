@@ -26,11 +26,12 @@ export type VideoStatus = {
 export type SampleResult = {
     audio: {
         start: number,
-        position: number,
+        startIndex: number,
         intensity: number[]
     } | null,
     video: {
         start: number,
+        end: number,
         keyframes: number[]
     } | null,
     isEof: boolean
@@ -76,7 +77,7 @@ export type MediaEvent = {
     data: { value: string }
 } | {
     event: 'keyframeData',
-    data: { pos: number | null }
+    data: { time: number | null }
 } | {
     event: 'sampleDone2',
     data: SampleResult
@@ -127,7 +128,7 @@ function createChannel(
 
 export type VideoFrameData = {
     type: 'video',
-    position: number,
+    pktpos: number,
     time: number,
     stride: number,
     size: [width: number, height: number],
@@ -136,7 +137,6 @@ export type VideoFrameData = {
 
 export type AudioFrameData = {
     type: 'audio',
-    position: number,
     pktpos: number,
     time: number,
     content: Float32Array
@@ -190,18 +190,17 @@ export class MMedia {
     #readFrameData(data: ArrayBuffer): AudioFrameData | VideoFrameData {
         const view = new BinaryReader(data);
         const type = view.readU32() == 0 ? 'audio' : 'video';
-        const position = view.readI32();
         const time = view.readF64();
-        if (type == 'audio') {
             const pktpos = view.readI32();
+        if (type == 'audio') {
             const length = view.readU32();
             const content = new Float32Array(data, view.pos, length);
-            return { type, position, pktpos, time, content } satisfies AudioFrameData;
+            return { type, pktpos, time, content } satisfies AudioFrameData;
         } else {
             const stride = view.readU32();
             const length = view.readU32();
             const content = new Uint8ClampedArray(data, view.pos, length);
-            return { type, position, time, stride, content, 
+            return { type, pktpos, time, stride, content, 
                 size: [...this.#outSize] } satisfies VideoFrameData;
         }
     }
@@ -283,13 +282,13 @@ export class MMedia {
         return this.#audio;
     }
 
-    async openAudioSampler(audioId: number, resolution: number) {
+    async openAudioSampler(audioId: number, samplePerSecond: number) {
         Debug.assert(!this.#destroyed);
         this.#audio = await new Promise<AudioStatus>((resolve, reject) => {
             let channel = createChannel('openAudioSampler', {
                 audioStatus: (data) => resolve(data)
             }, reject);
-            invoke('open_audio_sampler', {id: this.id, audioId, resolution, channel});
+            invoke('open_audio_sampler', {id: this.id, audioId, samplePerSecond, channel});
         });
         return this.#audio;
     }
@@ -388,7 +387,7 @@ export class MMedia {
         }
     }
 
-    async seekAudio(position: number) {
+    async seekAudio(time: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
@@ -398,14 +397,14 @@ export class MMedia {
                 channel = createChannel('seekAudio', {
                     done: () => resolve()
                 }, reject);
-                invoke('seek_audio', { id: this.id, channel, position });
+                invoke('seek_audio', { id: this.id, channel, time });
             });
         } finally {
             this.#currentJobs -= 1;
         }
     }
 
-    async seekVideo(position: number) {
+    async seekVideo(time: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
@@ -415,21 +414,21 @@ export class MMedia {
                 channel = createChannel('seekVideo', {
                     done: () => resolve()
                 }, reject);
-                invoke('seek_video', { id: this.id, channel, position });
+                invoke('seek_video', { id: this.id, channel, time });
             });
         } finally {
             this.#currentJobs -= 1;
         }
     }
 
-    async skipUntil(videoPosition: number, audioPosition: number) {
+    async skipUntil(time: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
         this.#currentJobs += 1;
         try {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
-                channel = createChannel('skipUntilVideoFrame', { 
+                channel = createChannel('skipUntil', { 
                     'EOF': () => {
                         Debug.debug('at eof');
                         this.#eof = true;
@@ -437,7 +436,7 @@ export class MMedia {
                     }
                 }, reject);
                 invoke<ArrayBuffer>('skip_until', { 
-                    id: this.id, videoPosition, audioPosition, channel 
+                    id: this.id, time, channel 
                 }).then((x) => {
                     if (x.byteLength > 0)
                         resolve(this.#readFrameData(x))
@@ -448,40 +447,14 @@ export class MMedia {
         }
     }
 
-    async getKeyframeBefore(pos: number) {
+    async getKeyframeBefore(time: number) {
         Debug.assert(!this.#destroyed);
         let channel: Channel<MediaEvent> | undefined;
         return await new Promise<number | null>((resolve, reject) => {
             channel = createChannel('getKeyframeBefore', {
-                keyframeData: (data) => resolve(data.pos)
+                keyframeData: (data) => resolve(data.time)
             }, reject);
-            invoke('get_keyframe_before', { id: this.id, channel, pos });
-        });
-    }
-
-    async getAudioSamplerData(level: number, from: number, to: number) {
-        Debug.assert(!this.#destroyed);
-        // await Debug.trace('getAudioSamplerData', level, from, to);
-        return await new Promise<Float32Array>((resolve, reject) => {
-            let channel = createChannel('getAudioSamplerData', {}, reject);
-            invoke<ArrayBuffer>('get_audio_sampler_data', {id: this.id, channel, level, from, to})
-                .then((x) => {
-                    if (x.byteLength > 0)
-                        resolve(this.#readFloatArrayData(x))
-                });
-        });
-    }
-
-    async getVideoSamplerData(level: number, from: number, to: number) {
-        Debug.assert(!this.#destroyed);
-        // await Debug.trace('getVideoSamplerData', level, from, to);
-        return await new Promise<Uint8Array>((resolve, reject) => {
-            let channel = createChannel('getVideoSamplerData', {}, reject);
-            invoke<ArrayBuffer>('get_video_sampler_data', {id: this.id, channel, level, from, to})
-                .then((x) => {
-                    if (x.byteLength > 0)
-                        resolve(this.#readByteArrayData(x))
-                });
+            invoke('get_keyframe_before', { id: this.id, channel, time });
         });
     }
 }

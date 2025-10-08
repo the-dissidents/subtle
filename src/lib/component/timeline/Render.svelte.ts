@@ -177,25 +177,25 @@ export class TimelineRenderer {
     if (TimelineConfig.data.showKeyframes
      && this.layout.scale * devicePixelRatio / Playback.sampler.keyframeResolution > 1) 
     {
-      this.#drawAggregation(
-        Playback.sampler.keyframeResolution,
-        (a, b, c) => Playback.sampler!.keyframeData(a, b, c),
-        (x, width, value) => {
-          if (value == 0) {
-            if (lastGap < 0) lastGap = x;
-            // this.layout.requestedSampler = true;
-          } else {
-            if (lastGap >= 0 && TimelineConfig.data.showDebug) {
-              ctx.fillStyle = PENDING_KEYFRAME_COLOR;
-              ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
-              lastGap = -1;
-            }
-            if (value == 2) {
-              ctx.fillStyle = KEYFRAME_COLOR;
-              ctx.fillRect(x, yscroll, width, this.layout.height);
-            }
-          }
-        });
+      // this.#drawAggregation(
+      //   Playback.sampler.keyframeResolution,
+      //   (a, b, c) => Playback.sampler!.keyframeData(a, b, c),
+      //   (x, width, value) => {
+      //     if (value == 0) {
+      //       if (lastGap < 0) lastGap = x;
+      //       // this.layout.requestedSampler = true;
+      //     } else {
+      //       if (lastGap >= 0 && TimelineConfig.data.showDebug) {
+      //         ctx.fillStyle = PENDING_KEYFRAME_COLOR;
+      //         ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
+      //         lastGap = -1;
+      //       }
+      //       if (value == 2) {
+      //         ctx.fillStyle = KEYFRAME_COLOR;
+      //         ctx.fillRect(x, yscroll, width, this.layout.height);
+      //       }
+      //     }
+      //   });
     }
   
     if (this.layout.requestedSampler)
