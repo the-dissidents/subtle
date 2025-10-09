@@ -7,6 +7,7 @@ extern crate ffmpeg_next as ffmpeg;
 mod encoding;
 mod media;
 mod redirect_log;
+mod util;
 
 use std::sync::Mutex;
 use tauri::AppHandle;

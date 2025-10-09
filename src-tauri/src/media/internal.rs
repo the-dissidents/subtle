@@ -22,6 +22,7 @@ use log::{debug, trace, warn};
 use crate::media::accel::HardwareDecoder;
 use crate::media::aggregation_tree::AggregationTree;
 use crate::media::disjoint_interval_set::DisjointIntervalSet;
+use crate::util::GuessNumber;
 
 #[derive(Debug)]
 pub enum MediaError {
@@ -360,16 +361,16 @@ impl MediaPlayback {
             warn!("create_video_base: [{index}] note: stream is VFR, avg={avg_framerate}, rate={framerate}");
         }
 
-        let estimated_n_frames: usize = match stream.frames() {
-            x if x > 0 => x,
-            _ => {
-                // warn!("create_video_base: [{index}] deriving frame count from duration, may be inaccurate");
-                i64::try_from(duration)
-                    .unwrap()
-                    .rescale(timebase, avg_framerate.invert())
-            }
-        }
-        .try_into().unwrap();
+        let estimated_n_frames = GuessNumber::new(0.005)
+            .baseline(i64::try_from(duration).unwrap()
+                    .rescale(timebase, avg_framerate.invert()))
+            .candidate_option(Some(stream.frames()).filter(|x| *x > 0))
+            // MKV often has this metadata field
+            .candidate_option(stream.metadata()
+                .get("NUMBER_OF_FRAMES")
+                .and_then(|x| (*x).parse::<i64>().ok()))
+            .guess().unwrap()
+            .to_usize().unwrap();
 
         debug!(
             "create_video_base: [{}] {:?}; decoder_fr={:?}",
