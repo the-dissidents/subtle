@@ -37,9 +37,14 @@ export class MediaPlayer2 {
 
     #videoBuffer: VideoFrameData[] = [];
     #lastFrame?: VideoFrameData;
-    #seekTargetTime?: number;
     #preloadEOF = false;
     #playEOF = false;
+
+    #seeking?: {
+        target: number;
+        skippedVideo: number;
+        skippedAudio: number;
+    };
 
     #bufCanvas: OffscreenCanvas;
     #bufCtx: OffscreenCanvasRenderingContext2D;
@@ -58,8 +63,15 @@ export class MediaPlayer2 {
     get streams() { return this.media.streams; }
     get currentAudioStream() { return this.media.audio!.index; }
     get frameRate() { return this.media.video!.framerate; }
+    get isVfr() { return this.media.video!.isVfr; }
     get videoSize() { return this.media.video?.size; }
     get sampleAspectRatio() { return this.media.video?.sampleAspectRatio; }
+
+    get startTime() {
+        return Math.min(
+            this.media.video!.startTime, 
+            this.media.audio?.startTime ?? Infinity);
+    }
 
     private constructor(
         private readonly media: MMedia, 
@@ -162,7 +174,7 @@ export class MediaPlayer2 {
 
     #seekDone() {
         const frame = this.#videoBuffer[0];
-        this.#seekTargetTime = undefined;
+        this.#seeking = undefined;
         Debug.debug(`seekDone: seeked to [${frame.time.toFixed(3)}]`);
     }
 
@@ -173,10 +185,12 @@ export class MediaPlayer2 {
             await this.#clearCache();
             return;
         }
-        if (this.#seekTargetTime !== undefined) {
-            if (frame.time < this.#seekTargetTime)
+        if (this.#seeking !== undefined) {
+            if (frame.time < this.#seeking.target) {
+                await Debug.trace(`skipped audio frame at ${frame.time}`);
+                this.#seeking.skippedAudio++;
                 return;
-            else if (this.#videoBuffer.length > 0)
+            } else if (this.#videoBuffer.length > 0)
                 this.#seekDone();
         }
         if (this.audio.bufferLength == 0)
@@ -191,12 +205,15 @@ export class MediaPlayer2 {
             await this.#clearCache();
             return;
         }
-        if (this.#seekTargetTime !== undefined && frame.time < this.#seekTargetTime)
+        if (this.#seeking !== undefined && frame.time < this.#seeking.target) {
+            await Debug.trace(`skipped video frame at ${frame.time}`);
+            this.#seeking.skippedVideo++;
             return;
+        }
         this.#videoBuffer.push(frame);
         this.#lastFrame = frame;
         this.#internalTimestamp = frame.time;
-        if (this.#seekTargetTime !== undefined && this.audio.bufferLength > 0)
+        if (this.#seeking !== undefined && this.audio.bufferLength > 0)
             this.#seekDone();
         if (this.#videoBuffer.length == 1) {
             this.#timestamp = frame.time;
@@ -453,7 +470,7 @@ export class MediaPlayer2 {
     new RestartableTask<[target: number, opt?: SetPositionOptions]>(
         async ([target, opt], tok) => await this.#mutex.use(async () => {
             if (this.#closed
-             || (!opt?.force && (this.#seekTargetTime == target || this.#timestamp == target)))
+             || (!opt?.force && (this.#seeking?.target === target || this.#timestamp == target)))
             {
                 await Debug.debug(`seek: aborted`);
                 return;
@@ -477,7 +494,7 @@ export class MediaPlayer2 {
                 await this.#clearCache();
                 if (tok.isCancelled) return;
 
-                const realTarget = target; // Math.max(0, target - 0.001);
+                const realTarget = Math.max(target, this.startTime);
                 let lastKeyframe: number | null;
                 if (this.#internalTimestamp === undefined
                  || target <= this.#internalTimestamp
@@ -487,13 +504,13 @@ export class MediaPlayer2 {
                 {
                     // must seek
                     if (!(opt?.imprecise))
-                        this.#seekTargetTime = target;
+                        this.#seeking = {target, skippedAudio: 0, skippedVideo: 0};
                     this.#internalTimestamp = undefined;
                     await this.media.seekVideo(realTarget);
                     await Debug.debug(`seek: [${target.toFixed(3)}] seeked`);
                 } else {
                     // no need to seek
-                    this.#seekTargetTime = target;
+                    this.#seeking = {target, skippedAudio: 0, skippedVideo: 0};
                     await Debug.debug(`seek: [${target.toFixed(3)}] not seeked`);
                 }
 

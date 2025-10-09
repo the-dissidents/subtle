@@ -7,6 +7,7 @@ use ffmpeg::format::Pixel;
 use ffmpeg::threading::Type;
 use ffmpeg::Stream;
 use ffmpeg_sys_next::AV_NOPTS_VALUE;
+use ffmpeg_sys_next::AV_TIME_BASE;
 use num_traits::ToPrimitive;
 use serde::Serialize;
 
@@ -135,6 +136,7 @@ pub struct VideoBase {
     decoder: codec::decoder::Video,
     accelerator: Option<HardwareDecoder>,
     estimated_n_frames: usize,
+    is_vfr: bool,
 
     /// will be inaccurate in case of VFR
     framerate: Rational,
@@ -357,7 +359,8 @@ impl MediaPlayback {
 
         let avg_framerate = stream.avg_frame_rate(); // avg_frame_rate
         let framerate = stream.rate();               // r_frame_rate
-        if framerate != avg_framerate {
+        let is_vfr = framerate != avg_framerate;
+        if is_vfr {
             warn!("create_video_base: [{index}] note: stream is VFR, avg={avg_framerate}, rate={framerate}");
         }
 
@@ -381,6 +384,7 @@ impl MediaPlayback {
         Ok(VideoBase {
             stream: stream_info,
             framerate,
+            is_vfr,
             estimated_n_frames,
             original_size: (decoder.width(), decoder.height()),
             sample_aspect_ratio,
@@ -538,24 +542,37 @@ impl MediaPlayback {
     pub fn get_next(&mut self) -> Result<Option<Frame>, MediaError> {
         assert!(self.audio.is_some() || self.video.is_some());
 
-        for (stream, packet) in self.input.packets() {
+        loop {
+            if let Some(f) = self.try_decode()? {
+                return Ok(Some(f));
+            }
+
+            let Some((stream, packet)) = self.input.packets().next() else {
+                return Ok(None);
+            };
+
             if let Some(c) = self.audio.as_mut() {
                 if c.base.stream.index == stream.index() {
-                    // decode audio packet
                     c.feed(&packet)?;
-                    if let Some(f) = c.decode()? {
-                        return Ok(Some(Frame::Audio(f)));
-                    }
                 }
             }
             if let Some(c) = self.video.as_mut() {
                 if c.base.stream.index == stream.index() {
-                    // decode video packet
                     c.feed(&packet)?;
-                    if let Some(f) = c.decode()? {
-                        return Ok(Some(Frame::Video(f)));
-                    }
                 }
+            }
+        };
+    }
+
+    fn try_decode(&mut self) -> Result<Option<Frame>, MediaError> {
+        if let Some(c) = self.audio.as_mut() {
+            if let Some(f) = c.decode()? {
+                return Ok(Some(Frame::Audio(f)));
+            }
+        }
+        if let Some(c) = self.video.as_mut() {
+            if let Some(f) = c.decode()? {
+                return Ok(Some(Frame::Video(f)));
             }
         }
         Ok(None)
@@ -610,19 +627,39 @@ impl MediaPlayback {
         }
     }
 
+    fn flush_all(&mut self) {
+        if let Some(cxt) = self.video.as_mut() {
+            cxt.flush();
+        }
+        if let Some(cxt) = self.audio.as_mut() {
+            cxt.flush();
+        }
+    }
+
+    pub fn seek(&mut self, time: f64) -> Result<(), MediaError> {
+        trace!("seek: [-1] time={time}");
+        self.flush_all();
+        let rescaled = (time * f64::from(AV_TIME_BASE)).to_i64().unwrap();
+        check!(self.input.seek(rescaled, ..rescaled))?;
+        Ok(())
+    }
+
     pub fn seek_video(&mut self, time: f64) -> Result<(), MediaError> {
+        self.flush_all();
+
         let stream = {
             let cxt = self
                 .video
                 .as_mut()
                 .ok_or(MediaError::InternalError("no video".to_string()))?;
-            cxt.flush();
             cxt.base.stream
         };
         self.seek_stream(time, stream)
     }
 
     pub fn seek_audio(&mut self, time: f64) -> Result<(), MediaError> {
+        self.flush_all();
+
         let stream = {
             let cxt = self
                 .audio
@@ -724,10 +761,10 @@ impl AudioContext {
         match self.base.decoder.send_packet(packet) {
             Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
-                // discard buffer
-                warn!("fill: EAGAIN met when sending audio pkt, flushing");
+                warn!("AudioContext::feed: some frames haven't been read! flushing.");
                 self.base.decoder.flush();
-                Ok(())
+                // resend packet
+                self.feed(packet)
             }
             send_packet_error => check!(send_packet_error),
         }
@@ -876,10 +913,10 @@ impl VideoContext {
         match self.base.decoder.send_packet(packet) {
             Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
-                // discard buffer
-                warn!("fill: EAGAIN met when sending video pkt, flushing");
+                warn!("VideoContext::feed: some frames haven't been read! flushing.");
                 self.base.decoder.flush();
-                Ok(())
+                // resend packet
+                self.feed(packet)
             }
             send_packet_error => check!(send_packet_error),
         }
@@ -944,6 +981,10 @@ impl VideoContext {
 
     pub fn framerate(&self) -> Rational {
         self.base.framerate
+    }
+
+    pub fn is_vfr(&self) -> bool {
+        self.base.is_vfr
     }
 
     // pub fn pixel_format(&self) -> format::Pixel {

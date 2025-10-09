@@ -96,6 +96,7 @@ export class TimelineLayout {
       if (!Playback.player) {
         const originalPos = pos;
         if (pos < 0) pos = 0;
+        pos = Math.max(pos, this.minPosition);
         pos = Math.min(pos, this.maxPosition);
         if (pos != originalPos) {
           Playback.setPosition(pos);
@@ -154,9 +155,19 @@ export class TimelineLayout {
 
   // TODO: cache it
   get maxPosition() {
-    return Playback.sampler 
+    return Playback.loaded 
       ? Playback.duration 
       : Math.max(0, ...Source.subs.entries.map((x) => x.end)) + 20;
+  }
+
+  get minPosition() {
+    return Playback.player !== null
+      ? Playback.player.startTime
+      : 0;
+  }
+
+  get positionSpan() {
+    return this.maxPosition - this.minPosition;
   }
 
   get scale() {
@@ -173,11 +184,10 @@ export class TimelineLayout {
 
   setScale(v: number) {
     Debug.assert(v > 0);
-    v = Math.max(v, this.width / this.maxPosition, 0.15);
+    v = Math.max(v, this.width / this.positionSpan, 0.15);
     v = Math.min(v, 500);
     if (v == this.scale) return;
 
-    // Debug.warn('scale', v);
     this.#scale = v;
     this.#updateContentArea();
     this.manager.requestRender();
@@ -187,7 +197,7 @@ export class TimelineLayout {
   setOffset(v: number) {
     if (v < 0) v = 0;
 
-    // Debug.warn('offset', v);
+    v = Math.max(v, this.minPosition);
     v = Math.min(v, this.maxPosition - this.width / this.scale);
     this.manager.setScroll({x: v * this.scale});
     this.manager.requestRender();
@@ -293,6 +303,7 @@ export class TimelineLayout {
 
   #updateContentArea() {
     this.manager.setContentRect({ 
+      l: this.minPosition * this.scale,
       r: this.maxPosition * this.scale,
       b: this.entryHeight * this.#shownStyles.length 
           + TimelineLayout.TRACKS_PADDING * 2 
@@ -305,16 +316,8 @@ export class TimelineLayout {
     this.height = h;
     this.requestedLayout = true;
     this.#updateContentArea();
-    this.#setViewOffset(this.offset);
+    this.setOffset(this.offset);
     this.manager.requestRender();
-  }
-
-  #setViewOffset(v: number) {
-    if (v < 0) v = 0;
-    v = Math.min(v, this.maxPosition - this.width / this.scale);
-    this.manager.setScroll({x: v * this.scale});
-    this.manager.requestRender();
-    this.requestedSampler = true;
   }
 
   async processSampler() {

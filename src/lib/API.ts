@@ -11,6 +11,7 @@ export type StreamDescription = {
 export type AudioStatus = {
     index: number,
     length: number,
+    startTime: number,
     sampleRate: number
 };
 
@@ -19,6 +20,7 @@ export type VideoStatus = {
     length: number,
     startTime: number,
     framerate: number,
+    isVfr: boolean,
     sampleAspectRatio: number,
     size: [width: number, height: number],
 };
@@ -205,20 +207,6 @@ export class MMedia {
         }
     }
 
-    #readFloatArrayData(data: ArrayBuffer) {
-        const view = new DataView(data);
-        const length = view.getUint32(0, true);
-        const content = new Float32Array(data, 4, length);
-        return content;
-    }
-
-    #readByteArrayData(data: ArrayBuffer) {
-        const view = new DataView(data);
-        const length = view.getUint32(0, true);
-        const content = new Uint8Array(data, 4, length);
-        return content;
-    }
-
     static async open(path: string) {
         const id = await new Promise<number>((resolve, reject) => {
             let channel = createChannel('open', {
@@ -381,6 +369,23 @@ export class MMedia {
                     sampleDone2: (data) => resolve(data)
                 }, reject);
                 invoke('sample_automatic2', { id: this.id, targetWorkingTimeMs, channel });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
+    async seek(time: number) {
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
+        try {
+            return await new Promise<void>((resolve, reject) => {
+                channel = createChannel('seekMedia', {
+                    done: () => resolve()
+                }, reject);
+                invoke('seek_media', { id: this.id, channel, time });
             });
         } finally {
             this.#currentJobs -= 1;

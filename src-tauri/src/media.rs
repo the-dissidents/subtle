@@ -3,6 +3,7 @@
 extern crate ffmpeg_next as ffmpeg;
 
 use internal::{Frame, StreamDescription};
+use log::{trace, warn};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -59,6 +60,7 @@ pub enum MediaEvent<'a> {
         index: usize,
         length: usize,
         framerate: f64,
+        is_vfr: bool,
         start_time: f64,
         sample_aspect_ratio: f64,
         size: (u32, u32),
@@ -218,6 +220,7 @@ pub fn open_video(
         index: ctx.stream_index(),
         length: ctx.n_frames(),
         framerate: ctx.framerate().into(),
+        is_vfr: ctx.is_vfr(),
         start_time: ctx.start_time(),
         sample_aspect_ratio: ctx.sample_aspect_ratio().into(),
         size: ctx.original_size()
@@ -249,6 +252,7 @@ pub fn open_video_sampler(
         length: ctx.n_frames(),
         start_time: ctx.start_time(),
         framerate: ctx.framerate().into(),
+        is_vfr: ctx.is_vfr(),
         sample_aspect_ratio: ctx.sample_aspect_ratio().into(),
         size: ctx.original_size()
     });
@@ -311,6 +315,22 @@ pub fn open_audio_sampler(
 }
 
 #[tauri::command]
+pub fn seek_media(
+    id: i32,
+    time: f64,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) {
+    let mut ap = state.lock().unwrap();
+    let Some(playback) = 
+        ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
+    if let Err(e) = playback.seek(time) {
+        return send_error!(&channel, e.to_string());
+    };
+    send_done(&channel);
+}
+
+#[tauri::command]
 pub fn seek_audio(
     id: i32,
     time: f64,
@@ -360,12 +380,19 @@ pub fn skip_until(
         send_invalid_id(&channel);
         return Err(());
     };
+    let mut counter = 0;
     loop {
         if let Some(data) = 
             send_next_frame_data_if_not_before(time, playback, &channel)
         {
+            if counter == 0 {
+                warn!("skip_until: didn't skip any frames");
+            } else {
+                trace!("skip_until: skipped {counter} frame(s)");
+            }
             return data;
         }
+        counter += 1;
     }
 }
 

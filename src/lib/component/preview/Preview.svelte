@@ -14,6 +14,8 @@
   volume.subscribe((x) => Playback.player?.setVolume(x));
 
   let isPlaying = $state(false);
+  let playPosStart = $state(0);
+  let playPosEnd = $state(1);
   let playPos = $state(0);
   let playPosInput = $state(0);
   let loadState = Playback.loadState;
@@ -29,8 +31,14 @@
 
   const me = {};
 
+  Playback.onLoaded.bind(me, () => {
+    playPosStart = Playback.player!.startTime;
+    playPosEnd = Playback.player!.startTime + Playback.duration;
+    playPos = Playback.position;
+  });
+
   Playback.onPositionChanged.bind(me, () => {
-    playPos = $loadState == 'loaded' ? Playback.position / Playback.duration : 0;
+    playPos = $loadState == 'loaded' ? Playback.position : 0;
     playPosInput = Playback.position;
   });
 
@@ -79,15 +87,15 @@
       {/if}
     </button>
     <input type='range' class='play-pointer flexgrow'
-      step="any" max="1" min="0"
-      disabled={$loadState !== 'loaded'}
+      step="any" min={playPosStart} max={playPosEnd}
       bind:value={playPos}
+      disabled={$loadState !== 'loaded'}
       oninput={() => {
         if ($loadState !== 'loaded') {
           playPos = 0;
           return;
         }
-        Playback.setPosition(playPos * Playback.duration, {imprecise: true});
+        Playback.setPosition(playPos, {imprecise: true});
       }}/>
     <button onclick={(e) => {
       const self = e.currentTarget;

@@ -139,7 +139,7 @@ export const Playback = {
     },
 
     snapPositionToFrame(pos: number, rounding: 'left' | 'right' | 'round') {
-        if (!this.player) return pos;
+        if (!this.player || this.player.isVfr) return pos;
         const i = Math.max(0, pos * this.player.frameRate);
         return (rounding == 'left' ? Math.floor(i)
               : rounding == 'right' ? Math.ceil(i)

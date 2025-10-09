@@ -87,6 +87,7 @@ fn main() {
             media::open_video,
             media::open_audio_sampler,
             media::open_video_sampler,
+            media::seek_media,
             media::seek_audio,
             media::seek_video,
             media::skip_until,

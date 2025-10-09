@@ -115,18 +115,16 @@ export class MediaSampler2 {
     }
 
     async startSampling(from: number, to: number): Promise<void> {
-        Debug.assert(!this.media.isClosed);
+        Debug.assert(!this.media.isClosed && this.media.audio !== undefined);
         if (this.#sampling) return Debug.early('already sampling');
 
-        const duration = this.media.duration;
         Debug.assert(to > from);
-        
-        if (this.#eofTimestamp >= 0) {
-            if (to > this.#eofTimestamp)
-                to = this.#eofTimestamp;
-        } else if (to > duration)
-            to = duration;
-
+        if (from < this.media.audio.startTime)
+            from = this.media.audio.startTime;
+        if (this.#eofTimestamp >= 0 && to > this.#eofTimestamp)
+            to = this.#eofTimestamp;
+        else if (to > this.media.duration)
+            to = this.media.duration;
         if (from >= to) return;
 
         this.#sampling = true;
