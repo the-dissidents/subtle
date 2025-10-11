@@ -193,7 +193,7 @@ export class MMedia {
         const view = new BinaryReader(data);
         const type = view.readU32() == 0 ? 'audio' : 'video';
         const time = view.readF64();
-            const pktpos = view.readI32();
+        const pktpos = view.readI32();
         if (type == 'audio') {
             const length = view.readU32();
             const content = new Float32Array(data, view.pos, length);
