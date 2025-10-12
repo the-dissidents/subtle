@@ -154,8 +154,6 @@ export const BasicCommands = {
             }
         }
     }),
-
-    
     
     playEntry: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['P'], ['Table', 'Timeline']),
@@ -568,18 +566,15 @@ export const BasicCommands = {
     {
         name: () => $_('action.sort-by-time'),
         isApplicable: () => hasSelection(1) && !Utils.isSelectionDisjunct(),
-        call() {
-            const selection = Editing.getSelection();
-            // assumes selection is not disjunct
-            const start = Source.subs.entries.indexOf(selection[0]);
-            if (start < 0) return Debug.early();
-            const positionMap = new Map<SubtitleEntry, number>();
-            for (let i = 0; i < Source.subs.entries.length; i++)
-                positionMap.set(Source.subs.entries[i], i);
-            selection.sort((a, b) => a.start - b.start);
-            Source.subs.entries.splice(start, selection.length, ...selection);
-            Source.markChanged(ChangeType.Order, $_('action.sort-by-time'));
-        },
+        call: () => Utils.sortSelection((a, b) => a.start - b.start, $_('action.sort-by-time')),
+    }),
+    sortSelectionByLabel: new UICommand(() => $_('category.tool'),
+        [],
+    {
+        name: () => $_('action.sort-by-label'),
+        isApplicable: () => hasSelection(1) && !Utils.isSelectionDisjunct(),
+        call: () => Utils.sortSelection(
+            (a, b) => a.label.localeCompare(b.label, 'en'), $_('action.sort-by-label')),
     }),
     createChannel: new UICommand(() => $_('category.editing'),
         [],

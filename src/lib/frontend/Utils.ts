@@ -234,5 +234,18 @@ export const Utils = {
             ? Source.subs.entries.find((ent, i) => i > thisIndex && ent.texts.has(style))
             : Source.subs.entries.findLast((ent, i) => i < thisIndex && ent.texts.has(style))
         ) ?? null;
+    },
+
+    sortSelection(cmp: (a: SubtitleEntry, b: SubtitleEntry) => number, changeName: string) {
+        const selection = Editing.getSelection();
+        // assumes selection is not disjunct
+        const start = Source.subs.entries.indexOf(selection[0]);
+        if (start < 0) return Debug.early();
+        const positionMap = new Map<SubtitleEntry, number>();
+        for (let i = 0; i < Source.subs.entries.length; i++)
+            positionMap.set(Source.subs.entries[i], i);
+        selection.sort(cmp);
+        Source.subs.entries.splice(start, selection.length, ...selection);
+        Source.markChanged(ChangeType.Order, changeName);
     }
 }

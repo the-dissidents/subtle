@@ -51,6 +51,7 @@ export async function contextMenu() {
                 BasicCommands.transformTimes.toMenuItem(),
                 { item: 'Separator' },
                 BasicCommands.sortSelectionByTime.toMenuItem(),
+                BasicCommands.sortSelectionByLabel.toMenuItem(),
                 { item: 'Separator' },
                 BasicCommands.mergeDuplicates.toMenuItem(),
                 DialogCommands.combineDialog.toMenuItem(),

@@ -71,6 +71,7 @@
     "set-end-time-to-cursor": "将字幕块结尾设置为当前位置",
     "set-start-time-to-cursor": "将字幕块开头设置为当前位置",
     "sort-by-first-style": "按第一个样式排序",
+    "sort-by-label": "按标签排序",
     "sort-by-time": "按时间排序",
     "sort-channels": "排序各频道",
     "split-by-line": "按行拆分为频道...",

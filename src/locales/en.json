@@ -71,6 +71,7 @@
     "set-end-time-to-cursor": "set end of active entry to cursor",
     "set-start-time-to-cursor": "set start of active entry to cursor",
     "sort-by-first-style": "sort by first style",
+    "sort-by-label": "sort by label",
     "sort-by-time": "sort by time",
     "sort-channels": "sort channels",
     "split-by-line": "split into channels by line...",
