@@ -457,6 +457,8 @@
     "end-time": "结束时间",
     "end-time-short": "结束",
     "label": "标签",
+    "number-of-channels": "条目中的频道数",
+    "number-of-channels-short": "频道数",
     "number-of-characters": "总字符数",
     "number-of-characters-in-longest-line": "最长行的字符数",
     "number-of-characters-in-longest-line-short": "行字符数",

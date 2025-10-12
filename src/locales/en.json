@@ -443,6 +443,8 @@
     "end-time": "end time",
     "end-time-short": "end",
     "label": "label",
+    "number-of-channels": "number of channels",
+    "number-of-channels-short": "#channels",
     "number-of-characters": "#characters",
     "number-of-characters-in-longest-line": "#characters in longest line",
     "number-of-characters-in-longest-line-short": "max(#chars per line)",
