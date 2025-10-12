@@ -90,7 +90,7 @@ export class CanvasManager {
     }
 
     get contentRect(): ReadonlyRect {
-        let rect = {
+        const rect = {
             l: this.#contentL,
             t: this.#contentT,
             r: this.#contentR < 0 ? this.#width : this.#contentR,
@@ -166,7 +166,7 @@ export class CanvasManager {
     }
 
     constructor(public canvas: HTMLCanvasElement)  {
-        let context = canvas.getContext('2d', { alpha: true });
+        const context = canvas.getContext('2d', { alpha: true });
         Debug.assert(context !== null);
         this.#cxt = context;
 
@@ -305,7 +305,7 @@ export class CanvasManager {
 
     #onMouseMove(ev: MouseEvent) {
         if (ev.buttons == 0) {
-            let oldHighlight = this.#scrollerHighlight;
+            const oldHighlight = this.#scrollerHighlight;
             if (ev.offsetY > this.#height - scrollerSize) {
                 this.#scrollerHighlight = 'h';
             } else if (ev.offsetX > this.#width - scrollerSize) {
@@ -341,7 +341,7 @@ export class CanvasManager {
                 this.onUserZoom.dispatch();
             }
         } else {
-            let [x, y] = this.scroll;
+            const [x, y] = this.scroll;
             this.#scrollX += tr.amountX * 0.1;
             this.#scrollY += tr.amountY * 0.1;
             this.#constrainScroll();

@@ -22,7 +22,7 @@ type State<Arg> = {
     type: 'idle'
 };
 
-export class RestartableTask<Arg extends any[]> {
+export class RestartableTask<Arg extends unknown[]> {
     private state: State<Arg> = { type: 'idle' };
 
     constructor(
@@ -31,7 +31,7 @@ export class RestartableTask<Arg extends any[]> {
     ) {}
 
     async request(...arg: Arg) {
-        let old = this.state.type == 'running' ? this.state.current.arg
+        const old = this.state.type == 'running' ? this.state.current.arg
                 : this.state.type == 'cancelling' ? this.state.new.arg
                 : undefined
         if (old && this.deduplicator(old, arg)) return;

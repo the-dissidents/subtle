@@ -38,6 +38,7 @@ export class Mutex {
 
     /**
      * Acquire the mutex only if it's immediately available.
+     * Use `Mutex.useIfIdle` instead of this whenever possible.
      * @returns `true` if successful.
      */
     acquireIfIdle() {
@@ -65,6 +66,19 @@ export class Mutex {
      */
     async use<T>(f: () => T | Promise<T>) {
         await this.acquire();
+        try {
+            return await f();
+        } finally {
+            this.release();
+        }
+    }
+
+    /**
+     * If the mutex is immediately available, safely acquire and release the it before and after executing the function, regardless of whether it throws; if not, do nothing.
+     */
+    async useIfIdle<T>(f: () => T | Promise<T>) {
+        if (!this.acquireIfIdle())
+            return undefined;
         try {
             return await f();
         } finally {

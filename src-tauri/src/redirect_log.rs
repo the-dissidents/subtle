@@ -1,7 +1,7 @@
 use log::Level;
 use std::ffi::{c_char, c_int, c_void};
-use lazy_static::lazy_static;
-use std::sync::RwLock;
+use std::sync::{RwLock, LazyLock};
+use log::LevelFilter;
 
 // cf. https://github.com/rust-lang/rust-bindgen/issues/2631
 
@@ -50,9 +50,9 @@ pub fn init_ffmpeg_logging() {
     }
 }
 
-lazy_static! {
-    pub static ref LOG_LEVEL: RwLock<log::LevelFilter> = RwLock::new(log::LevelFilter::Trace);
-}
+pub static LOG_LEVEL: LazyLock<RwLock<LevelFilter>> = LazyLock::new(|| {
+    RwLock::new(LevelFilter::Trace)
+});
 
 #[tauri::command]
 pub fn set_log_filter_level(u: usize) {

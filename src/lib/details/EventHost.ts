@@ -8,8 +8,9 @@ export type EventHandlerOptions = {
 export class EventHost<T extends unknown[] = []> {
     #listeners = new Map<object, [EventHandler<T>, EventHandlerOptions][]>();
 
-    static globalEventHosts: EventHost<any>[] = [];
+    static globalEventHosts: EventHost<unknown[]>[] = [];
     constructor() {
+        // @ts-expect-error -- converting to unknown
         EventHost.globalEventHosts.push(this);
     }
 
@@ -41,8 +42,9 @@ export class EventHost<T extends unknown[] = []> {
 export class AsyncEventHost<T extends unknown[] = []> {
     #listeners = new Map<object, [EventHandler<T>, EventHandlerOptions][]>();
 
-    static globalEventHosts: AsyncEventHost<any>[] = [];
+    static globalEventHosts: AsyncEventHost<unknown[]>[] = [];
     constructor() {
+        // @ts-expect-error -- converting to unknown
         AsyncEventHost.globalEventHosts.push(this);
     }
 

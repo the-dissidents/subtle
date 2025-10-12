@@ -175,19 +175,4 @@ export class HashMap<T, V> extends Map<T, V> {
 	override [Symbol.iterator](): IterableIterator<[T, V]> {
 		return this.entries();
 	}
-
-	/**
-	 * For compatibility: forEach method similar to native Map.
-	 *
-	 * @param callbackfn - Function to execute for each key and value.
-	 * @param thisArg - Optional. Value to use as "this" when executing callbackfn.
-	 */
-	override forEach(
-		callbackfn: (value: V, key: T, map: HashMap<T, V>) => void,
-		thisArg?: any
-	): void {
-		for (const [key, value] of this.entries()) {
-			callbackfn.call(thisArg, value, key, this);
-		}
-	}
 }

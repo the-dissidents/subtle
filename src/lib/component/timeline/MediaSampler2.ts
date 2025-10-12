@@ -13,7 +13,7 @@ class Keyframes {
     }
 
     query(left: number, right: number) {
-        let it = this.set.lowerBound(left);
+        const it = this.set.lowerBound(left);
         if (it.equals(this.set.rEnd())) return false;
         return it.pointer[0] <= right;
     }
@@ -145,7 +145,7 @@ export class MediaSampler2 {
             }
         });
 
-        let doSampling = async () => {
+        const doSampling = async () => {
             const ok = await this.#mutex.use(async () => {
                 const result = await this.media.sampleAutomatic2(20);
                 if (result.audio) {

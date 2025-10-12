@@ -9,7 +9,7 @@ export async function contextMenu() {
     const selection = Editing.getSelection();
     if (selection.length == 0) return;
 
-    let menu = await Menu.new({items: [
+    const menu = await Menu.new({items: [
         BasicCommands.copyMenu.toMenuItem(),
         BasicCommands.copyChannelText.toMenuItem(),
         BasicCommands.cut.toMenuItem(),

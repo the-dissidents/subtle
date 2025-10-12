@@ -136,7 +136,7 @@ export function evaluateFilter(
     } else {
         const from = Metrics[filter.metric as keyof typeof Metrics].value(entry, style);
         const success = MetricFilterMethods[filter.method]
-            .exec(from as never, ...(filter.parameters as [never, any])) != filter.negated;
+            .exec(from as never, ...(filter.parameters as [never, never])) != filter.negated;
         return { failed: success ? [] : [filter] };
     }
 }
@@ -145,7 +145,7 @@ function getTextLength(s: string) {
     return [...s.matchAll(/[\w\u4E00-\u9FFF]/g)].length;
 }
 
-export let Metrics = {
+export const Metrics = {
     startTime: new Metric('time', 'entry',
         () => $_('metrics.start-time'), 
         () => $_('metrics.start-time-short'), 
@@ -438,6 +438,6 @@ const ZFilterBase = z.union([
 
 export const ZFilter = z.pipe(ZFilterBase, z.transform((x) => x as MetricFilter));
 
-export function parseFilter(x: any): MetricFilter {
+export function parseFilter(x: unknown): MetricFilter {
     return z.parse(ZFilter, x) as MetricFilter;
 }

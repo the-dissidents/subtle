@@ -148,7 +148,7 @@ export const Reference = {
                 const original = x.getAttribute(attr);
                 if (original) try {
                     x.setAttribute(attr, new URL(original, url).toString());
-                } catch (_) {}
+                } catch { /* do nothing */ }
             }
             if (selected) {
                 if (!x.contains(selected) && !selected.contains(x)) {

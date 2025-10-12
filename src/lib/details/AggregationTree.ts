@@ -59,7 +59,7 @@ export class AggregationTree<T extends TypedArray> {
      * @param resolution must be an integer power of 2
      */
     getLevel(resolution: number): Readonly<T> {
-        let level = Math.log2(resolution);
+        const level = Math.log2(resolution);
         Debug.assert(level % 1 == 0 && resolution <= this.length, 'invalid level');
         const layer = this.#layers - level;
         return this.#data.subarray(2 ** (layer - 1) - 1, 2 ** layer - 1) as T;

@@ -19,5 +19,5 @@ export function groupBy<Obj extends {[k in Key]: string}, Key extends keyof Obj>
         else
             result[type] = [obj];
     }
-    return result as any;
+    return result as GroupedBy<Obj, Key>;
 }

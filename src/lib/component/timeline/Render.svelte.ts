@@ -40,8 +40,10 @@ const CURSOR_COLOR =
   $derived(theme.isDark ? 'pink' : 'oklch(62.73% 0.209 12.37)');
 const PENDING_WAVEFORM_COLOR = 
   $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 40%)`);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PENDING_KEYFRAME_COLOR = 
   $derived(theme.isDark ? `rgb(10% 100% 10% / 30%)` : `rgb(40% 100% 40% / 40%)`);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const KEYFRAME_COLOR = 
   $derived(theme.isDark ? `rgb(10% 40% 100% / 30%)` : `rgb(40% 40% 100% / 40%)`);
 const WAVEFORM_COLOR = 
@@ -137,10 +139,10 @@ export class TimelineRenderer {
     if (!Playback.sampler) return;
 
     const yscroll = this.manager.scroll[1];
-    let points: {x: number, y: number}[] = [];
+    const points: {x: number, y: number}[] = [];
     let lastGap = -1;
     ctx.fillStyle = PENDING_WAVEFORM_COLOR;
-    let {drawStart, drawEnd} = this.#drawAggregation(
+    const {drawStart, drawEnd} = this.#drawAggregation(
       Playback.sampler.intensityResolution, 
       (a, b, c) => Playback.sampler!.intensityData(a, b, c),
       (x, _, value) => {

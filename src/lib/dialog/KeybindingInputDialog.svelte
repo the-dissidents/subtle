@@ -12,7 +12,7 @@ import { UIFocusList, type UIFocus } from '../frontend/Frontend';
 import type { UICommand } from '../frontend/CommandBase';
 
 interface Props {
-  handler: DialogHandler<[UICommand, CommandBinding | null], CommandBinding | null>;
+  handler: DialogHandler<[UICommand<unknown>, CommandBinding | null], CommandBinding | null>;
 }
 
 let {
@@ -38,7 +38,7 @@ handler.showModal = async ([cmd, bind]) => {
 };
 
 let inner: DialogHandler<void> = {};
-let command = $state<UICommand>();
+let command = $state<UICommand<unknown>>();
 let binding = $state<KeyBinding | null>(null);
 let anyContext = $state(false);
 let contexts = $state(new Set<UIFocus>());

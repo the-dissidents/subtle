@@ -35,6 +35,7 @@ export const Basic = {
 
     splitPrintingWords(str: string): string[] {
         return str.split(/(\n)/u).flatMap((x) => x.split(
+            // eslint-disable-next-line no-control-regex
             /(?<=[^\u4E00-\u9FFF])(?=[\u4E00-\u9FFF])|(?<= )|(?<=[\u4E00-\u9FFF])(?=[\u0000-\u00FF\u4E00-\u9FFF])/u));
     },
 
@@ -52,21 +53,21 @@ export const Basic = {
 
     parseTimestamp: (t: string) => {
         const reg = /(\d+):(\d+):(\d+)[,.](\d+)/;
-        let match = reg.exec(t);
+        const match = reg.exec(t);
         if (!match) return null;
-        let h = parseInt(match[1]),
-            m = parseInt(match[2]),
-            s = parseFloat(match[3] + '.' + match[4]);
-        let result = h * 3600 + m * 60 + s;
+        const h = parseInt(match[1]),
+              m = parseInt(match[2]),
+              s = parseFloat(match[3] + '.' + match[4]);
+        const result = h * 3600 + m * 60 + s;
         if (isNaN(result)) return null;
         return result;
     },
 
     formatTimestamp: (t: number, n: number = 3, char = '.') => {
-        let h = Math.floor(t / 3600).toString().padStart(2, '0');
-        let m = Math.floor((t % 3600) / 60).toString().padStart(2, '0');
-        let s = Math.floor(t % 60).toString().padStart(2, '0');
-        let ms = (t % 1).toFixed(n).slice(2);
+        const h = Math.floor(t / 3600).toString().padStart(2, '0');
+        const m = Math.floor((t % 3600) / 60).toString().padStart(2, '0');
+        const s = Math.floor(t % 60).toString().padStart(2, '0');
+        const ms = (t % 1).toFixed(n).slice(2);
         return `${h}:${m}:${s}${char}${ms}`;
     },
     

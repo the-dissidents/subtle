@@ -58,7 +58,7 @@ function formatPrelude(level: string, file: string) {
         }[${level}][webview:${file}] `;
 }
 
-function formatData(data: any[]) {
+function formatData(data: unknown[]) {
     if (data.length == 0)
         return '';
     let result = '';
@@ -100,11 +100,11 @@ export const Debug: {
     redirectNative: boolean,
     setPersistentFilterLevel(level: LogLevelFilter): Promise<void>,
     init(): Promise<void>,
-    trace(...data: any[]): Promise<void>,
-    debug(...data: any[]): Promise<void>,
-    info(...data: any[]): Promise<void>,
-    warn(...data: any[]): Promise<void>,
-    error(...data: any[]): Promise<void>,
+    trace(...data: unknown[]): Promise<void>,
+    debug(...data: unknown[]): Promise<void>,
+    info(...data: unknown[]): Promise<void>,
+    warn(...data: unknown[]): Promise<void>,
+    error(...data: unknown[]): Promise<void>,
     forwardError(e: Error | unknown): Promise<void>,
     assert(cond: boolean, what?: string): asserts cond,
     early(reason?: string): void,
@@ -136,7 +136,7 @@ export const Debug: {
                 case LogLevel.Warn:
                     console.warn(message);
                     break;
-                case LogLevel.Error:
+                case LogLevel.Error: {
                     console.error(message);
                     const match = /^([\d-@:.]+)\[(.*?)\]\[(.*?)\](.*)$/.exec(message);
                     if (match)
@@ -144,6 +144,7 @@ export const Debug: {
                     else
                         this.onError.dispatch('?', message);
                     break;
+                }
             }
         });
 
@@ -166,31 +167,31 @@ export const Debug: {
             }
         });
     },
-    async trace(...data: any[]) {
+    async trace(...data: unknown[]) {
         const { file } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Trace)
             console.log(formatPrelude('TRACE', file), ...data);
         callLog(LogLevel.Trace, formatData(data), file);
     },
-    async debug(...data: any[]) {
+    async debug(...data: unknown[]) {
         const { file, trace: _ } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Debug)
             console.debug(formatPrelude('DEBUG', file), ...data);
         callLog(LogLevel.Debug, formatData(data), file);
     },
-    async info(...data: any[]) {
+    async info(...data: unknown[]) {
         const { file, trace: _ } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Info)
             console.info(formatPrelude('INFO', file), ...data);
         callLog(LogLevel.Info, formatData(data), file);
     },
-    async warn(...data: any[]) {
+    async warn(...data: unknown[]) {
         const { file, trace: _ } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Warn)
             console.warn(formatPrelude('WARN', file), ...data);
         callLog(LogLevel.Warn, formatData(data), file);
     },
-    async error(...data: any[]) {
+    async error(...data: unknown[]) {
         const { file, trace } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Error)
             console.error(formatPrelude('ERROR', file), ...data);
@@ -213,7 +214,7 @@ export const Debug: {
         }
     },
     assert(cond: boolean, what?: string): asserts cond {
-        if (!!!cond) {
+        if (!cond) {
             const msg = 'assertion failed' + (what ? `: ${what}` : '');
             this.error(msg);
             const error = new Error(msg);

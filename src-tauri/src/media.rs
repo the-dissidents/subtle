@@ -326,7 +326,7 @@ pub fn seek_media(
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
     if let Err(e) = playback.seek(time) {
         return send_error!(&channel, e.to_string());
-    };
+    }
     send_done(&channel);
 }
 
@@ -342,10 +342,10 @@ pub fn seek_audio(
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
     if playback.audio().is_none() {
         return send(&channel, MediaEvent::NoStream {});
-    };
+    }
     if let Err(e) = playback.seek_audio(time) {
         return send_error!(&channel, e.to_string());
-    };
+    }
     send_done(&channel);
 }
 
@@ -361,10 +361,10 @@ pub fn seek_video(
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
     if playback.video().is_none() {
         return send(&channel, MediaEvent::NoStream {});
-    };
+    }
     if let Err(e) = playback.seek_video(time) {
         return send_error!(&channel, e.to_string());
-    };
+    }
     send_done(&channel);
 }
 

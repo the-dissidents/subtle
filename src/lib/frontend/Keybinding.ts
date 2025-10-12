@@ -47,9 +47,9 @@ export class CommandBinding {
                 expr = expr.replace('CmdOrCtrl', Basic.ctrlKey);
             const split = expr.split('+');
             Debug.assert(split.length >= 1);
-            let key = split.pop()!;
+            const key = split.pop()!;
             Debug.assert(isKeyCode(key));
-            let modifiers = new Set<ModifierKey>();
+            const modifiers = new Set<ModifierKey>();
             for (const mod of split) {
                 Debug.assert(ModifierKeys.includes(mod as ModifierKey));
                 modifiers.add(mod as ModifierKey);
@@ -87,7 +87,7 @@ const keyCodeSet = new Set(Object.values(KeyCodeMap));
 const keyCodeArray = [...keyCodeSet];
 
 function isKeyCode(code: string): code is KeyCode {
-    return keyCodeSet.has(code as any);
+    return keyCodeSet.has(code as KeyCode);
 }
 
 /** Convert DOM a key code (`KeyboardEvent.code`) into Tauri key code */
@@ -107,7 +107,7 @@ type KeyTreeNode = {
     allContexts: Set<UIFocus> | undefined,
     values: {
         contexts?: Set<UIFocus>,
-        command: UICommand,
+        command: UICommand<unknown>,
     }[],
 };
 
@@ -121,7 +121,7 @@ export type AcceptKeyDownResult = {
 } | {
     type: 'activate',
     key: KeyBinding,
-    command: UICommand
+    command: UICommand<unknown>
 } | {
     type: 'waitNext',
     currentSequence: KeyBinding[]
@@ -131,7 +131,7 @@ export type AcceptKeyDownResult = {
 
 export type AcceptKeyUpResult = {
     type: 'deactivate',
-    commands: UICommand[]
+    commands: UICommand<unknown>[]
 } | {
     type: 'notFound'
 };
@@ -152,11 +152,11 @@ type KeymapSerialization = z.infer<typeof ZKeymap>;
 const ConfigFile = 'keybinding.json';
 
 let initialized = false;
-let commands = new Map<string, UICommand<any>>();
+const commands = new Map<string, UICommand<unknown>>();
 let hotkeyWasPressed = false;
 
 export const KeybindingManager = {
-    get commands(): ReadonlyMap<string, UICommand<any>> {
+    get commands(): ReadonlyMap<string, UICommand<unknown>> {
         return commands;
     },
 
@@ -243,7 +243,7 @@ export const KeybindingManager = {
             await Debug.info('no keybinding config found');
             return;
         }
-        let obj = JSON.parse(await fs.readTextFile(
+        const obj = JSON.parse(await fs.readTextFile(
             ConfigFile, {baseDir: fs.BaseDirectory.AppConfig}));
         const result = ZKeymap.safeParse(obj);
         if (!result.success) {
@@ -251,7 +251,7 @@ export const KeybindingManager = {
             return;
         }
         for (const name in result.data) {
-            let cmd = this.commands.get(name);
+            const cmd = this.commands.get(name);
             if (!cmd) continue;
             cmd.bindings = result.data[name].map((x) => new CommandBinding(
                 x.sequence.map((y) => new KeyBinding(y.key, new Set(y.modifiers))),
@@ -265,7 +265,7 @@ export const KeybindingManager = {
         Debug.assert(initialized);
         await Basic.ensureConfigDirectoryExists();
 
-        let serializable: KeymapSerialization = {};
+        const serializable: KeymapSerialization = {};
         for (const [name, cmd] of this.commands)
             serializable[name] = cmd.bindings.map((x) => x.toSerializable());
 
@@ -278,9 +278,9 @@ export const KeybindingManager = {
 
     parseKey(ev: KeyboardEvent): KeyBinding | null {
         Debug.assert(initialized);
-        if (ModifierKeys.includes(ev.key as any))
+        if (ModifierKeys.includes(ev.key as ModifierKey))
             return null;
-        let key = fromDOM(ev.code);
+        const key = fromDOM(ev.code);
         if (!key) return null;
         return new KeyBinding(key, 
             new Set(ModifierKeys.filter((x) => ev.getModifierState(x))));
@@ -297,7 +297,7 @@ export const KeybindingManager = {
 
         const map = currentNode?.children ?? bindingTree;
         const seq = [...currentSequence];
-        let node = map.get(key);
+        const node = map.get(key);
         if (node) {
             const cmd = node.values.find(
                 (x) => !x.contexts || x.contexts.has(focus));
@@ -327,7 +327,7 @@ export const KeybindingManager = {
     processKeyUp(ev: KeyboardEvent): AcceptKeyUpResult {
         Debug.assert(initialized);
         const code = fromDOM(ev.code);
-        const commands: UICommand[] = [];
+        const commands: UICommand<unknown>[] = [];
         for (const [cmd, key] of UICommand.activeCommands) {
             if (!key) continue;
             if (key.key === code || key.modifiers.has(ev.key as ModifierKey))
@@ -344,7 +344,7 @@ export const KeybindingManager = {
     },
 
     update() {
-        function registerBinding(key: CommandBinding, cmd: UICommand) {
+        function registerBinding(key: CommandBinding, cmd: UICommand<unknown>) {
             Debug.assert(bindingTree !== undefined);
             let current = bindingTree;
             let node: KeyTreeNode | undefined;
@@ -377,10 +377,10 @@ export const KeybindingManager = {
                 registerBinding(binding, cmd);
     },
 
-    findConflict(key: CommandBinding, cmd: UICommand<any>) {
+    findConflict(key: CommandBinding, cmd: UICommand<unknown>) {
         Debug.assert(initialized);
         Debug.assert(bindingTree !== undefined);
-        let conflicts: [UICommand<any>, UIFocus[]][] = [];
+        const conflicts: [UICommand<unknown>, UIFocus[]][] = [];
         let current = bindingTree;
         let node: KeyTreeNode | undefined;
         for (const step of key.sequence) {

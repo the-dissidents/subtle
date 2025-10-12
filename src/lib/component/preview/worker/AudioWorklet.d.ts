@@ -1,4 +1,5 @@
 // https://github.com/microsoft/TypeScript/issues/28308
+/* eslint-disable */
 
 interface AudioWorkletProcessor {
     readonly port: MessagePort;

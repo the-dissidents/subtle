@@ -129,10 +129,10 @@ export class MediaPlayer2 {
 
     static async create(manager: CanvasManager, rawurl: string, audioId: number) {
         const media = await MMedia.open(rawurl);
-        let videoStatus: VideoStatus;
+        let _videoStatus: VideoStatus;
         let audioStatus: AudioStatus;
         try {
-            videoStatus = await media.openVideo(-1, InterfaceConfig.data.useHwaccel);
+            _videoStatus = await media.openVideo(-1, InterfaceConfig.data.useHwaccel);
             audioStatus = await media.openAudio(audioId);
             await Debug.debug('VideoPlayer: opened media');
         } catch (e) {
@@ -258,20 +258,12 @@ export class MediaPlayer2 {
             return false;
         }
 
-        if (this.#mutex.acquireIfIdle()) {
-            try {
-                const start = performance.now();
-                const frame = await this.media.readNextFrame();
-                const elapsed = performance.now() - start;
-                return await this.#receiveFrame(frame, elapsed);
-            } finally {
-                this.#mutex.release();
-                return true;
-            }
-        } else {
-            // busy: skip this iteration
-            return true;
-        }
+        return await this.#mutex.useIfIdle(async () => {
+            const start = performance.now();
+            const frame = await this.media.readNextFrame();
+            const elapsed = performance.now() - start;
+            return await this.#receiveFrame(frame, elapsed);
+        }) ?? true;
     }
 
     #populateBufferRunning = false;
@@ -527,7 +519,7 @@ export class MediaPlayer2 {
 
     #resizeTask = 
     new RestartableTask<[ow: number, oh: number]>(
-        async ([ow, oh], tok) => {
+        async ([ow, oh], _tok) => {
             if (this.#closed) return;
             const [cw, ch] = this.media.outputSize;
             if (ow === cw && oh === ch) {

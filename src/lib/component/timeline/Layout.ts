@@ -68,6 +68,7 @@ export class TimelineLayout {
       try {
         Playback.sampler = await this.#makeSampler(audio);
       } catch (e) {
+        await Debug.forwardError(e);
         await this.#samplerMedia.close();
         this.#samplerMedia = undefined;
       }
@@ -229,8 +230,9 @@ export class TimelineLayout {
   }
 
   getChannelFromOffsetY(y: number, clamp = false): SubtitleStyle | undefined {
-    let i = Math.floor((y + this.manager.scroll[1] 
-      - TimelineLayout.HEADER_HEIGHT - TimelineLayout.TRACKS_PADDING) / this.entryHeight);
+    const i = Math.floor(
+      (y + this.manager.scroll[1] - TimelineLayout.HEADER_HEIGHT - TimelineLayout.TRACKS_PADDING) 
+      / this.entryHeight);
     if (clamp) return this.#shownStyles[Math.min(Math.max(i, this.shownStyles.length - 1), 0)];
     return this.#shownStyles.at(i);
   }
@@ -238,10 +240,10 @@ export class TimelineLayout {
   findEntriesByPosition(
     x: number, y: number, w = 0, h = 0): SubtitleEntry[] 
   {
-    let result = [];
+    const result = [];
     const start = (x - this.leftColumnWidth) / this.scale;
     const end = (x - this.leftColumnWidth + w) / this.scale;
-    for (let ent of Source.subs.entries) {
+    for (const ent of Source.subs.entries) {
       if (ent.end < start || ent.start > end) continue;
       if (this.getEntryPositions(ent)
         .some((b) => b.x <= x + w && b.x + b.w >= x 

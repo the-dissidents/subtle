@@ -11,9 +11,9 @@ import { _ } from 'svelte-i18n';
 import { get } from "svelte/store";
 
 const configPath = 'memorized.json';
-let memorizedData: Record<string, Memorized<any, any>> = {};
+const memorizedData: Record<string, Memorized<unknown, unknown>> = {};
 let initialized = false;
-let onInitCallbacks: (() => void)[] = [];
+const onInitCallbacks: (() => void)[] = [];
 
 export abstract class Memorized<S, Orig = S> {
     protected subscriptions = new Set<(value: Orig) => void>();
@@ -81,7 +81,7 @@ export abstract class Memorized<S, Orig = S> {
         Debug.assert(initialized);
         await Basic.ensureConfigDirectoryExists();
         await guardAsync(async () => {
-            let data: Record<string, any> = {};
+            const data: Record<string, unknown> = {};
             for (const [key, value] of Object.entries(memorizedData)) {
                 data[key] = value.serialize();
             }
@@ -95,7 +95,7 @@ export abstract class Memorized<S, Orig = S> {
         protected key: string, 
         protected value: Orig,
     ) {
-        memorizedData[key] = this;
+        (memorizedData[key] as Memorized<S, Orig>) = this;
     }
 
     protected abstract get type(): string;

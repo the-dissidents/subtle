@@ -18,7 +18,7 @@ export const Utils = {
     isSelectionDisjunct() {
         let state = 0;
         for (let i = 0; i < Source.subs.entries.length; i++) {
-            let ent = Source.subs.entries[i];
+            const ent = Source.subs.entries[i];
             if (Editing.selection.submitted.has(ent)
              || Editing.selection.currentGroup.has(ent))
             {
@@ -34,13 +34,13 @@ export const Utils = {
         const selection = Editing.getSelection();
         if (selection.length == 0 || direction == 0) return Debug.early();
 
-        let index = Source.subs.entries.indexOf(selection[0]);
+        const index = Source.subs.entries.indexOf(selection[0]);
         if (index + direction < 0 || index + direction > Source.subs.entries.length) return;
         Source.subs.entries.splice(index, selection.length);
         Source.subs.entries.splice(index + direction, 0, ...selection);
         Source.markChanged(ChangeType.Order, $_('c.move-entries'));
 
-        let entry = direction > 0 ? selection.at(-1)! : selection[0];
+        const entry = direction > 0 ? selection.at(-1)! : selection[0];
         setTimeout(() => {
             Editing.onKeepEntryInView.dispatch(entry);
         }, 0);
@@ -49,7 +49,7 @@ export const Utils = {
     moveSelectionTo(to: 'beginning' | 'end') {
         const selection = Editing.getSelection();
         if (selection.length == 0) return Debug.early();
-        let selectionSet = new Set(selection);
+        const selectionSet = new Set(selection);
         let newEntries = Source.subs.entries.filter((x) => !selectionSet.has(x));
         switch (to) {
         case "beginning":
@@ -65,9 +65,9 @@ export const Utils = {
     fixOverlap(selection: SubtitleEntry[], epsilon = 0.05) {
         let count = 0;
         for (let i = 0; i < selection.length - 1; i++) {
-            let entry = selection[i];
+            const entry = selection[i];
             for (let j = 1; j < selection.length; j++) {
-                let other = selection[j];
+                const other = selection[j];
                 if (entry.start < other.end && other.end - entry.start < epsilon) {
                     entry.start = other.end;
                     count++;
@@ -86,14 +86,14 @@ export const Utils = {
     },
 
     mergeDuplicate(selection: SubtitleEntry[]) {
-        let deletion = new Set<SubtitleEntry>;
+        const deletion = new Set<SubtitleEntry>;
         for (let i = 0; i < selection.length; i++) {
-            let entry = selection[i];
+            const entry = selection[i];
             if (deletion.has(entry)) continue;
             
             search: for (let j = 0; j < selection.length; j++) {
                 if (i == j) continue;
-                let other = selection[j];
+                const other = selection[j];
                 if (deletion.has(other)) continue;
                 for (const [style, text] of other.texts) {
                     if (entry.texts.get(style) !== text) continue search;
@@ -123,8 +123,8 @@ export const Utils = {
     mergeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
-            let textA = ent.texts.get(a)?.trimEnd() ?? '';
-            let textB = ent.texts.get(b)?.trimStart();
+            const textA = ent.texts.get(a)?.trimEnd() ?? '';
+            const textB = ent.texts.get(b)?.trimStart();
             if (textB == undefined) continue;
             ent.texts.set(a, textA + ' ' + textB);
             ent.texts.delete(b);
@@ -138,8 +138,8 @@ export const Utils = {
     exchangeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
-            let textA = ent.texts.get(a);
-            let textB = ent.texts.get(b);
+            const textA = ent.texts.get(a);
+            const textB = ent.texts.get(b);
 
             if (textA === undefined) ent.texts.delete(b);
             else ent.texts.set(b, textA);
@@ -159,7 +159,7 @@ export const Utils = {
          && !await dialog.confirm($_('msg.overwrite-style', {values: {style: b.name}}))) return;
         let done = 0;
         for (const ent of entries) {
-            let textA = ent.texts.get(a);
+            const textA = ent.texts.get(a);
             if (textA !== undefined) {
                 ent.texts.delete(a);
                 ent.texts.set(b, textA);
@@ -192,7 +192,7 @@ export const Utils = {
     removeNewlines(entries: SubtitleEntry[], style: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
-            let text = ent.texts.get(style)?.split('\n');
+            const text = ent.texts.get(style)?.split('\n');
             if (text === undefined || text.length == 1) continue;
             ent.texts.set(style, text.join(' '));
             done++;
@@ -207,7 +207,7 @@ export const Utils = {
         let start = first.start, end = first.end;
         for (let i = 1; i < selection.length; i++) {
             if (keepAll) for (const [style, text] of selection[i].texts) {
-                let oldText = first.texts.get(style);
+                const oldText = first.texts.get(style);
                 first.texts.set(style, (oldText ?? '') + text);
             }
             start = Math.min(start, selection[i].start);

@@ -34,7 +34,7 @@ const toPlaintext = (entries: SubtitleEntry[]) =>
         .toString();
 
 async function copySelection(transform: (use: SubtitleEntry[]) => string) {
-    let selection = Editing.getSelection();
+    const selection = Editing.getSelection();
     if (selection.length == 0) return;
     await clipboard.writeText(transform(selection));
     Frontend.setStatus($_('msg.copied'));
@@ -116,7 +116,7 @@ export const BasicCommands = {
             const focusedEntry = Editing.getFocusedEntry();
             if (!(focusedEntry instanceof SubtitleEntry)) return;
             Editing.submitFocusedEntry();
-            let i = Source.subs.entries.indexOf(focusedEntry) + 1;
+            const i = Source.subs.entries.indexOf(focusedEntry) + 1;
             if (i == Source.subs.entries.length)
                 Editing.startEditingNewVirtualEntry();
             else
@@ -231,11 +231,11 @@ export const BasicCommands = {
         name: () => $_('action.copy-text'),
         isApplicable: hasSelection,
         items: () => forEachStyle((style) => {
-            let selection = Editing.getSelection();
+            const selection = Editing.getSelection();
             if (selection.length == 0) return;
-            let results: string[] = [];
+            const results: string[] = [];
             selection.forEach((x) => {
-                let text = x.texts.get(style);
+                const text = x.texts.get(style);
                 if (text) results.push(text);
             })
             clipboard.writeText(results.join(' '));
@@ -260,7 +260,7 @@ export const BasicCommands = {
         async call() {
             const source = await clipboard.readText();
             if (!source) return;
-            let portion = parseSubtitleSource(source);
+            const portion = parseSubtitleSource(source);
             if (!portion) {
                 Frontend.setStatus($_('msg.failed-to-parse-clipboard-data-as-subtitles'), 'error');
                 return;
@@ -273,7 +273,7 @@ export const BasicCommands = {
                 Editing.clearSelection();
             } else position = Source.subs.entries.length;
 
-            let entries = SubtitleUtil.merge(Source.subs, portion, {
+            const entries = SubtitleUtil.merge(Source.subs, portion, {
                 position: 'Custom',
                 customPosition: position,
                 style: portion.migrated == 'text' ? 'UseOverrideForAll' : 'KeepDifferent',
@@ -305,7 +305,7 @@ export const BasicCommands = {
         call() {
             Editing.selection.focused = null;
             Editing.selection.currentGroup.clear();
-            for (let e of Source.subs.entries)
+            for (const e of Source.subs.entries)
                 Editing.selection.submitted.add(e);
             Editing.onSelectionChanged.dispatch(ChangeCause.Action);
         },
@@ -329,9 +329,9 @@ export const BasicCommands = {
         name: () => $_('action.invert-selection'),
         isApplicable: hasSelection,
         call() {
-            let newSelection = new Set<SubtitleEntry>;
-            let oldSelection = new Set(Editing.getSelection());
-            for (let e of Source.subs.entries)
+            const newSelection = new Set<SubtitleEntry>;
+            const oldSelection = new Set(Editing.getSelection());
+            for (const e of Source.subs.entries)
                 if (!oldSelection.has(e)) newSelection.add(e);
             Editing.clearFocus();
             Editing.selection.focused = null;
@@ -357,12 +357,12 @@ export const BasicCommands = {
                 start = 0;
                 end = 2;
             } else if (index == 0) {
-                let first = Source.subs.entries[0];
+                const first = Source.subs.entries[0];
                 start = Math.max(Math.min(pos, first.start - 2), 0);
                 end = Math.min(start + 2, first.start);
             } else {
                 Debug.assert(ent !== undefined);
-                let last = Source.subs.entries[index - 1];
+                const last = Source.subs.entries[index - 1];
                 if (last.end <= ent.start) {
                     start = Math.max(Math.min(pos, ent.start - 2), last.end);
                     end = Math.min(start + 2, ent.start);
@@ -382,18 +382,18 @@ export const BasicCommands = {
         call() {
             let ent = Editing.getFocusedEntry();
             if (!(ent instanceof SubtitleEntry)) ent = null;
-            let index = ent ? Source.subs.entries.indexOf(ent) + 1 : Source.subs.entries.length;
+            const index = ent ? Source.subs.entries.indexOf(ent) + 1 : Source.subs.entries.length;
             Debug.assert(index >= 0);
 
             const pos = Playback.loaded ? Playback.position : Infinity;
             let start: number, end: number;
             if (index == Source.subs.entries.length) {
-                let last = Source.subs.entries.at(-1);
+                const last = Source.subs.entries.at(-1);
                 start = Math.max(pos, last?.end ?? 0);
                 end = start + 2;
             } else {
                 Debug.assert(ent !== null);
-                let next = Source.subs.entries[index];
+                const next = Source.subs.entries[index];
                 if (next.start >= ent.end) {
                     start = Math.max(Math.min(next.start, pos), ent.end);
                     end = Math.min(start + 2, next.start);
@@ -484,15 +484,15 @@ export const BasicCommands = {
         isApplicable: () => hasSelection(),
         call() {
             const selection = Editing.getSelection();
-            let newSelection: SubtitleEntry[] = [];
+            const newSelection: SubtitleEntry[] = [];
             for (let i = 0; i < selection.length; i++) {
-                let entry = selection[i];
-                let index = Source.subs.entries.indexOf(entry);
-                let newEntries: SubtitleEntry[] = [];
+                const entry = selection[i];
+                const index = Source.subs.entries.indexOf(entry);
+                const newEntries: SubtitleEntry[] = [];
                 for (const style of Source.subs.styles) {
                     const text = entry.texts.get(style);
                     if (text !== undefined) {
-                        let newEntry = new SubtitleEntry(entry.start, entry.end);
+                        const newEntry = new SubtitleEntry(entry.start, entry.end);
                         newEntry.texts.set(style, text);
                         newEntries.push(newEntry);
                     }
@@ -502,7 +502,7 @@ export const BasicCommands = {
             }
             if (newSelection.length != selection.length) {
                 Editing.clearSelection();
-                for (let ent of newSelection)
+                for (const ent of newSelection)
                     Editing.selection.submitted.add(ent);
                 Source.markChanged(ChangeType.Times, $_('action.split-simultaneous'));
             }
@@ -546,7 +546,7 @@ export const BasicCommands = {
         items: Labels.map((x) => ({
             name: () => $_(`label.${x}`),
             call() {
-                for (let entry of Editing.getSelection())
+                for (const entry of Editing.getSelection())
                     entry.label = x;
                 Source.markChanged(ChangeType.InPlace, $_('c.label'));
             },
@@ -558,7 +558,7 @@ export const BasicCommands = {
         name: () => $_('action.transform-times'),
         isDialog: true,
         async call() {
-            let options = await Dialogs.timeTransform.showModal!();
+            const options = await Dialogs.timeTransform.showModal!();
             if (options && SubtitleUtil.shiftTimes(Source.subs, options))
                 Source.markChanged(ChangeType.Times, $_('c.transform-times'));
         },
@@ -571,9 +571,9 @@ export const BasicCommands = {
         call() {
             const selection = Editing.getSelection();
             // assumes selection is not disjunct
-            let start = Source.subs.entries.indexOf(selection[0]);
+            const start = Source.subs.entries.indexOf(selection[0]);
             if (start < 0) return Debug.early();
-            let positionMap = new Map<SubtitleEntry, number>();
+            const positionMap = new Map<SubtitleEntry, number>();
             for (let i = 0; i < Source.subs.entries.length; i++)
                 positionMap.set(Source.subs.entries[i], i);
             selection.sort((a, b) => a.start - b.start);
@@ -589,7 +589,7 @@ export const BasicCommands = {
         items: () => forEachStyle((x) => {
             const selection = Editing.getSelection();
             let done = false;
-            for (let ent of selection)
+            for (const ent of selection)
                 if (!ent.texts.has(x)) {
                     ent.texts.set(x, '');
                     done = true;

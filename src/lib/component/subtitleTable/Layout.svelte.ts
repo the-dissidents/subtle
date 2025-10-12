@@ -57,7 +57,7 @@ export class TableLayout {
 
     constructor(canvas: HTMLCanvasElement) {
         this.manager = new CanvasManager(canvas);
-        this.manager.onDisplaySizeChanged.bind(this, (w, h) => {
+        this.manager.onDisplaySizeChanged.bind(this, () => {
             this.manager.requestRender();
         });
         this.manager.canBeginDrag = (ev) => ev.offsetY > this.headerHeight / this.manager.scale;

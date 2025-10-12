@@ -144,12 +144,13 @@ const zFileSaveState = z.object({
     audioStream: z.optional(z.int()),
 });
 
-let recentOpened = Memorized.$('recentOpened', z.array(zFileSaveState), []);
-let savedStyles = new MemorizedStyles('savedStyles');
+const recentOpened = Memorized.$('recentOpened', z.array(zFileSaveState), []);
+const savedStyles = new MemorizedStyles('savedStyles');
+const currentFile = writable('');
+const fileChanged = writable(false);
+
 let intervalId = 0;
 let changedSinceLastAutosave = false;
-let currentFile = writable('');
-let fileChanged = writable(false);
 
 let undoStack = [] as Snapshot[];
 let redoStack = [] as Snapshot[];

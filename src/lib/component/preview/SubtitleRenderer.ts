@@ -91,7 +91,7 @@ export class SubtitleRenderer {
         subtitles: Subtitles) 
     {
         this.#subs = subtitles;
-        manager.onDisplaySizeChanged.bind(this, (_1, _2, rw, rh) => {
+        manager.onDisplaySizeChanged.bind(this, () => {
             this.updateResolution();
         });
         this.updateResolution();
@@ -106,7 +106,7 @@ export class SubtitleRenderer {
 
     updateResolution() {
         const [width, height] = this.manager.physicalSize;
-        let ratio = this.#subs.metadata.width / this.#subs.metadata.height;
+        const ratio = this.#subs.metadata.width / this.#subs.metadata.height;
         if (width / height < ratio) {
             [this.#hMargin, this.#vMargin] = [0, (height - width / ratio) / 2];
             this.#scale = width / this.#subs.metadata.width * this.#subs.metadata.scalingFactor;
@@ -131,7 +131,7 @@ export class SubtitleRenderer {
         this.#currentEntries = [];
         // this.#nextStopTime = Infinity;
         for (let i = 0; i < this.#sortedEntries.length; i++) {
-            let w = this.#sortedEntries[i];
+            const w = this.#sortedEntries[i];
             if (w.entry.start > this.#currentTime) {
                 // this.#nextUpdateEntry = w;
                 break;
@@ -166,15 +166,16 @@ export class SubtitleRenderer {
     }
 
     #breakWords(text: string, width: number, ctx: CanvasRenderingContext2D) {
-        let words = Basic.splitPrintingWords(text);
-        let lines: string[] = [], currentLine = '';
-        for (let word of words) {
+        const words = Basic.splitPrintingWords(text);
+        const lines: string[] = [];
+        let currentLine = '';
+        for (const word of words) {
             if (word == '\n') {
                 lines.push(currentLine);
                 currentLine = '';
                 continue;
             }
-            let w = ctx.measureText(currentLine + word).width;
+            const w = ctx.measureText(currentLine + word).width;
             if (w < width) {
                 currentLine += word;
             } else {
@@ -187,8 +188,7 @@ export class SubtitleRenderer {
     }
 
     render(ctx: CanvasRenderingContext2D) {
-        let boxes: EntryBox[] = [];
-
+        const boxes: EntryBox[] = [];
         const [width, height] = this.manager.physicalSize;
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;

@@ -4,7 +4,7 @@ import { Frontend } from "./Frontend";
 import type { KeyBinding, CommandBinding } from "./Keybinding";
 import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api/menu";
 
-export type CommandOptions<TState = any> = ({
+export type CommandOptions<TState = unknown> = ({
     displayAccel?: string,
     isDialog?: boolean,
     call: (self: UICommand<TState>) => (TState | Promise<TState>)
@@ -21,7 +21,7 @@ export type CommandOptions<TState = any> = ({
 
 /** T should not be a function type */
 function unwrap<T>(fv: T | (() => T)): T {
-    // @ts-expect-error
+    // @ts-expect-error -- T should not be a function type
     return typeof fv === 'function' ? fv() : fv;
 }
 
@@ -59,8 +59,8 @@ function commandOptionToMenu<T>(
 export type UICommandType = 'simple' | 'menu' | 'dialog';
 
 export class UICommand<TState = void> {
-    static #activated = new Map<UICommand<any>, KeyBinding | null>();
-    static get activeCommands(): ReadonlyMap<UICommand<any>, KeyBinding | null> {
+    static #activated = new Map<UICommand<unknown>, KeyBinding | null>();
+    static get activeCommands(): ReadonlyMap<UICommand<unknown>, KeyBinding | null> {
         return this.#activated;
     }
 
@@ -110,7 +110,7 @@ export class UICommand<TState = void> {
         if (!this.isApplicable)
             return Debug.early('command not applicable');
 
-        let opt = commandOptionToMenu(this.options, this, []);
+        const opt = commandOptionToMenu(this.options, this, []);
         if ('items' in opt) {
             await (await Menu.new(opt)).popup();
         } else {
@@ -128,7 +128,7 @@ export class UICommand<TState = void> {
             return Debug.early('command not applicable');
         if ('items' in item) {
             const items = unwrap(item.items);
-            let n = await overlayMenu(
+            const n = await overlayMenu(
                 items.map((x) => ({
                     text: unwrap(x.name),
                     disabled: x.isApplicable ? !x.isApplicable() : false
@@ -155,12 +155,14 @@ export class UICommand<TState = void> {
         if (!this.isApplicable) return false;
 
         Debug.debug('executing command', this.name);
+        // @ts-expect-error -- converting to unknown
         UICommand.#activated.set(this, key);
         await this.#runCommand(this.options);
         // end immediately when there's no onDeactivate handler. this is for reducing the 
         // probability of accidentally leaving a command marked as activated for too long, 
         // e.g. in the case where the key is lifted only after the window lost focus
         if (!this.options.onDeactivate)
+            // @ts-expect-error -- converting to unknown
             UICommand.#activated.delete(this);
         return true;
     }
@@ -173,6 +175,7 @@ export class UICommand<TState = void> {
             Debug.debug('executing onDeactivate', this.name);
             await this.options.onDeactivate(this.#state.value);
         }
+        // @ts-expect-error -- converting to unknown
         UICommand.#activated.delete(this);
     }
 };

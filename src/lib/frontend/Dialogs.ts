@@ -20,6 +20,7 @@ export const Dialogs = {
     configuration: new DialogHandler<void, void>(),
     keybinding: new DialogHandler<void, void>(),
     keybindingInput: new DialogHandler<
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         [UICommand<any>, CommandBinding | null], CommandBinding | null>(),
     splitByLine: new DialogHandler<void, void>(),
     export: new DialogHandler<void, {content: string, ext: string} | null>(),

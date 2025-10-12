@@ -50,7 +50,7 @@ Object.defineProperty(Metrics, 'selected', {
 });
 
 function updateFocusedStyle() {
-    let focused = Editing.getFocusedEntry();
+    const focused = Editing.getFocusedEntry();
     Debug.assert(focused instanceof SubtitleEntry);
     const style = get(Editing.focused.style);
     if (style === null
@@ -112,7 +112,7 @@ export const Editing = {
 
     startEditingFocusedEntry() {
         const style = updateFocusedStyle();
-        let elem = this.styleToEditor.get(style)!;
+        const elem = this.styleToEditor.get(style)!;
         elem.focus();
         elem.scrollIntoView();
     },
@@ -133,7 +133,7 @@ export const Editing = {
         styles: Iterable<SubtitleStyle> | undefined, 
         start: number, end: number, index: number
     ) {
-        let entry = new SubtitleEntry(start, end);
+        const entry = new SubtitleEntry(start, end);
         if (!styles) styles = [Source.subs.defaultStyle];
         for (const s of styles)
             entry.texts.set(s, '');
@@ -158,8 +158,8 @@ export const Editing = {
 
     startEditingNewVirtualEntry() {
         Frontend.setStatus($_('msg.new-entry-appended'));
-        let last = Source.subs.entries.at(-1);
-        let entry = last 
+        const last = Source.subs.entries.at(-1);
+        const entry = last 
             ? new SubtitleEntry(last.end, last.end + 2) 
             : new SubtitleEntry(0, 2);
         if (last) {
@@ -183,7 +183,7 @@ export const Editing = {
     },
 
     insertChannel(style: SubtitleStyle) {
-        let focused = this.getFocusedEntry();
+        const focused = this.getFocusedEntry();
         Debug.assert(focused instanceof SubtitleEntry);
         if (focused.texts.has(style)) return;
         focused.texts.set(style, '');
@@ -193,7 +193,7 @@ export const Editing = {
     },
 
     deleteChannel(style: SubtitleStyle) {
-        let focused = this.getFocusedEntry();
+        const focused = this.getFocusedEntry();
         Debug.assert(focused instanceof SubtitleEntry);
         if (!focused.texts.has(style)) return Debug.early('no such channel to delete');
         Debug.assert(focused.texts.size > 1);
@@ -216,7 +216,7 @@ export const Editing = {
     },
 
     clearFocus(trySubmit = true) {
-        let focused = this.getFocusedEntry();
+        const focused = this.getFocusedEntry();
         if (focused == null) return;
         if (trySubmit && focused instanceof SubtitleEntry)
             this.submitFocusedEntry();
@@ -243,10 +243,10 @@ export const Editing = {
     },
 
     deleteSelection(cause = ChangeCause.UIList) {
-        let selection = this.getSelection();
+        const selection = this.getSelection();
         if (selection.length == 0) return;
-        let next = Source.subs.entries.at(Source.subs.entries.indexOf(selection.at(-1)!) + 1);
-        let newEntries = 
+        const next = Source.subs.entries.at(Source.subs.entries.indexOf(selection.at(-1)!) + 1);
+        const newEntries = 
             Source.subs.entries.filter((x) => !selection.includes(x));
         Source.subs.entries = newEntries;
         this.clearSelection();
@@ -258,7 +258,7 @@ export const Editing = {
     },
 
     offsetFocus(n: number, mode: SelectMode, keepType = KeepInViewMode.KeepInSight) {
-        let focused = this.getFocusedEntry();
+        const focused = this.getFocusedEntry();
         if (focused == 'virtual' && mode == SelectMode.Single) {
             if (n == -1 && Source.subs.entries.length > 0) {
                 this.selectEntry(Source.subs.entries.at(-1)!, mode, ChangeCause.UIList, keepType);
@@ -267,7 +267,7 @@ export const Editing = {
         }
 
         if (!(focused instanceof SubtitleEntry)) return;
-        let i = Source.subs.entries.indexOf(focused) + n;
+        const i = Source.subs.entries.indexOf(focused) + n;
         if (i >= Source.subs.entries.length) {
             if (mode == SelectMode.Single) {
                 this.selectVirtualEntry();
@@ -286,7 +286,7 @@ export const Editing = {
                 this.clearFocus();
             }
             if (this.selection.currentGroup.has(ent)) {
-                for (let e of this.selection.currentGroup)
+                for (const e of this.selection.currentGroup)
                     this.selection.submitted.add(e);
                 this.selection.focused = null;
                 Editing.selection.currentGroup.clear();
@@ -317,15 +317,15 @@ export const Editing = {
                     this.selection.currentGroup.clear();
                     this.selection.currentGroup.add(ent);
                 } else {
-                    let a = Source.subs.entries.indexOf(this.selection.focused);
-                    let b = Source.subs.entries.indexOf(ent);
+                    const a = Source.subs.entries.indexOf(this.selection.focused);
+                    const b = Source.subs.entries.indexOf(ent);
                     Debug.assert(a >= 0 && b >= 0);
                     this.selection.currentGroup = new Set(
                         Source.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1));
                 }
                 break;
             case SelectMode.Multiple:
-                for (let e of this.selection.currentGroup)
+                for (const e of this.selection.currentGroup)
                     this.selection.submitted.add(e);
                 this.selection.focused = ent;
                 this.selection.currentGroup.clear();

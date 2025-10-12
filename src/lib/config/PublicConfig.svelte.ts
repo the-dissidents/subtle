@@ -49,7 +49,7 @@ type GroupType<T extends PublicConfigGroupDefinition> = {
 };
 
 export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
-    data: GroupType<T> = $state({} as any);
+    data: GroupType<T> = $state({} as GroupType<T>);
     readonly defaults: Readonly<GroupType<T>>;
     readonly ztype: z.core.$ZodType<GroupType<T>>;
 
@@ -59,17 +59,19 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
         public readonly priority: number,
         public readonly definition: T,
     ) {
-        let schemaContent: {[key: string]: z.core.$ZodType} = {};
+        const schemaContent: {[key: string]: z.core.$ZodType} = {};
         for (const key in definition) {
             const def = definition[key];
             this.data[key] = def.default;
             switch (def.type) {
                 case "boolean":
+                    schemaContent[key] = z._default(z.boolean(), def.default);
+                    break;
                 case "string":
-                    let s = def.type == 'string' ? z.string() : z.boolean();
-                    schemaContent[key] = z._default(s, def.default); break;
+                    schemaContent[key] = z._default(z.string(), def.default);
+                    break;
                 case "number":
-                case "integer":
+                case "integer": {
                     let n = def.type == 'integer' ? z.int() : z.number();
                     if (def.bounds && def.bounds[0] !== null)
                         n = n.check(z.gte(def.bounds[0]));
@@ -77,6 +79,7 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
                         n = n.check(z.lte(def.bounds[1]));
                     schemaContent[key] = z._default(n, def.default);
                     break;
+                }
                 case "select":
                 case "dropdown":
                     schemaContent[key] = z._default(z.enum(Object.keys(def.options)), def.default);
@@ -121,7 +124,7 @@ export class PublicConfig {
                 await Debug.debug('no config file found for', this.name);
                 return;
             }
-            let obj = JSON.parse(await fs.readTextFile(
+            const obj = JSON.parse(await fs.readTextFile(
                 configName, {baseDir: fs.BaseDirectory.AppConfig}));
 
             for (const key in this.groups) {
@@ -148,7 +151,7 @@ export class PublicConfig {
     async save() {
         await Basic.ensureConfigDirectoryExists();
     
-        let data: Record<string, GroupType<any>> = {};
+        const data: Record<string, GroupType<PublicConfigGroupDefinition>> = {};
         for (const key in this.groups)
             data[key] = this.groups[key].data;
 

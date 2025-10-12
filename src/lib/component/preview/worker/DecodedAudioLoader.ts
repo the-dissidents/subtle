@@ -31,8 +31,8 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     #volume = 1;
     #playing: boolean = false;
     
-    constructor(...args: any) {
-        super(...args);
+    constructor(options?: AudioWorkletNodeOptions | undefined) {
+        super(options);
         this.port.onmessage = (e: MessageEvent<AudioInputData>) => {
             switch (e.data.type) {
                 case "query":
@@ -81,14 +81,13 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
         } satisfies AudioFeedbackData);
     }
 
-    #log(...args: any[]) {
+    #log(...args: unknown[]) {
         this.port.postMessage(args);
     }
 
     process(
-        inputs: Float32Array[][], 
-        outputs: Float32Array[][], 
-        parameters: Record<string, Float32Array>
+        _inputs: Float32Array[][], 
+        outputs: Float32Array[][]
     ) {
         if (!this.#playing) return true;
 
@@ -102,9 +101,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                 newBuffer = [...this.#buffer];
                 newCurrentPosition = this.#currentPosition;
                 let fillPosition = 0;
-                let counter = 0;
                 while (newBuffer.length > 0) {
-                    counter += 1;
                     const content = newBuffer[0].content;
                     const end = channel.length - fillPosition + newCurrentPosition;
                     const part = content

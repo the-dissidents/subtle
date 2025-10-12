@@ -31,18 +31,16 @@ abstract class TimelineAction {
     this.origPos = this.self.convertX(e0.offsetX);
   }
 
-  onMouseMove(e: MouseEvent): boolean { return false; }
-  onMouseDown(e: MouseEvent): boolean { return false; }
+  onMouseMove(_e: MouseEvent): boolean { return false; }
+  onMouseDown(_e: MouseEvent): boolean { return false; }
+  canBeginDrag(_e0: MouseEvent): boolean { return false; }
 
-  canBeginDrag(e0: MouseEvent): boolean {
-    return false;
-  }
+  onDrag(_offsetX: number, _offsetY: number, _ev: MouseEvent) {}
 
-  onDrag(offsetX: number, offsetY: number, ev: MouseEvent) {}
-
-  onDragEnd(offsetX: number, offsetY: number, ev: MouseEvent) {
+  onDragEnd(_offsetX: number, _offsetY: number, _ev: MouseEvent) {
     this.self.currentAction = undefined;
   }
+
   onDragInterrupted() {
     this.self.currentAction = undefined;
   }
@@ -56,7 +54,7 @@ class Scale extends TimelineAction {
     this.origScale = this.layout.scale;
   }
 
-  onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
+  onDrag(_offsetX: number, _offsetY: number, ev: MouseEvent): void {
     this.layout.setScale(this.origScale / 
       Math.pow(1.03, (this.e0.clientX - ev.clientX)));
     this.layout.setOffset(this.origPos - this.e0.offsetX / this.layout.scale);
@@ -68,7 +66,7 @@ class MoveCursor extends TimelineAction {
     super(self, layout, e0);
   }
 
-  onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
+  onDrag(offsetX: number): void {
     let curPos = 
       (offsetX - this.layout.leftColumnWidth) / this.layout.scale + this.layout.offset;
     // always snap to frame, it's only valid that way with video loaded
@@ -87,18 +85,19 @@ class BoxSelect extends TimelineAction {
   constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent) {
     super(self, layout, e0);
     this.origSelection = Editing.getSelection();
-    this.x1 = e0.offsetX + this.layout.manager.scroll[0],
+    this.x1 = e0.offsetX + this.layout.manager.scroll[0];
     this.y1 = e0.offsetY + this.layout.manager.scroll[1];
   }
 
-  onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
-    let x2 = offsetX + this.layout.manager.scroll[0],
-        y2 = offsetY + this.layout.manager.scroll[1];
-    let b: Box = {
+  onDrag(offsetX: number, offsetY: number): void {
+    const x2 = offsetX + this.layout.manager.scroll[0],
+          y2 = offsetY + this.layout.manager.scroll[1];
+    const b: Box = {
       x: Math.min(this.x1, x2), y: Math.min(this.y1, y2), 
       w: Math.abs(this.x1 - x2), h: Math.abs(this.y1 - y2)};
     this.self.selectBox = b;
-    let newGroup = this.layout.findEntriesByPosition(b.x, b.y, b.w, b.h);
+
+    const newGroup = this.layout.findEntriesByPosition(b.x, b.y, b.w, b.h);
     if (newGroup.length != this.thisGroup.length) {
       this.self.selection = new SvelteSet(
         [...this.origSelection, ...newGroup]);
@@ -203,7 +202,7 @@ class DragMove extends MoveResizeBase {
     this.start = first.start;
 }
 
-  onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
+  onDrag(offsetX: number, _offsetY: number): void {
     const dval = this.self.convertX(offsetX) - this.origPos;
     let newDval = dval;
     if (TimelineHandle.useSnap.get())
@@ -234,7 +233,7 @@ class DragSeam extends MoveResizeBase {
     this.origVal = first.end;
   }
 
-  onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
+  onDrag(offsetX: number, _offsetY: number): void {
     const val = this.origVal + this.self.convertX(offsetX) - this.origPos;
     let newVal = val;
     if (TimelineHandle.useSnap.get())
@@ -263,12 +262,12 @@ class DragResize extends MoveResizeBase {
   ) {
     super(self, layout, e0, origPositions, afterEnd);
     const [first, last] = this.self.selectionFirstLast();
-    this.origVal = where == 'start' ? first.start : last.end,
+    this.origVal = where == 'start' ? first.start : last.end;
     this.start = first.start;
     this.end = last.end;
   }
 
-  onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
+  onDrag(offsetX: number, _offsetY: number): void {
     const val = this.origVal + this.self.convertX(offsetX) - this.origPos;
     let newVal = val;
     if (TimelineHandle.useSnap.get())
@@ -307,7 +306,7 @@ class CreateEntry extends TimelineAction {
     this.style = style_;
   }
 
-  onDrag(offsetX: number, offsetY: number, ev: MouseEvent): void {
+  onDrag(offsetX: number, _offsetY: number): void {
     const curPos = this.self.makeAlignmentLine(offsetX, {always: true});
     if (curPos >= this.entry.start)
       this.entry.end = curPos;
@@ -356,7 +355,7 @@ class SplitEntry extends TimelineAction {
     this.onDrag(e0.offsetX);
   }
 
-  override onMouseMove(e: MouseEvent): boolean {
+  override onMouseMove(): boolean {
     // keep alignment line at same position
     return true;
   }
@@ -449,7 +448,7 @@ export class TimelineInput {
     Editing.onSelectionChanged.bind(this, (cause) => {
       if (cause != ChangeCause.Timeline) {
         this.selection = new SvelteSet(Editing.getSelection());
-        let focused = Editing.getFocusedEntry();
+        const focused = Editing.getFocusedEntry();
         if (focused instanceof SubtitleEntry)
           this.layout.keepEntryInView(focused);
         this.manager.requestRender();
@@ -585,11 +584,10 @@ export class TimelineInput {
   }
 
   #onDoubleClick() {
-    if (this.selection.size == 1) {
-      let one = [...this.selection][0];
-      if (Editing.getFocusedEntry() == one) {
-        SubtitleTableHandle.processDoubleClick?.();
-      }
+    if (this.selection.size == 1
+     && Editing.getFocusedEntry() == [...this.selection][0])
+    {
+      SubtitleTableHandle.processDoubleClick?.();
     }
   }
 
@@ -662,7 +660,7 @@ export class TimelineInput {
         // only show move cursor
         return;
       } else {
-        let [first, last] = this.selectionFirstLast();
+        const [first, last] = this.selectionFirstLast();
         const [ _, x1] = this.layout.getHorizontalPos(first, {local: true});
         const [w2, x2] = this.layout.getHorizontalPos(last, {local: true});
         distL = under.includes(first) ? e.offsetX - x1 : Infinity;
@@ -833,7 +831,7 @@ export class TimelineInput {
             };
           } else {
             // cycle through the overlapping entries under the cursor
-            let one = [...this.selection][0];
+            const one = [...this.selection][0];
             selected = underMouse[(underMouse.indexOf(one) + 1) % underMouse.length];
             this.selection.clear();
             this.selection.add(selected);

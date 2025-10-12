@@ -34,12 +34,12 @@ export const ImportFormatDialogs = {
         formatMessage(type, group) {
             const map = <Ty extends JSONParseMessage['type']>(
                 f: (x: Extract<JSONParseMessage, { type: Ty; }>) => string
-            ) => // @ts-expect-error
+            ) => // @ts-expect-error -- well, help me clean this up
                 group.map(f);
 
             const one = <Ty extends JSONParseMessage['type']>(
                 f: (x: Extract<JSONParseMessage, { type: Ty; }>) => string
-            ) => // @ts-expect-error
+            ) => // @ts-expect-error -- the same
                 f(group[0]);
 
             switch (type) {
@@ -61,7 +61,7 @@ export const ImportFormatDialogs = {
                 };
             }
         },
-        categoryDescription(category) {
+        categoryDescription() {
             return undefined;
         },
     }),
@@ -71,7 +71,7 @@ export const ImportFormatDialogs = {
         formatMessage(type, group) {
             const one = <Ty extends SRTParseMessage['type']>(
                 f: (x: Extract<SRTParseMessage, { type: Ty; }>) => string
-            ) => // @ts-expect-error
+            ) => // @ts-expect-error -- ...
                 f(group[0]);
 
             switch (type) {
@@ -107,12 +107,12 @@ export const ImportFormatDialogs = {
         formatMessage(type, group) {
             const map = <Ty extends ASSParseMessage['type']>(
                 f: (x: Extract<ASSParseMessage, { type: Ty; }>) => string
-            ) => // @ts-expect-error
+            ) => // @ts-expect-error -- ...
                 group.map(f);
             
             const one = <Ty extends ASSParseMessage['type']>(
                 f: (x: Extract<ASSParseMessage, { type: Ty; }>) => string
-            ) => // @ts-expect-error
+            ) => // @ts-expect-error -- ...
                 f(group[0]);
 
             switch (type) {

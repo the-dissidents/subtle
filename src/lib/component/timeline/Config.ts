@@ -76,7 +76,7 @@ export const TimelineConfig = new PublicConfigGroup(
     },
 });
 
-async function make(other: UICommand<any>) {
+async function make<T>(other: UICommand<T>) {
     if (other.activated)
         await other.end();
     const style = Source.subs.view.timelineActiveChannel;

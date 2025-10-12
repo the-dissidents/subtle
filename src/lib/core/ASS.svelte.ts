@@ -10,7 +10,7 @@ export const ASSSubtitles = {
         try {
             new ASSParser(source);
             return true;
-        } catch (e) {
+        } catch {
             return false;
         }
     },
@@ -116,7 +116,7 @@ export class ASSParser implements SubtitleParser {
     }
 
     #parseScriptInfo() {
-        let text = this.#sections.get('Script Info');
+        const text = this.#sections.get('Script Info');
         if (text === undefined)
             throw new DeserializationError('invalid ASS: script info not found');
 
@@ -154,14 +154,14 @@ export class ASSParser implements SubtitleParser {
     }
 
     #parseStyles() {
-        let text = this.#sections.get('V4 Styles')
+        const text = this.#sections.get('V4 Styles')
                 ?? this.#sections.get('V4+ Styles')
                 ?? this.#sections.get('V4++ Styles');
         if (text === undefined) {
             this.#invalid({ type: 'no-styles' });
             return;
         }
-        let styleFieldMap = this.#sections.has('V4++ Styles')
+        const styleFieldMap = this.#sections.has('V4++ Styles')
             ? getASSFormatFieldMap('Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginT, MarginB, Encoding, RelativeTo')
             : getASSFormatFieldMap(text);
         if (styleFieldMap == null)
@@ -173,7 +173,7 @@ export class ASSParser implements SubtitleParser {
 
         const stylesRegex = /Style:\s*(.*)\n/g;
         let first: SubtitleStyle | undefined;
-        let nameToStyle = new Map<string, SubtitleStyle>();
+        const nameToStyle = new Map<string, SubtitleStyle>();
 
         const styleMatches = text.matchAll(stylesRegex);
         for (const match of styleMatches) {
@@ -214,7 +214,7 @@ export class ASSParser implements SubtitleParser {
             const name = items[styleFieldMap.get('Name')!];
             let style = nameToStyle.get(name);
             if (style === undefined) {
-                let newStyle = $state(Subtitles.createStyle(name));
+                const newStyle = $state(Subtitles.createStyle(name));
                 style = newStyle;
                 this.#subs.styles.push(newStyle);
                 nameToStyle.set(name, newStyle);
@@ -264,7 +264,7 @@ export class ASSParser implements SubtitleParser {
     }
 
     #parseEvents() {
-        let text = this.#sections.get('Events');
+        const text = this.#sections.get('Events');
         if (text == null)
             throw new DeserializationError('invalid ASS');
 
@@ -281,7 +281,7 @@ export class ASSParser implements SubtitleParser {
             let style = nameToStyle.get(styleName);
             if (!style) {
                 this.#invalid({ type: 'undefined-style', name: styleName });
-                let newStyle = $state(Subtitles.createStyle(styleName));
+                const newStyle = $state(Subtitles.createStyle(styleName));
                 style = newStyle;
                 nameToStyle.set(styleName, newStyle);
                 this.#subs.styles.push(newStyle);
@@ -289,13 +289,13 @@ export class ASSParser implements SubtitleParser {
             return style;
         };
 
-        let ignoredSpecial = new Map<string, number>();
-        let ignoredField = new Map<string, number>();
+        const ignoredSpecial = new Map<string, number>();
+        const ignoredField = new Map<string, number>();
         let ignoredOverride = 0;
         let ignoredDrawing = 0;
 
-        const regex = RegExp(String.raw
-            `^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
+        const regex = RegExp(
+            String.raw`^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
         let i = 0;
         for (const line of text.matchAll(regex)) {
             const timestamp = (field: string) => {
@@ -326,7 +326,7 @@ export class ASSParser implements SubtitleParser {
             ignore('Marked', '0');
             // FIXME: Layer is currently ignored, but we do export it, so we don't emit a warning
 
-            let entry = new SubtitleEntry(start, end);
+            const entry = new SubtitleEntry(start, end);
             const style = getStyleOrCreate(opts[fieldMap.get('Style')!]);
             let currentStyle = style;
             let parsedText = '';
@@ -342,7 +342,7 @@ export class ASSParser implements SubtitleParser {
             for (let i = 0; i < text.length; i++) {
                 // handle inline multichannel: \N{\r#}
                 if (this.transformInlineMultichannel) {
-                    let match = /^\\N{\\r(.*?)}/.exec(text.substring(i));
+                    const match = /^\\N{\\r(.*?)}/.exec(text.substring(i));
                     if (match) {
                         setText();
                         currentStyle = match[1] ? getStyleOrCreate(match[1]) : style;
@@ -447,10 +447,10 @@ export class ASSWriter implements SubtitleWriter {
         const reverseStyles = this.subs.styles.toReversed();
         const entries = this.#useEntries ?? this.subs.entries;
         for (const entry of entries) {
-            let t0 = Basic.formatTimestamp(entry.start, 2);
-            let t1 = Basic.formatTimestamp(entry.end, 2);
+            const t0 = Basic.formatTimestamp(entry.start, 2);
+            const t1 = Basic.formatTimestamp(entry.end, 2);
             for (const style of reverseStyles) {
-                let text = entry.texts.get(style);
+                const text = entry.texts.get(style);
                 if (!text) continue;
                 const styleName = this.styleNames.get(style);
                 Debug.assert(styleName !== undefined);
@@ -522,7 +522,7 @@ export function fromASSColor(str: string) {
     str = str.toUpperCase();
     if (!str.startsWith('&H') || str.length != 10) return null;
 
-    let [r, g, b, a] = [
+    const [r, g, b, a] = [
         Number.parseInt(str.slice(8, 10), 16), 
         Number.parseInt(str.slice(6, 8), 16),
         Number.parseInt(str.slice(4, 6), 16),

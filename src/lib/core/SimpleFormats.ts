@@ -39,7 +39,7 @@ const plaintext = {
 const tabDelimited = {
     write: (x) => new SubtitleLinearFormatWriter(x, 
         (linear) => {
-            let result = '', i = 1;
+            let result = '';
             for (const entry of linear) {
                 result += `${
                     Basic.formatTimestamp(entry.start, 3, '.')}\t${
@@ -47,7 +47,6 @@ const tabDelimited = {
                     entry.text
                         .replace('\n', '\\N')
                         .replace('\t', '\\T')}\n`;
-                i += 1;
             }
             return result;
         })

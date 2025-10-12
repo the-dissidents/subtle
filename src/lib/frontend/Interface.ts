@@ -123,7 +123,7 @@ export const Interface = {
             $_('msg.error-opening-video-path', {values: {path}}));
         if (!Playback.loaded) return;
         
-        let source = get(Source.currentFile);
+        const source = get(Source.currentFile);
         if (source != '')
             await this.saveFileData();
     },
@@ -137,7 +137,7 @@ export const Interface = {
         if (typeof path != 'string') return;
         const text = await readTextFile(path);
         if (!text) return;
-        let newSubs = await parseSubtitleSourceInteractive(path, text);
+        const newSubs = await parseSubtitleSourceInteractive(path, text);
         if (!newSubs) {
             Frontend.setStatus(
                 $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
@@ -146,7 +146,7 @@ export const Interface = {
         const options = await Dialogs.importOptions.showModal!(newSubs.migrated != 'text');
         if (!options) return;
 
-        let entries = SubtitleUtil.merge(Source.subs, newSubs, options);
+        const entries = SubtitleUtil.merge(Source.subs, newSubs, options);
         if (entries.length > 0) {
             Editing.setSelection(entries);
         }
@@ -202,9 +202,9 @@ export const Interface = {
     },
 
     async closeVideo() {
-        let file = get(Source.currentFile);
+        const file = get(Source.currentFile);
         await Playback.close();
-        let entry = Source.recentOpened.get().find((x) => x.name == file);
+        const entry = Source.recentOpened.get().find((x) => x.name == file);
         if (entry) {
             entry.video = undefined;
             entry.audioStream = undefined;
@@ -215,7 +215,7 @@ export const Interface = {
     async saveFileData() {
         const file = get(Source.currentFile);
         Debug.assert(file !== '');
-        let entry = Source.recentOpened.get().find((x) => x.name == file);
+        const entry = Source.recentOpened.get().find((x) => x.name == file);
         if (entry) {
             entry.video = Playback.player?.source;
             entry.audioStream = Playback.player?.currentAudioStream;

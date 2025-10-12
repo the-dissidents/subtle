@@ -30,7 +30,7 @@ const ZColor = z.codec(z.union([
                 return new Color('black');
             }
         } else {
-            let [r, g, b, a] = x;
+            const [r, g, b, a] = x;
             return new Color('srgb', [r, g, b], a);
         }
     },
@@ -97,7 +97,7 @@ export function parseSubtitleStyle(obj: any): SubtitleStyle {
 }
 
 export function cloneSubtitleStyle(s: SubtitleStyle): SubtitleStyle {
-    let x = structuredClone(z.encode(ZStyleBase, s));
+    const x = structuredClone(z.encode(ZStyleBase, s));
     return {
         ...z.decode(ZStyleBase, x),
         validator: $state.snapshot(s.validator)
@@ -150,7 +150,7 @@ export class Subtitles {
         if (base) {
             let def: SubtitleStyle | undefined;
             this.styles = base.styles.map((x) => {
-                let clone = $state(cloneSubtitleStyle(x));
+                const clone = $state(cloneSubtitleStyle(x));
                 if (x == base.defaultStyle) def = clone;
                 return clone;
             });
@@ -172,7 +172,7 @@ export class Subtitles {
         }
 
         let ok = true;
-        for (let style of this.styles) {
+        for (const style of this.styles) {
             if (!isProxy(style)) {
                 Debug.warn(`debugTestIntegrity: style is not a proxy: ${style.name}`);
                 console.log(style);

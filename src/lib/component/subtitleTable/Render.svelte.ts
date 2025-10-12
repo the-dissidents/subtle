@@ -52,8 +52,9 @@ export class TableRenderer {
         const [width, height] = this.manager.size;
 
         // table
-        const selection = new Set(Editing.getSelection());
         const focused = Editing.getFocusedEntry();
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const selection = new Set(Editing.getSelection());
         let i = 0;
         for (const { entry, line, height: lh, texts } of this.layout.lines) {
             i += 1;
@@ -99,7 +100,7 @@ export class TableRenderer {
 
                 for (const col of this.layout.channelColumns) {
                     const value = Metrics[col.metric].stringValue(entry, style);
-                    let splitLines = value.split('\n');
+                    const splitLines = value.split('\n');
                     cxt.textBaseline = 'middle';
                     cxt.textAlign = col.layout!.align;
                     cxt.fillStyle = textFillStyle;
@@ -118,7 +119,7 @@ export class TableRenderer {
             // entry cells
             for (const col of this.layout.entryColumns) {
                 const value = Metrics[col.metric].stringValue(entry, Source.subs.defaultStyle);
-                let splitLines = value.split('\n');
+                const splitLines = value.split('\n');
                 cxt.textBaseline = 'middle';
                 cxt.textAlign = col.layout!.align;
                 cxt.fillStyle = textFillStyle;

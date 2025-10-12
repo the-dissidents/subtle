@@ -123,7 +123,7 @@ export class JSONParser implements SubtitleParser {
 
     #parseView() {
         if (!this.#obj.view) return;
-        let sv = parseObjectZ(this.#obj.view, ZView);
+        const sv = parseObjectZ(this.#obj.view, ZView);
         // currently this doesn't detect whether the metrics are really valid
         // e.g. entry columns should not be channel metrics
         this.#subs.view.perEntryColumns = sv.perEntryColumns.filter((x) => 
@@ -151,10 +151,10 @@ export class JSONParser implements SubtitleParser {
 
         if (this.#version < '000400') {
             // pre 0.4: the default style is defined outside the styles array
-            let def = $state(parseSubtitleStyle(this.#obj.defaultStyle))
+            const def = $state(parseSubtitleStyle(this.#obj.defaultStyle))
             this.#subs.defaultStyle = def;
             this.#subs.styles = [def, ...styles.map((x) => {
-                let style = $state(parseSubtitleStyle(x));
+                const style = $state(parseSubtitleStyle(x));
                 return style;
             })];
             this.#subs.migrated = 'olderVersion';
@@ -162,7 +162,7 @@ export class JSONParser implements SubtitleParser {
             if (typeof defaultStyle !== 'string')
                 throw new DeserializationError('invalid default style');
             this.#subs.styles = styles.map((x) => {
-                let style = $state(parseSubtitleStyle(x));
+                const style = $state(parseSubtitleStyle(x));
                 return style;
             });
             const def = this.#subs.styles.find((x) => x.name == defaultStyle);
@@ -184,8 +184,8 @@ export class JSONParser implements SubtitleParser {
         }
     }
 
-    #parseEntry(o: any): SubtitleEntry {
-        let entry = new SubtitleEntry(o.start, o.end);
+    #parseEntry(o: unknown): SubtitleEntry {
+        const entry = new SubtitleEntry(o.start, o.end);
         if (o.label) entry.label = o.label;
 
         for (const [styleName, text] of o.texts) {
@@ -197,7 +197,7 @@ export class JSONParser implements SubtitleParser {
                     `note: style appeared multiple time in one entry: ${styleName}: in`, o);
 
                 // migrate pre-0.4 styles
-                let duplicated = this.#duplicatedStyles.get(style);
+                const duplicated = this.#duplicatedStyles.get(style);
                 let found: SubtitleStyle | undefined;
                 if (duplicated) {
                     found = duplicated.find((x) => !entry.texts.has(x));
@@ -234,8 +234,8 @@ export const JSONSubtitles = {
     },
 
     write(subs) {
-        let options = {useEntries: undefined as SubtitleEntry[] | undefined};
-        let obj = {
+        const options = {useEntries: undefined as SubtitleEntry[] | undefined};
+        const obj = {
             useEntries(e: SubtitleEntry[]) {
                 options.useEntries = e;
                 return obj;

@@ -29,9 +29,9 @@ function match(A: number[], Z: number[], opt: FuzzyMatchOptions) {
     const m = A.length;
     const n = Z.length;
 
-    let DPOp: Operation[][] = new Array(m+1).fill(null)
+    const DPOp: Operation[][] = new Array(m+1).fill(null)
         .map(() => new Array(n+1).fill(0));
-    let DPScore: number[][] = new Array(m+1).fill(null)
+    const DPScore: number[][] = new Array(m+1).fill(null)
         .map(() => new Array(n+1).fill(Infinity));
     for (let i = 0; i <= m; i++) {
         DPOp[i][0] = DELETE;
@@ -74,10 +74,10 @@ function match(A: number[], Z: number[], opt: FuzzyMatchOptions) {
         }
     if (current_j == 0) return null;
 
-    let tokens: SolutionToken[] = [];
+    const tokens: SolutionToken[] = [];
     let current_i = m;
     while (current_i > 0 && current_j > 0) {
-        let op = DPOp[current_i][current_j];
+        const op = DPOp[current_i][current_j];
         tokens.push({ op, i: current_i-1, j: current_j-1 });
         switch (op) {
             case SUBSITUTE:
@@ -111,7 +111,7 @@ export class RegexTokenizer implements Tokenizer {
         for (const regex of this.passes) {
             tokens = tokens.flatMap((x) => x.split(regex));
         }
-        let prefix = tokens.reduce<number[]>((p, c) => {
+        const prefix = tokens.reduce<number[]>((p, c) => {
             p.push(p.at(-1)! + c.length);
             return p;
         }, [0]);
@@ -129,7 +129,7 @@ export const SyllableTokenizer = new RegexTokenizer(
     /(?<!^[bcdfghjklmnpqrstvwxzßñç])(?=[bcdfghjklmnpqrstvwxzßñç][^bcdfghjklmnpqrstvwxzßñç])/]);
 
 function preprocess(w: string[], x: string[]) {
-    let dict = new Map<string, number>();
+    const dict = new Map<string, number>();
     x.forEach((word, i) => {
         if (dict.get(word) === undefined)
             dict.set(word, i);
@@ -183,7 +183,7 @@ export class Searcher {
                 default:
                     Debug.never(x.op);
             }
-        }).join('').replaceAll(/\]\[|\>\</g, '');
+        }).join('').replaceAll(/\]\[|></g, '');
 
         return {
             visualization,

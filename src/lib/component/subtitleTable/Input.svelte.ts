@@ -15,7 +15,6 @@ import { get } from "svelte/store";
 import { Playback } from "../../frontend/Playback";
 import { Frontend } from "../../frontend/Frontend";
 import { contextMenu } from "./Menu";
-import { Basic } from "../../Basic";
 
 export const SubtitleTableHandle = {
     processDoubleClick: undefined as (undefined | (() => Promise<void>)),

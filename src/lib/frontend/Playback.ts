@@ -23,8 +23,8 @@ export type PlayArea = {
     loop: boolean
 }
 
-let loadState = writable<LoadState>('empty'),
-    position = 0,
+const loadState = writable<LoadState>('empty');
+let position = 0,
     duration = 0;
 
 const me = {};

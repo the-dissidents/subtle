@@ -67,7 +67,7 @@ const ToLinearFormat = {
             })),
     [LinearFormatCombineStrategy.Recombine]:
         (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => {
-            let events: { type: 'start' | 'end', pos: number, i: number }[] = [];
+            const events: { type: 'start' | 'end', pos: number, i: number }[] = [];
             entries.forEach(({start, end}, i) => {
                 events.push({ type: 'start', pos: start, i });
                 events.push({ type: 'end', pos: end, i });
@@ -75,8 +75,8 @@ const ToLinearFormat = {
             events.sort((a, b) => a.pos - b.pos);
             if (events.length == 0) return [];
 
-            let activeTexts: {i: number, text: string}[] = [];
-            let result: LinearEntry[] = [];
+            const activeTexts: {i: number, text: string}[] = [];
+            const result: LinearEntry[] = [];
             let i = 0;
             outer: while (true) {
                 const pos = events[i].pos;
@@ -84,12 +84,12 @@ const ToLinearFormat = {
                     const event = events[i];
                     if (event.type == 'start') {
                         const entry = entries[event.i];
-                        let text = subs.styles
+                        const text = subs.styles
                             .map((s) => entry.texts.get(s))
                             .filter((x) => x).join('\n');
                         activeTexts.push({text, i: event.i});
                     } else {
-                        let index = activeTexts.findIndex((x) => x.i == event.i);
+                        const index = activeTexts.findIndex((x) => x.i == event.i);
                         Debug.assert(index >= 0);
                         activeTexts.splice(index, 1);
                     }
@@ -109,11 +109,11 @@ const ToLinearFormat = {
 export const SubtitleTools = {
     alignTimes: (subs: Subtitles, epsilon: number) => {
         for (let i = 0; i < subs.entries.length - 1; i++) {
-            let s0 = subs.entries[i].start;
-            let e0 = subs.entries[i].end;
+            const s0 = subs.entries[i].start;
+            const e0 = subs.entries[i].end;
             for (let j = i + 1; j < subs.entries.length; j++) {
-                let s1 = subs.entries[j].start;
-                let e1 = subs.entries[j].end;
+                const s1 = subs.entries[j].start;
+                const e1 = subs.entries[j].end;
                 if (Math.abs(s1 - s0) <= epsilon)
                     subs.entries[j].start = s0;
                 if (Math.abs(e1 - e0) <= epsilon)
@@ -122,9 +122,9 @@ export const SubtitleTools = {
         }
     },
     makeTestSubtitles: () => {
-        let subs = new Subtitles();
+        const subs = new Subtitles();
         for (let i = 0; i < 10; i++) {
-            let entry = new SubtitleEntry(i * 5, i * 5 + 5);
+            const entry = new SubtitleEntry(i * 5, i * 5 + 5);
             entry.texts.set(subs.defaultStyle, `测试第${i}行`);
             subs.entries.push(entry);
         }
@@ -159,15 +159,15 @@ export const SubtitleUtil = {
         const overrideStyle = options.overrideStyle ?? original.defaultStyle;
         Debug.assert(original.styles.includes(overrideStyle), 'invalid overrideStyle');
         const orginalStyleSerialized = original.styles.map((x) => JSON.stringify(x));
-        let processStyle = (s: SubtitleStyle) => {
+        const processStyle = (s: SubtitleStyle) => {
             if (styleMap.has(s)) return styleMap.get(s)!;
             const newStyleSerialized = JSON.stringify(s);
-            let iLocalName = original.styles.findIndex((x) => x.name == s.name);
-            let iLocalMatch = orginalStyleSerialized.indexOf(newStyleSerialized);
+            const iLocalName = original.styles.findIndex((x) => x.name == s.name);
+            const iLocalMatch = orginalStyleSerialized.indexOf(newStyleSerialized);
 
             const add = () => {
                 // make sure it is a proxy
-                let newStyle = $state(s);
+                const newStyle = $state(s);
                 original.styles.push(newStyle);
                 styleMap.set(s, newStyle);
                 return newStyle;
@@ -182,7 +182,7 @@ export const SubtitleUtil = {
                 case 'KeepAll':
                     // generate unqiue name
                     {
-                        let newStyle = $state(cloneSubtitleStyle(s));
+                        const newStyle = $state(cloneSubtitleStyle(s));
                         newStyle.name = SubtitleTools.getUniqueStyleName(original, s.name);
                         original.styles.push(newStyle);
                         styleMap.set(s, newStyle);
@@ -204,7 +204,7 @@ export const SubtitleUtil = {
                     return add();
                 case 'Overwrite':
                     if (iLocalName >= 0) {
-                        let newStyle = $state(s);
+                        const newStyle = $state(s);
                         if (original.defaultStyle === original.styles[iLocalName])
                             original.defaultStyle = newStyle;
                         original.styles.splice(iLocalName, 1, newStyle);
@@ -219,14 +219,14 @@ export const SubtitleUtil = {
         if (options.selection) switch (options.selection) {
             case 'OnlyStyles':
             case 'All':
-                for (let style of other.styles) processStyle(style);
+                for (const style of other.styles) processStyle(style);
                 break;
         }
 
         if (options.selection == 'OnlyStyles')
             return [];
 
-        let position = options.position ?? 'After';
+        const position = options.position ?? 'After';
         if (position == 'Overwrite')
             original.entries = [];
         let insertEntry: (e: SubtitleEntry) => void;
@@ -234,12 +234,12 @@ export const SubtitleUtil = {
         switch (position) {
             case 'SortedBefore':
                 insertEntry = (e) => {
-                    let i = original.entries.findIndex((x) => x.start >= e.start);
+                    const i = original.entries.findIndex((x) => x.start >= e.start);
                     original.entries.splice(i, 0, e);
                 }; break;
             case 'SortedAfter':
                 insertEntry = (e) => {
-                    let i = original.entries.findLastIndex((x) => x.start <= e.start);
+                    const i = original.entries.findLastIndex((x) => x.start <= e.start);
                     original.entries.splice(i+1, 0, e);
                 }; break;
             case 'Before':
@@ -257,10 +257,10 @@ export const SubtitleUtil = {
                 Debug.never(position);
         }
 
-        for (let ent of other.entries) {
+        for (const ent of other.entries) {
             insertEntry(ent);
-            let newTexts: [SubtitleStyle, string][] = [];
-            for (let [style, text] of ent.texts)
+            const newTexts: [SubtitleStyle, string][] = [];
+            for (const [style, text] of ent.texts)
                 newTexts.push([processStyle(style), text]);
             ent.texts = new SvelteMap(newTexts);
         }
@@ -269,14 +269,14 @@ export const SubtitleUtil = {
 
     // first scale, then offset
     shiftTimes(original: Subtitles, options: TimeShiftOptions) {
-        let modifySince = options.modifySince ?? false;
-        let offset = options.offset ?? 0;
-        let scale = options.scale ?? 1;
+        const modifySince = options.modifySince ?? false;
+        const offset = options.offset ?? 0;
+        const scale = options.scale ?? 1;
         if (offset == 0 && scale == 1) return false;
-        let selection = options.selection ?? original.entries;
-        let set = new Set(selection);
-        let start = Math.min(...selection.map((x) => x.start));
-        for (let ent of original.entries) {
+        const selection = options.selection ?? original.entries;
+        const set = new Set(selection);
+        const start = Math.min(...selection.map((x) => x.start));
+        for (const ent of original.entries) {
             if (set.has(ent) || (ent.start >= start && modifySince)) {
                 ent.start = Math.max(0, ent.start * scale + offset);
                 ent.end = Math.max(0, ent.end * scale + offset);

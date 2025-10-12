@@ -19,7 +19,7 @@ export type TranslatedWheelEvent = {
 
 export function parseSubtitleSource(source: string): Subtitles | null {
     const formats = [Format.JSON, Format.ASS, Format.SRT];
-    let possible: SubtitleFormat[] = [];
+    const possible: SubtitleFormat[] = [];
     for (const f of formats) {
         const d = f.detect(source);
         if (d === null) possible.push(f);
@@ -120,10 +120,11 @@ export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback?:
     }
 }
 
-type EnforceNotPromise<T extends () => any> = ReturnType<T> extends Promise<any> ? never : T;
+type EnforceNotPromise<T extends () => unknown> = 
+    ReturnType<T> extends Promise<unknown> ? never : T;
 
 export function guard<T extends () => void>(x: EnforceNotPromise<T>, msg: string): void;
-export function guard<T extends () => any>(
+export function guard<T extends () => unknown>(
     x: EnforceNotPromise<T>, msg: string, fallback: ReturnType<T>): ReturnType<T>;
 
 export function guard<T>(x: () => T, msg: string, fallback?: T) {
