@@ -100,6 +100,10 @@ export class MetricDefinition<TypeName extends MetricType> {
 
     stringValue(entry: SubtitleEntry, style: SubtitleStyle) {
         const value = this.value(entry, style);
+        // very hacky special handling of integers
+        if (this.type == 'number' && this.integer) {
+            return (value as number).toString();
+        }
         return MetricTypeDefinitions[this.type].toString(value as never);
     }
 };

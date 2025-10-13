@@ -51,9 +51,9 @@ onMount(() => {
 
 {#snippet metricList(opt: {list: Column[]}, category: MetricContext[])}
 {@const MetricsList = Object.entries(Metrics)}
-  <OrderableList list={opt.list} style='width: 100%' onsubmit={layout!.changeColumns}>
+  <OrderableList list={opt.list} style='width: 100%' onsubmit={() => layout!.changeColumns()}>
     {#snippet row(col, i)}
-      <select bind:value={col.metric} onchange={layout!.changeColumns}>
+      <select bind:value={col.metric} onchange={() => layout!.changeColumns()}>
         {#each MetricsList as [name, m]}
           {#if category.includes(m.context)
             && (!opt.list.some((x) => x.metric == name) || name == col.metric)}

@@ -1,7 +1,7 @@
 {
   "name": "subtle",
   "private": true,
-  "version": "0.5.4",
+  "version": "0.6.0-a0",
   "type": "module",
   "scripts": {
     "dev": "vite",

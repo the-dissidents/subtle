@@ -41,9 +41,11 @@ export type SampleResult = {
 
 export type MediaEvent = {
     event: 'done'
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     data: {}
 } | {
     event: 'EOF'
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     data: {}
 } | {
     event: 'opened'
@@ -70,9 +72,11 @@ export type MediaEvent = {
     data: { what: string }
 } | {
     event: 'noStream',
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     data: {}
 } | {
     event: 'invalidId',
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     data: {}
 } | {
     event: 'ffmpegVersion',
@@ -98,17 +102,16 @@ type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) 
 
 function createChannel(
     from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
-    reject: (e: any) => void, timeout = 2000
+    reject: (e: unknown) => void, timeout = 2000
 ) {
     if (timeout > 0) setTimeout(
         () => reject(new MediaError(`timed out [${timeout}ms]`, from)), timeout);
     
     const channel = new Channel<MediaEvent>;
     channel.onmessage = (msg) => {
-        let h = handler[msg.event];
-        // 'as any' because (A => C) | (B => C) will not accept A | B as the parameter
+        const h = handler[msg.event];
         if (h) {
-            h(msg.data as any);
+            h(msg.data as never);
             return;
         }
 
@@ -209,7 +212,7 @@ export class MMedia {
 
     static async open(path: string) {
         const id = await new Promise<number>((resolve, reject) => {
-            let channel = createChannel('open', {
+            const channel = createChannel('open', {
                 opened: (data) => resolve(data.id)
             }, reject);
             invoke('open_media', {path, channel});
@@ -220,7 +223,7 @@ export class MMedia {
             duration: number,
             streams: StreamDescription[]
         }>((resolve, reject) => {
-            let channel = createChannel('open/status', {
+            const channel = createChannel('open/status', {
                 mediaStatus: (data) => resolve(data)
             }, reject);
             invoke('media_status', {id, channel});
@@ -235,7 +238,7 @@ export class MMedia {
     async close() {
         Debug.assert(!this.#destroyed);
         await new Promise<void>((resolve, reject) => {
-            let channel = createChannel('close', {
+            const channel = createChannel('close', {
                 done: () => {
                     Debug.info(`media ${this.id} closed`);
                     this.#destroyed = true;
@@ -262,7 +265,7 @@ export class MMedia {
     async openAudio(audioId: number) {
         Debug.assert(!this.#destroyed);
         this.#audio = await new Promise<AudioStatus>((resolve, reject) => {
-            let channel = createChannel('openAudio', {
+            const channel = createChannel('openAudio', {
                 audioStatus: (data) => resolve(data)
             }, reject);
             invoke('open_audio', {id: this.id, audioId, channel});
@@ -273,7 +276,7 @@ export class MMedia {
     async openAudioSampler(audioId: number, samplePerSecond: number) {
         Debug.assert(!this.#destroyed);
         this.#audio = await new Promise<AudioStatus>((resolve, reject) => {
-            let channel = createChannel('openAudioSampler', {
+            const channel = createChannel('openAudioSampler', {
                 audioStatus: (data) => resolve(data)
             }, reject);
             invoke('open_audio_sampler', {id: this.id, audioId, samplePerSecond, channel});
@@ -284,7 +287,7 @@ export class MMedia {
     async openVideo(videoId: number, accel: boolean) {
         Debug.assert(!this.#destroyed);
         this.#video = await new Promise<VideoStatus>((resolve, reject) => {
-            let channel = createChannel('openVideo', {
+            const channel = createChannel('openVideo', {
                 videoStatus: (data) => resolve(data)
             }, reject);
             invoke('open_video', {id: this.id, videoId, accel, channel});
@@ -296,7 +299,7 @@ export class MMedia {
     async openVideoSampler(videoId: number, accel: boolean) {
         Debug.assert(!this.#destroyed);
         this.#video = await new Promise<VideoStatus>((resolve, reject) => {
-            let channel = createChannel('openVideoSampler', {
+            const channel = createChannel('openVideoSampler', {
                 videoStatus: (data) => resolve(data)
             }, reject);
             invoke('open_video_sampler', {id: this.id, videoId, accel, channel});
@@ -310,7 +313,7 @@ export class MMedia {
             audioIndex: number,
             videoIndex: number
         }>((resolve, reject) => {
-            let channel = createChannel('status', {
+            const channel = createChannel('status', {
                 mediaStatus: (data) => resolve(data)
             }, reject);
             invoke('media_status', {id: this.id, channel});
@@ -323,7 +326,7 @@ export class MMedia {
         width = Math.max(1, Math.round(width));
         height = Math.max(1, Math.round(height));
         await new Promise<void>((resolve, reject) => {
-            let channel = createChannel('setVideoSize', {
+            const channel = createChannel('setVideoSize', {
                 done: () => resolve()
             }, reject);
             invoke('video_set_size', {id: this.id, channel, width, height});
@@ -341,7 +344,7 @@ export class MMedia {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
                 channel = createChannel('readNextFrame', { 
                     'EOF': () => {
-                        Debug.debug('at eof');
+                        Debug.debug('readNextFrame: at eof');
                         this.#eof = true;
                         resolve(null);
                     }
@@ -435,7 +438,7 @@ export class MMedia {
             return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
                 channel = createChannel('skipUntil', { 
                     'EOF': () => {
-                        Debug.debug('at eof');
+                        Debug.debug('skipUntil: at eof');
                         this.#eof = true;
                         resolve(null);
                     }
@@ -467,7 +470,7 @@ export class MMedia {
 export const MAPI = {
     async version() {
         return await new Promise<string>((resolve, reject) => {
-            let channel = createChannel('version', {
+            const channel = createChannel('version', {
                 ffmpegVersion: (data) => resolve(data.value)
             }, reject);
             invoke('media_version', {channel});
@@ -480,7 +483,7 @@ export const MAPI = {
 
     async testPerformance(path: string, postprocess: boolean, hwaccel: boolean) {
         return await new Promise<void>((resolve, reject) => {
-            let channel = createChannel('test_performance', {
+            const channel = createChannel('test_performance', {
                 done: () => resolve()
             }, reject, -1);
             invoke('test_performance', {path, postprocess, hwaccel, channel});
