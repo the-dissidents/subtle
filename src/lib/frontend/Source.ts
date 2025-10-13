@@ -1,7 +1,7 @@
 console.info('Source loading');
 
 import { Debug } from "../Debug";
-import { parseSubtitleStyle, serializeSubtitleStyle, Subtitles, type SerializedSubtitleStyle, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { parseSubtitleStyleBase, serializeSubtitleStyle, Subtitles, type SerializedSubtitleStyle, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Format } from "../core/SimpleFormats";
 import { InterfaceConfig } from "../config/Groups";
 import { Memorized } from "../config/MemorizedValue.svelte";
@@ -62,7 +62,7 @@ class MemorizedStyles extends Memorized<SerializedSubtitleStyle[], SubtitleStyle
     }
     this.value = value.flatMap((x) => {
       try {
-        return [parseSubtitleStyle(x)];
+        return [parseSubtitleStyleBase(x)];
       } catch (e) {
         Debug.warn('unable to deserialize style', x, e);
         return [];

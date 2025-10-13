@@ -1,6 +1,7 @@
 import { Basic } from "../../Basic";
 import type { CanvasManager } from "../../CanvasManager";
-import { SubtitleEntry, type SubtitleStyle, Subtitles, AlignMode } from "../../core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitles.svelte";
+import { AlignMode } from "../../core/Labels";
 import { EventHost } from "../../details/EventHost";
 import { Typography } from "../../details/Typography";
 import { MediaConfig } from "./Config";

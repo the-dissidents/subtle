@@ -1,5 +1,6 @@
 <script lang="ts">
-import { AlignMode, type SubtitleStyle, Subtitles, cloneSubtitleStyle } from "./core/Subtitles.svelte";
+import { type SubtitleStyle, Subtitles, cloneSubtitleStyle } from "./core/Subtitles.svelte";
+import { AlignMode } from "./core/Labels";
 import { SubtitleTools } from "./core/SubtitleUtil.svelte";
 
 import { Menu } from "@tauri-apps/api/menu";

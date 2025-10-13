@@ -1,6 +1,6 @@
 import { Debug } from "../../Debug";
 import type { CanvasManager } from "../../CanvasManager";
-import { filterDescription, type SimpleMetricFilter } from "../../core/Filter";
+import { Filter, type SimpleMetricFilter } from "../../core/Filter";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
 import { ChangeCause, Source } from "../../frontend/Source";
@@ -110,7 +110,7 @@ export class TableInput {
 
     async #handleDoubleClick() {
         this.focus();
-        let focused = Editing.getFocusedEntry();
+        const focused = Editing.getFocusedEntry();
         Debug.assert(focused !== null);
         if (focused == 'virtual') {
             if (TableConfig.data.doubleClickStartEdit)
@@ -169,8 +169,8 @@ export class TableInput {
                 this.popupMessage = 
                     get(_)('table.requirement-not-met', {values: {n: this.currentFails.length}})
                     + '\n'
-                    + this.currentFails.map(filterDescription).join('\n');
-                let [left, top] = this.manager.convertPosition('canvas', 'client', 
+                    + this.currentFails.map((x) => Filter.describe(x)).join('\n');
+                const [left, top] = this.manager.convertPosition('canvas', 'client', 
                     channelColumnStart, 
                     currentText.line * this.layout.lineHeight + this.layout.headerHeight);
                 this.validationMessagePopup.open!({left, top, width: 0, 
@@ -202,7 +202,7 @@ export class TableInput {
                 this.lastAnimateFrameTime = -1;
                 return;
             }
-            let time = performance.now();
+            const time = performance.now();
             this.manager.setScroll({ y: this.manager.scroll[1] 
                 + this.autoScrollY * (time - this.lastAnimateFrameTime) * 0.001 });
             this.lastAnimateFrameTime = time;

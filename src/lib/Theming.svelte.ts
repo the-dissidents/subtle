@@ -1,4 +1,4 @@
-import type { LabelType } from "./core/Subtitles.svelte";
+import type { LabelType } from "./core/Labels";
 
 export const theme = $state({
     isDark: false

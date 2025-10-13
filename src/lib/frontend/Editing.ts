@@ -8,7 +8,7 @@ import { EventHost } from "../details/EventHost";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { Debug } from "../Debug";
-import { Metric, Metrics } from "../core/Filter";
+import { MetricDefinition, Metrics } from "../core/Filter";
 import { Frontend } from "./Frontend";
 import { ask } from "@tauri-apps/plugin-dialog";
 const $_ = unwrapFunctionStore(_);
@@ -42,12 +42,10 @@ export function getSelectMode(ev: MouseEvent | KeyboardEvent) {
     return SelectMode.Single;
 }
 
-Object.defineProperty(Metrics, 'selected', {
-    value: new Metric('boolean', 'editing',
-        () => $_('metrics.selected'), 
-        () => $_('metrics.selected'), 
-        (e) => Editing.inSelection(e))
-});
+Metrics['selected'] = new MetricDefinition('boolean', 'editing',
+    () => $_('metrics.selected'), 
+    () => $_('metrics.selected'), 
+    (e) => Editing.inSelection(e));
 
 function updateFocusedStyle() {
     const focused = Editing.getFocusedEntry();

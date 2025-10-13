@@ -2,7 +2,8 @@ import Color from "colorjs.io";
 import { Basic } from "../Basic";
 import { Debug } from "../Debug";
 import { DeserializationError } from "../Serialization";
-import { AlignMode, SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser, type SubtitleStyle, type SubtitleWriter } from "./Subtitles.svelte";
+import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser, type SubtitleStyle, type SubtitleWriter } from "./Subtitles.svelte";
+import { AlignMode } from "./Labels";
 import { SubtitleTools } from "./SubtitleUtil.svelte";
 
 export const ASSSubtitles = {

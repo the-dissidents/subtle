@@ -5,7 +5,7 @@ import { Debug } from "../../Debug";
 
 import { EventHost } from "../../details/EventHost";
 
-import { Metrics, Metric, type MetricContext } from "../../core/Filter";
+import { Metrics, type MetricContext } from "../../core/Filter";
 import Popup, { type PopupHandler } from "../../ui/Popup.svelte";
 import OrderableList from "../../ui/OrderableList.svelte";
 
@@ -50,7 +50,7 @@ onMount(() => {
 </div>
 
 {#snippet metricList(opt: {list: Column[]}, category: MetricContext[])}
-{@const MetricsList = Object.entries(Metrics) as [keyof typeof Metrics, Metric<any>][]}
+{@const MetricsList = Object.entries(Metrics)}
   <OrderableList list={opt.list} style='width: 100%' onsubmit={layout!.changeColumns}>
     {#snippet row(col, i)}
       <select bind:value={col.metric} onchange={layout!.changeColumns}>

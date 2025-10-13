@@ -1,7 +1,8 @@
 <script lang="ts">
 import * as dialog from "@tauri-apps/plugin-dialog";
 
-import { Subtitles, type LabelType, type SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { Subtitles, type SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { type LabelType } from "../core/Labels";
 import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';

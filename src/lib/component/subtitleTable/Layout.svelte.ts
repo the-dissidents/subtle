@@ -1,7 +1,7 @@
 import { get } from "svelte/store";
 import { CanvasManager } from "../../CanvasManager";
 import { InterfaceConfig, MainConfig } from "../../config/Groups";
-import { evaluateFilter, Metrics, type SimpleMetricFilter } from "../../core/Filter";
+import { Filter, Metrics, type SimpleMetricFilter } from "../../core/Filter";
 import type { SubtitleEntry, SubtitleStyle } from "../../core/Subtitles.svelte";
 import { Debug } from "../../Debug";
 import { ChangeType, Source } from "../../frontend/Source";
@@ -137,7 +137,7 @@ export class TableLayout {
                     height: lineHeight,
                     line: this.totalLines + entryHeight,
                     failed: style.validator === null 
-                    ? [] : evaluateFilter(style.validator, entry, style).failed
+                    ? [] : Filter.evaluate(style.validator, entry, style).failed
                 });
                 entryHeight += lineHeight;
             }

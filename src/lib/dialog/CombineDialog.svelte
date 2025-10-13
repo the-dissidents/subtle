@@ -1,5 +1,6 @@
 <script lang="ts">
-import { SubtitleEntry, type LabelType } from '../core/Subtitles.svelte';
+import { SubtitleEntry } from '../core/Subtitles.svelte';
+import { type LabelType } from "../core/Labels";
 import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
 import type { DialogHandler } from '../frontend/Dialogs';

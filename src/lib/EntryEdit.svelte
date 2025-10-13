@@ -4,7 +4,8 @@ import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
 import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
 
-import { SubtitleEntry, type LabelType, type SubtitleStyle } from './core/Subtitles.svelte';
+import { SubtitleEntry, type SubtitleStyle } from './core/Subtitles.svelte';
+import { type LabelType } from "./core/Labels";
 import { Editing } from './frontend/Editing';
 import { ChangeType, Source } from './frontend/Source';
 import { Frontend } from './frontend/Frontend';

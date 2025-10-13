@@ -52,7 +52,8 @@ KeybindingManager.register(SearchCommands);
 
 <script lang="ts">
 import { Basic } from '../Basic';
-import { Labels, SubtitleEntry, type LabelType, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { LABEL_TYPES, type LabelType } from "../core/Labels";
 import { Debug } from "../Debug";
 import StyleSelect from '../StyleSelect.svelte';
 
@@ -62,7 +63,7 @@ import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 import { _ } from 'svelte-i18n';
 import Collapsible from '../ui/Collapsible.svelte';
 import FilterEdit from '../FilterEdit.svelte';
-import { evaluateFilter, type MetricFilter } from '../core/Filter';
+import { Filter, type MetricFilter } from '../core/Filter';
 import Tooltip from '../ui/Tooltip.svelte';
 
 handler.execute = execute;
@@ -103,7 +104,7 @@ let resumeFrom: {
 function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
   if (useFilter) {
     Debug.assert(filter !== null);
-    return evaluateFilter(filter, entry, style).failed.length == 0;
+    return Filter.evaluate(filter, entry, style).failed.length == 0;
   } else {
     // not using filter
     return (!useStyle || style.name === searchStyle.name)
@@ -461,7 +462,7 @@ async function execute(type: SearchAction, option: SearchOption) {
           bind:value={label}
           oninput={() => useLabel = true}
         >
-          {#each Labels as color}
+          {#each LABEL_TYPES as color}
           <option value={color}>{color}</option>
           {/each}
         </select>

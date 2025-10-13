@@ -53,7 +53,6 @@ export class TableRenderer {
 
         // table
         const focused = Editing.getFocusedEntry();
-        // eslint-disable-next-line svelte/prefer-svelte-reactivity
         const selection = new Set(Editing.getSelection());
         let i = 0;
         for (const { entry, line, height: lh, texts } of this.layout.lines) {

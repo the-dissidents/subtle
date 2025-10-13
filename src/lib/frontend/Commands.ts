@@ -6,7 +6,8 @@ import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.
 import { Editing, KeepInViewMode, SelectMode } from "./Editing";
 import { Frontend, parseSubtitleSource } from "./Frontend";
 import { Source, ChangeType, ChangeCause } from "./Source";
-import { Labels, SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { LABEL_TYPES } from "../core/Labels";
 import { Playback } from "./Playback";
 import { Utils } from "./Utils";
 import { Dialogs } from "./Dialogs";
@@ -541,7 +542,7 @@ export const BasicCommands = {
     {
         name: () => $_('action.label'),
         isApplicable: hasSelection,
-        items: Labels.map((x) => ({
+        items: LABEL_TYPES.map((x) => ({
             name: () => $_(`label.${x}`),
             call() {
                 for (const entry of Editing.getSelection())

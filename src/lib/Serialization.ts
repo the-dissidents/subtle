@@ -1,4 +1,5 @@
 import * as z from "zod/v4-mini";
+import { Debug } from "./Debug";
 
 export class DeserializationError extends Error {
     constructor(msg: string) {
@@ -7,8 +8,9 @@ export class DeserializationError extends Error {
     }
 }
 
-export function parseObjectZ<Z extends z.core.$ZodType>(obj: object, ztype: Z) {
-    const result = z.safeParse(ztype, obj);
+export function parseObjectZ<Z extends z.core.$ZodType>(obj: unknown, ztype: Z, name: string) {
+    const result = z.safeParse(ztype, obj, {reportInput: true});
     if (result.success) return result.data;
-    throw new DeserializationError(z.prettifyError(result.error));
+    Debug.info(result.error);
+    throw new DeserializationError(`parsing ${name}: ` + z.prettifyError(result.error));
 }

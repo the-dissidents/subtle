@@ -2,82 +2,72 @@ console.info('core/Subtitles loading');
 
 import { Debug } from "../Debug";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
-import { parseFilter, type MetricFilter } from "./Filter";
+import { Filter, type MetricFilter } from "./Filter";
+import { AlignMode, type LabelType } from "./Labels";
 import { parseObjectZ } from "../Serialization";
-
-export const Labels = ['none', 'red', 'orange', 'yellow', 'green', 'blue', 'purple'] as const;
-export type LabelType = typeof Labels[number];
-
-export enum AlignMode {
-    BottomLeft = 1, BottomCenter, BottomRight,
-    CenterLeft, Center, CenterRight,
-    TopLeft, TopCenter, TopRight,
-}
 
 import * as z from "zod/v4-mini";
 import Color from "colorjs.io";
 
-const ZColor = z.codec(z.union([
-    z.string(),
-    z.tuple([z.number(), z.number(), z.number(), z.number()])
-]), z.instanceof(Color), {
-    decode: (x) => {
-        if (typeof x == 'string') {
-            try {
-                return new Color(x);
-            } catch (e) {
-                Debug.info('error parsing color:', e);
-                return new Color('black');
-            }
-        } else {
-            const [r, g, b, a] = x;
-            return new Color('srgb', [r, g, b], a);
+const ZColor = z.codec(z.string(), z.instanceof(Color),
+{
+    decode: (x, cxt) => {
+        try {
+            return new Color(x);
+        } catch (e) {
+            cxt.issues.push({
+                input: x,
+                code: "custom",
+                message: `error parsing color: ${e}`
+            });
+            return new Color('black');
         }
     },
     encode: (x) => x.toString()
 });
 
-const ZStyleBase = z.object({
-  name:                    z.string(),
-  font:         z._default(z.string(), ''),
-  size:         z._default(z.number().check(z.positive()), 72),
-  color:        z._default(ZColor, new Color('white')),
-  outlineColor: z._default(ZColor, new Color('black')),
-  outline:      z._default(z.number().check(z.gte(0)), 1),
-  shadowColor:  z._default(ZColor, new Color('black')),
-  shadow:       z._default(z.number().check(z.gte(0)), 0),
-  styles: z.object({
-    bold:          z._default(z.boolean(), false),
-    italic:        z._default(z.boolean(), false),
-    underline:     z._default(z.boolean(), false),
-    strikethrough: z._default(z.boolean(), false),
-  }),
-  margin: z.object({
-    top:           z._default(z.number(), 10),
-    bottom:        z._default(z.number(), 10),
-    left:          z._default(z.number(), 10),
-    right:         z._default(z.number(), 10),
-  }),
-  alignment:       z._default(z.enum(AlignMode), AlignMode.BottomCenter),
+export const ZStyleBase = z.object({
+    name:                         z.string(),
+    font:              z._default(z.string(), ''),
+    size:              z._default(z.number().check(z.positive()), 72),
+    color:             z._default(ZColor, new Color('white')),
+    outlineColor:      z._default(ZColor, new Color('black')),
+    outline:           z._default(z.number().check(z.gte(0)), 1),
+    shadowColor:       z._default(ZColor, new Color('black')),
+    shadow:            z._default(z.number().check(z.gte(0)), 0),
+    styles: z.object({
+        bold:          z._default(z.boolean(), false),
+        italic:        z._default(z.boolean(), false),
+        underline:     z._default(z.boolean(), false),
+        strikethrough: z._default(z.boolean(), false),
+    }),
+    margin: z.object({
+        top:           z._default(z.number(), 10),
+        bottom:        z._default(z.number(), 10),
+        left:          z._default(z.number(), 10),
+        right:         z._default(z.number(), 10),
+    }),
+    alignment:         z._default(z.enum(AlignMode), AlignMode.BottomCenter),
+    validator:         z._default(z.nullable(z.unknown()), null)
 });
 
 export const ZMetadata = z.object({
-  title:         z._default(z.string(), ''),
-  language:      z._default(z.string(), ''),
-  width:         z._default(z.int().check(z.positive()), 1920),
-  height:        z._default(z.int().check(z.positive()), 1080),
-  scalingFactor: z._default(z.number().check(z.positive()), 1),
-  special: z.object({
-    untimedText: z._default(z.string(), ''),
-  }),
-  uiState: z.object({
-    tableScrollIndex:   z._default(z.int().check(z.nonnegative()), 0),
-    timelineOffset:     z._default(z.nullable(z.number().check(z.nonnegative())), null),
-    timelineScale:      z._default(z.nullable(z.number().check(z.positive())), null)
-  })
+    title:         z._default(z.string(), ''),
+    language:      z._default(z.string(), ''),
+    width:         z._default(z.int().check(z.positive()), 1920),
+    height:        z._default(z.int().check(z.positive()), 1080),
+    scalingFactor: z._default(z.number().check(z.positive()), 1),
+    special: z.object({
+        untimedText:        z._default(z.string(), ''),
+    }),
+    uiState: z.object({
+        tableScrollIndex:   z._default(z.int().check(z.nonnegative()), 0),
+        timelineOffset:     z._default(z.nullable(z.number().check(z.nonnegative())), null),
+        timelineScale:      z._default(z.nullable(z.number().check(z.positive())), null)
+    }),
 });
 
-export type SubtitleStyle = z.infer<typeof ZStyleBase> & {
+export type SubtitleStyle = Omit<z.infer<typeof ZStyleBase>, 'validator'> & {
     validator: MetricFilter | null
 };
 
@@ -86,21 +76,20 @@ export type SerializedSubtitleStyle = ReturnType<typeof serializeSubtitleStyle>;
 export function serializeSubtitleStyle(s: SubtitleStyle) {
     return {
         ...z.encode(ZStyleBase, s),
-        validator: $state.snapshot(s.validator)
+        validator: s.validator ? Filter.serialize(s.validator) : null
     }
 }
 
-export function parseSubtitleStyle(obj: any): SubtitleStyle {
-    const base = parseObjectZ(obj, ZStyleBase);
-    const validator = obj.validator ? parseFilter(obj.validator) : null;
-    return { ...base, validator };
+export function parseSubtitleStyleBase(obj: unknown): SubtitleStyle {
+    const base = parseObjectZ(obj, ZStyleBase, "ZStyleBase");
+    return { ...base, validator: null };
 }
 
 export function cloneSubtitleStyle(s: SubtitleStyle): SubtitleStyle {
     const x = structuredClone(z.encode(ZStyleBase, s));
     return {
         ...z.decode(ZStyleBase, x),
-        validator: $state.snapshot(s.validator)
+        validator: s.validator ? Filter.clone(s.validator) : null
     };
 }
 
@@ -138,7 +127,7 @@ export class Subtitles {
     });
 
     static createStyle(name: string): SubtitleStyle {
-        return parseSubtitleStyle({ name, styles: {}, margin: {} });
+        return parseSubtitleStyleBase({ name, styles: {}, margin: {} });
     };
 
     static #createMetadata(): SubtitleMetadata {
@@ -160,6 +149,7 @@ export class Subtitles {
     }
 
     debugTestIntegrity() {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isProxy = (suspect: any) => {
             const randField = crypto.randomUUID();
             const obj = {};

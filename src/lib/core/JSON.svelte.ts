@@ -1,7 +1,8 @@
 import { Debug } from "../Debug";
-import { parseSubtitleStyle, SubtitleEntry, Subtitles, ZMetadata, type SubtitleFormat, type SubtitleStyle, type SubtitleParser, cloneSubtitleStyle, serializeSubtitleStyle } from "./Subtitles.svelte";
+import { SubtitleEntry, Subtitles, ZMetadata, type SubtitleFormat, type SubtitleStyle, type SubtitleParser, cloneSubtitleStyle, serializeSubtitleStyle, ZStyleBase } from "./Subtitles.svelte";
+import { LABEL_TYPES } from "./Labels";
 import { DeserializationError, parseObjectZ } from "../Serialization";
-import { Metrics } from "./Filter";
+import { Filter, Metrics } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
 
 import * as z from "zod/v4-mini";
@@ -50,7 +51,14 @@ function serializeView(view: Subtitles['view']) {
     };
 }
 
-function serializeEntry(entry: SubtitleEntry) {
+const ZEntry = z.object({
+    start: z.number(),
+    end: z.number(),
+    label: z.enum(LABEL_TYPES),
+    texts: z.array(z.readonly(z.tuple([z.string(), z.string()])))
+});
+
+function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
     return {
         start: entry.start,
         end: entry.end,
@@ -60,9 +68,17 @@ function serializeEntry(entry: SubtitleEntry) {
     }
 }
 
+const ZDocument = z.object({
+    version: z.string(),
+    metadata: ZMetadata,
+    view: ZView,
+    defaultStyle: z.string(),
+    styles: z.array(ZStyleBase),
+    entries: z.array(ZEntry)
+});
+
 export class JSONParser implements SubtitleParser {
-    #version: string;
-    #obj: any;
+    #obj: z.infer<typeof ZDocument>;
     #messages: JSONParseMessage[] = [];
     #subs: Subtitles;
 
@@ -73,32 +89,30 @@ export class JSONParser implements SubtitleParser {
     }
 
     constructor(source: string) {
-        this.#obj = JSON.parse(source);
-        this.#version = this.#obj.version ?? '0';
+        const jsonObj = JSON.parse(source);
+        this.#obj = parseObjectZ(jsonObj, ZDocument, 'JSON document');
+
         this.#subs = new Subtitles();
 
-        if (this.#version > SubtitleFormatVersion) {
+        if (this.#obj.version > SubtitleFormatVersion) {
             this.#subs.migrated = 'newerVersion';
             this.#messages.push({
                 type: 'migrated-newer',
                 category: 'migrated',
-                from: this.#version
+                from: this.#obj.version
             });
-        } else if (this.#version < SubtitleCompatibleVersion) {
+        } else if (this.#obj.version < SubtitleCompatibleVersion) {
             this.#messages.push({
                 type: 'migrated-older',
                 category: 'migrated',
-                from: this.#version
+                from: this.#obj.version
             });
         }
-
-        if (this.#obj.metadata) {
-            if (!this.#obj.metadata.uiState)
-                this.#obj.metadata.uiState = {};
-            this.#subs.metadata = parseObjectZ(this.#obj.metadata, ZMetadata);
-        }
-        this.#parseStyles();
+        
+        this.#subs.metadata = this.#obj.metadata;
         this.#parseView();
+        this.#parseStyles();
+
         const entries = this.#obj.entries;
         if (!Array.isArray(entries))
             throw new DeserializationError('missing properties');
@@ -123,13 +137,13 @@ export class JSONParser implements SubtitleParser {
 
     #parseView() {
         if (!this.#obj.view) return;
-        const sv = parseObjectZ(this.#obj.view, ZView);
-        // currently this doesn't detect whether the metrics are really valid
-        // e.g. entry columns should not be channel metrics
-        this.#subs.view.perEntryColumns = sv.perEntryColumns.filter((x) => 
-            x in Metrics && Metrics[x as keyof typeof Metrics]);
-        this.#subs.view.perChannelColumns = sv.perChannelColumns.filter((x) => 
-            x in Metrics && Metrics[x as keyof typeof Metrics]);
+        const sv = this.#obj.view;
+        this.#subs.view.perEntryColumns = sv.perEntryColumns.filter(
+            (x) => x in Metrics && Metrics[x].context == 'entry');
+        this.#subs.view.perChannelColumns = sv.perChannelColumns.filter(
+            (x) => x in Metrics && 
+                (Metrics[x].context == 'channel' || Metrics[x].context == 'style'));
+
         const styleMap = new Map(this.#subs.styles.map((x) => [x.name, x]));
         if (sv.timelineExcludeStyles.some((x) => !styleMap.has(x)))
             throw new DeserializationError('invalid item in timelineExcludeStyles');
@@ -146,30 +160,23 @@ export class JSONParser implements SubtitleParser {
     #parseStyles() {
         const styles = this.#obj.styles;
         const defaultStyle = this.#obj.defaultStyle;
-        if (defaultStyle === undefined || !Array.isArray(styles))
-            throw new DeserializationError('missing properties');
+        
+        this.#subs.styles = styles.map((x) => {
+            const style = $state({...x, validator: null});
+            return style;
+        });
+        const def = this.#subs.styles.find((x) => x.name == defaultStyle);
+        if (def === undefined)
+            throw new DeserializationError('invalid default style name');
+        this.#subs.defaultStyle = def;
 
-        if (this.#version < '000400') {
-            // pre 0.4: the default style is defined outside the styles array
-            const def = $state(parseSubtitleStyle(this.#obj.defaultStyle))
-            this.#subs.defaultStyle = def;
-            this.#subs.styles = [def, ...styles.map((x) => {
-                const style = $state(parseSubtitleStyle(x));
-                return style;
-            })];
-            this.#subs.migrated = 'olderVersion';
-        } else {
-            if (typeof defaultStyle !== 'string')
-                throw new DeserializationError('invalid default style');
-            this.#subs.styles = styles.map((x) => {
-                const style = $state(parseSubtitleStyle(x));
-                return style;
-            });
-            const def = this.#subs.styles.find((x) => x.name == defaultStyle);
-            if (def === undefined)
-                throw new DeserializationError('invalid default style name');
-            this.#subs.defaultStyle = def;
-        }
+        // now go back and add validators 
+        // since parsing filters requires access to all the styles
+        styles.forEach((x) => {
+            if (!x.validator) return;
+            this.#subs.styles.find((x) => x.name == x.name)!.validator = 
+                Filter.deserialize(x.validator, this.#subs);
+        });
     }
 
     #createDuplicateStyle(from: SubtitleStyle) {
@@ -184,19 +191,17 @@ export class JSONParser implements SubtitleParser {
         }
     }
 
-    #parseEntry(o: unknown): SubtitleEntry {
-        const entry = new SubtitleEntry(o.start, o.end);
-        if (o.label) entry.label = o.label;
+    #parseEntry(obj: z.infer<typeof ZEntry>): SubtitleEntry {
+        const entry = new SubtitleEntry(obj.start, obj.end);
+        entry.label = obj.label;
 
-        for (const [styleName, text] of o.texts) {
+        for (const [styleName, text] of obj.texts) {
             let style = this.#subs.styles.find((x) => x.name == styleName);
             if (!style) throw new DeserializationError(`invalid style name: ${styleName}`);
 
             if (entry.texts.has(style)) {
-                if (this.#version >= '000400') Debug.warn(
-                    `note: style appeared multiple time in one entry: ${styleName}: in`, o);
+                Debug.warn(`note: style appeared multiple times in one entry: ${styleName}: in`, obj);
 
-                // migrate pre-0.4 styles
                 const duplicated = this.#duplicatedStyles.get(style);
                 let found: SubtitleStyle | undefined;
                 if (duplicated) {
@@ -224,7 +229,7 @@ export const JSONSubtitles = {
         try {
             JSON.parse(source);
             return true;
-        } catch (_) {
+        } catch {
             return false;
         }
     },
