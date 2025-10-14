@@ -58,7 +58,7 @@ async function makePreview() {
 }
 </script>
 
-<DialogBase handler={inner} maxWidth={'35em'}
+<DialogBase handler={inner} maxWidth="35em"
   buttons={[{
     name: 'cancel',
     localizedName: () => $_('cancel')
@@ -83,7 +83,7 @@ async function makePreview() {
       </thead>
       <tbody>
       {#if candidates && candidates.length > 0}
-        {#each candidates as c, i}
+        {#each candidates as c, i (c)}
         <tr class={{
           important: c.confidence == 100, 
           unimportant: c.confidence < 20 

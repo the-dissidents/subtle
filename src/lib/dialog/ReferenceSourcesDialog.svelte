@@ -127,7 +127,7 @@ async function importJSON() {
 
 {#snippet rstring(r?: ReferenceString)}
 {#if r}
-  {#each r as component, i}
+  {#each r as component, i (component)}
     <span class="r">
       {#if typeof component == 'string'}
         <span class="text" contenteditable='plaintext-only'
@@ -143,7 +143,7 @@ async function importJSON() {
         <span style="white-space: nowrap;">
           <SquareFunctionIcon class='type' />
           <select bind:value={vars[component.id]}>
-          {#each vars as v}
+          {#each vars as v (v)}
             <option value={v}>{v.name}</option>
           {/each}
           </select>
@@ -237,7 +237,10 @@ async function importJSON() {
               name = $_('refsourcedialog.copy-of', {values: {name: activeSource[0].name}});
               if (!$sources.find((x) => x.name == name)) break;
             }
-            $sources.push({...$state.snapshot(activeSource[0]) as any, name});
+            $sources.push({
+              ...$state.snapshot(activeSource[0]) as z.infer<typeof zReferenceSource>, 
+              name
+            });
             sources.markChanged();
           }}>
           <CopyPlusIcon />
@@ -296,7 +299,7 @@ async function importJSON() {
         bind:value={activeSource}
         onchange={() => load()}
       >
-        {#each $sources as s}
+        {#each $sources as s (s)}
           <option value={s}>{s.name}</option>
         {/each}
       </select>
@@ -315,7 +318,7 @@ async function importJSON() {
         <tr>
           <td>{$_('refsourcedialog.parameters')}</td>
           <td class="grid">
-            {#each vars as _, i}
+            {#each vars as v, i (v)}
               {@render param(i)}
             {/each}
             {@render param()}
@@ -350,7 +353,7 @@ async function importJSON() {
       {/if}
       <h5>{$_('refsourcedialog.css-patches')}<Tooltip 
         text={$_('refsourcedialog.css-patches-d')} /></h5>
-      {#each patches as patch, i}
+      {#each patches as patch, i (patch)}
       <div class="patch">
         <div>
           {@render rstring(patch.selector)}
@@ -359,7 +362,7 @@ async function importJSON() {
           </button>
         </div>
         <div class="vlayout patch2">
-          {#each patch.patches as [k, v], i}
+          {#each patch.patches as p, i (p)}
             <div class="hlayout">
               <input type="text" bind:value={patch.patches[i][0]}
                 onchange={() => update()}/>

@@ -71,18 +71,18 @@ function parse() {
     <div class="left">
       <ul class="ass-import-warnings">
       {#if categories}
-      {#each Object.entries(categories) as [k, v]}
+      {#each Object.entries(categories) as [k, v] (k)}
       {@const groups = groupBy(v as SubtitleParseMessage[], 'type')}
       {@const info = format!.categoryDescription(k)}
-        {#each Object.entries(groups) as [type, msgs]}
-        {@const f = format!.formatMessage(type, msgs as any)}
+        {#each Object.entries(groups) as [type, msgs] (type)}
+        {@const f = format!.formatMessage(type, msgs as never)}
           <li>
             <CircleAlertIcon />
             {f.heading}
             {#if f.items?.length}
             <ul>
-              {#each f.items as item}
-              <li>{item}</li>
+              {#each f.items as item (item)}
+                <li>{item}</li>
               {/each}
             </ul>
             {/if}
@@ -110,7 +110,7 @@ function parse() {
   {#if format?.options}
     <div class="right">
       <h5>{$_('assimportdialog.options')}</h5>
-      {#each format.options as opt}
+      {#each format.options as opt (opt)}
         {#if opt.type == 'boolean'}
           <label>
             <input type="checkbox" checked={opt.getValue(parser!)}

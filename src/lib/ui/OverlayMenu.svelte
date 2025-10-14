@@ -67,7 +67,7 @@ const autofocus: Action<HTMLButtonElement, string> = (node, text) => {
     <p>{text}</p>
   {/if}
   <div class='vlayout'>
-    {#each items as item, i}
+    {#each items as item, i (item)}
       <button class="noborder"
         type="submit"
         tabindex="0"

@@ -111,6 +111,10 @@
     "transform-inline-multichannel": "transform \\N{\\r...} syntax",
     "undefined-style": "undefined style"
   },
+  "assimportdialog": {
+    "no-problems": "no problems found",
+    "options": "Options"
+  },
   "back": "back",
   "boolean": {
     "false": "false",

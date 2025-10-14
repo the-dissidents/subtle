@@ -91,7 +91,7 @@ async function copy() {
         </tr>
         </thead>
         <tbody>
-        {#each styles as entry}
+        {#each styles as entry (entry)}
         <tr>
           <td><input type="checkbox" 
             bind:checked={entry.use} 

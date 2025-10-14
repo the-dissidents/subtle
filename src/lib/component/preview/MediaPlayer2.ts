@@ -303,7 +303,7 @@ export class MediaPlayer2 {
 
         let audioTime: string, latencyStr: string;
         if (this.audio.head !== undefined) {
-            let latency = (frame.time - this.audio.head) * 1000;
+            const latency = (frame.time - this.audio.head) * 1000;
             this.#diag.latencySquared = this.#diag.latencySquared * DAMPING 
                 + (latency * latency * (1 - DAMPING));
 

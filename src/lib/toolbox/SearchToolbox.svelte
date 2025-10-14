@@ -214,7 +214,6 @@ async function execute(type: SearchAction, option: SearchOption) {
   }
 
   let expr: RegExp;
-  let usingEmptyTerm = false;
   if (term !== '') {
     // construct regex from search term
     try {
@@ -228,7 +227,6 @@ async function execute(type: SearchAction, option: SearchOption) {
   } else if (useLabel || useStyle || useFilter) {
     // permit empty term if using conditions
     expr = /.*/;
-    usingEmptyTerm = true;
   } else {
     Frontend.setStatus($_('msg.search-expression-is-empty'), 'error');
     return;
@@ -288,7 +286,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     let match: RegExpExecArray | null;
     let newText = text;
     expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
-    while (match = expr.exec(newText)) {
+    while ((match = expr.exec(newText)) !== null) {
       nDone++;
       if (newType == 'replace') {
         newText = newText.slice(0, match.index) 
@@ -462,8 +460,8 @@ async function execute(type: SearchAction, option: SearchOption) {
           bind:value={label}
           oninput={() => useLabel = true}
         >
-          {#each LABEL_TYPES as color}
-          <option value={color}>{color}</option>
+          {#each LABEL_TYPES as color (color)}
+            <option value={color}>{color}</option>
           {/each}
         </select>
       </label>

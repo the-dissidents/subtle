@@ -26,7 +26,7 @@ let inner: DialogHandler<void> = {};
 let refresh = $state(false);
 
 function groupedCommands() {
-  const result = new Map<string, UICommand<any>[]>();
+  const result = new Map<string, UICommand<unknown>[]>();
   KeybindingManager.commands.forEach((cmd, _) => {
     const category = cmd.category();
     if (!result.has(category))
@@ -36,7 +36,7 @@ function groupedCommands() {
   return result;
 }
 
-function isDefault(cmd: UICommand<any>) {
+function isDefault(cmd: UICommand<unknown>) {
   const a = JSON.stringify(cmd.bindings.map((x) => x.toSerializable()));
   const b = JSON.stringify(cmd.defaultBindings.map((x) => x.toSerializable()));
   return a == b;
@@ -60,13 +60,13 @@ locale.subscribe(() => refresh = !refresh);
     <table class="data">
     {#key refresh}
     <tbody>
-      {#each groupedCommands() as [category, cmds]}
+      {#each groupedCommands() as [category, cmds] (category)}
       <tr class='heading'>
         <td colspan="6">
           {category}
         </td>
       </tr>
-      {#each cmds as cmd}
+      {#each cmds as cmd (cmd)}
         {@const lines = cmd.bindings.length}
         {#snippet row(binding: CommandBinding)}
           {@const error = KeybindingManager.findConflict(binding, cmd).length > 0}
@@ -90,10 +90,10 @@ locale.subscribe(() => refresh = !refresh);
               {$_('keyinput.any')}
             {:else}
             <div class="ctxs hlayout">
-              {#each [...binding.contexts].sort() as ctx, i}
+              {#each [...binding.contexts].sort() as ctx, i (ctx)}
               <span>{$_(`context.${ctx}`)}</span>
               {#if i < binding.contexts.size - 1}
-              <span class="separator">|</span>
+                <span class="separator">|</span>
               {/if}
               {/each}
             </div>
@@ -156,11 +156,11 @@ locale.subscribe(() => refresh = !refresh);
             {@render row(cmd.bindings[0])}
           {/if}
         </tr>
-        {#each cmd.bindings.slice(1) as binding, i}
-        <tr>{@render row(binding)}</tr>
+        {#each cmd.bindings.slice(1) as binding (binding)}
+          <tr>{@render row(binding)}</tr>
         {/each}
         {#if lines > 0}
-        <tr>{@render addrow()}</tr>
+          <tr>{@render addrow()}</tr>
         {/if}
       {/each}
       {/each}

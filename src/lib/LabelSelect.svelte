@@ -20,7 +20,7 @@ let { disabled = false, stretch = false, value = $bindable(), onsubmit }: Props 
   class={{stretch}}
   style={`background-color: ${LabelColor(value)}`}
 >
-  {#each LABEL_TYPES as color}
+  {#each LABEL_TYPES as color (color)}
     <option value={color}>{$_(`label.${color}`)}</option>
   {/each}
 </select>

@@ -284,7 +284,7 @@ export class TimelineLayout {
     const exclude = subs.view.timelineExcludeStyles;
     for (const s of [...exclude])
       if (!subs.styles.includes(s))
-      exclude.delete(s);
+        exclude.delete(s);
     if (exclude.size == subs.styles.length)
       exclude.clear();
     // styleRefreshCounter++;

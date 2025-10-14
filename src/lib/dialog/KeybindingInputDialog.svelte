@@ -111,7 +111,7 @@ function check() {
           onclick={check} />
         {$_('keyinput.any')}
       </label>
-      {#each UIFocusList as x}
+      {#each UIFocusList as x (x)}
         <label>
           <input type="checkbox"
             disabled={anyContext}

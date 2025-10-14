@@ -52,7 +52,7 @@
 
 <div class="subview" style="width: {width}px; height: {height}px;">
   <div style="transform: {transform}; transform-origin: left top;">
-  {#each boxes as box}
+  {#each boxes as box (box)}
   {@const bold = box.style.styles.bold ? 'bold' : 'normal'}
   {@const italic = box.style.styles.italic ? 'italic' : 'normal'}
   {@const deco = ((box.style.styles.underline ? 'underline' : '')

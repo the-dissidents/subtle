@@ -13,7 +13,7 @@ export type DialogButton = {
 
 interface Props {
   handler: DialogHandler<void, string>;
-  centerWhenOpen?: boolean;
+  // centerWhenOpen?: boolean;
   maxWidth?: string;
   header?: import('svelte').Snippet;
   children?: import('svelte').Snippet;
@@ -109,7 +109,7 @@ handler.showModal = async () => {
     {@render children?.()}
   </div>
   <footer class={{shadow}}>
-    {#each buttons as btn}
+    {#each buttons as btn (btn)}
       <button 
         class='submit'
         disabled={typeof btn.disabled == 'function' 

@@ -147,7 +147,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
   {#if 'type' in f}
     <fieldset>
       <ul class="combination">
-        {#each f.filters as subfilter, i}
+        {#each f.filters as subfilter, i (subfilter)}
           <li>
             {#if i > 0}
               <div class='combinator'>
@@ -200,7 +200,9 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
             replace(createDefaultFilter(name));
         }}
       >
+        <!-- eslint-disable-next-line svelte/require-each-key --> 
         {#each groupedMetrics as [_, ms]}
+          <!-- eslint-disable-next-line svelte/require-each-key --> 
           {#each ms as [name, metric]}
             <option value={name}>{metric.localizedName()}</option>
           {/each}
@@ -228,6 +230,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
           onchange?.();
         }}
       >
+        <!-- eslint-disable-next-line svelte/require-each-key --> 
         {#each methods as [name, method]}
           {#if method.subject == Metrics[f.metric].type}
             <option value={name}>{method.localizedName()}</option>

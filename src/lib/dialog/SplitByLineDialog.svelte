@@ -56,11 +56,10 @@ handler.showModal = async () => {
           style = newStyles.get(d.styleName);
           if (!style) {
             Debug.assert(Source.subs.styles.every((x) => x.name !== d.styleName));
-            // debugger;
-            let n = $state(Subtitles.createStyle(d.styleName));
+            
             style = Subtitles.createStyle(d.styleName);
             Source.subs.styles.push(style);
-            style = Source.subs.styles.at(-1)!; // 
+            style = Source.subs.styles.at(-1)!; // get reactive version
             newStyles.set(d.styleName, style);
           }
           break;
@@ -190,7 +189,7 @@ let hasError = $state(true);
       </tr>
     </thead>
     <tbody>
-    {#each data as line, i}
+    {#each data as line, i (line)}
       <tr class={{focused: selectedRow == i}} 
           onclick={() => {
             selectedRow = i;
@@ -264,7 +263,7 @@ let hasError = $state(true);
     <div class="preview">
       <h5>{$_('splitbylinedialog.preview')}</h5>
       <ol tabindex="0" role="listbox">
-        {#each previewLines as line}
+        {#each previewLines as line (line)}
           <li>{line}</li>
         {/each}
       </ol>

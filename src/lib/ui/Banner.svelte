@@ -74,7 +74,7 @@ $effect(() => {
   <p>{text}</p>
   {#if buttons?.length}
     <div class="buttons">
-    {#each buttons as btn}
+    {#each buttons as btn (btn)}
       <button type="submit" class="noborder"
         disabled={typeof btn.disabled == 'function' 
           ? btn.disabled() 

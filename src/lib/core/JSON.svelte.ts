@@ -63,8 +63,8 @@ function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
         start: entry.start,
         end: entry.end,
         label: entry.label,
-        texts: [...[...entry.texts.entries()]
-            .map(([style, text]) => [style.name, text] as const)]
+        texts: [...entry.texts.entries()]
+            .map(([style, text]) => [style.name, text] as const)
     }
 }
 

@@ -61,7 +61,7 @@ locale.subscribe(() => refresh++);
   </div>
   
   {#key refresh}
-  {#each groups as [_gkey, group]}
+  {#each groups as [gkey, group] (gkey)}
   {@const items = Object.entries(group.definition)}
     <h3 class="groupname">
       {group.name()}
@@ -73,7 +73,7 @@ locale.subscribe(() => refresh++);
 
     <table>
     <tbody>
-    {#each items as [key, item]}
+    {#each items as [key, item] (key)}
       <tr>
         <td class="key hlayout">
           <span>{item.localizedName()}</span>
@@ -82,7 +82,7 @@ locale.subscribe(() => refresh++);
         <td>
           {#if item.type == 'select'}
           {@const options = Object.entries(item.options)}
-          {#each options as [optkey, option]}
+          {#each options as [optkey, option] (optkey)}
             <label>
               <input type="radio" bind:group={group.data[key]} value={optkey}
                    onchange={async () => await MainConfig.save()}/>
@@ -97,7 +97,7 @@ locale.subscribe(() => refresh++);
           {@const options = Object.entries(item.options)}
           <select bind:value={group.data[key]}
               onchange={async () => await MainConfig.save()}>
-            {#each options as [optkey, option]}
+            {#each options as [optkey, option] (optkey)}
               <option value={optkey}>{option.localizedName()}</option>
             {/each}
           </select>

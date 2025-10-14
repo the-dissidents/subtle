@@ -111,6 +111,10 @@
     "transform-inline-multichannel": "将\\N{\\r...}语法转化为多频道字幕块",
     "undefined-style": "未定义样式"
   },
+  "assimportdialog": {
+    "no-problems": "没有发现问题",
+    "options": "选项"
+  },
   "back": "返回",
   "boolean": {
     "false": "假",

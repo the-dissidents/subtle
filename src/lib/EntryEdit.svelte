@@ -28,7 +28,7 @@ let focusedStyle = Editing.focused.style;
 
 const me = {};
 
-Source.onSubtitlesChanged.bind(me, (type: ChangeType) => {
+Source.onSubtitlesChanged.bind(me, () => {
   editFormUpdateCounter++;
   updateForm();
 });
@@ -154,7 +154,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   {@const focused = Editing.getFocusedEntry() as SubtitleEntry}
   <table class='fields'>
     <tbody>
-      {#each Source.subs.styles as style}
+      {#each Source.subs.styles as style (style.name)}
       {#if focused.texts.has(style)}
       <tr>
         <td class={{selected: style.name == $focusedStyle?.name, vlayout: true}}>
@@ -210,7 +210,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
               Editing.focused.style.set(style);
               Editing.focused.control = ev.currentTarget;
             }}
-            onblur={(x) => {
+            onblur={() => {
               if ($uiFocus === 'EditingField')
                 $uiFocus = 'Other';
               Editing.submitFocusedEntry();

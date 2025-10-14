@@ -160,6 +160,7 @@ export const KeybindingManager = {
         return commands;
     },
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     register(cmds: Record<string, UICommand<any>>) {
         Debug.assert(!initialized);
         const entries = Object.entries(cmds);

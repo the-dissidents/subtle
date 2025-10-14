@@ -1,6 +1,7 @@
 <script lang="ts" module>
-import { type Readable, type Writable } from "svelte/store";
+import { type Readable } from "svelte/store";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type TabAPIType = {};
 export type TabPageData = {
   readonly id: string,
@@ -16,7 +17,7 @@ export type TabAPI = {
 
 <script lang="ts">
 import { onDestroy, setContext, type Snippet } from "svelte";
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 import { Debug } from "../Debug";
 
 interface Props {
@@ -63,13 +64,13 @@ setContext<TabAPI>(TabAPIContext, {
 <div class='tabview vlayout'>
   <div class='header'>
     {#key update}
-    {#each Pages as [id, data]}
-    <button 
-      class:selected="{$Selected === id}"
-      class='hlayout'
-      onclick={() => $Selected = id}>
-      {@render data.header()}
-    </button>
+    {#each Pages as [id, data] (id)}
+      <button 
+        class:selected="{$Selected === id}"
+        class='hlayout'
+        onclick={() => $Selected = id}>
+        {@render data.header()}
+      </button>
     {/each}
     {/key}
   </div>

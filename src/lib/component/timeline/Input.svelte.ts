@@ -398,7 +398,7 @@ class SplitEntry extends TimelineAction {
       Source.subs.entries.splice(index, 0, newEntry);
       newEntry.label = target.label;
       target.start = this.origPos;
-      for (const [style, text] of [...target.texts]) {
+      for (const [style, text] of target.texts) {
         const pos = this.self.splitting!.positions.get(style)!;
         newEntry.texts.set(style, text.substring(0, pos));
         target.texts.set(style, text.substring(pos));

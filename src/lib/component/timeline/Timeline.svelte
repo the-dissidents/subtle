@@ -25,13 +25,12 @@ let uiFocus = Frontend.uiFocus;
 
 let layout = $state<TimelineLayout>();
 let input = $state<TimelineInput>();
-let renderer: TimelineRenderer;
 
 // Setup function for the canvas
 function setup(canvas: HTMLCanvasElement) {
   layout = new TimelineLayout(canvas);
   input = new TimelineInput(layout);
-  renderer = new TimelineRenderer(layout, input);
+  new TimelineRenderer(layout, input);
 
   layout.onLayout.bind(layout, () => {
     buttonPosX = layout!.leftColumnWidth - TimelineLayout.LEFT_COLUMN_MARGIN;
@@ -147,7 +146,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
     </h5>
     {#key styleRefreshCounter}
     {@const exclude = Source.subs.view.timelineExcludeStyles}
-    {#each Source.subs.styles as style}
+    {#each Source.subs.styles as style (style.name)}
       <label>
         <input type="checkbox"
           checked={!exclude.has(style)}

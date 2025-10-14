@@ -95,7 +95,7 @@ currentSourceName.subscribe((x) => {
   <div class='hlayout'>
     <select class='flexgrow' bind:value={currentSource} 
             onchange={() => currentSourceName.set(currentSource!.name)}>
-      {#each $sources as source}
+      {#each $sources as source (source)}
         <option value={source}>{source.name}</option>
       {/each}
     </select>
@@ -107,7 +107,7 @@ currentSourceName.subscribe((x) => {
   <Collapsible header={$_('refs.parameters')}>
     <table class="config">
       <tbody>
-      {#each currentSource.variables as {name, defaultValue}}
+      {#each currentSource.variables as {name, defaultValue} (name)}
         <tr>
           <td>{name}</td>
           <td>

@@ -175,21 +175,18 @@ export const SubtitleUtil = {
 
             switch (options.style ?? 'KeepDifferent') {
                 case 'UseOverrideForAll':
-                    Debug.debug('UseOverrideForAll:', 
-                        cloneSubtitleStyle(s), '->', cloneSubtitleStyle(overrideStyle));
+                    Debug.trace('UseOverrideForAll:', s.name, '->', overrideStyle.name);
                     styleMap.set(s, overrideStyle);
                     return overrideStyle;
-                case 'KeepAll':
+                case 'KeepAll': {
                     // generate unqiue name
-                    {
-                        const newStyle = $state(cloneSubtitleStyle(s));
-                        newStyle.name = SubtitleTools.getUniqueStyleName(original, s.name);
-                        original.styles.push(newStyle);
-                        styleMap.set(s, newStyle);
-                        Debug.debug('KeepAll:', 
-                            cloneSubtitleStyle(s), '->', cloneSubtitleStyle(newStyle));
-                        return newStyle;
-                    }
+                    const newStyle = $state(cloneSubtitleStyle(s));
+                    newStyle.name = SubtitleTools.getUniqueStyleName(original, s.name);
+                    original.styles.push(newStyle);
+                    styleMap.set(s, newStyle);
+                    Debug.trace('KeepAll:', s.name, '->', newStyle.name);
+                    return newStyle;
+                }
                 case 'KeepDifferent':
                     if (iLocalMatch >= 0) {
                         styleMap.set(s, original.styles[iLocalMatch]);

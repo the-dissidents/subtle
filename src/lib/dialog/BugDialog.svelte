@@ -31,6 +31,7 @@ handler.showModal = async () => {
     <h3>{$_('bugdialog.header')}</h3>
   {/snippet}
 
+  <!-- eslint-disable-next-line svelte/no-at-html-tags -->
   <p class="bugs">{@html $_('bugdialog.p1')}</p>
   <button onclick={async () => openPath(await appLogDir())}>{$_('bugdialog.open-log-directory')}</button>
   <p>{$_('bugdialog.p2')}</p>

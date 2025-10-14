@@ -224,7 +224,7 @@
   }}>
   <div class="hlayout">
     <select value={mode} onchange={(ev) => convertMode(ev.currentTarget.value as ColorMode)}>
-      {#each Object.keys(modes) as m}
+      {#each Object.keys(modes) as m (m)}
         <option value={m}>{m}</option>
       {/each}
     </select>
