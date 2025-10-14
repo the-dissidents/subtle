@@ -1,5 +1,5 @@
 <script lang="ts">
-import { type SubtitleStyle, Subtitles, cloneSubtitleStyle } from "./core/Subtitles.svelte";
+import { SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
 import { AlignMode } from "./core/Labels";
 import { SubtitleTools } from "./core/SubtitleUtil.svelte";
 
@@ -64,7 +64,7 @@ async function contextMenu() {
     {
       text: $_('style.duplicate'),
       action() {
-        let clone = cloneSubtitleStyle($style);
+        let clone = SubtitleStyle.clone($style);
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
         // subtitles.styles = subtitles.styles;
@@ -123,7 +123,7 @@ async function contextMenu() {
               if (!await dialog.ask($_('msg.overwrite-preset-with-same-name'))) return;
               $savedStyles.splice(i, 1);
             }
-            $savedStyles.push(cloneSubtitleStyle($style));
+            $savedStyles.push(SubtitleStyle.clone($style));
             savedStyles.markChanged();
           }
         }
@@ -143,7 +143,7 @@ async function contextMenu() {
         const i = subtitles.styles.indexOf($style);
         Debug.assert(i >= 0);
         const name = SubtitleTools.getUniqueStyleName(subtitles, 'new');
-        const newStyle = Subtitles.createStyle(name);
+        const newStyle = SubtitleStyle.new(name);
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
         Source.markChanged(ChangeType.StyleDefinitions, $_('c.add-style'));
         onsubmit?.();

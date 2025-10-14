@@ -2,7 +2,7 @@ import Color from "colorjs.io";
 import { Basic } from "../Basic";
 import { Debug } from "../Debug";
 import { DeserializationError } from "../Serialization";
-import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser, type SubtitleStyle, type SubtitleWriter } from "./Subtitles.svelte";
+import { SubtitleEntry, Subtitles, SubtitleStyle, type SubtitleFormat, type SubtitleParser, type SubtitleWriter } from "./Subtitles.svelte";
 import { AlignMode } from "./Labels";
 import { SubtitleTools } from "./SubtitleUtil.svelte";
 
@@ -215,7 +215,7 @@ export class ASSParser implements SubtitleParser {
             const name = items[styleFieldMap.get('Name')!];
             let style = nameToStyle.get(name);
             if (style === undefined) {
-                const newStyle = $state(Subtitles.createStyle(name));
+                const newStyle = $state(SubtitleStyle.new(name));
                 style = newStyle;
                 this.#subs.styles.push(newStyle);
                 nameToStyle.set(name, newStyle);
@@ -282,7 +282,7 @@ export class ASSParser implements SubtitleParser {
             let style = nameToStyle.get(styleName);
             if (!style) {
                 this.#invalid({ type: 'undefined-style', name: styleName });
-                const newStyle = $state(Subtitles.createStyle(styleName));
+                const newStyle = $state(SubtitleStyle.new(styleName));
                 style = newStyle;
                 nameToStyle.set(styleName, newStyle);
                 this.#subs.styles.push(newStyle);

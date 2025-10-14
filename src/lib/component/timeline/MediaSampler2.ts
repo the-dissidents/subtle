@@ -6,12 +6,13 @@ import { AggregationTree } from "../../details/AggregationTree";
 import { Mutex } from "../../details/Mutex";
 
 class Keyframes {
-    private set = new OrderedMap<number, undefined>();
+    private set = new OrderedMap<number, number>();
 
     add(t: number) {
-        this.set.setElement(t, undefined);
+        this.set.setElement(t, 1);
     }
 
+    /** returns true if there is at least 1 keyframe in [left, right] */
     query(left: number, right: number) {
         const it = this.set.lowerBound(left);
         if (it.equals(this.set.rEnd())) return false;
@@ -48,9 +49,9 @@ export class MediaSampler2 {
         return this.#intensity.getLevel(level).subarray(from, to);
     }
 
-    // keyframeData(level: number, from: number, to: number) {
-    //     return this.#keyframes.getLevel(level).subarray(from, to);
-    // }
+    keyframeData(from: number, to: number) {
+        return this.#keyframes.query(from, to);
+    }
 
     async getKeyframeBefore(time: number) {
         return await this.media.getKeyframeBefore(time);

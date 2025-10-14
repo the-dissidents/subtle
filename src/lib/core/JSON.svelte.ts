@@ -1,5 +1,5 @@
 import { Debug } from "../Debug";
-import { SubtitleEntry, Subtitles, ZMetadata, type SubtitleFormat, type SubtitleStyle, type SubtitleParser, cloneSubtitleStyle, serializeSubtitleStyle, ZStyleBase } from "./Subtitles.svelte";
+import { SubtitleEntry, Subtitles, SubtitleStyle, ZMetadata, type SubtitleFormat, type SubtitleParser, ZStyleBase } from "./Subtitles.svelte";
 import { LABEL_TYPES } from "./Labels";
 import { DeserializationError, parseObjectZ } from "../Serialization";
 import { Filter, Metrics } from "./Filter";
@@ -183,7 +183,7 @@ export class JSONParser implements SubtitleParser {
         for (let i = 1; ; i++) {
             const name = from.name + ` (${i})`;
             if (!this.#subs.styles.find((x) => x.name == name)) {
-                const style = $state(cloneSubtitleStyle(from));
+                const style = $state(SubtitleStyle.clone(from));
                 style.name = name;
                 this.#subs.styles.push(style);
                 return style;
@@ -249,7 +249,7 @@ export const JSONSubtitles = {
                 version: SubtitleFormatVersion,
                 metadata: subs.metadata,
                 defaultStyle: subs.defaultStyle.name,
-                styles: subs.styles.map(serializeSubtitleStyle),
+                styles: subs.styles.map((x) => SubtitleStyle.serialize(x)),
                 view: serializeView(subs.view),
                 entries: (options.useEntries ?? subs.entries)
                     .map((x) => serializeEntry(x)),

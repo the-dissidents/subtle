@@ -71,27 +71,31 @@ export type SubtitleStyle = Omit<z.infer<typeof ZStyleBase>, 'validator'> & {
     validator: MetricFilter | null
 };
 
-export type SerializedSubtitleStyle = ReturnType<typeof serializeSubtitleStyle>;
+export type SerializedSubtitleStyle = ReturnType<typeof SubtitleStyle.serialize>;
 
-export function serializeSubtitleStyle(s: SubtitleStyle) {
-    return {
-        ...z.encode(ZStyleBase, s),
-        validator: s.validator ? Filter.serialize(s.validator) : null
+export const SubtitleStyle = {
+    serialize(s: SubtitleStyle) {
+        return {
+            ...z.encode(ZStyleBase, s),
+            validator: s.validator ? Filter.serialize(s.validator) : null
+        }
+    },
+    deserializeWithoutValidator(obj: unknown) {
+        const base = parseObjectZ(obj, ZStyleBase, "ZStyleBase");
+        return { ...base, validator: null };
+    },
+    clone(s: SubtitleStyle) {
+        // is this structuredClone unnecessary?
+        const x = structuredClone(z.encode(ZStyleBase, s));
+        return {
+            ...z.decode(ZStyleBase, x),
+            validator: s.validator ? Filter.clone(s.validator) : null
+        };
+    },
+    new(name: string) {
+        return SubtitleStyle.deserializeWithoutValidator({ name, styles: {}, margin: {} });
     }
-}
-
-export function parseSubtitleStyleBase(obj: unknown): SubtitleStyle {
-    const base = parseObjectZ(obj, ZStyleBase, "ZStyleBase");
-    return { ...base, validator: null };
-}
-
-export function cloneSubtitleStyle(s: SubtitleStyle): SubtitleStyle {
-    const x = structuredClone(z.encode(ZStyleBase, s));
-    return {
-        ...z.decode(ZStyleBase, x),
-        validator: s.validator ? Filter.clone(s.validator) : null
-    };
-}
+};
 
 export type SubtitleMetadata = z.infer<typeof ZMetadata>;
 
@@ -113,7 +117,7 @@ type MigrationInfo = 'none' | 'ASS' | 'text' | 'olderVersion' | 'newerVersion';
 export class Subtitles {
     metadata: SubtitleMetadata = $state(Subtitles.#createMetadata());
     /** Must be set to one of `styles` */
-    defaultStyle: SubtitleStyle = $state(Subtitles.createStyle('default'));
+    defaultStyle: SubtitleStyle = $state(SubtitleStyle.new('default'));
     /** The order of the styles should be strictly the reverse of the ASS display order */
     styles: SubtitleStyle[] = $state([this.defaultStyle]);
     entries: SubtitleEntry[] = [];
@@ -126,10 +130,6 @@ export class Subtitles {
         timelineActiveChannel: null as SubtitleStyle | null
     });
 
-    static createStyle(name: string): SubtitleStyle {
-        return parseSubtitleStyleBase({ name, styles: {}, margin: {} });
-    };
-
     static #createMetadata(): SubtitleMetadata {
         return ZMetadata.parse({ special: {}, uiState: {} });
     }
@@ -139,7 +139,7 @@ export class Subtitles {
         if (base) {
             let def: SubtitleStyle | undefined;
             this.styles = base.styles.map((x) => {
-                const clone = $state(cloneSubtitleStyle(x));
+                const clone = $state(SubtitleStyle.clone(x));
                 if (x == base.defaultStyle) def = clone;
                 return clone;
             });

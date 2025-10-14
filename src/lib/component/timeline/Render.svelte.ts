@@ -40,10 +40,6 @@ const CURSOR_COLOR =
   $derived(theme.isDark ? 'pink' : 'oklch(62.73% 0.209 12.37)');
 const PENDING_WAVEFORM_COLOR = 
   $derived(theme.isDark ? `rgb(100% 10% 10% / 30%)` : `rgb(100% 40% 40% / 40%)`);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const PENDING_KEYFRAME_COLOR = 
-  $derived(theme.isDark ? `rgb(10% 100% 10% / 30%)` : `rgb(40% 100% 40% / 40%)`);
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const KEYFRAME_COLOR = 
   $derived(theme.isDark ? `rgb(10% 40% 100% / 30%)` : `rgb(40% 40% 100% / 40%)`);
 const WAVEFORM_COLOR = 
@@ -179,25 +175,16 @@ export class TimelineRenderer {
     if (TimelineConfig.data.showKeyframes
      && this.layout.scale * devicePixelRatio / Playback.sampler.keyframeResolution > 1) 
     {
-      // this.#drawAggregation(
-      //   Playback.sampler.keyframeResolution,
-      //   (a, b, c) => Playback.sampler!.keyframeData(a, b, c),
-      //   (x, width, value) => {
-      //     if (value == 0) {
-      //       if (lastGap < 0) lastGap = x;
-      //       // this.layout.requestedSampler = true;
-      //     } else {
-      //       if (lastGap >= 0 && TimelineConfig.data.showDebug) {
-      //         ctx.fillStyle = PENDING_KEYFRAME_COLOR;
-      //         ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
-      //         lastGap = -1;
-      //       }
-      //       if (value == 2) {
-      //         ctx.fillStyle = KEYFRAME_COLOR;
-      //         ctx.fillRect(x, yscroll, width, this.layout.height);
-      //       }
-      //     }
-      //   });
+      for (let x = 0; x < this.layout.width; x += 1) {
+        const left = this.layout.offset + x / this.layout.scale;
+        const right = this.layout.offset + (x+1) / this.layout.scale;
+        if (Playback.sampler.keyframeData(left, right)) {
+          ctx.fillStyle = KEYFRAME_COLOR;
+          ctx.fillRect(
+            left * this.layout.scale + this.layout.leftColumnWidth, yscroll, 
+            2, this.layout.height);
+        }
+      }
     }
   
     if (this.layout.requestedSampler)

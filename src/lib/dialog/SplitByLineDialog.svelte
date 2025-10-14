@@ -1,7 +1,7 @@
 <script lang="ts">
 import * as dialog from "@tauri-apps/plugin-dialog";
 
-import { Subtitles, type SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { SubtitleStyle, type SubtitleEntry } from '../core/Subtitles.svelte';
 import { type LabelType } from "../core/Labels";
 import { Debug } from "../Debug";
 import DialogBase from '../DialogBase.svelte';
@@ -57,7 +57,7 @@ handler.showModal = async () => {
           if (!style) {
             Debug.assert(Source.subs.styles.every((x) => x.name !== d.styleName));
             
-            style = Subtitles.createStyle(d.styleName);
+            style = SubtitleStyle.new(d.styleName);
             Source.subs.styles.push(style);
             style = Source.subs.styles.at(-1)!; // get reactive version
             newStyles.set(d.styleName, style);
