@@ -35,7 +35,7 @@ export type SampleResult = {
     video: {
         start: number,
         end: number,
-        keyframes: number[]
+        keyframes: [number, number][]
     } | null,
     isEof: boolean
 };
@@ -84,7 +84,14 @@ export type MediaEvent = {
     data: { value: string }
 } | {
     event: 'keyframeData',
-    data: { time: number | null }
+    data: {
+        time: number,
+        bytePos: number
+    }
+} | {
+    event: 'noKeyframeData',
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    data: {}
 } | {
     event: 'sampleDone2',
     data: SampleResult
@@ -386,10 +393,27 @@ export class MMedia {
         this.#currentJobs += 1;
         try {
             return await new Promise<void>((resolve, reject) => {
-                channel = createChannel('seekMedia', {
+                channel = createChannel('seek', {
                     done: () => resolve()
                 }, reject);
                 invoke('seek_media', { id: this.id, channel, time });
+            });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
+    async seekByte(pos: number) {
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
+        try {
+            return await new Promise<void>((resolve, reject) => {
+                channel = createChannel('seekByte', {
+                    done: () => resolve()
+                }, reject);
+                invoke('seek_media_byte', { id: this.id, channel, pos });
             });
         } finally {
             this.#currentJobs -= 1;
@@ -459,9 +483,10 @@ export class MMedia {
     async getKeyframeBefore(time: number) {
         Debug.assert(!this.#destroyed);
         let channel: Channel<MediaEvent> | undefined;
-        return await new Promise<number | null>((resolve, reject) => {
+        return await new Promise<MediaEventData['keyframeData'] | null>((resolve, reject) => {
             channel = createChannel('getKeyframeBefore', {
-                keyframeData: (data) => resolve(data.time)
+                keyframeData: (data) => resolve(data),
+                noKeyframeData: () => resolve(null)
             }, reject);
             invoke('get_keyframe_before', { id: this.id, channel, time });
         });

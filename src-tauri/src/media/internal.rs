@@ -1,7 +1,7 @@
 extern crate ffmpeg_next as ffmpeg;
 
 use core::fmt;
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use ffmpeg::decoder;
 use ffmpeg::format::Pixel;
 use ffmpeg::threading::Type;
@@ -63,14 +63,14 @@ pub struct StreamDescription {
 }
 
 pub struct DecodedVideoFrame {
-    // pub position: i64,
+    pub byte_pos: isize,
     pub pktpos: i64,
     pub time: f64,
     pub decoded: frame::Video,
 }
 
 pub struct DecodedAudioFrame {
-    // pub position: i64,
+    pub byte_pos: isize,
     pub pktpos: i64,
     pub time: f64,
     pub decoded: frame::Audio,
@@ -83,6 +83,9 @@ pub struct StreamInfo {
 
     /// in stream timebase
     start_time: i64,
+
+    byte_pos_can_update: bool,
+    byte_pos: isize,
 }
 
 pub struct AudioBase {
@@ -153,7 +156,7 @@ pub struct VideoPlayerFront {
 }
 
 pub struct VideoSamplerFront {
-    keyframes: BTreeSet<Of64>,
+    keyframes: BTreeMap<Of64, isize>,
     known_range: DisjointIntervalSet
 }
 
@@ -161,7 +164,7 @@ pub struct VideoSamplerFront {
 #[serde(rename_all = "camelCase")]
 pub struct VideoSampleData {
     // pub start: usize,
-    pub keyframes: Vec<f64>,
+    pub keyframes: Vec<(f64, isize)>,
     pub start_time: f64,
     pub end_time: f64
 }
@@ -285,6 +288,8 @@ impl MediaPlayback {
                 index,
                 timebase,
                 start_time,
+                byte_pos_can_update: true,
+                byte_pos: -1
             },
             stream
         ))
@@ -435,7 +440,7 @@ impl MediaPlayback {
         let base = self.create_video_base(index, accel)?;
 
         let front = VideoFront::Sampler(VideoSamplerFront {
-            keyframes: BTreeSet::new(),
+            keyframes: BTreeMap::new(),
             known_range: DisjointIntervalSet::new()
         });
 
@@ -611,26 +616,6 @@ impl MediaPlayback {
         }
     }
 
-    fn seek_stream(&mut self, time: f64, stream: StreamInfo) -> Result<(), MediaError> {
-        trace!("seek_stream: [{}] time={time}", stream.index);
-        let rescaled = (time / f64::from(stream.timebase)).to_i64().unwrap();
-
-        unsafe {
-            match ffmpeg_sys_next::avformat_seek_file(
-                self.input.as_mut_ptr(),
-                stream.index.try_into().unwrap(),
-                0,
-                rescaled,
-                rescaled,
-                ffmpeg_sys_next::AVSEEK_FLAG_BACKWARD,
-            ) {
-                s if s >= 0 => Ok(()),
-                e => Err(MediaError::InternalError(
-                    format!("seek_video: avformat_seek_file -> {e}"))),
-            }
-        }
-    }
-
     fn flush_all(&mut self) {
         if let Some(cxt) = self.video.as_mut() {
             cxt.flush();
@@ -646,6 +631,43 @@ impl MediaPlayback {
         let rescaled = (time * f64::from(AV_TIME_BASE)).to_i64().unwrap();
         check!(self.input.seek(rescaled, ..rescaled))?;
         Ok(())
+    }
+
+    pub fn seek_byte_pos(&mut self, pos: i64) -> Result<(), MediaError> {
+        trace!("seek_byte_pos: pos={pos}");
+
+        unsafe {
+            match ffmpeg_sys_next::av_seek_frame(
+                self.input.as_mut_ptr(),
+                -1,
+                pos,
+                ffmpeg_sys_next::AVSEEK_FLAG_BYTE,
+            ) {
+                s if s >= 0 => Ok(()),
+                e => Err(MediaError::InternalError(
+                    format!("seek_byte_pos: avformat_seek_file -> {e}"))),
+            }
+        }
+    }
+
+    fn seek_stream(&mut self, time: f64, stream: StreamInfo) -> Result<(), MediaError> {
+        trace!("seek_stream: [{}] time={time}", stream.index);
+        let rescaled = (time / f64::from(stream.timebase)).to_i64().unwrap();
+
+        unsafe {
+            match ffmpeg_sys_next::avformat_seek_file(
+                self.input.as_mut_ptr(),
+                stream.index.try_into().unwrap(),
+                0,
+                rescaled,
+                rescaled,
+                ffmpeg_sys_next::AVSEEK_FLAG_BACKWARD,
+            ) {
+                s if s >= 0 => Ok(()),
+                e => Err(MediaError::InternalError(
+                    format!("seek_stream: avformat_seek_file -> {e}"))),
+            }
+        }
     }
 
     pub fn seek_video(&mut self, time: f64) -> Result<(), MediaError> {
@@ -770,6 +792,9 @@ impl AudioSamplerFront {
 
 impl AudioContext {
     fn feed(&mut self, packet: &codec::packet::Packet) -> Result<(), MediaError> {
+        if self.base.stream.byte_pos_can_update {
+            self.base.stream.byte_pos = packet.position();
+        }
         match self.base.decoder.send_packet(packet) {
             Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
@@ -784,12 +809,18 @@ impl AudioContext {
 
     fn flush(&mut self) {
         self.base.decoder.flush();
+        self.base.stream.byte_pos_can_update = true;
+        self.base.stream.byte_pos = -1;
     }
 
     pub fn decode(&mut self) -> Result<Option<DecodedAudioFrame>, MediaError> {
         let mut decoded = frame::Audio::empty();
+        let mut byte_pos: isize = -1;
         match self.base.decoder.receive_frame(&mut decoded) {
-            Ok(()) => (),
+            Ok(()) => {
+                byte_pos = self.base.stream.byte_pos;
+                self.base.stream.byte_pos_can_update = true;
+            },
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 return Ok(None);
             }
@@ -805,7 +836,7 @@ impl AudioContext {
         let time = f64::from(self.base.stream.timebase) * pts.to_f64().unwrap();
 
         Ok(Some(DecodedAudioFrame {
-            time,
+            time, byte_pos,
             pktpos: decoded.packet().position,
             decoded,
         }))
@@ -896,8 +927,8 @@ impl VideoSamplerFront {
         let sd = sampler_data.as_mut().unwrap();
 
         if frame.decoded.is_key() {
-            sd.keyframes.push(frame.time);
-            self.keyframes.insert(OrderedFloat(frame.time));
+            sd.keyframes.push((frame.time, frame.byte_pos));
+            self.keyframes.insert(OrderedFloat(frame.time), frame.byte_pos);
         }
         if frame.time > sd.end_time {
             sd.end_time = frame.time;
@@ -906,11 +937,13 @@ impl VideoSamplerFront {
         Ok(())
     }
 
-    pub fn get_keyframe_before(&self, time: f64) -> Option<f64> {
+    pub fn get_keyframe_before(&self, time: f64) -> Option<(f64, isize)> {
         let time = OrderedFloat(time);
-        if let Some(&OrderedFloat(k)) = self.keyframes.range(..=time).next_back() {
+        if let Some((&OrderedFloat(k), &pos)) = 
+            self.keyframes.range(..=time).next_back()
+        {
             if self.known_range.covers_range(k, *time) {
-                Some(k)
+                Some((k, pos))
             } else {
                 None
             }
@@ -922,6 +955,9 @@ impl VideoSamplerFront {
 
 impl VideoContext {
     fn feed(&mut self, packet: &codec::packet::Packet) -> Result<(), MediaError> {
+        if self.base.stream.byte_pos_can_update {
+            self.base.stream.byte_pos = packet.position();
+        }
         match self.base.decoder.send_packet(packet) {
             Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
@@ -936,13 +972,19 @@ impl VideoContext {
 
     fn flush(&mut self) {
         self.base.decoder.flush();
+        self.base.stream.byte_pos_can_update = true;
+        self.base.stream.byte_pos = -1;
     }
 
     #[allow(clippy::cast_precision_loss)]
     fn decode(&mut self) -> Result<Option<DecodedVideoFrame>, MediaError> {
         let mut decoded = frame::Video::empty();
+        let mut byte_pos: isize = -1;
         match self.base.decoder.receive_frame(&mut decoded) {
-            Ok(()) => {}
+            Ok(()) => {
+                byte_pos = self.base.stream.byte_pos;
+                self.base.stream.byte_pos_can_update = true;
+            }
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
                 // trace!("receive: EAGAIN");
                 return Ok(None);
@@ -964,7 +1006,7 @@ impl VideoContext {
         }
 
         Ok(Some(DecodedVideoFrame {
-            time,
+            time, byte_pos,
             pktpos: decoded.packet().position,
             decoded,
         }))

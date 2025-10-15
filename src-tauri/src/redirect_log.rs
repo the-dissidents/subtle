@@ -30,9 +30,9 @@ unsafe extern "C" fn rust_log_callback(
 
     let level: log::Level = match level {
         ffmpeg_sys_next::AV_LOG_PANIC
-        | ffmpeg_sys_next::AV_LOG_FATAL
-        | ffmpeg_sys_next::AV_LOG_ERROR => Level::Error,
-        ffmpeg_sys_next::AV_LOG_WARNING => Level::Warn,
+        | ffmpeg_sys_next::AV_LOG_FATAL => Level::Error,
+        ffmpeg_sys_next::AV_LOG_ERROR
+        | ffmpeg_sys_next::AV_LOG_WARNING => Level::Warn,
         ffmpeg_sys_next::AV_LOG_INFO => Level::Info,
         ffmpeg_sys_next::AV_LOG_VERBOSE => Level::Debug,
         _ => {

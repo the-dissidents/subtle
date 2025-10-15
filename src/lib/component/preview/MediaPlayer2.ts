@@ -491,19 +491,27 @@ export class MediaPlayer2 {
                 if (tok.isCancelled) return;
 
                 const realTarget = Math.max(target, this.startTime);
-                let lastKeyframe: number | null;
+                const lastKeyframe = await Playback.sampler?.getKeyframeBefore(realTarget);
                 if (this.#internalTimestamp === undefined
                  || target <= this.#internalTimestamp
-                 || !Playback.sampler 
-                 || (lastKeyframe = await Playback.sampler.getKeyframeBefore(realTarget)) === null
-                 || lastKeyframe > this.#internalTimestamp)
+                 || !lastKeyframe
+                 || lastKeyframe.time > this.#internalTimestamp)
                 {
                     // must seek
                     if (!(opt?.imprecise))
                         this.#seeking = {target, skippedAudio: 0, skippedVideo: 0};
                     this.#internalTimestamp = undefined;
+
                     await this.media.seekVideo(realTarget);
-                    await Debug.debug(`seek: [${target.toFixed(3)}] seeked`);
+                    await Debug.debug(`seek: [${target.toFixed(3)}] by time`);
+                    if (lastKeyframe)
+                        await Debug.debug(`seek: info: last keyframe is`, lastKeyframe);
+
+                    // if (!lastKeyframe || lastKeyframe.bytePos < 0) {
+                    // } else {
+                    //     await this.media.seekByte(lastKeyframe.bytePos);
+                    //     await Debug.debug(`seek: [${target.toFixed(3)}] by file position`);
+                    // }
                 } else {
                     // no need to seek
                     this.#seeking = {target, skippedAudio: 0, skippedVideo: 0};

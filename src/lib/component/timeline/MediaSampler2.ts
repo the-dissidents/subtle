@@ -8,8 +8,8 @@ import { Mutex } from "../../details/Mutex";
 class Keyframes {
     private set = new OrderedMap<number, number>();
 
-    add(t: number) {
-        this.set.setElement(t, 1);
+    add(t: number, pos: number) {
+        this.set.setElement(t, pos);
     }
 
     /** returns true if there is at least 1 keyframe in [left, right] */
@@ -146,7 +146,7 @@ export class MediaSampler2 {
             const prevKeyframe = await this.media.getKeyframeBefore(from);
             if (prevKeyframe === null
              || this.#sampleProgress > from
-             || this.#sampleProgress < prevKeyframe)
+             || this.#sampleProgress < prevKeyframe.time)
             {
                 await Debug.trace(`startSampling: ${from.toFixed(4)} - ${to.toFixed(4)}`);
                 await this.media.seekVideo(from);
@@ -163,8 +163,8 @@ export class MediaSampler2 {
                     this.#intensity.set(result.audio.intensity, result.audio.startIndex);
                 }
                 if (result.video) {
-                    for (const key of result.video.keyframes)
-                        this.#keyframes.add(key);
+                    for (const [time, pos] of result.video.keyframes)
+                        this.#keyframes.add(time, pos);
                 }
                 this.onProgress?.();
                 if (result.isEof) {

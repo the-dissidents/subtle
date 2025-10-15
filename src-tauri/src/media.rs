@@ -78,7 +78,12 @@ pub enum MediaEvent<'a> {
     #[serde(rename_all = "camelCase")]
     FfmpegVersion { value: String },
     #[serde(rename_all = "camelCase")]
-    KeyframeData { time: Option<f64> },
+    KeyframeData {
+        time: f64,
+        byte_pos: isize
+    },
+    #[serde(rename_all = "camelCase")]
+    NoKeyframeData {},
     #[serde(rename_all = "camelCase")]
     SampleDone2 { 
         audio: Option<AudioSampleData>,
@@ -330,6 +335,23 @@ pub fn seek_media(
     send_done(&channel);
 }
 
+
+#[tauri::command]
+pub fn seek_media_byte(
+    id: i32,
+    pos: i64,
+    state: State<Mutex<PlaybackRegistry>>,
+    channel: Channel<MediaEvent>,
+) {
+    let mut ap = state.lock().unwrap();
+    let Some(playback) = 
+        ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
+    if let Err(e) = playback.seek_byte_pos(pos) {
+        return send_error!(&channel, e.to_string());
+    }
+    send_done(&channel);
+}
+
 #[tauri::command]
 pub fn seek_audio(
     id: i32,
@@ -568,7 +590,12 @@ pub fn get_keyframe_before(
         playback.video() else { return send(&channel, MediaEvent::NoStream {}) };
     let VideoFront::Sampler(front) = 
         ctx.front() else { return send_error!(&channel, "video opened not as sampler") };
-    send(&channel, MediaEvent::KeyframeData { time: front.get_keyframe_before(time) });
+
+    if let Some((time, byte_pos)) = front.get_keyframe_before(time) {
+        send(&channel, MediaEvent::KeyframeData { time, byte_pos });
+    } else {
+        send(&channel, MediaEvent::NoKeyframeData {  });
+    }
 }
 
 #[tauri::command]
