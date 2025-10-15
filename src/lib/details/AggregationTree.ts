@@ -12,13 +12,17 @@ export class AggregationTree<T extends TypedArray> {
         public readonly length: number,
         /** Must be an associative operation */
         public readonly aggregator: (a: number, b: number) => number,
-        initial = NaN
+        private readonly initial = NaN
     ) {
         Debug.assert(length > 1, 'invalid length');
         this.#layers = Math.ceil(Math.log2(length)) + 1;
         this.#leafStart = 2 ** (this.#layers - 1) - 1;
         this.#data = new ctor(this.#leafStart + length);
         this.#data.fill(initial);
+    }
+
+    clear() {
+        this.#data.fill(this.initial);
     }
 
     set(values: ArrayLike<number>, start: number) {

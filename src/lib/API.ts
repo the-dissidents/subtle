@@ -27,7 +27,8 @@ export type VideoStatus = {
 
 export type SampleResult = {
     audio: {
-        start: number,
+        startTime: number,
+        endTime: number,
         startIndex: number,
         intensity: number[]
     } | null,

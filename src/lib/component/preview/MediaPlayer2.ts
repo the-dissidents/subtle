@@ -73,6 +73,10 @@ export class MediaPlayer2 {
             this.media.audio?.startTime ?? Infinity);
     }
 
+    get endTime() {
+        return this.media.video!.startTime + this.media.duration;
+    }
+
     private constructor(
         private readonly media: MMedia, 
         private readonly manager: CanvasManager, 
@@ -453,8 +457,8 @@ export class MediaPlayer2 {
     }
 
     async seek(t: number, opt?: SetPositionOptions) {
-        if (t < 0) t = 0;
-        if (t > this.duration) t = this.duration;
+        if (t < this.startTime) t = this.startTime;
+        if (t > this.endTime) t = this.endTime;
         return await this.#seekTask.request(t, opt);
     }
 

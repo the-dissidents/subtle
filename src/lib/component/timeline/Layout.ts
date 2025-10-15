@@ -156,8 +156,8 @@ export class TimelineLayout {
 
   // TODO: cache it
   get maxPosition() {
-    return Playback.loaded 
-      ? Playback.duration 
+    return Playback.loaded && Playback.player !== null
+      ? Playback.player.endTime + 20
       : Math.max(0, ...Source.subs.entries.map((x) => x.end)) + 20;
   }
 
@@ -324,53 +324,49 @@ export class TimelineLayout {
 
   async processSampler() {
     if (!Playback.sampler) return;
-  
-    let start = this.offset;
-    let end = this.offset + this.width / this.scale;
-    const preload = Math.min(PRELOAD_MARGIN, (end - start) * PRELOAD_MARGIN_FACTOR);
-    if (Playback.sampler.isSampling) {
-      if (Playback.sampler.sampleProgress > Playback.sampler.sampleStart
-       && (Playback.sampler.sampleProgress + preload < this.offset 
-        || Playback.sampler.sampleProgress > end + preload))
+    const s = Playback.sampler;
+
+    const left = this.offset;
+    const right = this.offset + this.width / this.scale;
+    const preload = Math.min(PRELOAD_MARGIN, (right - left) * PRELOAD_MARGIN_FACTOR);
+    if (s.isSampling) {
+      if (s.sampleProgress > s.sampleStart
+       && (s.sampleProgress + preload < left 
+        || s.sampleProgress > right + preload))
       {
-        Playback.sampler.tryCancelSampling();
-      } else if (Playback.sampler.sampleEnd < end + preload) {
-        Playback.sampler.extendSampling(end + preload);
-      }
+        s.tryCancelSampling();
+      } // or, wait for sampling to finish
       return;
     }
   
-    const resolution = Playback.sampler.intensityResolution;
-    const i = Math.floor(this.offset * resolution),
-          i_end = Math.ceil(end * resolution);
-    const subarray = Playback.sampler.intensityData(1, i, i_end);
-    const gapStart = subarray.findIndex(
-      // FIXME: the following is a desperate but seemingly effective hack to get the sampler 
-      // working despite those one-frame gaps popping up; it's definitely not serious
-      (x, i) => i < subarray.length - 1 && isNaN(x) && isNaN(subarray[i+1]));
-    if (Playback.isPlaying) {
-      if (gapStart < 0) {
-        this.requestedSampler = false;
-        return;
-      }
-    } else {
+    const resolution = s.intensityResolution;
+    const i = Math.max(0, Math.floor((left - s.startTime) * resolution)),
+          i_end = Math.ceil((right - s.startTime) * resolution);
+    const subarray = s.intensityData(1, i, i_end);
+    const gapStart = subarray.findIndex((x) => isNaN(x));
+
+    if (!Playback.isPlaying || gapStart >= 0)
       this.requestedSampler = false;
-      if (gapStart < 0) return;
-    }
-    start = (gapStart + i) / resolution;
+    if (gapStart < 0) return;
+
     const gapEnd = subarray.findIndex((x, i) => i > gapStart && !isNaN(x));
-    if (gapEnd > 0) end = (gapEnd + i) / resolution;
-  
-    end += preload;
-    if (start < 0) start = 0;
-    if (end > Playback.duration) end = Playback.duration;
+
+    let start = (gapStart + i) / resolution + s.startTime;
+    let end = gapEnd > 0
+      ? (gapEnd + i) / resolution + s.startTime
+      : right + preload;
+
+    if (start < s.startTime)
+      start = s.startTime;
+    if (end > Playback.duration + s.startTime)
+      end = Playback.duration + s.startTime;
     if (end == start) return;
     if (end < start) {
       Debug.debug(start, '>', end);
       return;
     }
   
-    Playback.sampler.startSampling(start, end);
+    s.startSampling(start, end);
     this.manager.requestRender();
   }
 }

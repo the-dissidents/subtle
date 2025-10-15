@@ -101,6 +101,33 @@ export class TimelineRenderer {
     ctx.fillText(`scale=${this.layout.scale.toFixed(2).padEnd(6)}`, x, y - 10);
     ctx.fillText(`dpr=${devicePixelRatio.toString().padEnd(5)}`, x - 80, y - 10);
     ctx.fillText(`lcw=${this.layout.leftColumnWidth.toFixed(2).padEnd(6)}`, x, y - 20);
+
+    if (Playback.sampler?.isSampling) {
+      const s = Playback.sampler;
+      const x1 = this.layout.width - 105;
+      const x2 = this.layout.width - 5;
+      const y = this.layout.height - 40;
+      const prog = (s.sampleProgress - s.sampleStart) / (s.sampleEnd - s.sampleStart);
+      const middle = x1 * (1 - prog) + x2 * prog;
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y);
+      ctx.lineTo(middle, y);
+      ctx.strokeStyle = 'red';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(middle, y);
+      ctx.lineTo(x2, y);
+      ctx.strokeStyle = 'blue';
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.fillText(`${s.sampleStart.toFixed(2)}`, x1, y - 5);
+      ctx.textAlign = 'right';
+      ctx.fillText(`${s.sampleEnd.toFixed(2)}`, x2, y - 5);
+    }
   }
 
   #drawAggregation<T extends Float32Array | Uint8Array>(
@@ -112,21 +139,25 @@ export class TimelineRenderer {
       Math.floor(resolution / this.layout.scale / devicePixelRatio));
     const step = 2 ** Math.floor(Math.log2(pointsPerPixel));
     
-    const start = Math.max(0, Math.floor(this.layout.offset * resolution / step));
+    const start = Math.max(0, Math.floor(
+      (this.layout.offset - this.layout.minPosition)
+        * resolution / step));
     const end = Math.ceil(
-      (this.layout.offset + this.layout.width / this.layout.scale) * resolution / step);
+      (this.layout.offset - this.layout.minPosition + this.layout.width / this.layout.scale)
+        * resolution / step);
     const data = tree(step, start, end);
 
-    const width_v = 1 / resolution * this.layout.scale * step;
+    const width_v = step / resolution * this.layout.scale;
+    const offset = this.layout.leftColumnWidth + this.layout.minPosition * this.layout.scale;
     const drawWidth = Math.max(1 / devicePixelRatio, width_v);
 
     for (let i = 0; i < data.length; i++) {
-      const x = (i + start) * width_v + this.layout.leftColumnWidth;
+      const x = (i + start) * width_v + offset;
       handler(x, drawWidth, data[i]);
     }
     return { 
-      drawStart: start * width_v + this.layout.leftColumnWidth, 
-      drawEnd: (start + data.length - 1) * width_v + this.layout.leftColumnWidth, 
+      drawStart: start * width_v + offset, 
+      drawEnd: (start + data.length - 1) * width_v + offset, 
       step
     };
   }

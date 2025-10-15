@@ -102,6 +102,7 @@ pub struct AudioPlayerFront {
 
 pub struct AudioSamplerFront {
     resampler: resampling::Context,
+    start_time: f64,
     sample_per_second: usize,
     intensities: AggregationTree<f32, fn(f32, f32) -> f32>,
 }
@@ -110,7 +111,8 @@ pub struct AudioSamplerFront {
 #[serde(rename_all = "camelCase")]
 pub struct AudioSampleData {
     pub start_index: usize,
-    pub start: f64,
+    pub start_time: f64,
+    pub end_time: f64,
     pub intensity: Vec<f32>
 }
 
@@ -503,6 +505,7 @@ impl MediaPlayback {
         Ok(())
     }
 
+    #[allow(clippy::cast_precision_loss)]
     pub fn open_audio_sampler(
         &mut self,
         index: Option<usize>,
@@ -530,7 +533,8 @@ impl MediaPlayback {
                 f32::max,
                 f32::NAN,
             ),
-            sample_per_second
+            sample_per_second,
+            start_time: f64::from(base.stream.timebase) * base.stream.start_time as f64
         });
 
         self.audio = Some(AudioContext { base, front });
@@ -694,7 +698,9 @@ impl AudioSamplerFront {
         }
 
         let sample_per_second = self.sample_per_second.to_f64().unwrap();
-        let start_index = (sample_per_second * frame.time).to_usize().unwrap();
+        let start_index = 
+            (sample_per_second * (frame.time - self.start_time))
+            .to_usize().unwrap();
 
         if start_index >= self.intensities.length {
             log::debug!("AudioSamplerFront.process: {start_index} is larger than capacity {}", self.intensities.length);
@@ -704,7 +710,8 @@ impl AudioSamplerFront {
         if sampler_data.is_none() {
             *sampler_data = Some(AudioSampleData {
                 start_index,
-                start: frame.time,
+                start_time: frame.time,
+                end_time: frame.time,
                 intensity: Vec::<f32>::new()
             });
         }
@@ -719,8 +726,11 @@ impl AudioSamplerFront {
 
         for (i, sample) in data.iter().enumerate() {
             let new_index = (
-                sample_per_second
-                    * (frame.time + i.to_f64().unwrap() / f64::from(processed.rate()))
+                sample_per_second * (
+                    frame.time
+                    - self.start_time
+                    + i.to_f64().unwrap() / f64::from(processed.rate())
+                )
             ).to_usize().unwrap();
 
             if new_index != index {
@@ -739,6 +749,8 @@ impl AudioSamplerFront {
                             }
                         }
                         sd.intensity.push(sum);
+                        sd.end_time = frame.time + 
+                            i.to_f64().unwrap() / f64::from(processed.rate());
                     }
                 }
 
