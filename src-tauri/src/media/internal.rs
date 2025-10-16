@@ -17,12 +17,13 @@ type Of64 = OrderedFloat<f64>;
 use ffmpeg::error::EAGAIN;
 use ffmpeg::software::resampling;
 use ffmpeg::software::scaling;
-use ffmpeg::{codec, format, frame, media, rescale, software, ChannelLayout, Rational, Rescale};
+use ffmpeg::{codec, format, media, rescale, software, ChannelLayout, Rational, Rescale};
 use log::{debug, trace, warn};
 
 use crate::media::accel::HardwareDecoder;
 use crate::media::aggregation_tree::AggregationTree;
 use crate::media::disjoint_interval_set::DisjointIntervalSet;
+use crate::media::frame;
 use crate::util::GuessNumber;
 
 #[derive(Debug)]
@@ -60,20 +61,6 @@ pub struct StreamDescription {
     r#type: StreamType,
     index: usize,
     description: String,
-}
-
-pub struct DecodedVideoFrame {
-    pub byte_pos: isize,
-    pub pktpos: i64,
-    pub time: f64,
-    pub decoded: frame::Video,
-}
-
-pub struct DecodedAudioFrame {
-    pub byte_pos: isize,
-    pub pktpos: i64,
-    pub time: f64,
-    pub decoded: frame::Audio,
 }
 
 #[derive(Clone, Copy)]
@@ -127,11 +114,6 @@ pub enum AudioFront {
 pub struct AudioContext {
     base: AudioBase,
     front: AudioFront,
-}
-
-pub enum Frame {
-    Audio(DecodedAudioFrame),
-    Video(DecodedVideoFrame),
 }
 
 pub struct VideoBase {
@@ -548,7 +530,7 @@ impl MediaPlayback {
     }
 
     /// Returns Ok(None) at EOF
-    pub fn get_next(&mut self) -> Result<Option<Frame>, MediaError> {
+    pub fn get_next(&mut self) -> Result<Option<frame::Frame>, MediaError> {
         assert!(self.audio.is_some() || self.video.is_some());
 
         loop {
@@ -573,15 +555,15 @@ impl MediaPlayback {
         };
     }
 
-    fn try_decode(&mut self) -> Result<Option<Frame>, MediaError> {
+    fn try_decode(&mut self) -> Result<Option<frame::Frame>, MediaError> {
         if let Some(c) = self.audio.as_mut() {
             if let Some(f) = c.decode()? {
-                return Ok(Some(Frame::Audio(f)));
+                return Ok(Some(f.into()));
             }
         }
         if let Some(c) = self.video.as_mut() {
             if let Some(f) = c.decode()? {
-                return Ok(Some(Frame::Video(f)));
+                return Ok(Some(f.into()));
             }
         }
         Ok(None)
@@ -591,27 +573,27 @@ impl MediaPlayback {
     pub fn sample_next(&mut self, 
         audio_data: &mut Option<AudioSampleData>,
         video_data: &mut Option<VideoSampleData>
-    ) -> Result<Option<Frame>, MediaError> {
+    ) -> Result<Option<frame::Frame>, MediaError> {
         assert!(self.audio.is_some() || self.video.is_some());
         match self.get_next()? {
-            Some(Frame::Audio(f)) => 
-            match self.audio_mut().unwrap().front_mut() {
-                AudioFront::Sampler(s) => {
-                    s.process(&f, audio_data)?;
-                    Ok(Some(Frame::Audio(f)))
-                }
-                AudioFront::Player(_) => Err(MediaError::InternalError(
-                    "audio not opened as sampler".to_string()))
-            },
-            Some(Frame::Video(f)) => 
-            match self.video_mut().unwrap().front_mut() {
-                VideoFront::Sampler(s) => {
-                    s.process(&f, video_data)?;
-                    Ok(Some(Frame::Video(f)))
-                }
-                VideoFront::Player(_) => Err(MediaError::InternalError(
-                    "video not opened as sampler".to_string()))
-            },
+            Some(frame::Frame::Audio(f)) =>
+                match self.audio_mut().unwrap().front_mut() {
+                    AudioFront::Sampler(s) => {
+                        s.process(&f, audio_data)?;
+                        Ok(Some(f.into()))
+                    }
+                    AudioFront::Player(_) => Err(MediaError::InternalError(
+                        "audio not opened as sampler".to_string()))
+                },
+            Some(frame::Frame::Video(f)) =>
+                match self.video_mut().unwrap().front_mut() {
+                    VideoFront::Sampler(s) => {
+                        s.process(&f, video_data)?;
+                        Ok(Some(f.into()))
+                    }
+                    VideoFront::Player(_) => Err(MediaError::InternalError(
+                        "video not opened as sampler".to_string()))
+                },
             None => Ok(None),
         }
     }
@@ -701,9 +683,9 @@ impl MediaPlayback {
 impl AudioPlayerFront {
     pub fn process(
         &mut self,
-        mut frame: DecodedAudioFrame,
-    ) -> Result<DecodedAudioFrame, MediaError> {
-        let mut processed = frame::Audio::empty();
+        mut frame: frame::Audio,
+    ) -> Result<frame::Audio, MediaError> {
+        let mut processed = frame::AudioData::empty();
         check!(self.resampler.run(&frame.decoded, &mut processed))?;
         frame.decoded = processed;
         Ok(frame)
@@ -712,16 +694,16 @@ impl AudioPlayerFront {
 
 impl AudioSamplerFront {
     pub fn process(
-        &mut self, frame: &DecodedAudioFrame, 
+        &mut self, frame: &frame::Audio, 
         sampler_data: &mut Option<AudioSampleData>
     ) -> Result<(), MediaError> {
-        if frame.time < 0.0 {
+        if frame.meta.time < 0.0 {
             return Ok(());
         }
 
         let sample_per_second = self.sample_per_second.to_f64().unwrap();
         let start_index = 
-            (sample_per_second * (frame.time - self.start_time))
+            (sample_per_second * (frame.meta.time - self.start_time))
             .to_usize().unwrap();
 
         if start_index >= self.intensities.length {
@@ -732,14 +714,14 @@ impl AudioSamplerFront {
         if sampler_data.is_none() {
             *sampler_data = Some(AudioSampleData {
                 start_index,
-                start_time: frame.time,
-                end_time: frame.time,
+                start_time: frame.meta.time,
+                end_time: frame.meta.time,
                 intensity: Vec::<f32>::new()
             });
         }
 
         let sd = sampler_data.as_mut().unwrap();
-        let mut processed = frame::Audio::empty();
+        let mut processed = frame::AudioData::empty();
         check!(self.resampler.run(&frame.decoded, &mut processed))?;
         
         let data: &[f32] = processed.plane(0);
@@ -749,7 +731,7 @@ impl AudioSamplerFront {
         for (i, sample) in data.iter().enumerate() {
             let new_index = (
                 sample_per_second * (
-                    frame.time
+                    frame.meta.time
                     - self.start_time
                     + i.to_f64().unwrap() / f64::from(processed.rate())
                 )
@@ -771,7 +753,7 @@ impl AudioSamplerFront {
                             }
                         }
                         sd.intensity.push(sum);
-                        sd.end_time = frame.time + 
+                        sd.end_time = frame.meta.time + 
                             i.to_f64().unwrap() / f64::from(processed.rate());
                     }
                 }
@@ -813,8 +795,8 @@ impl AudioContext {
         self.base.stream.byte_pos = -1;
     }
 
-    pub fn decode(&mut self) -> Result<Option<DecodedAudioFrame>, MediaError> {
-        let mut decoded = frame::Audio::empty();
+    pub fn decode(&mut self) -> Result<Option<frame::Audio>, MediaError> {
+        let mut decoded = frame::AudioData::empty();
         let mut byte_pos: isize = -1;
         match self.base.decoder.receive_frame(&mut decoded) {
             Ok(()) => {
@@ -835,9 +817,11 @@ impl AudioContext {
 
         let time = f64::from(self.base.stream.timebase) * pts.to_f64().unwrap();
 
-        Ok(Some(DecodedAudioFrame {
-            time, byte_pos,
-            pktpos: decoded.packet().position,
+        Ok(Some(frame::Audio {
+            meta: frame::FrameMetadata {
+                time, byte_pos,
+                pkt_pos: decoded.packet().position,
+            },
             decoded,
         }))
     }
@@ -867,8 +851,8 @@ impl AudioContext {
 impl VideoPlayerFront {
     pub fn process(
         &mut self,
-        mut frame: DecodedVideoFrame,
-    ) -> Result<DecodedVideoFrame, MediaError> {
+        mut frame: frame::Video,
+    ) -> Result<frame::Video, MediaError> {
         if frame.decoded.format() != self.original_format {
             log::warn!("decoded format is actually {:?}", frame.decoded.format());
             self.original_format = frame.decoded.format();
@@ -876,7 +860,7 @@ impl VideoPlayerFront {
         }
 
         // av_frame_alloc
-        let mut processed = frame::Video::empty();
+        let mut processed = frame::VideoData::empty();
         // sws_scale
         check!(self.scaler.run(&frame.decoded, &mut processed))?;
         frame.decoded = processed;
@@ -913,25 +897,25 @@ impl VideoPlayerFront {
 
 impl VideoSamplerFront {
     #[allow(clippy::unnecessary_wraps)]
-    pub fn process(&mut self, frame: &DecodedVideoFrame, 
+    pub fn process(&mut self, frame: &frame::Video, 
         sampler_data: &mut Option<VideoSampleData>
     ) -> Result<(), MediaError> {
         if sampler_data.is_none() {
             *sampler_data = Some(VideoSampleData {
                 keyframes: Vec::new(),
-                start_time: frame.time,
-                end_time: frame.time
+                start_time: frame.meta.time,
+                end_time: frame.meta.time
             });
         }
 
         let sd = sampler_data.as_mut().unwrap();
 
         if frame.decoded.is_key() {
-            sd.keyframes.push((frame.time, frame.byte_pos));
-            self.keyframes.insert(OrderedFloat(frame.time), frame.byte_pos);
+            sd.keyframes.push((frame.meta.time, frame.meta.byte_pos));
+            self.keyframes.insert(OrderedFloat(frame.meta.time), frame.meta.byte_pos);
         }
-        if frame.time > sd.end_time {
-            sd.end_time = frame.time;
+        if frame.meta.time > sd.end_time {
+            sd.end_time = frame.meta.time;
             self.known_range.add(sd.start_time, sd.end_time);
         }
         Ok(())
@@ -977,8 +961,8 @@ impl VideoContext {
     }
 
     #[allow(clippy::cast_precision_loss)]
-    fn decode(&mut self) -> Result<Option<DecodedVideoFrame>, MediaError> {
-        let mut decoded = frame::Video::empty();
+    fn decode(&mut self) -> Result<Option<frame::Video>, MediaError> {
+        let mut decoded = frame::VideoData::empty();
         let mut byte_pos: isize = -1;
         match self.base.decoder.receive_frame(&mut decoded) {
             Ok(()) => {
@@ -1000,14 +984,16 @@ impl VideoContext {
         let time = f64::from(self.base.stream.timebase) * pts as f64;
 
         if self.base.accelerator.is_some() {
-            let mut sw_frame = frame::Video::empty();
+            let mut sw_frame = frame::VideoData::empty();
             check!(HardwareDecoder::transfer_frame(&decoded, &mut sw_frame))?;
             decoded = sw_frame;
         }
 
-        Ok(Some(DecodedVideoFrame {
-            time, byte_pos,
-            pktpos: decoded.packet().position,
+        Ok(Some(frame::Video {
+            meta: frame::FrameMetadata {
+                time, byte_pos,
+                pkt_pos: decoded.packet().position,
+            },
             decoded,
         }))
     }
@@ -1057,7 +1043,7 @@ impl VideoContext {
 #[cfg(test)]
 mod tests {
     use std::time::Instant;
-    use crate::media::{accel::HardwareDecoder, internal::{Frame, VideoFront}, MediaPlayback};
+    use crate::media::{accel::HardwareDecoder, internal::{frame, VideoFront, MediaPlayback}};
 
     #[test]
     fn configuration() {
@@ -1087,13 +1073,13 @@ mod tests {
         let mut ia = 0;
         while i < 10000 {
             match playback.get_next().unwrap() {
-                Some(Frame::Video(_f)) => {
+                Some(frame::Frame::Video(_f)) => {
                     // if let VideoFront::Player(x) = playback.video_mut().unwrap().front_mut() {
                     //     x.process(f).unwrap();
                     // }
                     iv += 1;
                 }
-                Some(Frame::Audio(_f)) => {
+                Some(frame::Frame::Audio(_f)) => {
                     // if let AudioFront::Player(x) = playback.audio_mut().unwrap().front_mut() {
                     //     x.process(f).unwrap();
                     // }

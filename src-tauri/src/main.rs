@@ -6,6 +6,7 @@
 extern crate ffmpeg_next as ffmpeg;
 mod encoding;
 mod media;
+mod media_api;
 mod redirect_log;
 mod util;
 
@@ -76,28 +77,28 @@ fn main() {
             frontend_task: false,
             backend_task: true,
         }))
-        .manage(Mutex::new(media::PlaybackRegistry::new()))
+        .manage(Mutex::new(media_api::PlaybackRegistry::new()))
         .invoke_handler(tauri::generate_handler![
             init_complete,
-            media::media_version,
-            media::media_status,
-            media::open_media,
-            media::close_media,
-            media::open_audio,
-            media::open_video,
-            media::open_audio_sampler,
-            media::open_video_sampler,
-            media::seek_media,
-            media::seek_media_byte,
-            media::seek_audio,
-            media::seek_video,
-            media::skip_until,
-            media::sample_automatic2,
-            media::get_next_frame_data,
-            media::video_set_size,
-            media::get_keyframe_before,
-            media::test_performance,
-            media::media_config,
+            media_api::media_version,
+            media_api::media_status,
+            media_api::open_media,
+            media_api::close_media,
+            media_api::open_audio,
+            media_api::open_video,
+            media_api::open_audio_sampler,
+            media_api::open_video_sampler,
+            media_api::seek_media,
+            media_api::seek_media_byte,
+            media_api::seek_audio,
+            media_api::seek_video,
+            media_api::skip_until,
+            media_api::sample_automatic2,
+            media_api::get_next_frame_data,
+            media_api::video_set_size,
+            media_api::get_keyframe_before,
+            media_api::test_performance,
+            media_api::media_config,
             redirect_log::set_log_filter_level,
             encoding::decode_file_as,
             encoding::decode_or_detect_file,
