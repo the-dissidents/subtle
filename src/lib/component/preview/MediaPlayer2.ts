@@ -1,4 +1,4 @@
-import { MMedia, type AudioFrameData, type AudioStatus, type VideoFrameData, type VideoStatus } from "../../API";
+import { MMedia, type AudioFrameData, type AudioStatus, type DecodeResult, type VideoFrameData, type VideoStatus } from "../../API";
 import { Basic } from "../../Basic";
 import type { CanvasManager } from "../../CanvasManager";
 import { InterfaceConfig } from "../../config/Groups";
@@ -228,25 +228,20 @@ export class MediaPlayer2 {
     }
 
     // Must be called while locked
-    async #receiveFrame(frame: AudioFrameData | VideoFrameData | null, elapsed: number) {
-        if (!frame) {
+    async #receiveFrames(result: DecodeResult) {
+        if (result.audio.length == 0 && result.video.length == 0) {
             this.#preloadEOF = true;
             return false;
         }
-        Debug.assert(!this.#preloadEOF, 'receiveFrame called at EOF');
-        if (frame.type == 'audio') {
-            this.#diag.fetchAudioTime = 
-                this.#diag.fetchAudioTime * DAMPING + elapsed * (1 - DAMPING);
+        Debug.assert(!this.#preloadEOF, 'receiveFrames called at EOF');
+        for (const frame of result.audio)
             await this.#receiveAudioFrame(frame);
-        } else {
-            this.#diag.fetchVideoTime = 
-                this.#diag.fetchVideoTime * DAMPING + elapsed * (1 - DAMPING);
+        for (const frame of result.video)
             await this.#receiveVideoFrame(frame);
-        }
         return true;
     }
 
-    async #receiveNextFrame() {
+    async #doDecode() {
         if (this.#preloadEOF || this.#closed)
             return false;
 
@@ -263,10 +258,8 @@ export class MediaPlayer2 {
         }
 
         return await this.#mutex.useIfIdle(async () => {
-            const start = performance.now();
-            const frame = await this.media.readNextFrame();
-            const elapsed = performance.now() - start;
-            return await this.#receiveFrame(frame, elapsed);
+            const frames = await this.media.decodeAutomatic(10);
+            return await this.#receiveFrames(frames);
         }) ?? true;
     }
 
@@ -274,7 +267,7 @@ export class MediaPlayer2 {
     async #populateBuffer() {
         Debug.assert(!this.#populateBufferRunning, 'already populating buffer');
         this.#populateBufferRunning = true;
-        while (await this.#receiveNextFrame())
+        while (await this.#doDecode())
             await Basic.wait(0);
         this.#populateBufferRunning = false;
     }
@@ -519,8 +512,8 @@ export class MediaPlayer2 {
                 }
 
                 if (!(opt?.imprecise)) {
-                    const frame = await this.media.skipUntil(target);
-                    await this.#receiveFrame(frame, 0);
+                    const frames = await this.media.skipUntil(target);
+                    await this.#receiveFrames(frames);
                 }
             }
             if (!this.#populateBufferRunning) this.#populateBuffer();

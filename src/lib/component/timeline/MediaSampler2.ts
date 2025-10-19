@@ -157,7 +157,7 @@ export class MediaSampler2 {
 
         const doSampling = async () => {
             const ok = await this.#mutex.use(async () => {
-                const result = await this.media.sampleAutomatic2(20);
+                const result = await this.media.sampleAutomatic3(20);
                 if (result.audio) {
                     this.#sampleProgress = result.audio.endTime;
                     this.#intensity.set(result.audio.intensity, result.audio.startIndex);
@@ -169,10 +169,10 @@ export class MediaSampler2 {
                 this.onProgress?.();
                 if (result.isEof) {
                     await Debug.trace(`sampling done upon EOF`, 
-                        result.audio?.endTime?.toFixed(4), result.video?.end?.toFixed(4));
+                        result.audio?.endTime?.toFixed(4), result.video?.endTime?.toFixed(4));
                     this.#sampling = false;
                     this.#updateEOF(result.audio?.endTime);
-                    this.#updateEOF(result.video?.end);
+                    this.#updateEOF(result.video?.endTime);
                     return false;
                 }
                 if (this.#sampleProgress > this.#sampleEnd) {

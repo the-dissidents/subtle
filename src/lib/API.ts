@@ -1,103 +1,10 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
 import { Debug } from './Debug';
 import { BinaryReader } from './details/BinaryReader';
+import type { MediaEvent } from './bindings/MediaEvent';
+import type { StreamDescription } from './bindings/StreamDescription';
 
-export type StreamDescription = {
-    type: 'audio' | 'video' | 'subtitle' | 'unknown',
-    index: number,
-    description: string
-};
-
-export type AudioStatus = {
-    index: number,
-    length: number,
-    startTime: number,
-    sampleRate: number
-};
-
-export type VideoStatus = {
-    index: number,
-    length: number,
-    startTime: number,
-    framerate: number,
-    isVfr: boolean,
-    sampleAspectRatio: number,
-    size: [width: number, height: number],
-};
-
-export type SampleResult = {
-    audio: {
-        startTime: number,
-        endTime: number,
-        startIndex: number,
-        intensity: number[]
-    } | null,
-    video: {
-        start: number,
-        end: number,
-        keyframes: [number, number][]
-    } | null,
-    isEof: boolean
-};
-
-export type MediaEvent = {
-    event: 'done'
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    data: {}
-} | {
-    event: 'EOF'
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    data: {}
-} | {
-    event: 'opened'
-    data: { id: number }
-} | {
-    event: 'mediaStatus',
-    data: {
-        audioIndex: number,
-        videoIndex: number,
-        duration: number,
-        streams: StreamDescription[]
-    }
-} | {
-    event: 'audioStatus',
-    data: AudioStatus
-} | {
-    event: 'videoStatus',
-    data: VideoStatus
-} | {
-    event: 'debug',
-    data: { message: string }
-} | {
-    event: 'runtimeError',
-    data: { what: string }
-} | {
-    event: 'noStream',
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    data: {}
-} | {
-    event: 'invalidId',
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    data: {}
-} | {
-    event: 'ffmpegVersion',
-    data: { value: string }
-} | {
-    event: 'keyframeData',
-    data: {
-        time: number,
-        bytePos: number
-    }
-} | {
-    event: 'noKeyframeData',
-    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-    data: {}
-} | {
-    event: 'sampleDone2',
-    data: SampleResult
-};
-
-class MediaError extends Error {
+export class MediaError extends Error {
     constructor(msg: string, public readonly from: string) {
         super(`${msg} (${from})`);
         this.name = 'MediaError';
@@ -107,6 +14,10 @@ class MediaError extends Error {
 type MediaEventKey = MediaEvent['event'];
 type MediaEventData = {[E in MediaEvent as E['event']]: E['data']};
 type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) => void;
+
+export type VideoStatus = MediaEventData['videoStatus'];
+export type AudioStatus = MediaEventData['audioStatus'];
+export type SampleResult = MediaEventData['sampleDone2'];
 
 function createChannel(
     from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
@@ -140,20 +51,25 @@ function createChannel(
 }
 
 export type VideoFrameData = {
-    type: 'video',
     pktpos: number,
     time: number,
     stride: number,
+    length: number,
     size: [width: number, height: number],
-    content: Uint8ClampedArray<ArrayBuffer>
+    content: ImageDataArray
 };
 
 export type AudioFrameData = {
-    type: 'audio',
     pktpos: number,
     time: number,
+    length: number,
     content: Float32Array
 };
+
+export type DecodeResult = {
+    video: VideoFrameData[],
+    audio: AudioFrameData[]
+}
 
 export class MMedia {
     #destroyed = false;
@@ -200,22 +116,36 @@ export class MMedia {
         Debug.info(`media ${id} opened`);
     }
 
-    #readFrameData(data: ArrayBuffer): AudioFrameData | VideoFrameData {
+    #readFrames(data: ArrayBuffer): DecodeResult {
         const view = new BinaryReader(data);
-        const type = view.readU32() == 0 ? 'audio' : 'video';
+        const nA = view.readU32();
+        const audio: AudioFrameData[] = [];
+        for (let i = 0; i < nA; i++)
+            audio.push(this.#readAudioFrame(view));
+
+        const nV = view.readU32();
+        const video: VideoFrameData[] = [];
+        for (let i = 0; i < nV; i++)
+            video.push(this.#readVideoFrame(view));
+
+        return { audio, video };
+    }
+
+    #readAudioFrame(view: BinaryReader<ArrayBuffer>): AudioFrameData {
         const time = view.readF64();
         const pktpos = view.readI32();
-        if (type == 'audio') {
-            const length = view.readU32();
-            const content = new Float32Array(data, view.pos, length);
-            return { type, pktpos, time, content } satisfies AudioFrameData;
-        } else {
-            const stride = view.readU32();
-            const length = view.readU32();
-            const content = new Uint8ClampedArray(data, view.pos, length);
-            return { type, pktpos, time, stride, content, 
-                size: [...this.#outSize] } satisfies VideoFrameData;
-        }
+        const length = view.readU32();
+        const content = view.readF32Array(length);
+        return { pktpos, time, length, content };
+    }
+
+    #readVideoFrame(view: BinaryReader<ArrayBuffer>): VideoFrameData {
+        const time = view.readF64();
+        const pktpos = view.readI32();
+        const stride = view.readU32();
+        const length = view.readU32();
+        const content = view.readU8ClampedArray(length);
+        return { pktpos, time, stride, length, content, size: [...this.#outSize] };
     }
 
     static async open(path: string) {
@@ -342,45 +272,37 @@ export class MMedia {
         this.#outSize = [width, height];
     }
 
-    /** returns null on EOF */
-    async readNextFrame() {
-        Debug.assert(!this.#destroyed);
-        Debug.assert(this.#currentJobs == 0);
-        let channel: Channel<MediaEvent> | undefined;
-        this.#currentJobs += 1;
-        try {
-            return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
-                channel = createChannel('readNextFrame', { 
-                    'EOF': () => {
-                        Debug.debug('readNextFrame: at eof');
-                        this.#eof = true;
-                        resolve(null);
-                    }
-                }, reject);
-                invoke<ArrayBuffer>('get_next_frame_data', { id: this.id, channel })
-                    .then((x) => {
-                        if (x.byteLength > 0)
-                            resolve(this.#readFrameData(x))
-                    });
-            });
-        } finally {
-            this.#currentJobs -= 1;
-        }
-    }
-
-    /** returns null on EOF */
-    async sampleAutomatic2(targetWorkingTimeMs: number) {
+    async sampleAutomatic3(targetWorkingTimeMs: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
         this.#currentJobs += 1;
         try {
             return await new Promise<SampleResult>((resolve, reject) => {
-                channel = createChannel('sampleAutomatic', {
+                channel = createChannel('sampleAutomatic3', {
                     sampleDone2: (data) => resolve(data)
                 }, reject);
-                invoke('sample_automatic2', { id: this.id, targetWorkingTimeMs, channel });
+                invoke('sample_automatic3', { id: this.id, targetWorkingTimeMs, channel });
             });
+        } finally {
+            this.#currentJobs -= 1;
+        }
+    }
+
+    async decodeAutomatic(targetWorkingTimeMs: number) {
+        Debug.assert(!this.#destroyed);
+        Debug.assert(this.#currentJobs == 0);
+        let channel: Channel<MediaEvent> | undefined;
+        this.#currentJobs += 1;
+        try {
+            const result = await new Promise<ArrayBuffer>((resolve, reject) => {
+                channel = createChannel('decodeAutomatic', {}, reject);
+                invoke<ArrayBuffer>('get_frames_automatic', { 
+                    id: this.id, targetWorkingTimeMs, channel 
+                }).then(resolve);
+            });
+            const frames = this.#readFrames(result);
+            return frames;
         } finally {
             this.#currentJobs -= 1;
         }
@@ -460,19 +382,13 @@ export class MMedia {
         let channel: Channel<MediaEvent> | undefined;
         this.#currentJobs += 1;
         try {
-            return await new Promise<VideoFrameData | AudioFrameData | null>((resolve, reject) => {
-                channel = createChannel('skipUntil', { 
-                    'EOF': () => {
-                        Debug.debug('skipUntil: at eof');
-                        this.#eof = true;
-                        resolve(null);
-                    }
-                }, reject);
+            return await new Promise<DecodeResult>((resolve, reject) => {
+                channel = createChannel('skipUntil', {}, reject);
                 invoke<ArrayBuffer>('skip_until', { 
                     id: this.id, time, channel 
                 }).then((x) => {
                     if (x.byteLength > 0)
-                        resolve(this.#readFrameData(x))
+                        resolve(this.#readFrames(x));
                 });
             });
         } finally {

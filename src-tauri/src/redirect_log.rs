@@ -40,8 +40,10 @@ unsafe extern "C" fn rust_log_callback(
         }
     };
 
-    let str = vsprintf::vsprintf(fmt, args).unwrap();
-    log::log!(target: "ffmpeg", level, "{}", str.trim_end());
+    unsafe {
+        let str = vsprintf::vsprintf(fmt, args).unwrap();
+        log::log!(target: "ffmpeg", level, "{}", str.trim_end());
+    }
 }
 
 pub fn init_ffmpeg_logging() {

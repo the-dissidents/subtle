@@ -17,14 +17,16 @@ struct GetFormatCallbackContext {
 unsafe extern "C" fn get_format_callback(
     cxt: *mut AVCodecContext, fmt: *const AVPixelFormat
 ) -> AVPixelFormat {
-    let data = (*cxt).opaque as *const GetFormatCallbackContext;
-    let mut p = fmt;
-    while (*p) != AVPixelFormat::AV_PIX_FMT_NONE {
-        if (*p) == (*data).pixel_format {
-            log::debug!("using hardware format {:?}", *p);
-            return *p;
+    unsafe {
+        let data = (*cxt).opaque as *const GetFormatCallbackContext;
+        let mut p = fmt;
+        while (*p) != AVPixelFormat::AV_PIX_FMT_NONE {
+            if (*p) == (*data).pixel_format {
+                log::debug!("using hardware format {:?}", *p);
+                return *p;
+            }
+            p = p.add(1);
         }
-        p = p.add(1);
     }
     log::warn!("hardware format not found!");
     AVPixelFormat::AV_PIX_FMT_NONE

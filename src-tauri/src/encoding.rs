@@ -1,15 +1,17 @@
 use std::{fs, io::Read};
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, ts_rs::TS)]
 #[serde(rename_all = "camelCase", tag = "type", content = "data")]
+#[ts(export)]
 pub enum DecodeResult {
     Ok(String),
     Error(String)
 }
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, ts_rs::TS)]
 #[serde(rename_all = "camelCase", tag = "type", content = "data")]
+#[ts(export)]
 pub enum DetectResult {
     Normal(String),
     Strange(()),

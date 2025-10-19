@@ -174,12 +174,12 @@ export const PlaybackCommands = {
         name: () => $_('menu.select-audio-stream'),
         isApplicable: () => get(Playback.loadState) == 'loaded',
         items: () => Playback.player!.streams
-            .filter((x) => x.type == 'audio')
             .map((x) => ({
-                name: x.description + (
+                name: `[${x.index}] ${x.type}: ${x.codecId ?? ''} ${x.languageCode}` + (
                     x.index == Playback.player?.currentAudioStream 
                     ? ' ' + $_('menu.audio-stream-current') : ''),
-                isApplicable: () => x.index != Playback.player?.currentAudioStream,
+                isApplicable: () => x.type == 'audio' 
+                                 && x.index != Playback.player?.currentAudioStream,
                 async call() {
                     if (Playback.player) await guardAsync(
                         () => Playback.setAudioStream(x.index),

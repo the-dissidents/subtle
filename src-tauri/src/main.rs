@@ -8,7 +8,6 @@ mod encoding;
 mod media;
 mod media_api;
 mod redirect_log;
-mod util;
 
 use std::sync::Mutex;
 use tauri::AppHandle;
@@ -93,8 +92,8 @@ fn main() {
             media_api::seek_audio,
             media_api::seek_video,
             media_api::skip_until,
-            media_api::sample_automatic2,
-            media_api::get_next_frame_data,
+            media_api::sample_automatic3,
+            media_api::get_frames_automatic,
             media_api::video_set_size,
             media_api::get_keyframe_before,
             media_api::test_performance,

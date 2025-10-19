@@ -1,5 +1,7 @@
 pub use ffmpeg_next::frame::{Audio as AudioData, Video as VideoData};
 
+use crate::media::units;
+
 pub enum Frame {
     Audio(Audio),
     Video(Video)
@@ -8,7 +10,7 @@ pub enum Frame {
 pub struct FrameMetadata {
     pub byte_pos: isize,
     pub pkt_pos: i64,
-    pub time: f64,
+    pub time: units::Seconds,
 }
 
 pub struct Audio {
@@ -34,6 +36,7 @@ impl From<Video> for Frame {
 }
 
 impl Frame {
+    #[expect(unused)]
     pub fn meta(&self) -> &FrameMetadata {
         match self {
             Frame::Audio(f) => &f.meta,

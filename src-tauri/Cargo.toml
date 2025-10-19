@@ -3,7 +3,7 @@ name = "subtle-subtitles"
 version = "0.6.0-a0"
 description = "Cross-platform subtitle editor"
 authors = ["the_dissidents"]
-edition = "2021"
+edition = "2024"
 
 [profile.test]
 inherits = "release"
@@ -37,6 +37,9 @@ chardetng = "0.1.17"
 tauri-plugin-http = "2"
 ordered-float = "5.1.0"
 num-traits = "0.2.19"
+getset = "0.1.6"
+enum_dispatch = "0.3.13"
+ts-rs = "11.1.0"
 
 [target.'cfg(windows)'.dependencies]
 ffmpeg-sys-next = { version = "7.1.0", features = ["build-lib-d3d11va"] }
