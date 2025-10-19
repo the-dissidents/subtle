@@ -11,10 +11,10 @@ use num_traits::ToPrimitive;
 use serde::Serialize;
 use std::collections::VecDeque;
 use std::{collections::HashMap};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::ipc::{self, Channel};
-use tauri::State;
+use tauri::{async_runtime, State};
 
 pub struct PlaybackRegistry {
     next_id: i32,
@@ -128,7 +128,7 @@ pub fn media_config() -> String {
 }
 
 #[tauri::command]
-pub fn media_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Channel<MediaEvent>) {
+pub fn media_status(id: i32, state: State<Arc<Mutex<PlaybackRegistry>>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     let Some(session) = 
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
@@ -154,7 +154,7 @@ pub fn media_status(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Cha
 #[tauri::command]
 pub fn video_set_size(
     id: i32, width: u32, height: u32,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -170,7 +170,7 @@ pub fn video_set_size(
 }
 
 #[tauri::command]
-pub fn close_media(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Channel<MediaEvent>) {
+pub fn close_media(id: i32, state: State<Arc<Mutex<PlaybackRegistry>>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     if ap.table.remove(&id).is_none() {
         return send_invalid_id(&channel);
@@ -179,7 +179,7 @@ pub fn close_media(id: i32, state: State<Mutex<PlaybackRegistry>>, channel: Chan
 }
 
 #[tauri::command]
-pub fn open_media(state: State<Mutex<PlaybackRegistry>>, path: &str, channel: Channel<MediaEvent>) {
+pub fn open_media(state: State<Arc<Mutex<PlaybackRegistry>>>, path: &str, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
     send(&channel, MediaEvent::Debug { message: path });
 
@@ -198,7 +198,7 @@ pub fn open_media(state: State<Mutex<PlaybackRegistry>>, path: &str, channel: Ch
 #[allow(clippy::cast_sign_loss)]
 pub fn open_video(
     id: i32, video_id: i32, accel: bool,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -228,7 +228,7 @@ pub fn open_video(
 #[allow(clippy::cast_sign_loss)]
 pub fn open_video_sampler(
     id: i32, video_id: i32, _accel: bool,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -258,7 +258,7 @@ pub fn open_video_sampler(
 #[allow(clippy::cast_sign_loss)]
 pub fn open_audio(
     id: i32, audio_id: i32,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -286,7 +286,7 @@ pub fn open_audio(
 pub fn open_audio_sampler(
     id: i32, audio_id: i32,
     sample_per_second: usize,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -313,7 +313,7 @@ pub fn open_audio_sampler(
 pub fn seek_media(
     id: i32,
     time: units::Seconds,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -329,7 +329,7 @@ pub fn seek_media(
 pub fn seek_media_byte(
     id: i32,
     pos: i64,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -345,7 +345,7 @@ pub fn seek_media_byte(
 pub fn seek_audio(
     id: i32,
     time: units::Seconds,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -364,7 +364,7 @@ pub fn seek_audio(
 pub fn seek_video(
     id: i32,
     time: units::Seconds,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
@@ -383,7 +383,7 @@ pub fn seek_video(
 pub fn skip_until(
     id: i32,
     time: units::Seconds,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) -> Result<ipc::Response, ()> {
     let mut ap = state.lock().unwrap();
@@ -424,76 +424,93 @@ pub fn skip_until(
 }
 
 #[tauri::command]
-pub fn get_frames_automatic(
+pub async fn get_frames_automatic(
     id: i32, target_working_time_ms: u64,
-    state: State<Mutex<PlaybackRegistry>>,
-    channel: Channel<MediaEvent>,
+    state: State<'_, Arc<Mutex<PlaybackRegistry>>>,
+    channel: Channel<MediaEvent<'static>>,
 ) -> Result<ipc::Response, ()> {
-    let mut ap = state.lock().unwrap();
-    let Some(session) = ap.table.get_mut(&id) else {
-        send_invalid_id(&channel);
-        return Err(());
-    };
-    
-    match work(session, target_working_time_ms) {
-        Ok(_) => {
-            Ok(send_frames(session))
+    let state = Arc::clone(&state);
+    let channel = channel.clone();
+
+    async_runtime::spawn_blocking(move || {
+        let mut ap = state.lock().unwrap();
+        let Some(session) = ap.table.get_mut(&id) else {
+            send_invalid_id(&channel);
+            return Err(());
+        };
+        
+        match work(session, target_working_time_ms) {
+            Ok(_) => {
+                Ok(send_frames(session))
+            }
+            Err(e) => {
+                send_error!(&channel, e.to_string());
+                Err(())
+            }
         }
-        Err(e) => {
-            send_error!(&channel, e.to_string());
-            Err(())
-        }
-    }
+    })
+    .await
+    .map_err(|_| ())
+    .flatten()
 }
 
 #[tauri::command]
-pub fn sample_automatic3(
+pub async fn sample_automatic3(
     id: i32, target_working_time_ms: u64,
-    state: State<Mutex<PlaybackRegistry>>,
-    channel: Channel<MediaEvent>,
+    state: State<'_, Arc<Mutex<PlaybackRegistry>>>,
+    channel: Channel<MediaEvent<'static>>,
 ) -> Result<(), ()> {
-    let mut ap = state.lock().unwrap();
-    let Some(session) = ap.table.get_mut(&id) else {
-        send_invalid_id(&channel);
-        return Err(());
-    };
-    
-    match work(session, target_working_time_ms) {
-        Ok(has_next) => {
-            let audio = 
-                if let Some((_, audio::AudioSinkKind::Sampler(s))) = session.audio_mut() {
-                    s.get_delta()
-                } else {
-                    None
-                };
-            let video = 
-                if let Some((_, VideoSinkKind::Sampler(s))) = session.video_mut() {
-                    s.get_delta()
-                } else {
-                    None
-                };
-            send(&channel, MediaEvent::SampleDone2 {
-                audio, video,
-                is_eof: !has_next
-            });
-            Ok(())
+    let state = Arc::clone(&state);
+    let channel = channel.clone();
+
+    async_runtime::spawn_blocking(move || {
+        let mut ap = state.lock().unwrap();
+        let Some(session) = ap.table.get_mut(&id) else {
+            send_invalid_id(&channel);
+            return Err(());
+        };
+
+        match work(session, target_working_time_ms) {
+            Ok(has_next) => {
+                let audio = 
+                    if let Some((_, AudioSinkKind::Sampler(s))) = session.audio_mut() {
+                        s.get_delta()
+                    } else {
+                        None
+                    };
+                let video = 
+                    if let Some((_, VideoSinkKind::Sampler(s))) = session.video_mut() {
+                        s.get_delta()
+                    } else {
+                        None
+                    };
+                send(&channel, MediaEvent::SampleDone2 {
+                    audio, video,
+                    is_eof: !has_next
+                });
+                Ok(())
+            }
+            Err(e) => {
+                send_error!(&channel, e.to_string());
+                Err(())
+            }
         }
-        Err(e) => {
-            send_error!(&channel, e.to_string());
-            Err(())
-        }
-    }
+    })
+    .await
+    .map_err(|_| ())
+    .flatten()
 }
 
-fn work(session: &mut session::Session, target_working_time_ms: u64) -> Result<bool, MediaError> {
+fn work(
+    session: &mut session::Session, target_working_time_ms: u64
+) -> Result<bool, MediaError> {
     let start_time = Instant::now();
     let target_working_time = Duration::from_millis(target_working_time_ms);
-
     loop {
         session.try_process()?;
         if start_time.elapsed() >= target_working_time
             && (session.audio().is_none_or(|(_, s)| !s.is_empty())
-             || session.video().is_none_or(|(_, s)| !s.is_empty()))
+            || session.video().is_none_or(|(_, s)| !s.is_empty()))
         {
             return Ok(true);
         }
@@ -519,7 +536,7 @@ fn send_frames(session: &mut session::Session) -> tauri::ipc::Response {
         };
     pack_audio_frames(&audio, &mut buf);
     pack_video_frames(&video, &mut buf);
-    log::trace!("sent frames: {} audio, {} video", audio.len(), video.len());
+    // log::trace!("sent frames: {} audio, {} video", audio.len(), video.len());
     ipc::Response::new(buf)
 }
 
@@ -589,7 +606,7 @@ pub fn pack_audio_frames(frames: &VecDeque<frame::Audio>, buf: &mut Vec<u8>) {
 #[tauri::command]
 pub fn get_keyframe_before(
     id: i32, time: units::Seconds,
-    state: State<Mutex<PlaybackRegistry>>,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>
 ) {
     let ap = state.lock().unwrap();

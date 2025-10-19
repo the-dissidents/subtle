@@ -257,8 +257,8 @@ export class MediaPlayer2 {
             return false;
         }
 
-        return await this.#mutex.useIfIdle(async () => {
-            const frames = await this.media.decodeAutomatic(10);
+        return await this.#mutex.use(async () => {
+            const frames = await this.media.decodeAutomatic(5);
             return await this.#receiveFrames(frames);
         }) ?? true;
     }

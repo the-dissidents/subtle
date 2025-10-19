@@ -108,7 +108,7 @@ export class TimelineRenderer {
       const x2 = this.layout.width - 5;
       const y = this.layout.height - 40;
       const prog = (s.sampleProgress - s.sampleStart) / (s.sampleEnd - s.sampleStart);
-      const middle = x1 * (1 - prog) + x2 * prog;
+      const middle = Math.max(x1, x1 * (1 - prog) + x2 * prog);
       ctx.lineWidth = 2;
 
       ctx.beginPath();

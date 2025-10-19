@@ -9,7 +9,7 @@ mod media;
 mod media_api;
 mod redirect_log;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri::State;
@@ -76,7 +76,7 @@ fn main() {
             frontend_task: false,
             backend_task: true,
         }))
-        .manage(Mutex::new(media_api::PlaybackRegistry::new()))
+        .manage(Arc::new(Mutex::new(media_api::PlaybackRegistry::new())))
         .invoke_handler(tauri::generate_handler![
             init_complete,
             media_api::media_version,

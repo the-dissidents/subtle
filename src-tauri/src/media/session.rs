@@ -128,19 +128,24 @@ impl Session {
 
     pub fn try_process_skipping_before(&mut self, when: units::Seconds) -> Result<i32, MediaError> {
         let mut count = 0;
-        if let Some((d, c)) = self.audio_mut()
-            && let Some(f) = d.try_receive()?
-            && f.meta.time >= when
-        {
-            c.process(f)?;
-            count += 1;
-        }
-        if let Some((d, c)) = self.video_mut()
-            && let Some(f) = d.try_receive()?
-            && f.meta.time >= when
-        {
-            c.process(f)?;
-            count += 1;
+        loop {
+            if let Some((d, c)) = self.audio_mut()
+                && let Some(f) = d.try_receive()?
+                && f.meta.time >= when
+            {
+                c.process(f)?;
+                count += 1;
+                continue;
+            }
+            if let Some((d, c)) = self.video_mut()
+                && let Some(f) = d.try_receive()?
+                && f.meta.time >= when
+            {
+                c.process(f)?;
+                count += 1;
+                continue;
+            }
+            break;
         }
         Ok(count)
     }
