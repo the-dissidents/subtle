@@ -41,6 +41,7 @@
     "move-up": "move up",
     "move-whole-end-time-to-cursor": "move selection's end to cursor (as a whole)",
     "move-whole-start-time-to-cursor": "move selection's start to cursor (as a whole)",
+    "next-entry-and-play": "go to next entry and play",
     "next-entry-sequence": "previous entry (sequence select)",
     "next-entry-single": "next entry (single select)",
     "next-entry-with-this-style": "next entry with this style",

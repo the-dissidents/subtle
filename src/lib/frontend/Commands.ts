@@ -16,6 +16,7 @@ import { Format } from "../core/SimpleFormats";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
+import { TableCommands } from "../component/subtitleTable/Config";
 const $_ = unwrapFunctionStore(_);
 
 const toJSON = (entries: SubtitleEntry[]) => 
@@ -172,6 +173,16 @@ export const BasicCommands = {
             };
             await Playback.forceSetPosition(current.start);
             await Playback.play(true);
+        }
+    }),
+
+    nextAndPlayEntry: new UICommand(() => $_('category.media'),
+        [ CommandBinding.from(['Alt+Shift+Enter'], ['Table', 'Timeline']) ],
+    {
+        name: () => $_('action.next-entry-and-play'),
+        async call() {
+            await TableCommands.nextEntrySingle.call();
+            await BasicCommands.playEntry.call();
         }
     }),
 

@@ -41,6 +41,7 @@
     "move-up": "向上移动",
     "move-whole-end-time-to-cursor": "移动选中项整体结尾到当前位置",
     "move-whole-start-time-to-cursor": "移动选中项整体开头到当前位置",
+    "next-entry-and-play": "前往下一个条目，然后播放",
     "next-entry-sequence": "下一个条目（连选）",
     "next-entry-single": "下一个条目（单选）",
     "next-entry-with-this-style": "下一个具有这一样式的条目",
