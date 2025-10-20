@@ -11,6 +11,7 @@ fi
 
 # Get the directory where the script is located
 SCRIPT_DIR=$(dirname "$0")
+VERSION=$(jq -r '.version' <"$SCRIPT_DIR/package.json")
 
 # Go to the bundle directory
 BUNDLE_DIR="$SCRIPT_DIR/src-tauri/target/universal-apple-darwin/release/bundle/macos"
@@ -42,7 +43,6 @@ else
     exit 1
 fi
 
-
 # Create the libs directory
 LIBS_DIR="$APP_BUNDLE/Contents/libs"
 
@@ -66,9 +66,10 @@ echo "Bundling dylibs..."
 
 dylibbundler -od -b -x "$SUBTLE_EXECUTABLE" -d "$LIBS_DIR" || { echo "dylibbundler failed!"; exit 1; }
 
+ARCHIVE_NAME="subtle $VERSION macos.zip"
+zip -r "$ARCHIVE_NAME" "$APP_BUNDLE"
 
-# Reveal the app bundle in Finder
-echo "Revealing $APP_BUNDLE in Finder..."
-open -R "$APP_BUNDLE"
+echo "Revealing $ARCHIVE_NAME in Finder..."
+open -R "$ARCHIVE_NAME"
 
 echo "Repackaging complete."

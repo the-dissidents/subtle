@@ -52,8 +52,6 @@ export class MediaPlayer2 {
     #displaySize: [number, number] = [1, 1];
 
     #diag = {
-        fetchVideoTime: 0,
-        fetchAudioTime: 0,
         latencySquared: 0,
     }
 
@@ -328,18 +326,15 @@ export class MediaPlayer2 {
         ctx.fillText(
             `DRW ${(performance.now() - start).toFixed(1)}`, x, 80);
         ctx.fillText(
-            `FVT ${this.#diag.fetchVideoTime.toFixed(2)}`.padEnd(10) 
-          + `FAT ${this.#diag.fetchAudioTime.toFixed(2)}`, x, 100);
-        ctx.fillText(
             `VBL ${this.#videoBuffer.length}`.padEnd(9)
-            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 120);
+            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 100);
         ctx.fillText(
             `ABL ${this.audio.bufferLength}`.padEnd(9) 
-            + `(${(audioSize / 1024).toFixed(0)}KB)`, x, 140);
+            + `(${(audioSize / 1024).toFixed(0)}KB)`, x, 120);
         if (rescaled)
-            ctx.fillText(`RES ${ow}x${oh} -> ${dw}x${dh}`, x, 160);
+            ctx.fillText(`RES ${ow}x${oh} -> ${dw}x${dh}`, x, 140);
         else
-            ctx.fillText(`RES ${ow}x${oh}`, x, 160);
+            ctx.fillText(`RES ${ow}x${oh}`, x, 140);
     }
 
     async #presentNext() {
