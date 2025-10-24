@@ -45,8 +45,10 @@ handler.showModal = async () => {
     let lines = [...ent.texts.values()][0].split('\n');
     if (reversed)
       lines = lines.reverse();
-    if (removeEmptyLines)
+    if (removeEmptyLines) {
       lines = lines.filter((x) => x.trim().length > 0);
+      if (lines.length == 0) continue;
+    }
     ent.texts.clear();
     let dataIndex = 0;
     for (let i = 0; i < lines.length; i++) {
@@ -58,7 +60,6 @@ handler.showModal = async () => {
       let style: SubtitleStyle | undefined;
       switch (d.type) {
         case "use":
-          Debug.assert(d.style !== undefined);
           style = d.style!;
           break;
         case "useNew":
@@ -129,6 +130,7 @@ function makeData() {
       span: 1,
       ok: true,
       type: 'use',
+      style: Source.subs.defaultStyle,
       styleName: ''
     });
     i++;
@@ -199,8 +201,8 @@ function expandLineDown(lineIndex: number) {
     }
     newData.push(l);
   }
-  console.log($state.snapshot(newData));
   data = newData;
+  check();
   updateCounter++;
 }
 
@@ -220,8 +222,8 @@ function expandLineUp(lineIndex: number) {
     newData.push(l);
   }
   newData.push(...data.slice(lineIndex));
-  console.log($state.snapshot(newData));
   data = newData;
+  check();
   updateCounter++;
 }
 
@@ -235,11 +237,13 @@ function resetLineSpan(lineIndex: number) {
       rowIndex: i,
       span: 1,
       type: "use",
+      style: Source.subs.defaultStyle,
       styleName: ""
     });
 
   data.splice(lineIndex + 1, 0, ...newData);
   line.span = 1;
+  check();
   updateCounter++;
 }
 
@@ -251,7 +255,7 @@ type LineSplitData = {
   // preserve data for UI
   type: 'useNew' | 'use',
   styleName: string,
-  style?: SubtitleStyle,
+  style: SubtitleStyle,
 };
 
 let selection: SubtitleEntry[] = [];

@@ -175,14 +175,16 @@ export class Subtitles {
             ok = false;
         }
         const map = new Map<SubtitleStyle, number>();
-        for (const ent of this.entries) {
+        this.entries.forEach((ent, i) => {
+            if (ent.texts.size == 0)
+                Debug.warn(`debugTestIntegrity: entry with no channels at ${i}`);
             for (const [style, _] of ent.texts) {
                 if (!this.styles.includes(style)) {
                     map.set(style, (map.get(style) ?? 0) + 1);
                     ok = false;
                 }
             }
-        }
+        });
         for (const [style, n] of map) {
             Debug.warn(`debugTestIntegrity: entry style not found in styles: ${style.name}${n > 1 ? ` [${n} times]` : ''}`);
             console.log(style);

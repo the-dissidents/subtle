@@ -49,7 +49,7 @@ Metrics['selected'] = new MetricDefinition('boolean', 'editing',
 
 function updateFocusedStyle() {
     const focused = Editing.getFocusedEntry();
-    Debug.assert(focused instanceof SubtitleEntry);
+    Debug.assert(focused instanceof SubtitleEntry, 'invalid focus');
     const style = get(Editing.focused.style);
     if (style === null
         || !Editing.styleToEditor.has(style)
@@ -58,7 +58,7 @@ function updateFocusedStyle() {
         const first = focused.texts.has(Source.subs.defaultStyle) 
             ? Source.subs.defaultStyle
             : Source.subs.styles.find((x) => focused.texts.has(x));
-        Debug.assert(first !== undefined);
+        Debug.assert(first !== undefined, 'invalid style');
         Editing.focused.style.set(first);
         Debug.debug('changed focused style to', first.name);
         return first;
@@ -182,7 +182,7 @@ export const Editing = {
 
     insertChannel(style: SubtitleStyle) {
         const focused = this.getFocusedEntry();
-        Debug.assert(focused instanceof SubtitleEntry);
+        Debug.assert(focused instanceof SubtitleEntry, 'invalid focus');
         if (focused.texts.has(style)) return;
         focused.texts.set(style, '');
         this.focused.style.set(style);
@@ -192,9 +192,9 @@ export const Editing = {
 
     deleteChannel(style: SubtitleStyle) {
         const focused = this.getFocusedEntry();
-        Debug.assert(focused instanceof SubtitleEntry);
+        Debug.assert(focused instanceof SubtitleEntry, 'invalid focus');
         if (!focused.texts.has(style)) return Debug.early('no such channel to delete');
-        Debug.assert(focused.texts.size > 1);
+        Debug.assert(focused.texts.size > 1, '> 1 channel expected');
         focused.texts.delete(style);
         updateFocusedStyle();
         Source.markChanged(ChangeType.InPlace, $_('c.delete-channel'));
@@ -202,7 +202,7 @@ export const Editing = {
 
     submitFocusedEntry() {
         const focused = this.getFocusedEntry();
-        Debug.assert(focused instanceof SubtitleEntry, 'focused is not an entry');
+        Debug.assert(focused instanceof SubtitleEntry, 'invalid focus');
         if (!this.editChanged) return;
 
         const style = get(this.focused.style);
