@@ -27,7 +27,8 @@ export default defineConfig(
         		"destructuredArrayIgnorePattern": "^_",
 				"varsIgnorePattern": "^_",
 			}],
-			"svelte/prefer-svelte-reactivity": 'off'
+			"svelte/prefer-svelte-reactivity": 'off',
+			"svelte/require-each-key": 'off'
 		}
 	},
 	{

@@ -437,7 +437,7 @@ table.config td:first-child {
     background-color: var(--uchu-yin-1);
     color: var(--uchu-yin-6);
   }
-  table.data tr.focused {
+  table.data .focused {
     background-color: var(--uchu-gray-1);
   }
 }
@@ -447,7 +447,7 @@ table.config td:first-child {
     background-color: var(--uchu-yin-5);
     color: var(--uchu-gray-1);
   }
-  table.data tr.focused {
+  table.data .focused {
     background-color: var(--uchu-yin-6);
   }
 }
