@@ -301,8 +301,7 @@ let updateCounter = $state(0);
     </thead>
     <tbody>
     {#key updateCounter}
-    {@const usagesOrdered = reversed ? usages.toReversed() : usages}
-    {#each usagesOrdered as usage, i}
+    {#each usages as usage, i}
       {@const lineIndex = data.findIndex((x) => x.rowIndex == i)}
       {@const line = lineIndex < 0 ? undefined : data.at(lineIndex)}
 
@@ -311,7 +310,7 @@ let updateCounter = $state(0);
             makePreview();
           }}>
         <td class={{right: true, focused: selectedRow == i}}>
-          {reversed ? usagesOrdered.length - i : i + 1}
+          {i + 1}
         </td>
         <td class={{focused: selectedRow == i}}>
           {usage}

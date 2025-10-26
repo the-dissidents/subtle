@@ -1,6 +1,6 @@
 [package]
 name = "subtle-subtitles"
-version = "0.6.0-a0"
+version = "0.6.0-a1"
 description = "Cross-platform subtitle editor"
 authors = ["the_dissidents"]
 edition = "2024"
@@ -42,7 +42,7 @@ enum_dispatch = "0.3.13"
 ts-rs = "11.1.0"
 
 [target.'cfg(windows)'.dependencies]
-ffmpeg-sys-next = { version = "7.1.0", features = ["build-lib-d3d11va"] }
+ffmpeg-sys-next = { version = "7.1.0", features = [] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 ffmpeg-sys-next = { version = "7.1.0", features = [] }

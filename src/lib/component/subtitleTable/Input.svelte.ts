@@ -48,7 +48,7 @@ export class TableInput {
             const posNew = layout.lineMap.get(ent);
             const posOld = layout.lineMap.get(old);
             if (posNew === undefined || posOld === undefined) {
-                Debug.warn('?!row', ent, old);
+                // Debug.warn('?!row', ent, old);
                 return;
             }
             const sy = (posNew.line - posOld.line) * layout.lineHeight + this.manager.scroll[1];
@@ -63,7 +63,7 @@ export class TableInput {
             if (ent instanceof SubtitleEntry) {
                 const pos = layout.lineMap.get(ent);
                 if (pos === undefined) {
-                    Debug.warn('?!row', ent);
+                    // Debug.warn('?!row', ent);
                     return;
                 }
                 const sy = Math.max(
