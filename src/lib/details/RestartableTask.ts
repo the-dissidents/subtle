@@ -22,19 +22,23 @@ type State<Arg> = {
     type: 'idle'
 };
 
+export type RestartableTaskOptions<Arg extends unknown[]> = {
+    deduplicator?: (a: Arg, b: Arg) => boolean
+}
+
 export class RestartableTask<Arg extends unknown[]> {
     private state: State<Arg> = { type: 'idle' };
 
     constructor(
         private executor: (arg: Arg, token: CancellationToken) => Promise<void>,
-        private deduplicator: (a: Arg, b: Arg) => boolean = () => false
+        private options?: RestartableTaskOptions<Arg>
     ) {}
 
     async request(...arg: Arg) {
         const old = this.state.type == 'running' ? this.state.current.arg
                 : this.state.type == 'cancelling' ? this.state.new.arg
                 : undefined
-        if (old && this.deduplicator(old, arg)) return;
+        if (old && this.options?.deduplicator?.(old, arg)) return;
 
         return new Promise<void>((resolve, reject) => {
             const request: Request<Arg> = { 

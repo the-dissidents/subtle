@@ -430,18 +430,22 @@ export class MediaPlayer2 {
         MediaPlayerInterface2.onPlayStateChanged.dispatch();
     }
 
-    requestNextFrame() {
+    async requestNextFrame() {
         Debug.assert(!this.#closed, 'player closed');
         if (this.#playEOF) return;
-        // TODO!
-        // this.#seekToFrameTask.request(this.#timestamp + 1);
+        this.#seekTask.request(this.#timestamp + 0.001);
     }
 
-    requestPreviousFrame() {
+    async requestPreviousFrame() {
         Debug.assert(!this.#closed, 'player closed');
         if (this.#timestamp == 0) return;
         // TODO!
-        this.#seekTask.request(this.#timestamp - 1);
+        const result = await Playback.sampler?.getFrameBefore(this.#timestamp);
+        if (!result) {
+            Debug.warn('cannot find previous frame');
+            return;
+        }
+        this.#seekTask.request(result.time);
     }
 
     async seek(t: number, opt?: SetPositionOptions) {
@@ -514,7 +518,7 @@ export class MediaPlayer2 {
             if (!this.#populateBufferRunning) this.#populateBuffer();
             if (!this.#presenting) this.#present();
         }),
-        ([a, b], [c, d]) => a === c && b === d
+        { deduplicator: ([a, b], [c, d]) => a === c && b === d }
     )
 
     #resizeTask = 
@@ -534,7 +538,7 @@ export class MediaPlayer2 {
                 this.#seekTask.request(this.#timestamp, { force: true });
             })
         },
-        ([a, b], [c, d]) => a == c && b == d
+        { deduplicator: ([a, b], [c, d]) => a == c && b == d }
     );
 
     async setAudioStream(id: number) {

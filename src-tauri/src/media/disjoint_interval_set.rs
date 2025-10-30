@@ -1,23 +1,20 @@
 use std::collections::BTreeMap;
-use ordered_float::OrderedFloat;
 
-type Of64 = OrderedFloat<f64>;
-
-pub struct DisjointIntervalSet {
-    map: BTreeMap<Of64, Of64>
+pub struct DisjointIntervalSet<T> {
+    map: BTreeMap<T, T>
 }
 
-impl DisjointIntervalSet {
+impl<T> DisjointIntervalSet<T>
+where
+    T: Ord + Copy
+{
     pub fn new() -> Self {
         DisjointIntervalSet { map: BTreeMap::new() }
     }
 
-    pub fn add(&mut self, left: f64, right: f64) {
+    pub fn add(&mut self, mut left: T, mut right: T) {
         assert!(right >= left);
-        
-        let mut left = OrderedFloat(left);
-        let mut right = OrderedFloat(right);
-        let mut to_remove = Vec::<Of64>::new();
+        let mut to_remove = Vec::<T>::new();
         {
             let mut iter = self.map.range(..=right);
             while let Some((&a, &b)) = iter.next_back() {
@@ -38,14 +35,11 @@ impl DisjointIntervalSet {
     }
 
     #[expect(unused)]
-    pub fn contains(&self, point: f64) -> bool {
+    pub fn contains(&self, point: T) -> bool {
         self.contains_range(point, point)
     }
 
-    pub fn contains_range(&self, left: f64, right: f64) -> bool {
-        let left = OrderedFloat(left);
-        let right = OrderedFloat(right);
-
+    pub fn contains_range(&self, left: T, right: T) -> bool {
         let iter = self.map.range(..=right).next_back();
         if let Some((&_a, &b)) = iter {
             b >= left
@@ -54,10 +48,7 @@ impl DisjointIntervalSet {
         }
     }
 
-    pub fn covers_range(&self, left: f64, right: f64) -> bool {
-        let left = OrderedFloat(left);
-        let right = OrderedFloat(right);
-
+    pub fn covers_range(&self, left: T, right: T) -> bool {
         let iter = self.map.range(..=left).next_back();
         if let Some((&_a, &b)) = iter {
             b >= right

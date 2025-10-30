@@ -399,12 +399,24 @@ export class MMedia {
     async getKeyframeBefore(time: number) {
         Debug.assert(!this.#destroyed);
         let channel: Channel<MediaEvent> | undefined;
-        return await new Promise<MediaEventData['keyframeData'] | null>((resolve, reject) => {
+        return await new Promise<MediaEventData['frameQueryResult'] | null>((resolve, reject) => {
             channel = createChannel('getKeyframeBefore', {
-                keyframeData: (data) => resolve(data),
-                noKeyframeData: () => resolve(null)
+                frameQueryResult: (data) => resolve(data),
+                noResult: () => resolve(null)
             }, reject);
             invoke('get_keyframe_before', { id: this.id, channel, time });
+        });
+    }
+
+    async getFrameBefore(time: number) {
+        Debug.assert(!this.#destroyed);
+        let channel: Channel<MediaEvent> | undefined;
+        return await new Promise<MediaEventData['frameQueryResult'] | null>((resolve, reject) => {
+            channel = createChannel('getKeyframeBefore', {
+                frameQueryResult: (data) => resolve(data),
+                noResult: () => resolve(null)
+            }, reject);
+            invoke('get_frame_before', { id: this.id, channel, time });
         });
     }
 }

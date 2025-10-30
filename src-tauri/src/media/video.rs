@@ -5,10 +5,7 @@ use ffmpeg::{codec, decoder, error::EAGAIN, format, software::scaling, Rescale};
 use getset::{CopyGetters, Getters};
 use log::{debug, warn};
 
-use crate::media::{accel, demux, disjoint_interval_set::DisjointIntervalSet, frame, internal::{check, MediaError}, units::{self, Seconds}};
-
-use ordered_float::OrderedFloat;
-type Of64 = OrderedFloat<f64>;
+use crate::media::{accel, demux, disjoint_interval_set::DisjointIntervalSet, frame, internal::{MediaError, check}, units::{Seconds, Timestamp, Rational, DEFAULT_TIMEBASE}};
 
 #[derive(Getters, CopyGetters)]
 pub struct Decoder {
@@ -19,7 +16,7 @@ pub struct Decoder {
     stream_info: demux::StreamInfo,
 
     #[getset(get_copy = "pub")]
-    sample_aspect_ratio: units::Rational,
+    sample_aspect_ratio: Rational,
 
     #[getset(get_copy = "pub")]
     original_size: (u32, u32),
@@ -29,7 +26,7 @@ pub struct Decoder {
 
     /// will be inaccurate in case of VFR
     #[getset(get_copy = "pub")]
-    framerate: units::Rational,
+    framerate: Rational,
 }
 
 impl Decoder {
@@ -86,11 +83,11 @@ impl Decoder {
         let decoder = check!(decoder_ctx.video())?;            // avcodec_open2
 
         let sample_aspect_ratio = match decoder.aspect_ratio() {
-            units::Rational(0, _) => units::Rational(1, 1),
-            x => if f64::from(x) <= 0.0 { units::Rational(1, 1) } else { x  }
+            Rational(0, _) => Rational(1, 1),
+            x => if f64::from(x) <= 0.0 { Rational(1, 1) } else { x  }
         };
 
-        if sample_aspect_ratio != units::Rational(1, 1) {
+        if sample_aspect_ratio != Rational(1, 1) {
             debug!("video::Decoder::create: [{index}] note: video has an SAR of {sample_aspect_ratio}");
         }
 
@@ -154,7 +151,7 @@ impl Decoder {
             receive_frame_error => check!(receive_frame_error)?,
         }
 
-        let time = units::Timestamp(
+        let time = Timestamp(
             decoded
             .pts()
             // fall back to packet's DTS if no pts available (as in AVI)
@@ -247,7 +244,7 @@ impl Player {
                 format::Pixel::RGBA,
                 decoder.inner
                     .width()
-                    .rescale(units::Rational(1, 1), decoder.sample_aspect_ratio())
+                    .rescale(Rational(1, 1), decoder.sample_aspect_ratio())
                     .try_into()
                     .unwrap(),
                 h,
@@ -287,8 +284,9 @@ impl Player {
 }
 
 pub struct Sampler {
-    keyframes: BTreeMap<Of64, isize>,
-    known_range: DisjointIntervalSet,
+    frames: BTreeMap<Timestamp, isize>,
+    keyframes: BTreeMap<Timestamp, isize>,
+    known_range: DisjointIntervalSet<Timestamp>,
     data: Option<SamplerDeltaData>
 }
 
@@ -320,14 +318,21 @@ impl VideoSink for Sampler {
             });
         }
 
+        let timestamp = Timestamp::from_seconds(frame.meta.time, DEFAULT_TIMEBASE);
+
+        self.frames.insert(timestamp, frame.meta.byte_pos);
+
         let sd = self.data.as_mut().unwrap();
         if frame.decoded.is_key() {
             sd.keyframes.push((frame.meta.time, frame.meta.byte_pos));
-            self.keyframes.insert(OrderedFloat(frame.meta.time.0), frame.meta.byte_pos);
+            self.keyframes.insert(timestamp, frame.meta.byte_pos);
         }
         if frame.meta.time > sd.end_time {
             sd.end_time = frame.meta.time;
-            self.known_range.add(sd.start_time.0, sd.end_time.0);
+            self.known_range.add(
+                Timestamp::from_seconds(sd.start_time, DEFAULT_TIMEBASE), 
+                timestamp
+            );
         }
         Ok(())
     }
@@ -337,6 +342,7 @@ impl Sampler {
     #[allow(clippy::unnecessary_wraps)]
     pub fn create(_decoder: &Decoder) -> Result<Self, MediaError> {
         Ok(Self {
+            frames: BTreeMap::new(),
             keyframes: BTreeMap::new(),
             known_range: DisjointIntervalSet::new(),
             data: None
@@ -348,15 +354,24 @@ impl Sampler {
     }
 
     pub fn get_keyframe_before(&self, time: Seconds) -> Option<(Seconds, isize)> {
-        let time = OrderedFloat(time.0);
-        if let Some((&OrderedFloat(k), &pos)) = 
-            self.keyframes.range(..=time).next_back()
+        let timestamp = Timestamp::from_seconds(time, DEFAULT_TIMEBASE);
+        if let Some((&t, &pos)) = 
+            self.keyframes.range(..=timestamp).next_back()
+        && self.known_range.covers_range(t, timestamp)
         {
-            if self.known_range.covers_range(k, *time) {
-                Some((Seconds(k), pos))
-            } else {
-                None
-            }
+            Some((t.to_seconds(DEFAULT_TIMEBASE), pos))
+        } else {
+            None
+        }
+    }
+
+    pub fn get_frame_before(&self, time: Seconds) -> Option<(Seconds, isize)> {
+        let timestamp = Timestamp::from_seconds(time, DEFAULT_TIMEBASE);
+        if let Some((&t, &pos)) = 
+            self.frames.range(..timestamp).next_back()
+        && self.known_range.covers_range(t, timestamp)
+        {
+            Some((t.to_seconds(DEFAULT_TIMEBASE), pos))
         } else {
             None
         }

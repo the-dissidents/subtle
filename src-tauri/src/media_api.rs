@@ -72,12 +72,12 @@ pub enum MediaEvent<'a> {
     #[serde(rename_all = "camelCase")]
     FfmpegVersion { value: String },
     #[serde(rename_all = "camelCase")]
-    KeyframeData {
+    FrameQueryResult {
         time: units::Seconds,
         byte_pos: isize
     },
     #[serde(rename_all = "camelCase")]
-    NoKeyframeData {},
+    NoResult {},
     #[serde(rename_all = "camelCase")]
     SampleDone2 { 
         audio: Option<audio::SamplerDeltaData>,
@@ -616,9 +616,29 @@ pub fn get_keyframe_before(
         session.video() else { return send(&channel, MediaEvent::NoStream {}) };
 
     if let Some((time, byte_pos)) = s.get_keyframe_before(time) {
-        send(&channel, MediaEvent::KeyframeData { time, byte_pos });
+        send(&channel, MediaEvent::FrameQueryResult { time, byte_pos });
     } else {
-        send(&channel, MediaEvent::NoKeyframeData {  });
+        send(&channel, MediaEvent::NoResult {  });
+    }
+}
+
+
+#[tauri::command]
+pub fn get_frame_before(
+    id: i32, time: units::Seconds,
+    state: State<Arc<Mutex<PlaybackRegistry>>>,
+    channel: Channel<MediaEvent>
+) {
+    let ap = state.lock().unwrap();
+    let Some(session) = 
+        ap.table.get(&id) else { return send_invalid_id(&channel) };
+    let Some((_, VideoSinkKind::Sampler(s))) = 
+        session.video() else { return send(&channel, MediaEvent::NoStream {}) };
+
+    if let Some((time, byte_pos)) = s.get_frame_before(time) {
+        send(&channel, MediaEvent::FrameQueryResult { time, byte_pos });
+    } else {
+        send(&channel, MediaEvent::NoResult {  });
     }
 }
 

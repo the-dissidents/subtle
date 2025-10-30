@@ -5,7 +5,7 @@ import { Debug } from "../../Debug";
 import { AggregationTree } from "../../details/AggregationTree";
 import { Mutex } from "../../details/Mutex";
 
-class Keyframes {
+class Index {
     private set = new OrderedMap<number, number>();
 
     add(t: number, pos: number) {
@@ -32,7 +32,7 @@ export class MediaSampler2 {
     #eofTimestamp = -1;
 
     #intensity: AggregationTree<Float32Array>;
-    #keyframes: Keyframes;
+    #videoIndex: Index;
 
     onProgress?: () => void;
 
@@ -66,11 +66,15 @@ export class MediaSampler2 {
     }
 
     keyframeData(from: number, to: number) {
-        return this.#keyframes.query(from, to);
+        return this.#videoIndex.query(from, to);
     }
 
     async getKeyframeBefore(time: number) {
         return await this.media.getKeyframeBefore(time);
+    }
+
+    async getFrameBefore(time: number) {
+        return await this.media.getFrameBefore(time);
     }
 
     private constructor(
@@ -81,7 +85,7 @@ export class MediaSampler2 {
         Debug.assert(media.audio !== undefined);
         this.#intensity = new AggregationTree(Float32Array,
             Math.ceil(this.media.duration * this.resolution), Math.max);
-        this.#keyframes = new Keyframes();
+        this.#videoIndex = new Index();
     }
 
     static async open(media: MMedia, audio: number, resolution: number) {
@@ -164,7 +168,7 @@ export class MediaSampler2 {
                 }
                 if (result.video) {
                     for (const [time, pos] of result.video.keyframes)
-                        this.#keyframes.add(time, pos);
+                        this.#videoIndex.add(time, pos);
                 }
                 this.onProgress?.();
                 if (result.isEof) {

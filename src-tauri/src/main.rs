@@ -96,6 +96,7 @@ fn main() {
             media_api::get_frames_automatic,
             media_api::video_set_size,
             media_api::get_keyframe_before,
+            media_api::get_frame_before,
             media_api::test_performance,
             media_api::media_config,
             redirect_log::set_log_filter_level,

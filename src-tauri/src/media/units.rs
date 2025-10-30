@@ -13,7 +13,7 @@ impl Display for Seconds {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Timestamp(pub i64);
 
 impl Timestamp {
