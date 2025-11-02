@@ -176,7 +176,7 @@ appWindow.onCloseRequested(async (ev) => {
 appWindow.onDragDropEvent(async (ev) => {
   if (ev.payload.type == 'drop') {
     const path = ev.payload.paths.at(0);
-    if (!path) return Debug.early('no path in dropped payload');
+    if (!path) return Debug.early();
 
     if (MEDIA_EXTENSIONS.includes(path.split('.').at(-1)!)) {
       await Interface.openVideo(path);

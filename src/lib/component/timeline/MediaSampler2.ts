@@ -107,14 +107,14 @@ export class MediaSampler2 {
 
     async close() {
         if (this.media.isClosed)
-            return Debug.early('already closed');
+            return Debug.early();
         if (this.isSampling)
             this.tryCancelSampling();
         await this.#mutex.use(() => this.media.close());
     }
 
     tryCancelSampling() {
-        Debug.assert(this.#sampling, 'not sampling');
+        Debug.assert(this.#sampling);
         this.#cancelling = true;
     }
 
@@ -130,7 +130,7 @@ export class MediaSampler2 {
 
     async startSampling(from: number, to: number): Promise<void> {
         Debug.assert(!this.media.isClosed && this.media.audio !== undefined);
-        if (this.#sampling) return Debug.early('already sampling');
+        if (this.#sampling) return Debug.early();
 
         Debug.assert(to > from);
         if (from < this.startTime)

@@ -359,8 +359,8 @@ export class CanvasManager {
 
     #render() {
         this.#requestedRender = false;
-        if (!this.renderer) return Debug.early('no renderer');
-        if (this.#isRendering) return Debug.early('already rendering');
+        if (!this.renderer) return Debug.early();
+        if (this.#isRendering) return Debug.early();
         this.#isRendering = true;
 
         this.#cxt.resetTransform();

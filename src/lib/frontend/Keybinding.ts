@@ -169,7 +169,7 @@ export const KeybindingManager = {
 
     async init() {
         if (initialized)
-            return Debug.early('already initialized');
+            return Debug.early();
         initialized = true;
         await this.read();
         this.update();

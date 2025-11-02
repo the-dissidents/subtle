@@ -66,8 +66,8 @@ export class Audio {
     }
 
     async close() {
-        Debug.assert(!this.#closed, 'closed (closing)');
-        Debug.assert(!this.#working, 'working (closing)');
+        Debug.assert(!this.#closed);
+        Debug.assert(!this.#working);
         this.#closed = true;
         await this.ctx.close();
     }
@@ -104,13 +104,13 @@ export class Audio {
 
     async play() {
         if (this.#feedback.isPlaying)
-            return Debug.early('already playing');
+            return Debug.early();
         await this.#post({ type: 'play' });
     }
 
     async stop() {
         if (!this.#feedback.isPlaying)
-            return Debug.early('already stopped');
+            return Debug.early();
         await this.#post({ type: 'suspend' });
     }
 

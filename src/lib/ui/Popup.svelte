@@ -73,7 +73,7 @@ handler.openAt = (x, y, w, h) => {
 
 handler.close = () => {
   Debug.assert(tooltip !== undefined);
-  if (!isOpen) return Debug.early('popup already closed');
+  if (!isOpen) return Debug.early();
   tooltip.hidePopover();
 };
 

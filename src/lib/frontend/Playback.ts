@@ -77,7 +77,7 @@ export const Playback = {
 
     async load(rawurl: string, audio: number) {
         if (get(loadState) === 'loaded')
-            return Debug.early('already loaded');
+            return Debug.early();
 
         await Debug.debug('loadState -> loading');
         loadState.set('loading');
@@ -110,7 +110,7 @@ export const Playback = {
 
     async close(force = false) {
         if (!force && get(loadState) != 'loaded')
-            return Debug.early('not loaded');
+            return Debug.early();
         
         try {
             await this.onClose.dispatchAndAwaitAll()

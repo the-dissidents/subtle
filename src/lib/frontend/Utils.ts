@@ -30,7 +30,7 @@ export const Utils = {
     },
 
     moveSelectionContinuous(direction: number) {
-        if (this.isSelectionDisjunct()) return Debug.early('disjunct selection');
+        if (this.isSelectionDisjunct()) return Debug.early();
         const selection = Editing.getSelection();
         if (selection.length == 0 || direction == 0) return Debug.early();
 

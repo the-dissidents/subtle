@@ -55,7 +55,7 @@ async function contextMenu() {
           return;
         }
         let i = subtitles.styles.indexOf($style);
-        if (i < 0) return Debug.early('style not found');
+        if (i < 0) return Debug.early();
         subtitles.styles.splice(i, 1);
         Source.markChanged(ChangeType.StyleDefinitions, $_('c.delete-style'));
         onsubmit?.();

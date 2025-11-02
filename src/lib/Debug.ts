@@ -213,20 +213,26 @@ export const Debug: {
             await this.error(e);
         }
     },
-    assert(cond: boolean, what?: string): asserts cond {
+    assert(cond: boolean, file?: string, line?: number): asserts cond {
         if (!cond) {
-            const msg = 'assertion failed' + (what ? `: ${what}` : '');
-            this.error(msg);
+            const msg = 'assertion failed ' + (line ? `at line ${line}` : '(no location info)');
+            file ??= '?';
+            if (this.filterLevel >= LogLevelFilter.Error)
+                console.error(formatPrelude('ERROR', file), msg);
+            this.onError.dispatch(file, msg);
+            callLog(LogLevel.Error, msg, file);
+
             const error = new Error(msg);
             HasStacktrace.add(error);
             throw error;
         }
     },
-    early(reason?: string): void {
+    early(file?: string, func?: string, line?: number): void {
         (async () => {
-            const { file, func, trace } = await stacktrace();
-            callLog(LogLevel.Info, `<${func}> returned early` + (reason ? `: ${reason}` : ''), file);
-            callLog(LogLevel.Info, `!!!WEBVIEW_STACKTRACE\n` + trace);
+            func ??= 'unknown';
+            file ??= '?';
+            callLog(LogLevel.Info, `<${func}> returned early ` 
+                + (line ? `at line ${line}` : '(no location info)'), file);
         })();
     },
     never(x?: never): never {

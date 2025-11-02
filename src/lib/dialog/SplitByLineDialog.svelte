@@ -55,7 +55,7 @@ handler.showModal = async () => {
       if (data[dataIndex].rowIndex + data[dataIndex].span <= i)
         dataIndex++;
       const d = data[dataIndex];
-      Debug.assert(d !== undefined, 'split data not found');
+      Debug.assert(d !== undefined);
 
       let style: SubtitleStyle | undefined;
       switch (d.type) {

@@ -157,7 +157,7 @@ export const SubtitleUtil = {
 
         const styleMap = new Map<SubtitleStyle, SubtitleStyle>();
         const overrideStyle = options.overrideStyle ?? original.defaultStyle;
-        Debug.assert(original.styles.includes(overrideStyle), 'invalid overrideStyle');
+        Debug.assert(original.styles.includes(overrideStyle));
         const orginalStyleSerialized = original.styles.map((x) => JSON.stringify(x));
         const processStyle = (s: SubtitleStyle) => {
             if (styleMap.has(s)) return styleMap.get(s)!;

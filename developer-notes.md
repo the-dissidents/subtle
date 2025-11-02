@@ -17,7 +17,7 @@
 - 使用switch讨论枚举或union取值情况的时候一定加上`default`块，并在其中使用`Debug.never`。
 - 多使用`Debug.assert`和`Debug.early`。
   - 我们称下列情况为early return：一个函数被调用的时机不恰当，或者在不该调用的时候被调用了，导致什么也不需要做。一般来说，它不导致程序直接出现错误行为，但很可能意味着某些地方有潜在的逻辑问题。
-  - 建议在early return的时候写`return Debug.early('reason');`。
+  - 建议在early return的时候写`return Debug.early();`。
 
 ### 代码风格（Rust）
 
