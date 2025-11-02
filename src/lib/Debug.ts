@@ -106,8 +106,8 @@ export const Debug: {
     warn(...data: unknown[]): Promise<void>,
     error(...data: unknown[]): Promise<void>,
     forwardError(e: Error | unknown): Promise<void>,
-    assert(cond: boolean, what?: string): asserts cond,
-    early(reason?: string): void,
+    assert(cond: boolean, file?: string, line?: number): asserts cond,
+    early(file?: string, func?: string, line?: number): void,
     never(value?: never): never
 } = {
     onError: new EventHost<[origin: string, msg: string]>(),

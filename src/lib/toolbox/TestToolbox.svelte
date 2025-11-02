@@ -66,6 +66,10 @@ function testFuzzy(tok: Tokenizer) {
   }
   result = text;
 }
+
+function testAssertion() {
+  Debug.assert(false);
+}
 </script>
 
 <button
@@ -114,6 +118,20 @@ function testFuzzy(tok: Tokenizer) {
     throw new Error('test error');
   }}>
   create error
+</button>
+
+<button
+  onclick={() => {
+    Debug.assert(false);
+  }}>
+  create assertion failure 1
+</button>
+
+<button
+  onclick={() => {
+    testAssertion();
+  }}>
+  create assertion failure 2
 </button>
 
 <button
