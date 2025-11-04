@@ -118,13 +118,10 @@ export class MediaSampler2 {
         this.#cancelling = true;
     }
 
-    extendSampling(to: number) {
+    changeSamplingEnd(to: number) {
         Debug.assert(this.#sampling);
-        if (to > this.endTime)
-            to = this.endTime;
-        if (this.#sampleEnd >= to) return;
-        Debug.assert(this.#sampleProgress < to);
-        Debug.trace('extending sampling to', to);
+        if (this.sampleProgress >= to)
+            this.#cancelling = true;
         this.#sampleEnd = to;
     }
 

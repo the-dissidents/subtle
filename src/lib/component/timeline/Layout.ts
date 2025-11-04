@@ -330,12 +330,10 @@ export class TimelineLayout {
     const right = this.offset + this.width / this.scale;
     const preload = Math.min(PRELOAD_MARGIN, (right - left) * PRELOAD_MARGIN_FACTOR);
     if (s.isSampling) {
-      if (s.sampleProgress > s.sampleStart
-       && (s.sampleProgress + preload < left 
-        || s.sampleProgress > right + preload))
-      {
+      if (s.sampleProgress + preload < left)
         s.tryCancelSampling();
-      } // or, wait for sampling to finish
+      else
+        s.changeSamplingEnd(Math.min(s.sampleEnd, right + preload))
       return;
     }
   
@@ -343,7 +341,8 @@ export class TimelineLayout {
     const i = Math.max(0, Math.floor((left - s.startTime) * resolution)),
           i_end = Math.ceil((right - s.startTime) * resolution);
     const subarray = s.intensityData(1, i, i_end);
-    const gapStart = subarray.findIndex((x) => isNaN(x));
+    const gapStart = subarray.findIndex((x, i) => 
+      i < subarray.length - 1 && isNaN(x) && isNaN(subarray[i+1]));
 
     if (!Playback.isPlaying || gapStart >= 0)
       this.requestedSampler = false;

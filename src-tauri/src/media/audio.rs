@@ -79,11 +79,16 @@ impl Decoder {
         match self.inner.send_packet(packet) {
             Ok(()) => Ok(()),
             Err(ffmpeg_next::Error::Other { errno: EAGAIN }) => {
-                warn!("audio::Decoder::feed: some frames haven't been read! flushing.");
+                warn!("audio::Decoder::feed: some frames haven't been read; flushing and resending");
                 self.flush();
                 // resend packet
                 self.feed(packet)
-            }
+            },
+            Err(ffmpeg_next::Error::InvalidData) => {
+                warn!("audio::Decoder::feed: met invalid data; flushing");
+                self.flush();
+                Ok(())
+            },
             send_packet_error => check!(send_packet_error),
         }
     }

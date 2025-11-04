@@ -252,6 +252,8 @@
     "navigation-keep-position": "保持新选择的字幕条属于同样屏幕位置",
     "preload-amount": "预加载量",
     "preload-amount-d": "视频和音频播放的预加载量，以秒为单位。设置过高可能导致大量内存消耗",
+    "preload-work-time": "预加载工作时间",
+    "preload-work-time-d": "后台确保每次工作至少这么长时间，来提高效率。如果卡顿可尝试减小。单位为毫秒",
     "resize-area-size": "边缘可拖动区域大小",
     "resize-area-size-d": "字幕块左侧和右侧可拖动调整区域的大小，以CSS像素为单位",
     "seam-area-size": "连接处可拖动区域大小",

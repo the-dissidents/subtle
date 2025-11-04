@@ -50,7 +50,7 @@ export class Audio {
         this.#worklet.connect(ctx.destination);
         this.#worklet.port.onmessage = (ev) => {
             if (Array.isArray(ev.data)) {
-                Debug.info.apply(console, ev.data);
+                // Debug.info.apply(console, ev.data);
             } else {
                 const feedback = ev.data as AudioFeedbackData;
                 if (this.#onAudioFeedback)

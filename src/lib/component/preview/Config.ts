@@ -14,6 +14,13 @@ export const MediaConfig = new PublicConfigGroup(
         bounds: [0.1, 10],
         default: 0.2
     },
+    preloadWorkTime: {
+        localizedName: () => $_('config.preload-work-time'),
+        type: 'integer',
+        description: () => $_('config.preload-work-time-d'),
+        bounds: [0, 15],
+        default: 5
+    },
     maxZoom: {
         localizedName: () => $_('config.maximum-zoom'),
         type: 'number',

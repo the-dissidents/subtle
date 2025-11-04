@@ -131,7 +131,12 @@ impl Decoder {
                 self.flush();
                 // resend packet
                 self.feed(packet)
-            }
+            },
+            Err(ffmpeg_next::Error::InvalidData) => {
+                warn!("video::Decoder::feed: met invalid data; flushing");
+                self.flush();
+                Ok(())
+            },
             send_packet_error => check!(send_packet_error),
         }
     }

@@ -252,6 +252,8 @@
     "navigation-keep-position": "keep entry at the same screen position",
     "preload-amount": "preload amount",
     "preload-amount-d": "Amount of preloading for video and audio playback, in seconds. A high value can lead to high memory consumption.",
+    "preload-work-time": "preload batch work time",
+    "preload-work-time-d": "Set the minimum time for the backend to work, to reduce IPC overhead. In milliseconds.",
     "resize-area-size": "draggable edge area size",
     "resize-area-size-d": "Size of the area around the left and right side of an entry in which you can drag to resize the entry, in CSS pixels.",
     "seam-area-size": "draggable seam area size",

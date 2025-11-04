@@ -7,6 +7,7 @@ use crate::media::internal::MediaError;
 use crate::media::video::{VideoSink, VideoSinkKind};
 use crate::media::{accel, audio, demux, frame, session, units, video};
 
+use log::warn;
 use num_traits::ToPrimitive;
 use serde::Serialize;
 use std::collections::VecDeque;
@@ -506,13 +507,19 @@ fn work(
 ) -> Result<bool, MediaError> {
     let start_time = Instant::now();
     let target_working_time = Duration::from_millis(target_working_time_ms);
+    let mut warned = false;
     loop {
         session.try_process()?;
-        if start_time.elapsed() >= target_working_time
-            && (session.audio().is_none_or(|(_, s)| !s.is_empty())
-            || session.video().is_none_or(|(_, s)| !s.is_empty()))
-        {
-            return Ok(true);
+        if start_time.elapsed() >= target_working_time {
+            if session.audio().is_none_or(|(_, s)| !s.is_empty())
+            || session.video().is_none_or(|(_, s)| !s.is_empty())
+            {
+                return Ok(true);
+            }
+            if !warned {
+                warn!("work: {target_working_time_ms}ms exceeded but got no frames");
+                warned = true;
+            }
         }
         if !session.try_feed()? {
             return Ok(false);

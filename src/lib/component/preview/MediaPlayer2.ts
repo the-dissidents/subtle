@@ -11,6 +11,7 @@ import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
 
 const DAMPING = 0.5;
+const FETCH_TIME_N = 30;
 
 export type SetPositionOptions = {
     imprecise?: boolean;
@@ -53,6 +54,7 @@ export class MediaPlayer2 {
 
     #diag = {
         latencySquared: 0,
+        fetchTimes: [] as number[]
     }
 
     get source() { return this.rawurl; }
@@ -256,7 +258,13 @@ export class MediaPlayer2 {
         }
 
         return await this.#mutex.use(async () => {
-            const frames = await this.media.decodeAutomatic(5);
+            const start = performance.now();
+            const targetTime = MediaConfig.data.preloadWorkTime;
+            const frames = await this.media.decodeAutomatic(targetTime);
+            const time = performance.now() - start;
+            this.#diag.fetchTimes.push(time);
+            if (this.#diag.fetchTimes.length > FETCH_TIME_N)
+                this.#diag.fetchTimes.shift();
             return await this.#receiveFrames(frames);
         }) ?? true;
     }
@@ -305,13 +313,14 @@ export class MediaPlayer2 {
             audioTime = this.audio.head.toFixed(3);
             latencyStr = latency.toFixed(1);
         } else {
-            audioTime = 'n/a';
-            latencyStr = 'n/a';
+            audioTime = 'n/a!';
+            latencyStr = 'n/a!';
         }
         
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = 'green';
         ctx.font = `${window.devicePixelRatio * 10}px Courier`;
         ctx.textBaseline = 'top';
+        ctx.textAlign = 'left'
 
         const x = dx;
         ctx.fillText(
@@ -335,6 +344,37 @@ export class MediaPlayer2 {
             ctx.fillText(`RES ${ow}x${oh} -> ${dw}x${dh}`, x, 140);
         else
             ctx.fillText(`RES ${ow}x${oh}`, x, 140);
+
+        const lo = Math.floor(MediaConfig.data.preloadWorkTime);
+        const hi = lo + 25;
+        const bins: number[] = [];
+        let _small = 0, big = 0;
+        this.#diag.fetchTimes.forEach((x) => {
+            const i = Math.floor(x);
+            if (i < lo) _small++;
+            else if (i > hi) big++;
+            else bins[i] = (bins[i] ?? 0) + 1;
+        });
+        const max = Math.max(...bins.filter(isFinite), big);
+
+        const W = 200, H = 100, 
+              X = w - W,
+              Y = h - 20;
+
+        for (let i = lo; i <= hi; i++) {
+            const value = H * (bins[i] ?? 0) / max;
+            const x = X + W / (hi - lo + 1) * (i - lo);
+            ctx.fillRect(x - 1, Y - value, 2, value);
+            ctx.fillRect(x - 2, Y - 2, 4, 4);
+        }
+        const value = H * big / max;
+        ctx.fillRect(X + W - 2, Y - value, 2, value);
+        
+
+        ctx.textAlign = 'right';
+        ctx.fillText(max.toFixed(0), X, Y - H);
+        ctx.fillText(lo.toFixed(0), X, Y);
+        ctx.fillText(hi.toFixed(0), w, Y);
     }
 
     async #presentNext() {
