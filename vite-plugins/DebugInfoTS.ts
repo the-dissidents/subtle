@@ -12,9 +12,9 @@ const plugin = declare(() => {
         const node = path.node;
         
         if (node.callee.type !== "MemberExpression"
-        || node.callee.object.type !== "Identifier"
-        || node.callee.object.name !== "Debug"
-        || node.callee.property.type !== "Identifier") return;
+         || node.callee.object.type !== "Identifier"
+         || node.callee.object.name !== "Debug"
+         || node.callee.property.type !== "Identifier") return;
 
         if (node.callee.property.name == 'assert') {
           if (node.arguments.length != 1) return;
