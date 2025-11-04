@@ -71,7 +71,7 @@ const UntimedCommands = {
     isApplicable: () => fuzzy.enabled,
     call: () => {
       if (fuzzy.currentEntry !== Editing.getFocusedEntry())
-        return Debug.early('current entry is not fuzzy.currentEntry');
+        return Debug.early();
 
       Debug.assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
       Editing.focused.style.set(fuzzy.useStyle);
@@ -306,7 +306,7 @@ function clear() {
     <button disabled={!($focusedEntry instanceof SubtitleEntry)}
       onclick={async () => {
         if (!($focusedEntry instanceof SubtitleEntry))
-          return Debug.early('failed to fill in this line');
+          return Debug.early();
         if (await fillIn([$focusedEntry]))
           Editing.offsetFocus(1, SelectMode.Single);
       }}

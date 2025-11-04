@@ -98,12 +98,12 @@ export class MediaPlayer2 {
     }
 
     #updateOutputSize() {
-        Debug.assert(!this.#closed && this.media.video !== undefined, 'no video or closed');
+        Debug.assert(!this.#closed && this.media.video !== undefined);
 
         const [w, h] = this.manager.physicalSize;
         const width = this.media.video.size[0] * this.media.video.sampleAspectRatio;
         const height = this.media.video.size[1];
-        Debug.assert(height !== 0, 'height is zero');
+        Debug.assert(height !== 0);
         const ratio = width / height;
 
         let oh: number, ow: number;
@@ -167,7 +167,7 @@ export class MediaPlayer2 {
 
     // Must be called while locked
     async #clearCache() {
-        Debug.assert(!this.#closed, 'player closed');
+        Debug.assert(!this.#closed);
         this.#preloadEOF = false;
         this.#playEOF = false;
         this.#videoBuffer = [];
@@ -231,7 +231,7 @@ export class MediaPlayer2 {
             this.#preloadEOF = true;
             return false;
         }
-        Debug.assert(!this.#preloadEOF, 'receiveFrames called at EOF');
+        Debug.assert(!this.#preloadEOF);
         for (const frame of result.audio)
             await this.#receiveAudioFrame(frame);
         for (const frame of result.video)
@@ -263,7 +263,7 @@ export class MediaPlayer2 {
 
     #populateBufferRunning = false;
     async #populateBuffer() {
-        Debug.assert(!this.#populateBufferRunning, 'already populating buffer');
+        Debug.assert(!this.#populateBufferRunning);
         this.#populateBufferRunning = true;
         while (await this.#doDecode())
             await Basic.wait(0);
@@ -344,7 +344,7 @@ export class MediaPlayer2 {
         if (!this.#playing) {
             let frame = this.#videoBuffer.at(0);
             if (this.#playEOF) {
-                Debug.assert(this.#lastFrame !== undefined, 'no lastFrame');
+                Debug.assert(this.#lastFrame !== undefined);
                 frame = this.#lastFrame;
             }
             // if no frames in buffer, wait for it to get populated
@@ -395,7 +395,7 @@ export class MediaPlayer2 {
 
     #presenting = false;
     async #present() {
-        Debug.assert(!this.#presenting, 'already presenting');
+        Debug.assert(!this.#presenting);
         this.#presenting = true;
         while (true) {
             const delay = await this.#presentNext();
@@ -431,13 +431,13 @@ export class MediaPlayer2 {
     }
 
     async requestNextFrame() {
-        Debug.assert(!this.#closed, 'player closed');
+        Debug.assert(!this.#closed);
         if (this.#playEOF) return;
         this.#seekTask.request(this.#timestamp + 0.001);
     }
 
     async requestPreviousFrame() {
-        Debug.assert(!this.#closed, 'player closed');
+        Debug.assert(!this.#closed);
         if (this.#timestamp == 0) return;
         // TODO!
         const result = await Playback.sampler?.getFrameBefore(this.#timestamp);
@@ -542,7 +542,7 @@ export class MediaPlayer2 {
     );
 
     async setAudioStream(id: number) {
-        Debug.assert(!this.#closed, 'player closed');
+        Debug.assert(!this.#closed);
         if (id == this.media.audio!.index) return;
         if (this.#playing) await this.stop();
 

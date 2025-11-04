@@ -36,7 +36,7 @@ const groupedMetrics = $derived(
 const autoWidth: Action<HTMLSelectElement> = (elem) => {
   function updateSelectWidth() {
     const checked = elem.querySelector('option:checked');
-    if (checked === null) return Debug.early('checked is null');
+    if (checked === null) return Debug.early();
     const text = (<HTMLElement>checked).innerText;
     const { fontWeight, fontSize, fontFamily } = window.getComputedStyle(elem);
 

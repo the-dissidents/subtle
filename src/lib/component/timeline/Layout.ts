@@ -82,7 +82,7 @@ export class TimelineLayout {
 
     Playback.onClose.bind(this, async () => {
       if (Playback.sampler == undefined)
-        return Debug.early('already closed');
+        return Debug.early();
       Debug.assert(this.#samplerMedia !== undefined && !this.#samplerMedia.isClosed);
       await Debug.info('closing timeline');
       await Playback.sampler.close();

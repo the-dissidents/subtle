@@ -14,7 +14,7 @@ export class AggregationTree<T extends TypedArray> {
         public readonly aggregator: (a: number, b: number) => number,
         private readonly initial = NaN
     ) {
-        Debug.assert(length > 1, 'invalid length');
+        Debug.assert(length > 1);
         this.#layers = Math.ceil(Math.log2(length)) + 1;
         this.#leafStart = 2 ** (this.#layers - 1) - 1;
         this.#data = new ctor(this.#leafStart + length);
@@ -44,10 +44,10 @@ export class AggregationTree<T extends TypedArray> {
     }
 
     fill(value: number, start: number, end: number) {
-        Debug.assert(end >= start, 'end >= start');
+        Debug.assert(end >= start);
         let first: number | null = this.#leafStart + start;
         let last: number | null = this.#leafStart + end;
-        Debug.assert(start >= 0 && last < this.#data.length, 'fill: start/end out of bound');
+        Debug.assert(start >= 0 && last < this.#data.length);
         this.#data.fill(value, first, last);
 
         while (true) {
@@ -64,7 +64,7 @@ export class AggregationTree<T extends TypedArray> {
      */
     getLevel(resolution: number): Readonly<T> {
         const level = Math.log2(resolution);
-        Debug.assert(level % 1 == 0 && resolution <= this.length, 'invalid level');
+        Debug.assert(level % 1 == 0 && resolution <= this.length);
         const layer = this.#layers - level;
         return this.#data.subarray(2 ** (layer - 1) - 1, 2 ** layer - 1) as T;
     }

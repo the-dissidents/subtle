@@ -108,7 +108,7 @@ export class UICommand<TState = void> {
 
     async menu() {
         if (!this.isApplicable)
-            return Debug.early('command not applicable');
+            return Debug.early();
 
         const opt = commandOptionToMenu(this.options, this, []);
         if ('items' in opt) {
@@ -125,7 +125,7 @@ export class UICommand<TState = void> {
 
     async #runCommand(item: CommandOptions<TState>) {
         if (!this.isApplicable)
-            return Debug.early('command not applicable');
+            return Debug.early();
         if ('items' in item) {
             const items = unwrap(item.items);
             const n = await overlayMenu(

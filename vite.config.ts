@@ -1,12 +1,17 @@
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { visualizer } from "rollup-plugin-visualizer";
+import inspect from 'vite-plugin-inspect'
+import debugInfoSvelte from './vite-plugins/DebugInfoSvelte';
+import debugInfoTS from './vite-plugins/DebugInfoTS';
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [
-    // nodePolyfills({include: ['buffer', 'stream', 'util']}),
+    debugInfoSvelte(),
+    debugInfoTS(),
     svelte(),
+    inspect(),
     visualizer({
       template: 'treemap',
       gzipSize: true,

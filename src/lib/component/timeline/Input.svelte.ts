@@ -874,12 +874,12 @@ export class TimelineInput {
   };
 
   #onDragEnd(offsetX: number, offsetY: number, ev: MouseEvent) {
-    if (!this.currentAction) return Debug.early('no action for onDragEnd');
+    if (!this.currentAction) return Debug.early();
     this.currentAction.onDragEnd(offsetX, offsetX, ev);
   }
 
   #onDragInterrupted() {
-    if (!this.currentAction) return Debug.early('no action for onDragInterrupted');
+    if (!this.currentAction) return Debug.early();
     this.currentAction.onDragInterrupted();
   }
 }
