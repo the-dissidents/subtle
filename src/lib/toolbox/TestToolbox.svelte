@@ -13,7 +13,8 @@ import { Source, SourceCommands } from '../frontend/Source';
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
-    import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy2";
+import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy2";
+import { invoke } from "@tauri-apps/api/core";
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -139,6 +140,13 @@ function testAssertion() {
     throw new Error('test rejection');
   }}>
   create rejection
+</button>
+
+<button
+  onclick={async () => {
+    invoke('make_panic');
+  }}>
+  create panic
 </button>
 
 <button

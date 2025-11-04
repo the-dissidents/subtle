@@ -9,20 +9,31 @@ mod media;
 mod media_api;
 mod redirect_log;
 
+use std::panic;
 use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
 use tauri::Manager;
-use tauri::State;
 use tauri_plugin_log::TimezoneStrategy;
-
-struct SetupState {
-    frontend_task: bool,
-    backend_task: bool,
-}
 
 fn main() {
     ffmpeg::init().unwrap();
     redirect_log::init_ffmpeg_logging();
+
+    panic::set_hook(Box::new(|info| {
+        let message = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            (*s).to_string()
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "<no message>".to_string()
+        };
+        let location = if let Some(loc) = info.location() {
+            format!("{loc}")
+        } else {
+            "unknown location".to_string()
+        };
+        log::error!("!! FATAL !! backend panicked ({message}) at {location}");
+    }));
 
     let time_format = time::format_description::parse(
         "[year]-[month]-[day]@[hour]:[minute]:[second].[subsecond digits:3]",
@@ -72,13 +83,8 @@ fn main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
-        .manage(Mutex::new(SetupState {
-            frontend_task: false,
-            backend_task: true,
-        }))
         .manage(Arc::new(Mutex::new(media_api::PlaybackRegistry::new())))
         .invoke_handler(tauri::generate_handler![
-            init_complete,
             media_api::media_version,
             media_api::media_status,
             media_api::open_media,
@@ -103,6 +109,7 @@ fn main() {
             encoding::decode_file_as,
             encoding::decode_or_detect_file,
             open_devtools,
+            make_panic,
         ])
         .run(ctx)
         .expect("error while running tauri application");
@@ -114,29 +121,8 @@ fn open_devtools(app: AppHandle) {
     app.get_webview_window("main").unwrap().open_devtools();
 }
 
+
 #[tauri::command]
-async fn init_complete(
-    app: AppHandle,
-    state: State<'_, Mutex<SetupState>>,
-    task: String,
-) -> Result<(), ()> {
-    // Lock the state without write access
-    let mut state_lock = state.lock().unwrap();
-    match task.as_str() {
-        "frontend" => state_lock.frontend_task = true,
-        "backend" => state_lock.backend_task = true,
-        _ => panic!("invalid task completed!"),
-    }
-    // Check if both tasks are completed
-    if state_lock.backend_task && state_lock.frontend_task {
-        // Setup is complete, we can close the splashscreen
-        // and unhide the main window!
-        let Some(splash_window) = app.get_webview_window("splashscreen") else {
-            return Ok(());
-        };
-        let main_window = app.get_webview_window("main").unwrap();
-        splash_window.close().unwrap();
-        main_window.show().unwrap();
-    }
-    Ok(())
+fn make_panic() {
+    panic!("`make_panic` called");
 }
