@@ -91,8 +91,6 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     ) {
         if (!this.#playing) return true;
 
-        this.#postFeedback('playing');
-
         try {
             const output = outputs[0];
             let newBuffer = [...this.#buffer];
@@ -115,6 +113,8 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                     } else {
                         // this buffer entry is used up
                         newBuffer.shift();
+                        this.#postFeedback('playing');
+
                         newCurrentPosition = 0;
                         if (end == content.length)
                             break;

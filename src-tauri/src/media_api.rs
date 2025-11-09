@@ -550,7 +550,7 @@ fn send_frames(session: &mut session::Session) -> tauri::ipc::Response {
 /**
  * frame := [
  *  time        : [f64]
- *  pktpos      : [i32]
+ *  pktpos      : [i64]
  *  stride      : [u32]
  *  length      : [u32]
  *  rgba data   : \[[u8]]
@@ -571,7 +571,7 @@ pub fn pack_video_frames(frames: &VecDeque<frame::Video>, buf: &mut Vec<u8>) {
         let data = to_byte_slice(frame.decoded.plane(0));
 
         buf.extend(time.to_le_bytes().iter());
-        buf.extend(i32::try_from(frame.meta.pkt_pos).unwrap().to_le_bytes().iter());
+        buf.extend(frame.meta.pkt_pos.to_le_bytes().iter());
         buf.extend(u32::try_from(frame.decoded.stride(0) / 4).unwrap().to_le_bytes().iter());
         buf.extend(u32::try_from(data.len()).unwrap().to_le_bytes().iter());
         buf.extend_from_slice(data);
@@ -581,7 +581,7 @@ pub fn pack_video_frames(frames: &VecDeque<frame::Video>, buf: &mut Vec<u8>) {
 /**
  * frame: [
  *  time        : [f64]
- *  pktpos      : [i32]
+ *  pktpos      : [i64]
  *  length      : [u32]
  *  sample data : [f32]
  * ]
@@ -604,7 +604,7 @@ pub fn pack_audio_frames(frames: &VecDeque<frame::Audio>, buf: &mut Vec<u8>) {
         let data: &[f32] = frame.decoded.plane(0);
 
         buf.extend(time.to_le_bytes().iter());
-        buf.extend(i32::try_from(frame.meta.pkt_pos).unwrap().to_le_bytes().iter());
+        buf.extend(frame.meta.pkt_pos.to_le_bytes().iter());
         buf.extend(i32::try_from(data.len()).unwrap().to_le_bytes().iter());
         buf.extend_from_slice(to_byte_slice(data));
     };

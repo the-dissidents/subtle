@@ -1,5 +1,6 @@
 import type { AudioFrameData } from '../../API';
 import { Debug } from '../../Debug';
+import { Mutex } from '../../details/Mutex';
 import type { AudioFeedbackData, AudioInputData } from './worker/DecodedAudioLoader';
 import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 
@@ -8,8 +9,8 @@ const VOLUME_POWER = 3;
 export class Audio {
     #onAudioFeedback?: (data: AudioFeedbackData) => void;
     #closed = false;
-    #working: string | null = null;
     #worklet: AudioWorkletNode;
+    #mutex = new Mutex(1000, 'audio');
     #volume = 1;
 
     #feedback: AudioFeedbackData = {
@@ -67,27 +68,23 @@ export class Audio {
 
     async close() {
         Debug.assert(!this.#closed);
-        Debug.assert(!this.#working);
+        await this.#mutex.acquire();
         this.#closed = true;
         await this.ctx.close();
     }
 
     async #post(msg: AudioInputData) {
-        Debug.assert(!this.#closed, `closed (posting ${msg.type})`);
-        Debug.assert(!this.#working, `working ${this.#working} (posting ${msg.type})`);
-        this.#working = msg.type;
-        return await new Promise<void>((resolve, reject) => {
+        Debug.assert(!this.#closed);
+        await this.#mutex.use(() => new Promise<void>((resolve, reject) => {
             setTimeout(() => {
-                this.#working = null;
                 reject(new Error(`postAudioMessage: timed out (posting ${msg.type})`));
             }, 1000);
             this.#onAudioFeedback = (data) => {
-                this.#working = null;
                 this.#feedback = data;
                 resolve();
             };
             this.#worklet.port.postMessage(msg);
-        });
+        }));
     }
 
     async clearBuffer() {

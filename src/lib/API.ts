@@ -133,7 +133,7 @@ export class MMedia {
 
     #readAudioFrame(view: BinaryReader<ArrayBuffer>): AudioFrameData {
         const time = view.readF64();
-        const pktpos = view.readI32();
+        const pktpos = view.readI64();
         const length = view.readU32();
         const content = view.readF32Array(length);
         return { pktpos, time, length, content };
@@ -141,7 +141,7 @@ export class MMedia {
 
     #readVideoFrame(view: BinaryReader<ArrayBuffer>): VideoFrameData {
         const time = view.readF64();
-        const pktpos = view.readI32();
+        const pktpos = view.readI64();
         const stride = view.readU32();
         const length = view.readU32();
         const content = view.readU8ClampedArray(length);

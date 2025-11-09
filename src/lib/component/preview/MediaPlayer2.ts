@@ -479,7 +479,6 @@ export class MediaPlayer2 {
     async requestPreviousFrame() {
         Debug.assert(!this.#closed);
         if (this.#timestamp == 0) return;
-        // TODO!
         const result = await Playback.sampler?.getFrameBefore(this.#timestamp);
         if (!result) {
             Debug.warn('cannot find previous frame');

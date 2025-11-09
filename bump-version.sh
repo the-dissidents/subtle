@@ -37,9 +37,6 @@ increment_prerelease() {
 # Get the directory of the script
 script_dir=$(dirname "$(readlink -f "$0")")
 
-# Escape spaces in the script directory path for sed
-escaped_script_dir=$(echo "$script_dir" | sed 's/ /\\ /g')
-
 # Parse command line arguments
 if [ "$1" = "--prerelease" ] || [ "$1" = "-p" ]; then
   # Increment pre-release version
@@ -72,22 +69,20 @@ else
   echo "Setting version to: $new_version"
 fi
 
+SED_INPLACE="sed -i"
+
 # Detect if we're on macOS (BSD sed) or GNU sed
 if sed --version >/dev/null 2>&1; then
-  # GNU sed (Linux/MSYS2)
-  SED_INPLACE="sed -i"
+  # GNU sed uses -i without an argument
+  $SED_INPLACE "s/  \"version\": *\"[^\"]*\",/  \"version\": \"$new_version\",/" "$script_dir/src-tauri/tauri.conf.json"
+  $SED_INPLACE "s/  \"version\": *\"[^\"]*\",/  \"version\": \"$new_version\",/" "$script_dir/package.json"
+  $SED_INPLACE "s/^version = \"[^\"]*\"/version = \"$new_version\"/" "$script_dir/src-tauri/Cargo.toml"
 else
-  # BSD sed (macOS)
-  SED_INPLACE="sed -i ''"
+  # BSD sed requires an argument for -i. We pass '' (an empty string)
+  # to signify *no backup*.
+  $SED_INPLACE '' "s/  \"version\": *\"[^\"]*\",/  \"version\": \"$new_version\",/" "$script_dir/src-tauri/tauri.conf.json"
+  $SED_INPLACE '' "s/  \"version\": *\"[^\"]*\",/  \"version\": \"$new_version\",/" "$script_dir/package.json"
+  $SED_INPLACE '' "s/^version = \"[^\"]*\"/version = \"$new_version\"/" "$script_dir/src-tauri/Cargo.toml"
 fi
 
-# Update src-tauri/tauri.conf.json
-$SED_INPLACE "s/  \"version\": *\"[^\"]*\",/  \"version\": \"$new_version\",/" "$escaped_script_dir/src-tauri/tauri.conf.json"
-
-# Update package.json
-$SED_INPLACE "s/  \"version\": *\"[^\"]*\",/  \"version\": \"$new_version\",/" "$escaped_script_dir/package.json"
-
-# Update src-tauri/Cargo.toml
-$SED_INPLACE "s/^version = \"[^\"]*\"/version = \"$new_version\"/" "$escaped_script_dir/src-tauri/Cargo.toml"
-
-echo "Version updated successfully to $new_version!"
+echo "Version updated successfully to $new_version"

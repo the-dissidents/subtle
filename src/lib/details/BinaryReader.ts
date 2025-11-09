@@ -23,6 +23,12 @@ export class BinaryReader<T extends ArrayBufferLike = ArrayBufferLike> {
         return result;
     }
 
+    readI64() {
+        const result = this.data.getBigInt64(this.i, true);
+        this.i += 8;
+        return Number(result);
+    }
+
     readF64() {
         const result = this.data.getFloat64(this.i, true);
         this.i += 8;

@@ -46,15 +46,17 @@ impl Decoder {
 
         // create decoder
         let mut decoder_ctx = codec::Context::new_with_codec(codec).decoder();
+        let thread_count = num_cpus::get().min(16);
 
         decoder_ctx.set_threading(codec::threading::Config { 
             kind: codec::threading::Type::Frame, 
-            count: num_cpus::get()
+            count: thread_count
         });
 
         debug!(
-            "video::Decoder::create: codec = {:?}, using {} threads", 
+            "video::Decoder::create: codec = {:?}, using {} threads (num_cpus={})", 
             decoder_ctx.codec().map(|x| x.id()),
+            thread_count,
             num_cpus::get()
         );
 
