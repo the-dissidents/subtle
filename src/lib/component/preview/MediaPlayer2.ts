@@ -100,7 +100,8 @@ export class MediaPlayer2 {
     }
 
     #updateOutputSize() {
-        Debug.assert(!this.#closed && this.media.video !== undefined);
+        Debug.assert(!this.#closed);
+        Debug.assert(this.media.video !== undefined);
 
         const [w, h] = this.manager.physicalSize;
         const width = this.media.video.size[0] * this.media.video.sampleAspectRatio;
@@ -150,6 +151,8 @@ export class MediaPlayer2 {
     }
 
     async close() {
+        EventHost.unbind(this);
+        
         await this.#mutex.use(async () => {
             if (this.#closed) return;
             this.#closed = true;
