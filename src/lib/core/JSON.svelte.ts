@@ -145,8 +145,6 @@ export class JSONParser implements SubtitleParser {
                 (Metrics[x].context == 'channel' || Metrics[x].context == 'style'));
 
         const styleMap = new Map(this.#subs.styles.map((x) => [x.name, x]));
-        Debug.trace([...styleMap.keys()]);
-        Debug.trace(sv);
         if (sv.timelineExcludeStyles.some((x) => !styleMap.has(x)))
             throw new DeserializationError('invalid item in timelineExcludeStyles');
         this.#subs.view.timelineExcludeStyles = 
