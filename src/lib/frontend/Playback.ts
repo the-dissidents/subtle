@@ -83,7 +83,8 @@ export const Playback = {
         loadState.set('loading');
         try {
             await this.onLoad.dispatchAndAwaitAll(rawurl, audio);
-            Debug.assert(this.player !== null);
+            if (this.player === null)
+                throw new Error('Playback.player is unexpectedly null');
         } catch (err) {
             await Debug.forwardError(err);
             await Debug.info('An error occurred when trying to load media. We now attempt to close it.');
@@ -189,7 +190,7 @@ export const PlaybackCommands = {
         emptyText: () => $_('msg.no-available-item')
     }),
     togglePlay: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['Space'], ['Table', 'Timeline']),
+        [ CommandBinding.from(['Space'], ['Table', 'Timeline', 'Preview']),
           CommandBinding.from(['Alt+Space']), ],
     {
         name: () => $_('action.toggle-play'),
@@ -199,7 +200,7 @@ export const PlaybackCommands = {
         }
     }),
     toggleInPoint: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['I'], ['Table', 'Timeline']),
+        [ CommandBinding.from(['I'], ['Table', 'Timeline', 'Preview']),
           CommandBinding.from(['Alt+I']), ],
     {
         name: () => $_('action.toggle-in-point'),
@@ -212,7 +213,7 @@ export const PlaybackCommands = {
         }
     }),
     toggleOutPoint: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['O'], ['Table', 'Timeline']),
+        [ CommandBinding.from(['O'], ['Table', 'Timeline', 'Preview']),
           CommandBinding.from(['Alt+O']), ],
     {
         name: () => $_('action.toggle-out-point'),
@@ -225,28 +226,28 @@ export const PlaybackCommands = {
         }
     }),
     previousFrame: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['CmdOrCtrl+ArrowLeft'], ['Timeline']),
+        [ CommandBinding.from(['CmdOrCtrl+ArrowLeft'], ['Timeline', 'Preview']),
           CommandBinding.from(['Alt+CmdOrCtrl+ArrowLeft']), ],
     {
         name: () => $_('action.previous-frame'),
         call: () => Playback.player?.requestPreviousFrame()
     }),
     nextFrame: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['CmdOrCtrl+ArrowRight'], ['Timeline']),
+        [ CommandBinding.from(['CmdOrCtrl+ArrowRight'], ['Timeline', 'Preview']),
           CommandBinding.from(['Alt+CmdOrCtrl+ArrowRight']), ],
     {
         name: () => $_('action.next-frame'),
         call: () => Playback.player?.requestNextFrame()
     }),
     jumpBackward: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['ArrowLeft'], ['Timeline']),
+        [ CommandBinding.from(['ArrowLeft'], ['Timeline', 'Preview']),
           CommandBinding.from(['Alt+ArrowLeft']), ],
     {
         name: () => $_('action.jump-backward'),
         call: () => Playback.setPosition(Playback.position - InputConfig.data.skipDuration)
     }),
     jumpForward: new UICommand(() => $_('category.media'),
-        [ CommandBinding.from(['ArrowRight'], ['Timeline']),
+        [ CommandBinding.from(['ArrowRight'], ['Timeline', 'Preview']),
           CommandBinding.from(['Alt+ArrowRight']), ],
     {
         name: () => $_('action.jump-forward'),

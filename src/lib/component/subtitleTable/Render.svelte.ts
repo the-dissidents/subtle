@@ -14,8 +14,8 @@ function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
 }
 
 const textColor           = $derived(theme.isDark ? '#fff'          : '#000');
-const gridColor           = $derived(theme.isDark ? '#444'          : '#bbb');
-const gridMajorColor      = $derived(theme.isDark ? '#666'          : '#999');
+const gridColor           = $derived(theme.isDark ? '#444'          : '#ddd');
+const gridMajorColor      = $derived(theme.isDark ? '#666'          : '#bbb');
 const headerBackground    = $derived(theme.isDark ? '#555'          : '#ddd');
 const overlapColor        = $derived(theme.isDark ? 'lightpink'       : 'crimson');
 const focusBackground     = $derived(theme.isDark ? 'darkslategray'   : 'lightblue');
@@ -61,20 +61,20 @@ export class TableRenderer {
             if (line * this.layout.lineHeight > sy + width) break;
 
             // background of selection
-            const y = line * this.layout.lineHeight + this.layout.headerHeight;
+            const baseY = line * this.layout.lineHeight + this.layout.headerHeight;
             const h = lh * this.layout.lineHeight;
             if (entry == focused) {
                 cxt.fillStyle = focusBackground;
-                cxt.fillRect(0, y+1, width + sx, h-2);
+                cxt.fillRect(0, baseY+1, width + sx, h-2);
             } else if (selection.has(entry)) {
                 cxt.fillStyle = selectedBackground;
-                cxt.fillRect(0, y+1, width + sx, h-2);
+                cxt.fillRect(0, baseY+1, width + sx, h-2);
             }
 
             // label
             if (entry.label !== 'none') {
                 cxt.fillStyle = LabelColor(entry.label);
-                cxt.fillRect(0, y, this.layout.indexColumnLayout.width, h);
+                cxt.fillRect(0, baseY, this.layout.indexColumnLayout.width, h);
             }
 
             // texts
@@ -83,9 +83,10 @@ export class TableRenderer {
                     && focused instanceof SubtitleEntry
                     && overlappingTime(focused, entry)) ? overlapColor : textColor;
             cxt.strokeStyle = gridColor;
+            cxt.font = this.layout.font;
 
-            // lines; in the order of Source.subs.styles
-            let y0 = y;
+            // channels; in the order of Source.subs.styles
+            let y0 = baseY;
             let j = 0;
             for (const { style, failed, height } of texts) {
                 const xpos = this.layout.channelColumns[0].layout!.position;
@@ -116,26 +117,34 @@ export class TableRenderer {
             }
 
             // entry cells
+            const entryCellY = Math.min(
+                Math.max(sy + this.layout.headerHeight, baseY), 
+                baseY + (lh - 1) * this.layout.lineHeight
+            );
             for (const col of this.layout.entryColumns) {
                 const value = Metrics[col.metric].stringValue(entry, Source.subs.defaultStyle);
                 const splitLines = value.split('\n');
                 cxt.textBaseline = 'middle';
                 cxt.textAlign = col.layout!.align;
                 cxt.fillStyle = textFillStyle;
+                cxt.font = Metrics[col.metric].type.isMonospace
+                    ? this.layout.monospaceFont : this.layout.font;
                 splitLines.forEach((line, i) =>
-                    cxt.fillText(line, col.layout!.textX, y + (i + 0.5) * this.layout.lineHeight));
+                    cxt.fillText(line, col.layout!.textX, 
+                        entryCellY + (i + 0.5) * this.layout.lineHeight));
             }
 
             // index
             cxt.textAlign = 'end';
             cxt.fillStyle = textFillStyle;
+            cxt.font = this.layout.monospaceFont;
             cxt.fillText(i.toString(),
                 this.layout.indexColumnLayout.width - this.layout.cellPadding,
-                y + 0.5 * this.layout.lineHeight);
+                entryCellY + 0.5 * this.layout.lineHeight);
 
             // outer horizontal line
             cxt.strokeStyle = gridMajorColor;
-            drawLine(0, y + h, width + sx, y + h);
+            drawLine(0, baseY + h, width + sx, baseY + h);
         }
 
         if (i == this.layout.lines.length) {

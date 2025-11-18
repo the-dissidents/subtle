@@ -38,7 +38,7 @@ Editing.onSelectionChanged.bind(me, () => {
   const focused = Editing.getFocusedEntry();
   if (focused instanceof SubtitleEntry) {
     updateForm();
-    const isEditingNow = Frontend.getUIFocus() == 'EditingField';
+    const isEditingNow = $uiFocus == 'EditingField';
     tick().then(() => {
       let col = document.getElementsByClassName('contentarea');
       for (const target of col) {
@@ -149,7 +149,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   </label>
 </fieldset>
 <!-- channels view -->
-<div class="channels flexgrow isolated">
+<div class="channels flexgrow isolated area" class:focused={$uiFocus == 'EditingField'}>
   {#if Editing.getFocusedEntry() instanceof SubtitleEntry}
   {@const focused = Editing.getFocusedEntry() as SubtitleEntry}
   <table class='fields'>
@@ -262,8 +262,8 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
 
 .channels {
   overflow: auto;
-  box-shadow: gray 0px 0px 3px inset;
-  border-radius: 3px;
+  /* box-shadow: gray 0px 0px 3px inset; */
+  border: solid var(--uchu-gray-2) 1px;
   margin-left: 3px;
 }
 
@@ -280,7 +280,6 @@ td {
   padding: 3px;
   border-radius: 3px;
 }
-
 
 @media (prefers-color-scheme: light) {
   .selected {

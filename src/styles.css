@@ -471,6 +471,14 @@ table.data .right {
 
 /* CLASSES */
 
+.area {
+  border-radius: 4px;
+  transition: box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  &.focused {
+    box-shadow: 0 5px 10px gray;
+  }
+}
+
 .isolated {
   contain: layout size style;
 }

@@ -206,7 +206,6 @@ export const Debug: {
             if (this.filterLevel >= LogLevelFilter.Error)
                 console.error(formatPrelude('ERROR', file), e);
             const format = formatData([e]);
-            this.onError.dispatch(file, format);
             callLog(LogLevel.Error, format, file);
             callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
         } else {

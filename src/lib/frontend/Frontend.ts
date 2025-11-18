@@ -78,7 +78,13 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
 }
 
 export type UIFocus = (typeof UIFocusList)[number];
-export const UIFocusList = ['EditingField', 'Table', 'Timeline', 'Other'] as const;
+export const UIFocusList = [
+    'EditingField', 
+    'Table', 
+    'Timeline',
+    'Preview',
+    'Other'
+] as const;
 
 export type StatusType = 'info' | 'error';
 export type ToolboxPage = 'properties' | 'search' | 'untimed' | 'test' | 'references' | undefined;
@@ -95,7 +101,7 @@ export const Frontend = {
     },
 
     setStatus(msg: string, type: StatusType = 'info') {
-        Debug.debug('status ->', msg, type);
+        Debug.trace('status ->', msg, type);
         status.set({ msg, type });
     },
 

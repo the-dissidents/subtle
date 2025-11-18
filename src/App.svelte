@@ -77,7 +77,6 @@ let leftPane: HTMLElement | undefined = $state();
 let editTable: HTMLElement | undefined = $state();
 let videoCanvasContainer: HTMLElement | undefined = $state();
 let timelineCanvasContainer: HTMLDivElement | undefined = $state();
-let statusBar: HTMLDivElement | undefined = $state();
 
 let statusTwinkling = $state(false);
 
@@ -209,7 +208,7 @@ Debug.onError.bind({}, (origin, _msg) => {
 
 let versionBanner = $state({open: false});
 onMount(() => {
-  const popoverSupported = HTMLElement.prototype.hasOwnProperty('popover');
+  const popoverSupported = Object.prototype.hasOwnProperty.call(HTMLElement.prototype, 'popover');
   if (!popoverSupported) {
     versionBanner.open = true;
   }
@@ -265,7 +264,7 @@ onMount(() => {
 
 <main class="vlayout container fixminheight">
   <!-- toolbar -->
-  <div>
+  <header>
     <ul class='menu'>
       <li><button onclick={() => InterfaceCommands.newFile.menu()}>{$_('menu.new-file')}</button></li>
       <li><button onclick={() => InterfaceCommands.openMenu.menu()}>{$_('menu.open')}</button></li>
@@ -321,7 +320,7 @@ onMount(() => {
         </Tooltip>
       </li>
     </ul>
-  </div>
+  </header>
 
   <!-- body -->
   <div class='hlayout flexgrow fixminheight'>
@@ -390,17 +389,17 @@ onMount(() => {
   </div>
 
   <!-- status bar -->
-  <div bind:this={statusBar}
-    class={[{status: true, twinkling: statusTwinkling}, $status.type]}
+  <footer
+    class={[{twinkling: statusTwinkling}, $status.type]}
     onanimationend={() => statusTwinkling = false}
-  >{$status.msg}</div>
+  >{$status.msg}</footer>
 </main>
 
 {/if}
 
 <style>
 @media (prefers-color-scheme: light) {
-  .status {
+  footer {
     background-color: var(--uchu-yin-2);
   }
   ul.menu {
@@ -432,7 +431,7 @@ onMount(() => {
 }
 
 @media (prefers-color-scheme: dark) {
-  .status, ul.menu {
+  footer, ul.menu {
     background-color: var(--uchu-yin-7);
   }
   ul.menu button {
@@ -493,6 +492,7 @@ onMount(() => {
 }
 
 ul.menu {
+  border-radius: 4px;
   flex: none;
   list-style-type: none;
   margin: 0;
@@ -503,6 +503,20 @@ ul.menu {
   cursor: default;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
+}
+
+header {
+  margin: 0 0 5px 0;
+}
+
+footer {
+  text-align: left;
+  padding: 5px;
+  margin: 5px 0 0 0;
+  line-height: normal;
+  white-space: nowrap;
+  overflow-x: auto;
+  border-radius: 4px;
 }
 
 ul.menu li {
@@ -538,14 +552,5 @@ ul.menu .separator {
   min-height: 30px;
   display: block;
   margin: 0 10px;
-}
-
-.status {
-  text-align: left;
-  padding: 5px;
-  margin: 5px 0 0 0;
-  line-height: normal;
-  white-space: nowrap;
-  overflow-x: auto;
 }
 </style>

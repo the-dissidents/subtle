@@ -31,6 +31,7 @@ class MetricTypeDefinition<
     Serialized extends z.ZodMiniType
 > {
     readonly clone: (value: MetricValue<Name>) => MetricValue<Name>;
+    readonly isMonospace: boolean;
 
     constructor(
         readonly name: Name,
@@ -39,21 +40,24 @@ class MetricTypeDefinition<
         readonly deserialize: (value: z.infer<Serialized>, subs: Subtitles) => MetricValue<Name>,
         readonly toString: (value: MetricValue<Name>) => string,
         opts?: {
-            clone: (value: MetricValue<Name>) => MetricValue<Name>
+            clone?: (value: MetricValue<Name>) => MetricValue<Name>,
+            monospace?: boolean
         }
     ) {
         this.clone = opts?.clone ?? ((x) => x);
+        this.isMonospace = opts?.monospace ?? false;
     }
 };
 
-const MetricTypeDefinitions = {
+export const MetricTypeDefinitions = {
     string: new MetricTypeDefinition(
         "string", z.string(),
         (x) => x, (x) => x, (x) => x
     ),
     number: new MetricTypeDefinition(
         "number", z.number(),
-        (x) => x, (x) => x, (x) => x.toFixed(3)
+        (x) => x, (x) => x, (x) => x.toFixed(3),
+        { monospace: true }
     ),
     boolean: new MetricTypeDefinition(
         "boolean", z.boolean(),
@@ -61,7 +65,8 @@ const MetricTypeDefinitions = {
     ),
     time: new MetricTypeDefinition(
         "time", z.number(),
-        (x) => x, (x) => x, (x) => Basic.formatTimestamp(x)
+        (x) => x, (x) => x, (x) => Basic.formatTimestamp(x),
+        { monospace: true }
     ),
     label: new MetricTypeDefinition(
         "label", z.enum(LABEL_TYPES),
@@ -79,10 +84,15 @@ const MetricTypeDefinitions = {
 } satisfies {[k in MetricType]: MetricTypeDefinition<k, z.ZodMiniType>};
 
 export class MetricDefinition<TypeName extends MetricType> {
-    public readonly integer: boolean;
-    public readonly description?: () => string;
+    readonly integer: boolean;
+    readonly description?: () => string;
+    
+    get type() {
+        return MetricTypeDefinitions[this.typeName];
+    }
+    
     constructor (
-        public readonly type: TypeName,
+        public readonly typeName: TypeName,
         public readonly context: MetricContext,
         public readonly localizedName: () => string,
         public readonly shortName: () => string,
@@ -101,10 +111,10 @@ export class MetricDefinition<TypeName extends MetricType> {
     stringValue(entry: SubtitleEntry, style: SubtitleStyle) {
         const value = this.value(entry, style);
         // very hacky special handling of integers
-        if (this.type == 'number' && this.integer) {
+        if (this.typeName == 'number' && this.integer) {
             return (value as number).toString();
         }
-        return MetricTypeDefinitions[this.type].toString(value as never);
+        return MetricTypeDefinitions[this.typeName].toString(value as never);
     }
 };
 
@@ -469,7 +479,7 @@ const ZSimpleFilter = z.object({
 }).check(({issues, value: x}) => {
     const m = Metrics[x.metric as keyof typeof Metrics];
     const method = MetricFilterMethods[x.method];
-    if (method.subject != m.type) issues.push({ 
+    if (method.subject != m.typeName) issues.push({ 
         code: 'custom', input: x,
         message: 'method type mismatch',
         continue: true

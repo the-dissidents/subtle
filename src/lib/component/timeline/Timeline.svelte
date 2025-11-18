@@ -67,7 +67,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
   on:keydown={updateSnapOverride}
   on:keyup={updateSnapOverride}/>
 
-<div class={["hlayout", "container", {timelinefocused: $uiFocus === 'Timeline'}]}>
+<div class="hlayout container area" class:focused={$uiFocus === 'Timeline'}>
   <div class="vlayout toolbox">
     <Tooltip text={$_('timeline.select-tool')} position="right">
       <label>
@@ -171,17 +171,11 @@ function updateSnapOverride(ev: KeyboardEvent) {
   canvas.timeline {
     background-color: var(--uchu-gray-1);
   }
-  .timelinefocused {
-    box-shadow: 0 5px 10px gray;
-  }
 }
 
 @media (prefers-color-scheme: dark) {
   canvas.timeline {
     background-color: black;
-  }
-  .timelinefocused {
-    box-shadow: 0 5px 10px gray;
   }
 }
 

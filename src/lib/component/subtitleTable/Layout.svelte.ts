@@ -42,6 +42,8 @@ export class TableLayout {
     readonly cellPadding   = $derived(InterfaceConfig.data.fontSize * 0.4);
     readonly font = $derived(
         `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`);
+    readonly monospaceFont = $derived(
+        `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.monospaceFontFamily}`);
 
     manager: CanvasManager;
     entryColumns = $state<Column[]>([{ metric: 'startTime' }, { metric: 'endTime' }]);
@@ -99,23 +101,31 @@ export class TableLayout {
             const metric = Metrics[col.metric];
             const name = metric.shortName();
             col.layout = {
-            name, align: 'start',
-            position: -1, 
-            width: cxt.measureText(name).width + this.cellPadding * 2, 
-            textX: -1
+                name, align: 'start',
+                position: -1, 
+                width: cxt.measureText(name).width + this.cellPadding * 2, 
+                textX: -1
             };
         }
 
         this.lines = []; this.totalLines = 0;
         for (const entry of Source.subs.entries) {
+            let entryColumnsHeight = 1;
             for (const col of this.entryColumns) {
-                // FIXME: we assume no string metrics here
                 const metric = Metrics[col.metric];
                 const value = metric.stringValue(entry, Source.subs.defaultStyle);
-                col.layout!.width = Math.max(col.layout!.width, 
-                    cxt.measureText(value).width + this.cellPadding * 2);
+                const splitLines = value.split('\n');
+
+                cxt.font = metric.type.isMonospace
+                    ? this.monospaceFont
+                    : this.font;
+                const w = Math.max(...splitLines.map((x) => cxt.measureText(x).width)) 
+                    + this.cellPadding * 2;
+                col.layout!.width = Math.max(col.layout!.width, w);
+                entryColumnsHeight = Math.max(entryColumnsHeight, splitLines.length);
             }
 
+            cxt.font = this.font;
             let entryHeight = 0;
             const texts: TextLayout[] = [];
             for (const style of Source.subs.styles) {
@@ -143,9 +153,10 @@ export class TableLayout {
             }
             this.lines.push({entry, line: this.totalLines, height: entryHeight, texts});
             this.lineMap.set(entry, {line: this.totalLines, height: entryHeight});
-            this.totalLines += entryHeight;
+            this.totalLines += Math.max(entryHeight, entryColumnsHeight);
         }
 
+        cxt.font = this.monospaceFont;
         let pos = 0;
         this.indexColumnLayout.position = 0;
         this.indexColumnLayout.width = this.cellPadding * 2 

@@ -45,7 +45,8 @@ onMount(() => {
     <PenLineIcon />
   </button>
   <canvas bind:this={canvas}
-    class:subsfocused={$uiFocus === 'Table'}
+    class="area"
+    class:focused={$uiFocus === 'Table'}
   ></canvas>
 </div>
 
@@ -151,12 +152,6 @@ onMount(() => {
   canvas {
     width: 100%;
     height: 100%;
-    border-radius: 4px;
     margin-bottom: 6px;
-  }
-
-  .subsfocused {
-    /* border: 2px solid skyblue; */
-    box-shadow: 0 5px 10px gray;
   }
 </style>

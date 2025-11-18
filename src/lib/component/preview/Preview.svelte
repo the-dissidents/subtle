@@ -9,6 +9,7 @@
   import Popup, { type PopupHandler } from "../../ui/Popup.svelte";
   import { Memorized } from "../../config/MemorizedValue.svelte";
   import { z } from "zod/v4-mini";
+  import { Frontend } from "../../frontend/Frontend";
 
   let volume = Memorized.$('playbackVolume', z.number().check(z.gt(0)).check(z.lt(1)), 0.8);
   volume.subscribe((x) => Playback.player?.setVolume(x));
@@ -19,6 +20,7 @@
   let playPos = $state(0);
   let playPosInput = $state(0);
   let loadState = Playback.loadState;
+  let uiFocus = Frontend.uiFocus;
   let layout = $state<PreviewLayout>();
   let volumePopup = $state<PopupHandler>({});
 
@@ -54,7 +56,11 @@
     oninput={(x) => $volume = x.currentTarget.valueAsNumber}/>
 </Popup>
 
-<div class="vlayout fill">
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="vlayout fill area" class:focused={$uiFocus == 'Preview'}
+  onclick={() => $uiFocus = 'Preview'}
+>
   <div class='player-container fixminsize'>
     <canvas class="fill" use:setup></canvas>
     {#if MediaConfig.data.subtitleRenderer == 'dom'}
@@ -123,12 +129,16 @@
   }
 }
 
+.area {
+  overflow: hidden;
+}
+
 .player-container {
   position: relative;
   min-height: 0;
   min-width: 0;
   height: 100%;
-  padding: 3px;
+  padding-bottom: 3px;
 }
 
 canvas {

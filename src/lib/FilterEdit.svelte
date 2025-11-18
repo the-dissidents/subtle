@@ -71,7 +71,7 @@ function createDefaultValue(type: MetricType) {
 }
 
 function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
-  const method = MetricFilterDefaultMethods[Metrics[metric].type];
+  const method = MetricFilterDefaultMethods[Metrics[metric].typeName];
   const m = MetricFilterMethods[method];
   const params = [];
   for (const type of m.parameters)
@@ -193,7 +193,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
           const name = <keyof typeof Metrics>ev.currentTarget.value;
           Debug.assert(name in Metrics);
 
-          if (Metrics[name].type == method.subject) {
+          if (Metrics[name].typeName == method.subject) {
             f.metric = name;
             onchange?.();
           } else
@@ -232,7 +232,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
       >
         <!-- eslint-disable-next-line svelte/require-each-key --> 
         {#each methods as [name, method]}
-          {#if method.subject == Metrics[f.metric].type}
+          {#if method.subject == Metrics[f.metric].typeName}
             <option value={name}>{method.localizedName()}</option>
           {/if}
         {/each}
