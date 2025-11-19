@@ -467,6 +467,10 @@ export const MAPI = {
     },
 
     async resolveFontFamily(name: string) {
-        return await invoke<ResolvedFontFamily | null>('resolve_family_name', { name });
+        return await invoke<ResolvedFontFamily | null>('resolve_family', { name });
+    },
+
+    async getAllFontFamilies() {
+        return await invoke<string[]>('get_all_font_families', {});
     }
 };

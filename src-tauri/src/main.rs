@@ -109,7 +109,7 @@ fn main() {
             redirect_log::set_log_filter_level,
             encoding::decode_file_as,
             encoding::decode_or_detect_file,
-            font::resolve_family_name,
+            font::resolve_family,
             font::get_all_font_families,
             open_devtools,
             make_panic,

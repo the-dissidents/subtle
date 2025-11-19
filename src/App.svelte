@@ -67,6 +67,7 @@ import { Frontend } from './lib/frontend/Frontend';
 import { BugIcon, CommandIcon, FilmIcon, SettingsIcon, TriangleAlertIcon } from '@lucide/svelte';
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { MAPI } from './lib/API';
+import { Fonts } from './lib/Fonts';
 import * as z from "zod/v4-mini";
     
 Debug.init();
@@ -153,6 +154,7 @@ MainConfig.hook(() => InterfaceConfig.data.theme,
 
 MainConfig.init();
 KeybindingManager.init();
+Fonts.init();
 
 getVersion().then((x) => 
   appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));

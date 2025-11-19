@@ -60,3 +60,4 @@ custom-protocol = ["tauri/custom-protocol"]
 
 [patch.crates-io]
 ffmpeg-sys-next = { git = "https://github.com/the-dissidents/rust-ffmpeg-sys.git", branch = "official" }
+font-kit = { git = "https://github.com/the-dissidents/font-kit.git", branch = "fix/coretext-path" }
