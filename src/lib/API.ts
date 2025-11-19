@@ -3,6 +3,7 @@ import { Debug } from './Debug';
 import { BinaryReader } from './details/BinaryReader';
 import type { MediaEvent } from './bindings/MediaEvent';
 import type { StreamDescription } from './bindings/StreamDescription';
+import type { ResolvedFontFamily } from './bindings/ResolvedFontFamily';
 
 export class MediaError extends Error {
     constructor(msg: string, public readonly from: string) {
@@ -420,22 +421,6 @@ export class MMedia {
         });
     }
 }
-
-export type FontStyle = 'normal' | 'italic' | 'oblique';
-
-export type ResolvedFontFamily = {
-    faces: ResolvedFontFace[],
-    familyName: string
-};
-
-export type ResolvedFontFace = {
-    url: string,
-    postscriptName: string,
-    real_height: number,
-    weight: number,
-    stretch: number,
-    style: FontStyle,
-};
 
 export const MAPI = {
     async version() {

@@ -3,8 +3,9 @@ use font_kit::source::SystemSource;
 use font_kit::{handle::Handle, properties::Style};
 use serde::Serialize;
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 enum FontStyle {
     Normal,
     Italic,
@@ -21,15 +22,17 @@ impl From<Style> for FontStyle {
     }
 }
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ResolvedFontFamily {
     faces: Vec<ResolvedFontFace>,
     family_name: String
 }
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ResolvedFontFace {
     url: String,
     postscript_name: String,
@@ -58,7 +61,7 @@ fn load_family(f: FamilyHandle) -> Option<ResolvedFontFamily> {
         let path = match face {
             Handle::Path { path, font_index: _ } => 
                 if let Some(s) = path.to_str() { s } else {
-                    log::error!("font path is invalid UTF-8");
+                    log::warn!("font path is invalid UTF-8");
                     continue;
                 },
             Handle::Memory { bytes: _, font_index: _ } => {
