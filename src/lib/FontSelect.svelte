@@ -80,45 +80,6 @@
 </Select.Root>
 
 <style>
-  :global([data-select-trigger]) {
-    box-shadow: none;
-    &::before {
-      content: "\200b";
-      display: inline-block;
-      width: 0;
-    }
-  }
-
-  :global([data-select-content]) {
-    border: 1px solid var(--uchu-gray-4);
-    background-color: white;
-    color: var(--uchu-yin);
-    max-height: min(30vh, var(--bits-select-content-available-height));
-    width: max(30em, var(--bits-select-anchor-width));
-    overflow-y: scroll;
-    translate: calc(50% - var(--bits-select-anchor-width) / 2) 0;
-  }
-
-  button.item {
-    border-radius: 0;
-    border-top: none;
-    border-bottom: solid var(--uchu-gray-4) 1px;
-    padding: 3px 5px;
-
-    min-width: 5em;
-    background-color: white;
-    color: var(--uchu-yin);
-    font-size: 0.85rem;
-
-    text-align: start;
-    box-shadow: none;
-    font-family: var(--fontFamily);
-
-    &[data-highlighted] {
-      filter: brightness(97%);
-    }
-  }
-
   .name {
     flex-grow: 1;
     padding-right: 10px;

@@ -15,6 +15,22 @@
   /* scrollbar-width: thin; */
 }
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  cursor: default;
+  user-select: none; -webkit-user-select: none;
+  -moz-user-select: none; -ms-user-select: none;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .lucide {
   display: block;
   width: 1lh;
@@ -100,6 +116,14 @@
     color: var(--uchu-gray-9);
     box-shadow: none;
   }
+  [data-select-content] {
+    border: 1px solid var(--uchu-gray-4);
+    background-color: white;
+    color: var(--uchu-yin);
+  }
+  [data-select-item] {
+    border-bottom: solid var(--uchu-gray-4) 1px;
+  }
   h5 {
     color: var(--uchu-yin-6);
     border-bottom: 1px solid var(--uchu-yin-2);
@@ -180,6 +204,14 @@
     color: var(--uchu-gray-9);
     box-shadow: none;
   }
+  [data-select-content] {
+    border: 1px solid var(--uchu-yin-8);
+    background-color: var(--uchu-yin-8);
+    color: var(--uchu-yang);
+  }
+  [data-select-item] {
+    border-bottom: solid var(--uchu-yin-8) 1px;
+  }
   h5 {
     color: var(--uchu-yin-3);
     border-bottom: 1px solid var(--uchu-yin-7);
@@ -187,22 +219,6 @@
   hr {
     border-bottom: 1px solid var(--uchu-yin-7);
   }
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  cursor: default;
-  user-select: none; -webkit-user-select: none;
-  -moz-user-select: none; -ms-user-select: none;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
 }
 
 /* WIDGETS */
@@ -292,6 +308,39 @@ select, [data-select-trigger] {
     background-repeat: no-repeat;
     background-position: right 0 center;
     background-size: 12px;
+  }
+}
+
+[data-select-trigger] {
+  &::before {
+    content: "\200b";
+    display: inline-block;
+    width: 0;
+  }
+}
+
+[data-select-content] {
+  max-height: min(30vh, var(--bits-select-content-available-height));
+  width: max(30em, var(--bits-select-anchor-width));
+  overflow-y: scroll;
+  translate: calc(50% - var(--bits-select-anchor-width) / 2) 0;
+}
+
+[data-select-item] {
+  border-radius: 0;
+  border-top: none;
+  padding: 3px 5px;
+  margin: 0;
+
+  min-width: 5em;
+  font-size: 0.85rem;
+
+  text-align: start;
+  box-shadow: none;
+  font-family: var(--fontFamily);
+
+  &[data-highlighted] {
+    filter: brightness(97%);
   }
 }
 
