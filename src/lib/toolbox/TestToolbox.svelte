@@ -87,7 +87,7 @@ function testAssertion() {
   ffmpeg config
 </button>
 
-<FontSelect></FontSelect>
+<FontSelect value=""></FontSelect>
 
 <label>
   <input type='checkbox' bind:checked={hwaccel} />

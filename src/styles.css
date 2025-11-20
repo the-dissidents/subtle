@@ -79,7 +79,7 @@
       color: var(--uchu-gray-9);
     }
   }
-  button,
+  button:where(:not([data-select-trigger])),
   label:has(input[type='checkbox'].button) {
     border: 1px solid var(--uchu-gray-4);
     background-color: white;
@@ -159,7 +159,7 @@
       color: var(--uchu-gray-9);
     }
   }
-  button,
+  button:where(:not([data-select-trigger])),
   label:has(input[type='checkbox'].button) {
     border: none;
     background-color: var(--uchu-yin-7);
@@ -233,7 +233,7 @@ input[type='checkbox'].button {
   height: 0;
 }
 
-button,
+button:where(:not([data-select-trigger])),
 label:has(input[type='checkbox'].button) {
   appearance: none;
   display: inline-block;
@@ -277,9 +277,8 @@ button.right {
 select, [data-select-trigger] {
   appearance: none;
 
-  border-radius: 3px;
+  border-radius: 2px;
   padding: 2px 5px 2px 5px;
-  margin: 1px;
 
   text-align: start;
   text-decoration: none;
@@ -299,7 +298,7 @@ select, [data-select-trigger] {
 textarea {
   font-family: var(--fontFamily);
   font-size: 1rem;
-  border-radius: 3px;
+  border-radius: 2px;
   padding: 3px 5px;
   margin: 1px;
 }

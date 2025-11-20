@@ -2,8 +2,14 @@
   import { Select } from "bits-ui";
   import { Fonts } from "./Fonts";
   import { tick } from "svelte";
+  import type { HTMLButtonAttributes } from "svelte/elements";
 
-  let value = $state('');
+  interface Props extends HTMLButtonAttributes {
+    value: string,
+    onChange?: (v: string) => void
+  };
+
+  let { value = $bindable(), onChange, ...rest }: Props = $props();
   let list: Entry[] = $state([]);
   
   type Entry = {
@@ -30,11 +36,12 @@
 </script>
 
 <Select.Root type='single' bind:value
+  onValueChange={(v) => onChange?.(v)}
   onOpenChange={(v) => {
     if (v) tick().then(() => updateVisibility());
   }
 }>
-  <Select.Trigger>
+  <Select.Trigger {...rest as object}>
     {value}
   </Select.Trigger>
   <Select.Portal>
@@ -73,10 +80,13 @@
 </Select.Root>
 
 <style>
-  :global([data-select-trigger])::before {
-    content: "\200b";
-    display: inline-block;
-    width: 0;
+  :global([data-select-trigger]) {
+    box-shadow: none;
+    &::before {
+      content: "\200b";
+      display: inline-block;
+      width: 0;
+    }
   }
 
   :global([data-select-content]) {
