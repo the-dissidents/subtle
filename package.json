@@ -25,6 +25,7 @@
     "@tauri-apps/plugin-os": "^2.3.1",
     "@tauri-apps/plugin-window-state": "~2",
     "@types/babel-core": "^6.25.10",
+    "bits-ui": "^2.14.4",
     "chardet": "^2.1.0",
     "colorjs.io": "^0.5.2",
     "object-inspect": "^1.13.4",

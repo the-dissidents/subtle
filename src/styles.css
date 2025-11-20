@@ -47,7 +47,8 @@
       background: var(--uchu-yin-1);
     }
   }
-  input[type=number], input[type=text], select, 
+  input[type=number], input[type=text], 
+  select, [data-select-trigger], 
   textarea, ol[role='listbox'] {
     border: 1px solid var(--uchu-gray-4);
     background-color: white;
@@ -126,7 +127,8 @@
       background: var(--uchu-yin-7);
     }
   }
-  input[type=number], input[type=text], select, 
+  input[type=number], input[type=text], 
+  select, [data-select-trigger], 
   textarea, ol[role='listbox'] {
     border: none;
     background-color: var(--uchu-yin-8);
@@ -272,7 +274,7 @@ button.right {
   text-align: left;
 }
 
-select {
+select, [data-select-trigger] {
   appearance: none;
 
   border-radius: 3px;

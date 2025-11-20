@@ -1,6 +1,7 @@
 use font_kit::family_handle::FamilyHandle;
 use font_kit::source::SystemSource;
 use font_kit::{handle::Handle, properties::Style};
+use num_traits::ToPrimitive;
 use serde::Serialize;
 use tauri::async_runtime;
 
@@ -38,6 +39,7 @@ pub struct ResolvedFontFace {
     url: String,
     index: u32,
     family_name: String,
+    full_name: String,
     postscript_name: String,
     real_height: f32,
     weight: f32,
@@ -80,8 +82,9 @@ fn load_family(f: FamilyHandle) -> Option<ResolvedFontFamily> {
                 faces.push(ResolvedFontFace {
                     url: path.to_string(), index,
                     family_name: f.family_name(),
+                    full_name: f.full_name(),
                     postscript_name: f.postscript_name().unwrap_or(f.full_name()), 
-                    real_height: metrics.ascent + metrics.descent.abs(), 
+                    real_height: metrics.units_per_em.to_f32().unwrap() / (metrics.ascent + metrics.descent.abs()), 
                     weight: f.properties().weight.0, 
                     stretch: f.properties().stretch.0, 
                     style: f.properties().style.into()

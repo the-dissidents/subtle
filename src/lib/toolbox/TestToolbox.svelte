@@ -15,10 +15,15 @@ import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
 import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy2";
 import { invoke } from "@tauri-apps/api/core";
+  import FontSelect from "../FontSelect.svelte";
+  import { Fonts } from "../Fonts";
 
 let result = $state("");
 MAPI.version().then((x) => {
-  result = `ffmpeg version is ${x}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}`;
+  Fonts.onInit(async () => {
+    const arial = (await Fonts.getFamily('Arial'))!;
+    result = `ffmpeg version is ${x}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}; fonts got ${arial.map((x) => `${x.fullName}=${x.realHeight}`)}`;
+  });
 });
 
 let hwaccel = $state(false);
@@ -81,6 +86,8 @@ function testAssertion() {
   }}>
   ffmpeg config
 </button>
+
+<FontSelect></FontSelect>
 
 <label>
   <input type='checkbox' bind:checked={hwaccel} />
