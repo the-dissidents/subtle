@@ -45,6 +45,7 @@ pub struct ResolvedFontFace {
     weight: f32,
     stretch: f32,
     style: FontStyle,
+    preview_string: String
 }
 
 // impl Into<Properties> for FontStyle {
@@ -58,6 +59,39 @@ pub struct ResolvedFontFace {
 //         }
 //     }
 // }
+
+fn generate_preview_string(font: &font_kit::font::Font) -> String {
+    // A list of sample texts for various scripts.
+    // (Script Name, Sample Text)
+    let script_samples: &[(&str, &str)] = &[
+        ("Numerals", "0123"),
+        ("Symbols", "&@#"),
+        ("Latin", "AaBbZz"),
+        ("Latin Diacritics", "ÁáŒœÇç"),
+        ("Greek", "ΑαΒβΩω"),
+        ("Cyrillic", "БбЯя"),
+        ("Armenian", "ԱաԲբԱչ"),
+        ("Hebrew", "אבג"),
+        ("Arabic", "ابج"),
+        ("Devanagari", "अआइ"),
+        ("Thai", "กขค"),
+        ("Simplified Chinese", "测试"),
+        ("Traditional Chinese", "測試"),
+        ("Japanese", "あア漢"),
+        ("Korean", "가나다"),
+    ];
+
+    let mut preview_parts = Vec::new();
+
+    for (_name, sample) in script_samples {
+        let fully_supported = sample.chars().all(|c| font.glyph_for_char(c).is_some());
+        if fully_supported {
+            preview_parts.push(*sample);
+        }
+    }
+
+    preview_parts.join("  ")
+}
 
 fn load_family(f: FamilyHandle) -> Option<ResolvedFontFamily> {
     let mut faces = Vec::<ResolvedFontFace>::new();
@@ -87,7 +121,8 @@ fn load_family(f: FamilyHandle) -> Option<ResolvedFontFamily> {
                     real_height: metrics.units_per_em.to_f32().unwrap() / (metrics.ascent + metrics.descent.abs()), 
                     weight: f.properties().weight.0, 
                     stretch: f.properties().stretch.0, 
-                    style: f.properties().style.into()
+                    style: f.properties().style.into(),
+                    preview_string: generate_preview_string(&f)
                 });
             });
     }
@@ -108,10 +143,13 @@ pub async fn get_all_font_families() -> Result<Vec<String>, tauri::Error> {
 }
 
 #[tauri::command]
-pub fn resolve_family(name: &str) -> Option<ResolvedFontFamily> {
-    let source = SystemSource::new();
-    match source.select_family_by_name(name) {
-        Ok(f) => load_family(f),
-        Err(_) => None
-    }
+pub async fn resolve_family(name: &str) -> Result<Option<ResolvedFontFamily>, tauri::Error> {
+    let name = name.to_string();
+    async_runtime::spawn_blocking(move || {
+        match SystemSource::new().select_family_by_name(&name) {
+            Ok(f) => load_family(f),
+            Err(_) => None
+        }
+    })
+    .await
 }

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Select } from "bits-ui";
   import { Fonts } from "./Fonts";
-  import { tick } from "svelte";
   import type { HTMLButtonAttributes } from "svelte/elements";
 
   interface Props extends HTMLButtonAttributes {
@@ -38,7 +37,7 @@
 <Select.Root type='single' bind:value
   onValueChange={(v) => onChange?.(v)}
   onOpenChange={(v) => {
-    if (v) tick().then(() => updateVisibility());
+    if (v) setTimeout(() => updateVisibility(), 0);
   }
 }>
   <Select.Trigger {...rest as object}>
@@ -48,28 +47,29 @@
     <Select.Content strategy='absolute'
       id="font-select-content"
       onscroll={() => updateVisibility()}
+      collisionPadding={{left: -Infinity}}
     >
       {#each list as entry}
         <Select.Item value={entry.name}>
         {#snippet child({ props })}
-          <button class="item" bind:this={entry.ctrl} {...props}>
+          <button class="item hlayout" bind:this={entry.ctrl} {...props}>
+            <span class="name">
+              {entry.name}
+            </span>
             {#if entry.visible}
-              <!-- {#await Fonts.getFamily(entry.name)}
-                {entry.name}
+              {#await Fonts.getFamily(entry.name)}
+                <!-- empty -->
               {:then family} 
                 {#if family === null || family.length == 0}
-                  Failed: {family[0].}
+                  <span class="preview">
+                    Failed to load data for this font
+                  </span>
                 {:else}
-                  <span style="font-family: '{entry.name}'">
-                    {entry.name}
+                  <span class="preview" style="font-family: '{entry.name}'">
+                    {family[0].previewString}
                   </span>
                 {/if}
-              {/await} -->
-              <span style="font-family: '{entry.name}'">
-                {entry.name}
-              </span>
-            {:else}
-              {entry.name}
+              {/await}
             {/if}
           </button>
         {/snippet}
@@ -90,20 +90,20 @@
   }
 
   :global([data-select-content]) {
-    border-radius: 3px;
     border: 1px solid var(--uchu-gray-4);
     background-color: white;
     color: var(--uchu-yin);
     max-height: min(30vh, var(--bits-select-content-available-height));
-    min-width: var(--bits-select-anchor-width);
+    width: max(30em, var(--bits-select-anchor-width));
     overflow-y: scroll;
     translate: calc(50% - var(--bits-select-anchor-width) / 2) 0;
   }
 
   button.item {
-    border: none;
+    border-radius: 0;
+    border-top: none;
+    border-bottom: solid var(--uchu-gray-4) 1px;
     padding: 3px 5px;
-    margin: 1px;
 
     min-width: 5em;
     background-color: white;
@@ -112,9 +112,24 @@
 
     text-align: start;
     box-shadow: none;
+    font-family: var(--fontFamily);
 
     &[data-highlighted] {
       filter: brightness(97%);
     }
+  }
+
+  .name {
+    flex-grow: 1;
+    padding-right: 10px;
+    white-space: nowrap;
+  }
+
+  .preview {
+    font-size: 1rem;
+    text-align: right;
+    min-width: 5em;
+    word-break: keep-all;
+    text-wrap: balance;
   }
 </style>
