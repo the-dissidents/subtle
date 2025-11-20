@@ -387,6 +387,10 @@
     "not": "并非",
     "or": "或者"
   },
+  "fontselect": {
+    "failed-to-load-data-for-this-font": "无法加载字体信息",
+    "this-font-doesnt-exist-on-your-computer": "你的电脑上没有这个字体"
+  },
   "importdialog": {
     "after-existing-lines": "在现有行之后",
     "before-existing-lines": "在现有行之前",

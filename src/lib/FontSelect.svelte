@@ -1,7 +1,12 @@
 <script lang="ts">
-  import { Select } from "bits-ui";
+  import { Combobox } from "bits-ui";
+  import { _ } from 'svelte-i18n';
   import { Fonts } from "./Fonts";
   import type { HTMLButtonAttributes } from "svelte/elements";
+  import { hook } from "./details/Hook.svelte";
+  import { Debug } from "./Debug";
+
+  import Tooltip from "./ui/Tooltip.svelte";
 
   interface Props extends HTMLButtonAttributes {
     value: string,
@@ -10,6 +15,35 @@
 
   let { value = $bindable(), onChange, ...rest }: Props = $props();
   let list: Entry[] = $state([]);
+  let searchValue = $state("");
+  let isValid = $state(false);
+
+  hook(() => value, (v) => {
+    isValid = Fonts.families.has(v);
+    Debug.info('isvalid?', v, isValid);
+  });
+ 
+  const filteredList = $derived.by(() => {
+    if (searchValue === "") return list;
+    const lower = searchValue.toLowerCase();
+    const filtered = list.filter((item) =>
+      item.name.toLowerCase().includes(lower));
+    return filtered.sort((a, b) => 
+        (a.name.toLowerCase().startsWith(lower) ? 0 : 1) 
+      - (b.name.toLowerCase().startsWith(lower) ? 0 : 1));
+  });
+ 
+  function handleInput(e: Event & { currentTarget: HTMLInputElement }) {
+    searchValue = e.currentTarget.value;
+    setTimeout(() => updateVisibility(), 0);
+  }
+ 
+  function handleOpenChange(v: boolean) {
+    if (!v) searchValue = "";
+    if (v) setTimeout(() => updateVisibility(), 0);
+  }
+  
+  let anchor = $state<HTMLElement>(null!);
   
   type Entry = {
     name: string,
@@ -34,27 +68,44 @@
   }
 </script>
 
-<Select.Root type='single' bind:value
+<Combobox.Root type='single' bind:value
   onValueChange={(v) => onChange?.(v)}
-  onOpenChange={(v) => {
-    if (v) setTimeout(() => updateVisibility(), 0);
-  }
-}>
-  <Select.Trigger {...rest as object}>
-    {value}
-  </Select.Trigger>
-  <Select.Portal>
-    <Select.Content strategy='absolute'
+  onOpenChange={(v) => handleOpenChange(v)}
+>
+  <div class="hlayout" {...rest as object}>
+    <div class="combobox flexgrow" bind:this={anchor}>
+      <Combobox.Input
+        onchange={(e) => {
+          value = e.currentTarget.value;
+          onChange?.(value);
+        }}
+        oninput={(v) => handleInput(v)}/>
+      <Combobox.Trigger />
+    </div>
+    {#if !isValid && value != ""}
+      <Tooltip text={$_('fontselect.this-font-doesnt-exist-on-your-computer')}>
+        <div>⚠️</div>
+      </Tooltip>
+    {/if}
+  </div>
+  <Combobox.Portal>
+    <Combobox.Content strategy='absolute'
       id="font-select-content"
       onscroll={() => updateVisibility()}
       collisionPadding={{left: -Infinity}}
+      customAnchor={anchor}
     >
-      {#each list as entry}
-        <Select.Item value={entry.name}>
+      {#each filteredList as entry}
+        <Combobox.Item value={entry.name} label={entry.name}>
         {#snippet child({ props })}
-          <button class="item hlayout" bind:this={entry.ctrl} {...props}>
+          <button class="hlayout" bind:this={entry.ctrl} {...props}>
             <span class="name">
-              {entry.name}
+              {#if searchValue == ''}
+                {entry.name}
+              {:else}
+              {@const pos = entry.name.toLowerCase().indexOf(searchValue.toLowerCase())}
+                {entry.name.slice(0, pos)}<b>{entry.name.slice(pos, pos + searchValue.length)}</b>{entry.name.slice(pos + searchValue.length)}
+              {/if}
             </span>
             {#if entry.visible}
               {#await Fonts.getFamily(entry.name)}
@@ -62,7 +113,7 @@
               {:then family} 
                 {#if family === null || family.length == 0}
                   <span class="preview">
-                    Failed to load data for this font
+                    {$_('fontselect.failed-to-load-data-for-this-font')}
                   </span>
                 {:else}
                   <span class="preview" style="font-family: '{entry.name}'">
@@ -73,13 +124,16 @@
             {/if}
           </button>
         {/snippet}
-        </Select.Item>
+        </Combobox.Item>
       {/each}
-    </Select.Content>
-  </Select.Portal>
-</Select.Root>
+    </Combobox.Content>
+  </Combobox.Portal>
+</Combobox.Root>
 
 <style>
+  b {
+    font-weight: bold;
+  }
   .name {
     flex-grow: 1;
     padding-right: 10px;

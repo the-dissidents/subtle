@@ -382,6 +382,10 @@
     "not": "not",
     "or": "or"
   },
+  "fontselect": {
+    "failed-to-load-data-for-this-font": "Failed to load data for this font",
+    "this-font-doesnt-exist-on-your-computer": "This font doesn't exist on your computer"
+  },
   "importdialog": {
     "after-existing-lines": "after existing lines",
     "before-existing-lines": "before existing lines",
