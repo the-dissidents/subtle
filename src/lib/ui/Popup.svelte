@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { Snippet } from 'svelte';
+import type { HTMLAttributes } from 'svelte/elements';
 import { Debug } from '../Debug';
-    import type { HTMLAttributes } from 'svelte/elements';
 
 export type PopupHandler = {
   open?: (rect: {

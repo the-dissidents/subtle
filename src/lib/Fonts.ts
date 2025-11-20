@@ -35,6 +35,29 @@ async function getFace(face: ResolvedFontFace) {
     return obj;
 }
 
+export type FontAvailability = {
+    status: true
+    supplement: false | string
+} | {
+    status: false
+};
+
+import FontsMac10_15 from '../font-data/mac10_15.csv?raw';
+import FontsWin11 from '../font-data/win11.csv?raw';
+
+function readFonts(s: string, map: Map<string, string | false>) {
+    for (const line of s.split('\n')) {
+        const [name, type, system] = line.split(',');
+        if (!name || !type || !system) continue;
+        map.set(name, type == 'Builtin' ? false : type);
+    }
+}
+
+const macFonts = new Map<string, string | false>();
+const winFonts = new Map<string, string | false>();
+readFonts(FontsWin11, winFonts);
+readFonts(FontsMac10_15, macFonts);
+
 export const Fonts = {
     async init() {
         allFamilies.clear();
@@ -70,5 +93,17 @@ export const Fonts = {
             .map((x) => x.value);
         cachedFamilies.set(name, result);
         return result;
+    },
+
+    windowsAvailability(name: string): FontAvailability {
+        return winFonts.has(name)
+            ? { status: true, supplement: winFonts.get(name)! }
+            : { status: false };
+    },
+
+    macosAvailability(name: string): FontAvailability {
+        return macFonts.has(name)
+            ? { status: true, supplement: macFonts.get(name)! }
+            : { status: false };
     }
 }

@@ -7,6 +7,7 @@
   import { Debug } from "./Debug";
 
   import Tooltip from "./ui/Tooltip.svelte";
+  import { InfoIcon } from "@lucide/svelte";
 
   interface Props extends HTMLButtonAttributes {
     value: string,
@@ -66,6 +67,18 @@
         && entry.ctrl.offsetTop <= content.scrollTop + content.offsetHeight;
     }
   }
+
+  function describeAvailability(v: string) {
+    const w = Fonts.windowsAvailability(v);
+    const m = Fonts.macosAvailability(v);
+
+    return `Windows: ${w.status
+      ? (w.supplement ? `📁 Only in ${w.supplement} supplement` : `✅ Built-in`)
+      : `❌ not available`}\n` 
+         + `macOS: ${m.status
+      ? (m.supplement ? `📁 Sometimes requires manual download` : `✅ Built-in`)
+      : `❌ not available`}`;
+  }
 </script>
 
 <Combobox.Root type='single' bind:value
@@ -87,6 +100,19 @@
         <div>⚠️</div>
       </Tooltip>
     {/if}
+    <Tooltip text={describeAvailability(value)} style="whitespace:nowrap">
+      <span class="hlayout"><InfoIcon /></span>
+      {#snippet content()}
+        {@const w = Fonts.windowsAvailability(value)}
+        {@const m = Fonts.macosAvailability(value)}
+        Windows: <b>{w.status
+          ? (w.supplement ? `only in ${w.supplement} supplement` : `built-in`)
+          : `not available`}</b>
+        <br/>macOS: <b>{m.status
+          ? (m.supplement ? `sometimes requires manual download` : `built-in`)
+          : `not available`}</b>
+      {/snippet}
+    </Tooltip>
   </div>
   <Combobox.Portal>
     <Combobox.Content strategy='absolute'
@@ -124,6 +150,10 @@
             {/if}
           </button>
         {/snippet}
+        </Combobox.Item>
+      {:else}
+        <Combobox.Item value="" disabled={true}>
+          <i>{$_('fontselect.no-font-matches-your-query')}</i>
         </Combobox.Item>
       {/each}
     </Combobox.Content>

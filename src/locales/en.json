@@ -384,6 +384,7 @@
   },
   "fontselect": {
     "failed-to-load-data-for-this-font": "Failed to load data for this font",
+    "no-font-matches-your-query": "No font matches your query",
     "this-font-doesnt-exist-on-your-computer": "This font doesn't exist on your computer"
   },
   "importdialog": {
