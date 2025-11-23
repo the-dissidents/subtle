@@ -75,8 +75,8 @@ fn generate_preview_string(font: &font_kit::font::Font) -> String {
         ("Arabic", "ابج"),
         ("Devanagari", "अआइ"),
         ("Thai", "กขค"),
-        ("Simplified Chinese", "测试"),
-        ("Traditional Chinese", "測試"),
+        ("Simplified Chinese", "直角返回"),
+        ("Traditional Chinese", "與時偕極"),
         ("Japanese", "あア漢"),
         ("Korean", "가나다"),
     ];

@@ -296,6 +296,7 @@ export class MediaPlayer2 {
         if (ow !== dw || oh !== dh) {
             const bitmap = await createImageBitmap(imgData);
             ctx.drawImage(bitmap, dx, dy, dw, dh);
+            bitmap.close();
             rescaled = true;
         } else {
             ctx.putImageData(imgData, dx, dy, 0, 0, ow, oh);

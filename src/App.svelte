@@ -23,7 +23,8 @@ MainConfig.addGroup('table', TableConfig);
 import CombineDialog from "./lib/dialog/CombineDialog.svelte";
 import ConfigDialog from './lib/dialog/ConfigDialog.svelte';
 import EncodingDialog from './lib/dialog/EncodingDialog.svelte';
-import ExportDialog from './lib/dialog/ExportDialog.svelte';
+import ExportTextDialog from './lib/dialog/ExportTextDialog.svelte';
+import ExportASSDialog from './lib/dialog/ExportASSDialog.svelte';
 import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
 import SplitByLineDialog from './lib/dialog/SplitByLineDialog.svelte';
 import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
@@ -242,7 +243,8 @@ onMount(() => {
 <CombineDialog          handler={Dialogs.combine}/>
 <SplitByLineDialog      handler={Dialogs.splitByLine}/>
 <EncodingDialog         handler={Dialogs.encoding}/>
-<ExportDialog           handler={Dialogs.export}/>
+<ExportTextDialog       handler={Dialogs.exportText}/>
+<ExportASSDialog        handler={Dialogs.exportASS}/>
 <ConfigDialog           handler={Dialogs.configuration}/>
 <KeybindingDialog       handler={Dialogs.keybinding}/>
 <KeybindingInputDialog  handler={Dialogs.keybindingInput}/>

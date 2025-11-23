@@ -111,7 +111,8 @@ body {
       background-color: var(--uchu-red-1);
     }
   }
-  button:disabled {
+  button:disabled,
+  label:has(input[type='checkbox'].button:disabled) {
     background-color: var(--uchu-gray-1);
     color: var(--uchu-gray-9);
     box-shadow: none;
@@ -199,7 +200,8 @@ body {
       background-color: var(--uchu-green-9);
     }
   }
-  button:disabled {
+  button:disabled,
+  label:has(input[type='checkbox'].button:disabled) {
     background-color: var(--uchu-yin-8);
     color: var(--uchu-gray-9);
     box-shadow: none;

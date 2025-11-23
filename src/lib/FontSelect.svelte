@@ -4,10 +4,9 @@
   import { Fonts } from "./Fonts";
   import type { HTMLButtonAttributes } from "svelte/elements";
   import { hook } from "./details/Hook.svelte";
-  import { Debug } from "./Debug";
 
   import Tooltip from "./ui/Tooltip.svelte";
-  import { InfoIcon } from "@lucide/svelte";
+  import { InfoIcon, LoaderIcon } from "@lucide/svelte";
 
   interface Props extends HTMLButtonAttributes {
     value: string,
@@ -21,7 +20,6 @@
 
   hook(() => value, (v) => {
     isValid = Fonts.families.has(v);
-    Debug.info('isvalid?', v, isValid);
   });
  
   const filteredList = $derived.by(() => {
@@ -36,12 +34,12 @@
  
   function handleInput(e: Event & { currentTarget: HTMLInputElement }) {
     searchValue = e.currentTarget.value;
-    setTimeout(() => updateVisibility(), 0);
+    requestAnimationFrame(() => updateVisibility());
   }
  
   function handleOpenChange(v: boolean) {
     if (!v) searchValue = "";
-    if (v) setTimeout(() => updateVisibility(), 0);
+    if (v) requestAnimationFrame(() => updateVisibility());
   }
   
   let anchor = $state<HTMLElement>(null!);
@@ -72,16 +70,21 @@
     const w = Fonts.windowsAvailability(v);
     const m = Fonts.macosAvailability(v);
 
-    return `Windows: ${w.status
-      ? (w.supplement ? `📁 Only in ${w.supplement} supplement` : `✅ Built-in`)
-      : `❌ not available`}\n` 
-         + `macOS: ${m.status
-      ? (m.supplement ? `📁 Sometimes requires manual download` : `✅ Built-in`)
-      : `❌ not available`}`;
+    return (w.status
+      ? (w.supplement 
+        ? $_('exportassdialog.available-on-windows-through-supplement', {values: {s: w.supplement}}) 
+        : $_('exportassdialog.built-in-on-windows'))
+      : $_('exportassdialog.not-directly-available-on-windows')) + '\n'
+        + (m.status
+      ? (m.supplement 
+        ? $_('exportassdialog.downloadable-on-macos-but-not-necessarily-built-in') 
+        : $_('exportassdialog.built-in-on-macos'))
+      : $_('exportassdialog.not-directly-available-on-macos'));
   }
 </script>
 
 <Combobox.Root type='single' bind:value
+  inputValue={value}
   onValueChange={(v) => onChange?.(v)}
   onOpenChange={(v) => handleOpenChange(v)}
 >
@@ -105,12 +108,16 @@
       {#snippet content()}
         {@const w = Fonts.windowsAvailability(value)}
         {@const m = Fonts.macosAvailability(value)}
-        Windows: <b>{w.status
-          ? (w.supplement ? `only in ${w.supplement} supplement` : `built-in`)
-          : `not available`}</b>
-        <br/>macOS: <b>{m.status
-          ? (m.supplement ? `sometimes requires manual download` : `built-in`)
-          : `not available`}</b>
+        {w.status
+          ? (w.supplement 
+            ? $_('exportassdialog.available-on-windows-through-supplement', {values: {s: w.supplement}}) 
+            : $_('exportassdialog.built-in-on-windows'))
+          : $_('exportassdialog.not-directly-available-on-windows')}
+        <br/>{m.status
+          ? (m.supplement 
+            ? $_('exportassdialog.downloadable-on-macos-but-not-necessarily-built-in') 
+            : $_('exportassdialog.built-in-on-macos'))
+          : $_('exportassdialog.not-directly-available-on-macos')}
       {/snippet}
     </Tooltip>
   </div>
@@ -135,11 +142,15 @@
             </span>
             {#if entry.visible}
               {#await Fonts.getFamily(entry.name)}
-                <!-- empty -->
+                <LoaderIcon />
               {:then family} 
                 {#if family === null || family.length == 0}
                   <span class="preview">
                     {$_('fontselect.failed-to-load-data-for-this-font')}
+                  </span>
+                {:else if family[0].previewString == ''}
+                  <span class="preview">
+                    {$_('fontselect.no-preview-available')}
                   </span>
                 {:else}
                   <span class="preview" style="font-family: '{entry.name}'">

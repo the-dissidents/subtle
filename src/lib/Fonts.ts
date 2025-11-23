@@ -24,7 +24,14 @@ async function getFace(face: ResolvedFontFace) {
     if (f) return f;
 
     // const newf = new FontFace(
-    //     `__subtle_ff_${face.familyName}_${counter}`, `url("${convertFileSrc(face.url)}")`);
+    //     `__subtle_ff_${face.familyName}_${counter}`, 
+    //     // `url("${convertFileSrc(face.url)}#${face.index}")`,
+    //     `local("${face.familyName}")`,
+    // {
+    //     weight: face.weight.toString(),
+    //     stretch: face.stretch.toString(),
+    //     style: face.style
+    // });
     // await newf.load();
     // document.fonts.add(newf);
     // Debug.info('added font', id);

@@ -333,6 +333,29 @@
     "info": "这些过时或罕见的编码在现代设备上可能会导致问题。为了打开这个文件，我们可以尝试将它转换为现代格式（通常很准确，除非文件完全无效）。如有疑问请咨询专家。",
     "unable-to-guess-encoding": "无法猜测编码"
   },
+  "exportassdialog": {
+    "available-on-windows-through-supplement": "在Windows上需要 {s} 扩展包",
+    "built-in-on-macos": "macOS内置",
+    "built-in-on-windows": "Windows内置",
+    "cannot-embedd": "无法嵌入",
+    "downloadable-on-macos-but-not-necessarily-built-in": "macOS上可下载，但不一定内置",
+    "embed-info": "子集化为 {a} 个字符，ASS格式下占用 {b} 字节",
+    "embedd-this-font": "嵌入字体",
+    "embedd-this-font-not-recommended": "嵌入字体（不推荐）",
+    "embedd-this-font-recommended": "嵌入字体（推荐）",
+    "embedded": "已嵌入字体",
+    "error": "子集化时出错",
+    "font-d": "由于Windows和macOS平台内置字体很不相同，在你的电脑上制作的字幕很可能在其它电脑上找不到字体。通过嵌入字体，可以保证字体在其它系统上正确显示。",
+    "font-not-found": "你的电脑上没有这个字体",
+    "fonts": "字体",
+    "format-d": "导出为ASS能保存所有格式，但一些subtle特有的信息将会丢失，例如标签和无时间文本。",
+    "glyphs-not-found": "未找到 {n} 个字符",
+    "header": "导出为ASS",
+    "not-directly-available-on-macos": "macOS默认不包含该字体",
+    "not-directly-available-on-windows": "Windows默认不包含该字体",
+    "remove-embedding": "取消嵌入",
+    "working": "正在嵌入……"
+  },
   "exportdialog": {
     "combine-strategy": "合并策略",
     "copy-to-clipboard": "复制到剪贴板",
@@ -390,6 +413,7 @@
   "fontselect": {
     "failed-to-load-data-for-this-font": "无法加载字体信息",
     "no-font-matches-your-query": "没有找到符合条件的字体",
+    "no-preview-available": "无法显示预览",
     "this-font-doesnt-exist-on-your-computer": "你的电脑上没有这个字体"
   },
   "importdialog": {
