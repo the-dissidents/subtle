@@ -95,6 +95,7 @@ async function copy() {
         <tr>
           <td><input type="checkbox" 
             bind:checked={entry.use} 
+            disabled={entry.count == 0}
             onchange={() => makePreview()} /></td>
           <td>{entry.style.name}</td>
           <td>{entry.count}</td>

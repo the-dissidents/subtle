@@ -40,6 +40,9 @@ num-traits = "0.2.19"
 getset = "0.1.6"
 enum_dispatch = "0.3.13"
 ts-rs = "11.1.0"
+font-kit = "0.14.3"
+allsorts = "0.16.0"
+anyhow = "1.0.100"
 
 [target.'cfg(windows)'.dependencies]
 ffmpeg-sys-next = { version = "7.1.0", features = [] }
@@ -59,3 +62,4 @@ custom-protocol = ["tauri/custom-protocol"]
 
 [patch.crates-io]
 ffmpeg-sys-next = { git = "https://github.com/the-dissidents/rust-ffmpeg-sys.git", branch = "official" }
+font-kit = { git = "https://github.com/the-dissidents/font-kit.git", branch = "fix/coretext-path" }

@@ -3,6 +3,8 @@ import { Debug } from './Debug';
 import { BinaryReader } from './details/BinaryReader';
 import type { MediaEvent } from './bindings/MediaEvent';
 import type { StreamDescription } from './bindings/StreamDescription';
+import type { ResolvedFontFamily } from './bindings/ResolvedFontFamily';
+import type { SubsetResult } from './bindings/SubsetResult';
 
 export class MediaError extends Error {
     constructor(msg: string, public readonly from: string) {
@@ -463,5 +465,17 @@ export const MAPI = {
 
     async openDevtools() {
         await invoke<void>('open_devtools');
+    },
+
+    async resolveFontFamily(name: string) {
+        return await invoke<ResolvedFontFamily | null>('resolve_family', { name });
+    },
+
+    async getAllFontFamilies() {
+        return await invoke<string[]>('get_all_font_families', {});
+    },
+
+    async subsetEncode(path: string, index: number, text: string) {
+        return await invoke<SubsetResult>('subset_encode', { path, index, text });
     }
 };

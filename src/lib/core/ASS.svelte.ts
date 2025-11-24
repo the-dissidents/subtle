@@ -411,21 +411,29 @@ export class ASSParser implements SubtitleParser {
     }
 }
 
+export type ASSAttachment = {
+    name: string,
+    content: string
+};
+
 export class ASSWriter implements SubtitleWriter {
-    styleNames = new Map<SubtitleStyle, string>();
+    #styleNames = new Map<SubtitleStyle, string>();
+    #fonts: ASSAttachment[] = [];
 
     constructor(private subs: Subtitles) {
+        const mangle = (name: string) =>
+            SubtitleTools.getUniqueStyleName(
+                this.subs, `${name.replace(',', '_')}_${this.#styleNames.size}`);
+
         // `Default` seems to be a case-insensitive reserved word in the SSA format that always 
         // points to the built-in default style; also the fields of dialogue lines are not 
         // permitted to contain commas. As a consequence, if we have a style name in conflict with 
         // this we must mangle it. 
         for (const style of subs.styles) {
             if (style.name.toLowerCase() == 'default' || style.name.includes(','))
-                this.styleNames.set(style, 
-                    SubtitleTools.getUniqueStyleName(
-                        this.subs, `${style.name.replace(',', '_')}_${this.styleNames.size}`));
+                this.#styleNames.set(style, mangle(style.name));
             else
-                this.styleNames.set(style, style.name);
+                this.#styleNames.set(style, style.name);
         }
     }
 
@@ -443,7 +451,24 @@ export class ASSWriter implements SubtitleWriter {
         return this;
     }
 
+    embeddFontData(name: string, ext: string, content: string) {
+        this.#fonts.push({
+            name: `${this.#fonts.length}_${name.replace(/\n|\s|,|./, '_')}.${ext}`,
+            content
+        });
+    }
+
     toString(): string {
+        const body = this.writeBody();
+        if (this.#headerless) return body;
+        else {
+            const header = this.writeHeader(this.subs);
+            const attachments = this.writeAttachments();
+            return header + body + attachments;
+        }
+    }
+
+    private writeBody() {
         let result = '';
         const reverseStyles = this.subs.styles.toReversed();
         const entries = this.#useEntries ?? this.subs.entries;
@@ -453,17 +478,28 @@ export class ASSWriter implements SubtitleWriter {
             for (const style of reverseStyles) {
                 const text = entry.texts.get(style);
                 if (!text) continue;
-                const styleName = this.styleNames.get(style);
+                const styleName = this.#styleNames.get(style);
                 Debug.assert(styleName !== undefined);
                 result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${
                     text.replaceAll('\n', '\\N')}\n`;
             }
         }
-        if (this.#headerless) return result;
-        else return this.writeASSHeader(this.subs) + result;
+        return result;
     }
 
-    writeASSHeader(subs: Subtitles) {
+    private writeAttachments() {
+        let result = '';
+        if (this.#fonts.length > 0) {
+            result += '\n[Fonts]\n';
+            for (const f of this.#fonts) {
+                result += `fontname: ${f.name}\n`;
+                result += f.content + '\n\n';
+            }
+        }
+        return result;
+    }
+
+    private writeHeader(subs: Subtitles) {
         const width = subs.metadata.width / subs.metadata.scalingFactor;
         const height = subs.metadata.height / subs.metadata.scalingFactor;
 
@@ -483,8 +519,9 @@ LayoutResY: ${height}
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 `;
         for (const s of subs.styles) {
-            const styleName = this.styleNames.get(s);
+            const styleName = this.#styleNames.get(s);
             Debug.assert(styleName !== undefined);
+
             result += `Style: ${styleName},`
                     + `${s.font == '' ? 'Arial' : s.font},${s.size},`
                     + `${toASSColor(s.color)},`

@@ -3,18 +3,19 @@ import { SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
 import { AlignMode } from "./core/Labels";
 import { SubtitleTools } from "./core/SubtitleUtil.svelte";
 
+import { ArrowDown, ArrowUp, MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
 import { Menu } from "@tauri-apps/api/menu";
 import * as dialog from "@tauri-apps/plugin-dialog";
 import { writable } from 'svelte/store';
 import { ChangeType, Source } from "./frontend/Source";
-import Collapsible from "./ui/Collapsible.svelte";
 
 import { _ } from 'svelte-i18n';
 import { Debug } from "./Debug";
 import { Utils } from "./frontend/Utils";
 import FilterEdit from "./FilterEdit.svelte";
+import FontSelect from "./FontSelect.svelte";
 import NumberInput from "./ui/NumberInput.svelte";
-import { ArrowDown, ArrowUp, MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
+import Collapsible from "./ui/Collapsible.svelte";
 import Colorpicker from "./ui/Colorpicker.svelte";
 
 interface Props {
@@ -221,8 +222,10 @@ async function contextMenu() {
         </tr>
         <tr>
           <td>{$_('style.font')}</td>
-          <td><input type="text" bind:value={$style.font}
-            onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font'))}/></td>
+          <td><FontSelect bind:value={$style.font}
+            style="width: 100%"
+            onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font'))}/>
+          </td>
         </tr>
         <tr>
           <td>{$_('style.size')}</td>

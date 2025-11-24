@@ -15,10 +15,15 @@ import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
 import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy2";
 import { invoke } from "@tauri-apps/api/core";
+  import FontSelect from "../FontSelect.svelte";
+  import { Fonts } from "../Fonts";
 
 let result = $state("");
 MAPI.version().then((x) => {
-  result = `ffmpeg version is ${x}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}`;
+  Fonts.onInit(async () => {
+    const arial = (await Fonts.getFamily('Arial'))!;
+    result = `ffmpeg version is ${x}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}; fonts got ${arial.map((x) => `${x.fullName}=${x.realHeight}`)}`;
+  });
 });
 
 let hwaccel = $state(false);
@@ -27,6 +32,8 @@ let tooltipPos: TooltipPosition = $state('bottom');
 let textarea = $state<HTMLTextAreaElement>();
 let haystack = $state('');
 let needle = $state('');
+
+let fontname = $state('Arial');
 
 let list = $state([
   {text: '123'}, 
@@ -79,6 +86,8 @@ function testAssertion() {
   }}>
   ffmpeg config
 </button>
+
+<FontSelect value=""></FontSelect>
 
 <label>
   <input type='checkbox' bind:checked={hwaccel} />
@@ -202,4 +211,12 @@ function testAssertion() {
 <button onclick={() => testFuzzy(SyllableTokenizer)}>syltok</button>
 
 <br>
+
+<input type='text' bind:value={fontname} />
+<button onclick={async () => {
+  Debug.info(await MAPI.resolveFontFamily(fontname));
+}}>resolve font family</button>
+
+<br>
+
 <span style="white-space: pre-wrap;">{result}</span>

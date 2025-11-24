@@ -23,7 +23,8 @@ export const Dialogs = {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         [UICommand<any>, CommandBinding | null], CommandBinding | null>(),
     splitByLine: new DialogHandler<void, void>(),
-    export: new DialogHandler<void, {content: string, ext: string} | null>(),
+    exportASS: new DialogHandler<void, void>(),
+    exportText: new DialogHandler<void, {content: string, ext: string} | null>(),
     encoding: new DialogHandler<
         {path: string, source: Uint8Array, result: AnalyseResult}, 
         {decoded: string, encoding: EncodingName} | null>(),

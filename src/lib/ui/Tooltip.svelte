@@ -3,16 +3,17 @@ import type { Snippet } from 'svelte';
 import { Debug } from '../Debug';
 import Popup, { type PopupHandler } from './Popup.svelte';
 import { CircleHelpIcon } from '@lucide/svelte';
+import type { HTMLAttributes } from 'svelte/elements';
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
-interface Props {
+interface Props extends HTMLAttributes<HTMLDivElement> {
   position?: TooltipPosition;
   text?: string;
   children?: Snippet;
-  // TODO: add delay parameter
+  content?: Snippet;
 }
 
-let { position = 'top', text = '<Tooltip>', children }: Props = $props();
+let { position = 'top', text = '<Tooltip>', children, content, ...rest }: Props = $props();
 let handler: PopupHandler = $state({});
 let container: HTMLElement | undefined = $state();
 
@@ -76,10 +77,14 @@ function findBoundingRect(element: HTMLElement): DOMRect {
     </span>
   {/if}
 </div>
-<Popup kind='tooltip' bind:handler={handler} {position}>
-  <div class="content">
-    {text}
-  </div>
+<Popup kind='tooltip' bind:handler={handler} {position} {...rest as object}>
+  {#if content}
+    {@render content()}
+  {:else}
+    <div class="content">
+      {text}
+    </div>
+  {/if}
 </Popup>
 
 <style>

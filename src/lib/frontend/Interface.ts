@@ -293,7 +293,7 @@ export const InterfaceCommands = {
     {
         name: () => $_('menu.export-ass'),
         isDialog: true,
-        call: () => Interface.askExportFile('ass', (x) => Format.ASS.write(x).toString())
+        call: () => Dialogs.exportASS.showModal!()
     }),
     exportSRTPlaintext: new UICommand(() => $_('category.document'),
         [ ],
@@ -301,7 +301,7 @@ export const InterfaceCommands = {
         name: () => $_('menu.export-srt-plaintext'),
         isDialog: true,
         call: async () => {
-            const result = await Dialogs.export.showModal!();
+            const result = await Dialogs.exportText.showModal!();
             if (!result) return;
             Interface.askExportFile(result.ext, () => result.content);
         }

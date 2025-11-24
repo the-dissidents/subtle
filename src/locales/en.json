@@ -332,6 +332,27 @@
     "info": "These formats can cause problems on today's devices. In order to open the file, we can try to convert it to the modern encoding. The estimation of formats is usually very accurate, unless the file is simply invalid; but when in doubt, consult an expert.",
     "unable-to-guess-encoding": "Unable to guess encoding"
   },
+  "exportassdialog": {
+    "available-on-windows-through-supplement": "Available on Windows through {s} supplement",
+    "built-in-on-macos": "Built-in on macOS",
+    "built-in-on-windows": "Built-in on Windows",
+    "cannot-embedd": "can't embed",
+    "downloadable-on-macos-but-not-necessarily-built-in": "Downloadable on macOS, but not necessarily built-in",
+    "embed-info": "Subset with {a} glyphs; {b} bytes in ASS encoding",
+    "embedd-this-font": "embed font",
+    "embedd-this-font-not-recommended": "embed font (not recommended)",
+    "embedd-this-font-recommended": "embed font (recommended)",
+    "embedded": "Font embedded",
+    "error": "Error when subsetting",
+    "font-not-found": "Font not found on your computer",
+    "fonts": "Fonts",
+    "glyphs-not-found": "{n} characters not found in font",
+    "header": "Export as ASS",
+    "not-directly-available-on-macos": "Not directly available on macOS",
+    "not-directly-available-on-windows": "Not directly available on Windows",
+    "remove-embedding": "remove embedding",
+    "working": "Working..."
+  },
   "exportdialog": {
     "combine-strategy": "combine strategy",
     "copy-to-clipboard": "copy to clipboard",
@@ -381,6 +402,12 @@
     "new-or-clause": "new or-clause",
     "not": "not",
     "or": "or"
+  },
+  "fontselect": {
+    "failed-to-load-data-for-this-font": "Failed to load data for this font",
+    "no-font-matches-your-query": "No font matches your query",
+    "no-preview-available": "no preview available",
+    "this-font-doesnt-exist-on-your-computer": "This font doesn't exist on your computer"
   },
   "importdialog": {
     "after-existing-lines": "after existing lines",

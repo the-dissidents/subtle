@@ -2,6 +2,8 @@ import { Debug } from "../Debug";
 
 const RealDims = new Map<string, number>();
 
+
+
 export const Typography = {
     getRealDimFactor(
         fontFamily: string, 
