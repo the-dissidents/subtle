@@ -18,6 +18,7 @@ import { get, readonly, writable } from "svelte/store";
 import * as z from "zod/v4-mini";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import { TimelineHandle } from "../component/timeline/Input.svelte";
 const $_ = unwrapFunctionStore(_);
 
 export type Snapshot = {
@@ -311,14 +312,24 @@ export const SourceCommands = {
           CommandBinding.from(['CmdOrCtrl+Alt+Z']) ],
     {
         name: () => $_('menu.undo'),
-        call: () => { Source.undo() }
+        call: () => {
+            if (TimelineHandle.isDuringAction())
+                TimelineHandle.interruptAction();
+            else
+                Source.undo();
+        }
     }),
     redo: new UICommand(() => $_('category.document'),
         [ CommandBinding.from(['CmdOrCtrl+Shift+Z'], ['Table', 'Timeline']),
           CommandBinding.from(['CmdOrCtrl+Alt+Shift+Z']) ],
     {
         name: () => $_('menu.redo'),
-        call: () => { Source.redo() }
+        call: () => {
+            if (TimelineHandle.isDuringAction())
+                TimelineHandle.interruptAction();
+            else
+                Source.redo();
+        }
     }),
 }
 KeybindingManager.register(SourceCommands);
