@@ -143,7 +143,8 @@ export const Interface = {
                 $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
             return;
         }
-        const options = await Dialogs.importOptions.showModal!(newSubs.migrated != 'text');
+        const options = await Dialogs.importOptions
+            .showModal!([newSubs.migrated != 'text', newSubs]);
         if (!options) return;
 
         const entries = SubtitleUtil.merge(Source.subs, newSubs, options);

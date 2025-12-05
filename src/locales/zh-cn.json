@@ -434,7 +434,8 @@
     "sorted-before-existing-lines-if-time-points-are-equal": "排序；如果时间点相等，则在现有行之前",
     "styles": "样式",
     "use-for-all": "全都使用这个样式：",
-    "use-local-styles-when-names-match": "名称匹配时使用本地样式"
+    "use-local-styles-when-names-match": "名称匹配时使用本地样式",
+    "use-new-for-all": "全部使用新建样式："
   },
   "jsonimport": {
     "fixed-style": "修复了重叠的样式",

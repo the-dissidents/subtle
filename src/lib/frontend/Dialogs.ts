@@ -2,6 +2,7 @@ console.info('Dialogs loading');
 
 import { UICommand } from "./CommandBase";
 import type { AnalyseResult, EncodingName } from "chardet";
+import type { Subtitles } from "../core/Subtitles.svelte";
 import type { MergeOptions, TimeShiftOptions } from "../core/SubtitleUtil.svelte";
 import { KeybindingManager, type CommandBinding } from "./Keybinding";
 import { Editing } from "./Editing";
@@ -14,7 +15,7 @@ export class DialogHandler<TInput = void, TOutput = string> {
 }
 
 export const Dialogs = {
-    importOptions: new DialogHandler<boolean, MergeOptions | null>(),
+    importOptions: new DialogHandler<[boolean, Subtitles], MergeOptions | null>(),
     timeTransform: new DialogHandler<void, TimeShiftOptions | null>(),
     combine: new DialogHandler<void, void>(),
     configuration: new DialogHandler<void, void>(),

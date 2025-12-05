@@ -3,21 +3,29 @@ import { Debug } from "../Debug";
 import { SubtitleEntry, Subtitles, SubtitleStyle } from "./Subtitles.svelte";
 
 export type MergeStyleSelection =
-    'UsedOnly' | 'All' | 'OnlyStyles';
+    'usedOnly' | 'all' | 'onlyStyles';
 
-export type MergeStyleBehavior = 
-    'KeepAll' | 'KeepDifferent' | 'UseLocalByName' | 'Overwrite' | 'UseOverrideForAll';
+export type MergeStyleBehavior = {
+    type: 'keepAll' | 'keepDifferent' | 'useLocalByName' | 'overwrite';
+} | {
+    type: 'override',
+    overrideStyle: SubtitleStyle
+} | {
+    type: 'createNewOverride',
+    name: string
+}
 
-export type MergePosition =
-    'SortedBefore' | 'SortedAfter' |
-    'Before' | 'After' | 'Overwrite' | 'Custom';
+export type MergePosition = {
+    type: 'sortedBefore' | 'sortedAfter' | 'before' | 'after' | 'overwrite'
+} | {
+    type: 'custom',
+    customPosition: number
+};
 
 export type MergeOptions = {
-    style?: MergeStyleBehavior;
-    overrideStyle?: SubtitleStyle;
-    selection?: MergeStyleSelection;
-    position?: MergePosition;
-    customPosition?: number;
+    style: MergeStyleBehavior;
+    selection: MergeStyleSelection;
+    position: MergePosition;
     overrideMetadata?: boolean;
 };
 
@@ -154,10 +162,20 @@ export const SubtitleUtil = {
         if (options.overrideMetadata) {
             other.metadata = JSON.parse(JSON.stringify(original.metadata));
         }
+        
+        let overrideStyle: SubtitleStyle;
+        if (options.style.type == 'createNewOverride') {
+            const name = SubtitleTools.getUniqueStyleName(original, options.style.name);
+            const state = $state(SubtitleStyle.new(name));
+            original.styles.push(state);
+            overrideStyle = state;
+        } else {
+            overrideStyle = options.style.type == 'override' 
+                ? options.style.overrideStyle : original.defaultStyle;
+            Debug.assert(original.styles.includes(overrideStyle));
+        }
 
         const styleMap = new Map<SubtitleStyle, SubtitleStyle>();
-        const overrideStyle = options.overrideStyle ?? original.defaultStyle;
-        Debug.assert(original.styles.includes(overrideStyle));
         const orginalStyleSerialized = original.styles.map((x) => JSON.stringify(x));
         const processStyle = (s: SubtitleStyle) => {
             if (styleMap.has(s)) return styleMap.get(s)!;
@@ -173,12 +191,13 @@ export const SubtitleUtil = {
                 return newStyle;
             };
 
-            switch (options.style ?? 'KeepDifferent') {
-                case 'UseOverrideForAll':
-                    Debug.trace('UseOverrideForAll:', s.name, '->', overrideStyle.name);
+            switch (options.style.type) {
+                case 'override':
+                case 'createNewOverride':
+                    Debug.trace('override:', s.name, '->', overrideStyle.name);
                     styleMap.set(s, overrideStyle);
                     return overrideStyle;
-                case 'KeepAll': {
+                case 'keepAll': {
                     // generate unqiue name
                     const newStyle = $state(SubtitleStyle.clone(s));
                     newStyle.name = SubtitleTools.getUniqueStyleName(original, s.name);
@@ -187,19 +206,19 @@ export const SubtitleUtil = {
                     Debug.trace('KeepAll:', s.name, '->', newStyle.name);
                     return newStyle;
                 }
-                case 'KeepDifferent':
+                case 'keepDifferent':
                     if (iLocalMatch >= 0) {
                         styleMap.set(s, original.styles[iLocalMatch]);
                         return styleMap.get(s)!;
                     }
                     return add();
-                case 'UseLocalByName':
+                case 'useLocalByName':
                     if (iLocalName >= 0) {
                         styleMap.set(s, original.styles[iLocalName]);
                         return styleMap.get(s)!;
                     }
                     return add();
-                case 'Overwrite':
+                case 'overwrite':
                     if (iLocalName >= 0) {
                         const newStyle = $state(s);
                         if (original.defaultStyle === original.styles[iLocalName])
@@ -210,56 +229,59 @@ export const SubtitleUtil = {
                     }
                     return add();
                 default:
-                    Debug.assert(false);
+                    Debug.never(options.style);
             }
         };
-        if (options.selection) switch (options.selection) {
-            case 'OnlyStyles':
-            case 'All':
+        switch (options.selection) {
+            case 'onlyStyles':
+            case 'all':
                 for (const style of other.styles) processStyle(style);
                 break;
+            case "usedOnly":
+                break;
+            default:
+                Debug.never(options.selection);
         }
 
-        if (options.selection == 'OnlyStyles')
+        if (options.selection == 'onlyStyles')
             return [];
 
-        const position = options.position ?? 'After';
-        if (position == 'Overwrite')
+        if (options.position.type == 'overwrite')
             original.entries = [];
         let insertEntry: (e: SubtitleEntry) => void;
-        let index = options.customPosition ?? 0;
-        switch (position) {
-            case 'SortedBefore':
+        let insertIndex = 0;
+        switch (options.position.type) {
+            case 'sortedBefore':
                 insertEntry = (e) => {
                     const i = original.entries.findIndex((x) => x.start >= e.start);
                     original.entries.splice(i, 0, e);
                 }; break;
-            case 'SortedAfter':
+            case 'sortedAfter':
                 insertEntry = (e) => {
                     const i = original.entries.findLastIndex((x) => x.start <= e.start);
                     original.entries.splice(i+1, 0, e);
                 }; break;
-            case 'Before':
-            case 'Custom':
+            case 'custom':
+                insertIndex = options.position.customPosition;
+                // fallthrough
+            case 'before':
                 insertEntry = (e) => {
-                    original.entries.splice(index, 0, e);
-                    index++;
+                    original.entries.splice(insertIndex, 0, e);
+                    insertIndex++;
                 }; break;
-            case 'After':
-            case 'Overwrite':
+            case 'after':
+            case 'overwrite':
                 insertEntry = (e) => {
                     original.entries.push(e);
                 }; break;
             default:
-                Debug.never(position);
+                Debug.never(options.position);
         }
 
         for (const ent of other.entries) {
             insertEntry(ent);
-            const newTexts: [SubtitleStyle, string][] = [];
-            for (const [style, text] of ent.texts)
-                newTexts.push([processStyle(style), text]);
-            ent.texts = new SvelteMap(newTexts);
+            ent.texts = new SvelteMap([...ent.texts]
+                .map(([style, text]) => [processStyle(style), text]));
         }
         return other.entries;
     },

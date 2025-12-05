@@ -182,7 +182,7 @@ export const DebugConfig = new PublicConfigGroup(
                 ['Warn']: { localizedName: () => 'warn' },
                 ['Error']: { localizedName: () => 'error' },
             },
-            default: 'Debug'
+            default: 'Trace'
         },
         logLevel: {
             localizedName: () => 'webview log level',

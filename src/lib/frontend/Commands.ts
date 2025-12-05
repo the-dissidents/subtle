@@ -284,10 +284,15 @@ export const BasicCommands = {
             } else position = Source.subs.entries.length;
 
             const entries = SubtitleUtil.merge(Source.subs, portion, {
-                position: 'Custom',
-                customPosition: position,
-                style: portion.migrated == 'text' ? 'UseOverrideForAll' : 'KeepDifferent',
-                overrideStyle: Source.subs.defaultStyle
+                position: { type: 'custom', customPosition: position },
+                style: portion.migrated == 'text' 
+                    ? { 
+                        type: 'override',
+                        overrideStyle: Source.subs.defaultStyle
+                    } : { 
+                        type: 'keepDifferent'
+                    },
+                selection: 'all'
             });
             if (entries.length > 0) {
                 Editing.setSelection(entries);

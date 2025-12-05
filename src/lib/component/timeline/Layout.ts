@@ -58,7 +58,6 @@ export class TimelineLayout {
     this.manager = new CanvasManager(canvas);
     this.manager.onDisplaySizeChanged.bind(this, 
       (w, h) => this.#processDisplaySizeChanged(w, h));
-    setTimeout(() => this.setScale(10), 0);
 
     Playback.onLoad.bind(this, async (rawurl, audio) => {
       Debug.assert(this.#samplerMedia === undefined || this.#samplerMedia.isClosed)

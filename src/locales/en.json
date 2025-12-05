@@ -427,7 +427,8 @@
     "sorted-before-existing-lines-if-time-points-are-equal": "sorted; before existing lines if time points are equal",
     "styles": "styles",
     "use-for-all": "use for all:",
-    "use-local-styles-when-names-match": "use local styles when names match"
+    "use-local-styles-when-names-match": "use local styles when names match",
+    "use-new-for-all": "create a new style and use for all:"
   },
   "jsonimport": {
     "header": "import JSON"

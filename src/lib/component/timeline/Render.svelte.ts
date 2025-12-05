@@ -81,6 +81,7 @@ export class TimelineRenderer {
 
     const t0 = Date.now();
   
+    this.layout.setScale(this.layout.scale);
     this.#renderWaveform(ctx);
     this.#renderRuler(ctx);
     this.#renderTracks(ctx);
