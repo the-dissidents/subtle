@@ -3,7 +3,7 @@
   import { untrack } from "svelte";
   import { _ } from "svelte-i18n";
 
-  import Popup, { type PopupHandler } from "./Popup.svelte";
+  import Popup from "./Popup.svelte";
   import NumberInput from "./NumberInput.svelte";
   import Tooltip from "./Tooltip.svelte";
 
@@ -201,7 +201,7 @@
 
   let changed = false;
   
-  let popupHandler: PopupHandler = {};
+  let popupHandler: Popup;
 </script>
 
 <button class="preview-btn" aria-label="color"
@@ -215,7 +215,7 @@
   }}
 ></button>
 
-<Popup handler={popupHandler} maxWidth="none"
+<Popup bind:this={popupHandler} maxWidth="none"
   onclose={() => {
     if (changed) {
       changed = false;

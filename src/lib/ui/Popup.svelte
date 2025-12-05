@@ -3,20 +3,14 @@ import type { Snippet } from 'svelte';
 import type { HTMLAttributes } from 'svelte/elements';
 import { Debug } from '../Debug';
 
-export type PopupHandler = {
-  open?: (rect: {
-    left: number, top: number, width?: number, height?: number,
-    popupWidth?: number, popupHeight?: number
-  }) => void;
-  openAt?: (x: number, y: number, w?: number, h?: number) => void;
-  close?: () => void;
-  isOpen?: () => boolean;
-};
+export type PopupOpen = {
+  left: number, top: number, width?: number, height?: number,
+  popupWidth?: number, popupHeight?: number
+}
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 
 interface Props extends HTMLAttributes<HTMLSpanElement> {
-  handler: PopupHandler;
   kind?: 'panel' | 'tooltip';
   maxWidth?: string;
   position?: TooltipPosition;
@@ -26,7 +20,7 @@ interface Props extends HTMLAttributes<HTMLSpanElement> {
 
 let { 
   position = 'top', kind = 'panel', maxWidth = '200px',
-  handler = $bindable(), onclose, children, ...rest
+  onclose, children, ...rest
 }: Props = $props();
 
 let id = $props.id();
@@ -50,7 +44,7 @@ function computePosition(rect: DOMRect, pos: TooltipPosition): [number, number] 
   }
 }
 
-handler.open = ({left, top, width = 0, height = 0, popupHeight, popupWidth}) => {
+export function open({left, top, width = 0, height = 0, popupHeight, popupWidth}: PopupOpen) {
   Debug.assert(tooltip !== undefined);
   const [x1, y1] = computePosition(new DOMRect(left, top, width, height), position);
   tooltip.style.left = `${Math.round(x1)}px`;
@@ -61,7 +55,7 @@ handler.open = ({left, top, width = 0, height = 0, popupHeight, popupWidth}) => 
   tooltip.showPopover();
 };
 
-handler.openAt = (x, y, w, h) => {
+export function openAt(x: number, y: number, w?: number, h?: number) {
   Debug.assert(tooltip !== undefined);
   tooltip.style.left = `${x}px`;
   tooltip.style.top = `${y}px`;
@@ -69,15 +63,18 @@ handler.openAt = (x, y, w, h) => {
   tooltip.style.height = h ? `${h}px` : '';
   transformClass = '';
   tooltip.showPopover();
-};
+}
 
-handler.close = () => {
+export function close() {
   Debug.assert(tooltip !== undefined);
   if (!isOpen) return Debug.early();
   tooltip.hidePopover();
-};
+}
 
-handler.isOpen = () => isOpen;
+export function openState() {
+  return isOpen;
+}
+
 </script>
 
 <style>

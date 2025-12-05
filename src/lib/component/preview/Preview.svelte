@@ -6,7 +6,7 @@
   import { MediaPlayerInterface2 } from "./MediaPlayer2";
   import SubtitleView, { type EntryBox } from "./SubtitleView.svelte";
   import { MediaConfig } from "./Config";
-  import Popup, { type PopupHandler } from "../../ui/Popup.svelte";
+  import Popup from "../../ui/Popup.svelte";
   import { Memorized } from "../../config/MemorizedValue.svelte";
   import { z } from "zod/v4-mini";
   import { Frontend } from "../../frontend/Frontend";
@@ -22,9 +22,9 @@
   let loadState = Playback.loadState;
   let uiFocus = Frontend.uiFocus;
   let layout = $state<PreviewLayout>();
-  let volumePopup = $state<PopupHandler>({});
-
   let boxes = $state<EntryBox[]>([]);
+
+  let volumePopup: Popup;
 
   const setup = (canvas: HTMLCanvasElement) => {
     layout = new PreviewLayout(canvas);
@@ -49,7 +49,7 @@
   });
 </script>
 
-<Popup bind:handler={volumePopup} style="padding: 0; display: flex">
+<Popup bind:this={volumePopup} style="padding: 0; display: flex">
   <input type="range" class="volume flexgrow"
     min="0" max="1" step="any"
     value={$volume}
@@ -106,7 +106,7 @@
     <button onclick={(e) => {
       const self = e.currentTarget;
       const rect = self.getBoundingClientRect();
-      volumePopup.openAt?.(rect.left, rect.bottom, 100);
+      volumePopup.openAt(rect.left, rect.bottom, 100);
     }} disabled={$loadState !== 'loaded'}>
       <Volume2Icon />
     </button>

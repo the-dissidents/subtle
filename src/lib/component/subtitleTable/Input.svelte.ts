@@ -4,7 +4,6 @@ import { Filter, type SimpleMetricFilter } from "../../core/Filter";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
 import { ChangeCause, Source } from "../../frontend/Source";
-import type { PopupHandler } from "../../ui/Popup.svelte";
 
 import type { TableLayout, TextLayout } from "./Layout.svelte";
 import { TableConfig } from "./Config";
@@ -15,6 +14,7 @@ import { get } from "svelte/store";
 import { Playback } from "../../frontend/Playback";
 import { Frontend } from "../../frontend/Frontend";
 import { contextMenu } from "./Menu";
+import type Popup from "../../ui/Popup.svelte";
 
 export const SubtitleTableHandle = {
     processDoubleClick: undefined as (undefined | (() => Promise<void>)),
@@ -32,7 +32,7 @@ export class TableInput {
 
     constructor(
         private layout: TableLayout,
-        private validationMessagePopup: PopupHandler,
+        private validationMessagePopup: Popup,
     ) {
         this.manager = layout.manager;
         this.manager.onMouseMove.bind(this, (ev) => this.#onMouseMove(ev));
@@ -162,7 +162,7 @@ export class TableInput {
 
         if (currentText?.failed !== this.currentFails) {
             this.currentFails = currentText?.failed ?? [];
-            if (this.validationMessagePopup.isOpen!())
+            if (this.validationMessagePopup.openState())
                 this.validationMessagePopup.close!();
             if (this.currentFails.length > 0) {
                 Debug.assert(currentText !== undefined);

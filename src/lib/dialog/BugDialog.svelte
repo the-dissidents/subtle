@@ -4,13 +4,13 @@ import { Debug } from '../Debug';
 import { DialogHandler } from '../frontend/Dialogs';
 
 import { _ } from 'svelte-i18n';
-    import { openPath, openUrl } from '@tauri-apps/plugin-opener';
-    import { appLogDir } from '@tauri-apps/api/path';
+import { openPath, openUrl } from '@tauri-apps/plugin-opener';
+import { appLogDir } from '@tauri-apps/api/path';
 
 interface Props {
   handler: DialogHandler<void, void>;
 }
-    
+
 let {
   handler = $bindable(),
 }: Props = $props();

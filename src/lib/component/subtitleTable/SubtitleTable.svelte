@@ -6,7 +6,7 @@ import { Debug } from "../../Debug";
 import { EventHost } from "../../details/EventHost";
 
 import { Metrics, type MetricContext } from "../../core/Filter";
-import Popup, { type PopupHandler } from "../../ui/Popup.svelte";
+import Popup from "../../ui/Popup.svelte";
 import OrderableList from "../../ui/OrderableList.svelte";
 
 import { Menu } from "@tauri-apps/api/menu";
@@ -18,18 +18,20 @@ import { TableInput } from "./Input.svelte";
 import { Frontend } from "../../frontend/Frontend";
 
 let canvas = $state<HTMLCanvasElement>();
-let validationMessagePopup = $state<PopupHandler>({});
-let columnPopup = $state<PopupHandler>({});
 let uiFocus = Frontend.uiFocus;
 
 let layout: TableLayout | undefined = $state();
 let input: TableInput | undefined = $state();
+
+let validationMessagePopup: Popup;
+let columnPopup: Popup;
 
 const me = {};
 onDestroy(() => EventHost.unbind(me));
 
 onMount(() => {
   Debug.assert(canvas !== undefined);
+  Debug.assert(validationMessagePopup !== undefined);
   layout = new TableLayout(canvas);
   input = new TableInput(layout, validationMessagePopup);
   new TableRenderer(layout);
@@ -40,7 +42,7 @@ onMount(() => {
 <div class="container">
   <button onclick={(ev) => {
     const rect = ev.currentTarget.getBoundingClientRect();
-    columnPopup.open!(rect);
+    columnPopup.open(rect);
   }} aria-label='edit'>
     <PenLineIcon />
   </button>
@@ -91,7 +93,7 @@ onMount(() => {
   </OrderableList>
 {/snippet}
 
-<Popup bind:handler={columnPopup} position="left">
+<Popup bind:this={columnPopup} position="left">
   {#if layout !== undefined}
   {#key $locale}
   <div class="form">
@@ -106,7 +108,7 @@ onMount(() => {
   {/if}
 </Popup>
 
-<Popup bind:handler={validationMessagePopup} position="left" kind='tooltip'>
+<Popup bind:this={validationMessagePopup} position="left" kind='tooltip'>
   <span style="white-space: pre-wrap;">
     {input?.popupMessage}
   </span>

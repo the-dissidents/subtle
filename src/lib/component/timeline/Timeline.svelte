@@ -2,7 +2,7 @@
 import { _ } from 'svelte-i18n';
 
 import { ChangeType, Source } from "../../frontend/Source";
-import Popup, { type PopupHandler } from '../../ui/Popup.svelte';
+import Popup from '../../ui/Popup.svelte';
 import { TimelineLayout } from "./Layout";
 import { TimelineInput, TimelineHandle } from "./Input.svelte";
 import { TimelineRenderer } from "./Render.svelte";
@@ -17,7 +17,6 @@ let useSnap = TimelineHandle.useSnap;
 let lockCursor = TimelineHandle.lockCursor;
 let snapToFrame = TimelineHandle.snapToFrame;
 
-let rowPopup: PopupHandler = $state({});
 let styleRefreshCounter = $state(0);
 let buttonPosX = $state(0);
 let buttonPosY = $state(0);
@@ -25,6 +24,7 @@ let uiFocus = Frontend.uiFocus;
 
 let layout = $state<TimelineLayout>();
 let input = $state<TimelineInput>();
+let rowPopup: Popup;
 
 // Setup function for the canvas
 function setup(canvas: HTMLCanvasElement) {
@@ -128,7 +128,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
         style:top="{buttonPosY}px"
         onclick={(ev) => {
           const rect = ev.currentTarget.getBoundingClientRect();
-          rowPopup.open!(rect);
+          rowPopup.open(rect);
         }}
       >
         <PenLineIcon />
@@ -139,7 +139,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
   </div>
 </div>
 
-<Popup bind:handler={rowPopup} position="right">
+<Popup bind:this={rowPopup} position="right">
   <div class="vlayout">
     <h5>
       {$_('timeline.filter-styles')}

@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { Snippet } from 'svelte';
 import { Debug } from '../Debug';
-import Popup, { type PopupHandler } from './Popup.svelte';
+import Popup from './Popup.svelte';
 import { CircleHelpIcon } from '@lucide/svelte';
 import type { HTMLAttributes } from 'svelte/elements';
 
@@ -14,8 +14,8 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 }
 
 let { position = 'top', text = '<Tooltip>', children, content, ...rest }: Props = $props();
-let handler: PopupHandler = $state({});
 let container: HTMLElement | undefined = $state();
+let popup: Popup;
 
 function findBoundingRect(element: HTMLElement): DOMRect {
   let minX = Infinity;
@@ -62,10 +62,10 @@ function findBoundingRect(element: HTMLElement): DOMRect {
   onmouseenter={() => {
     Debug.assert(container !== undefined);
     const rect = findBoundingRect(container);
-    handler.open!(rect);
+    popup.open(rect);
   }}
   onmouseleave={() => {
-    if (handler.isOpen!()) handler.close!();
+    if (popup.openState()) popup.close!();
   }}
   style="display: contents;"
 >
@@ -77,7 +77,7 @@ function findBoundingRect(element: HTMLElement): DOMRect {
     </span>
   {/if}
 </div>
-<Popup kind='tooltip' bind:handler={handler} {position} {...rest as object}>
+<Popup kind='tooltip' bind:this={popup} {position} {...rest as object}>
   {#if content}
     {@render content()}
   {:else}
