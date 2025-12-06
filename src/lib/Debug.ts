@@ -2,7 +2,6 @@ console.info('Debug loading');
 
 import { invoke } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log"
-import * as StackTrace from "stacktrace-js";
 import inspect from "object-inspect";
 import { EventHost } from "./details/EventHost";
 
@@ -46,7 +45,7 @@ async function callLog(level: LogLevel, message: string, location?: string) {
     });
 }
 
-function formatPrelude(level: string, file: string) {
+function formatPrelude(level: string, file?: string) {
     const now = new Date();
     return `${now.getFullYear()
         }-${now.getMonth().toString().padStart(2, '0')
@@ -55,7 +54,7 @@ function formatPrelude(level: string, file: string) {
         }:${now.getMinutes().toString().padStart(2, '0')
         }:${now.getSeconds().toString().padStart(2, '0')
         }.${now.getMilliseconds().toString().padStart(3, '0')
-        }[${level}][webview:${file}] `;
+        }[${level}][webview${file ? `:${file}` : ''}] `;
 }
 
 function formatData(data: unknown[]) {
@@ -68,28 +67,6 @@ function formatData(data: unknown[]) {
     }
     data.forEach((x) => result += ' ' + inspect(x));
     return result;
-}
-
-const Filter = {
-    filter: (stackFrame: StackTrace.StackFrame) => 
-        !(stackFrame.getFileName()?.endsWith('src/lib/Debug.ts')) 
-        && !(stackFrame.getFunctionName()?.includes('StackTrace$$')),
-    offline: true
-};
-
-async function stacktrace(from?: Error) {
-    // return {
-    //     file: '...',
-    //     func: '...',
-    //     trace: from?.stack ?? ''
-    // };
-    const frames = from 
-        ? await StackTrace.fromError(from, Filter) 
-        : StackTrace.getSync(Filter);
-    return {
-        file: frames[0]?.fileName?.split(/\/|\\/)?.at(-1) ?? '?',
-        func: frames[0]?.getFunctionName() ?? '?',
-        trace: frames.map((x) => '--> ' + x.toString()).join('\n')};
 }
 
 const HasStacktrace = new WeakSet<Error>();
@@ -168,46 +145,38 @@ export const Debug: {
         });
     },
     async trace(...data: unknown[]) {
-        const { file } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Trace)
-            console.log(formatPrelude('TRACE', file), ...data);
-        callLog(LogLevel.Trace, formatData(data), file);
+            console.log(formatPrelude('TRACE'), ...data);
+        callLog(LogLevel.Trace, formatData(data));
     },
     async debug(...data: unknown[]) {
-        const { file, trace: _ } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Debug)
-            console.debug(formatPrelude('DEBUG', file), ...data);
-        callLog(LogLevel.Debug, formatData(data), file);
+            console.debug(formatPrelude('DEBUG'), ...data);
+        callLog(LogLevel.Debug, formatData(data));
     },
     async info(...data: unknown[]) {
-        const { file, trace: _ } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Info)
-            console.info(formatPrelude('INFO', file), ...data);
-        callLog(LogLevel.Info, formatData(data), file);
+            console.info(formatPrelude('INFO'), ...data);
+        callLog(LogLevel.Info, formatData(data));
     },
     async warn(...data: unknown[]) {
-        const { file, trace: _ } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Warn)
-            console.warn(formatPrelude('WARN', file), ...data);
-        callLog(LogLevel.Warn, formatData(data), file);
+            console.warn(formatPrelude('WARN'), ...data);
+        callLog(LogLevel.Warn, formatData(data));
     },
     async error(...data: unknown[]) {
-        const { file, trace } = await stacktrace();
         if (this.filterLevel >= LogLevelFilter.Error)
-            console.error(formatPrelude('ERROR', file), ...data);
+            console.error(formatPrelude('ERROR'), ...data);
         const format = formatData(data);
-        this.onError.dispatch(file, format);
-        callLog(LogLevel.Error, format, file);
-        callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+        this.onError.dispatch('webview', format);
+        callLog(LogLevel.Error, format);
     },
     async forwardError(e: Error | unknown) {
         if (e instanceof Error) {
-            const { file, trace } = await stacktrace(e);
             if (this.filterLevel >= LogLevelFilter.Error)
-                console.error(formatPrelude('ERROR', file), e);
+                console.error(formatPrelude('ERROR'), e);
             const format = formatData([e]);
-            callLog(LogLevel.Error, format, file);
-            callLog(LogLevel.Error, `!!!WEBVIEW_STACKTRACE\n` + trace);
+            callLog(LogLevel.Error, format);
         } else {
             await this.error(e);
         }
@@ -227,12 +196,10 @@ export const Debug: {
         }
     },
     early(file?: string, func?: string, line?: number): void {
-        (async () => {
-            func ??= 'unknown';
-            file ??= '?';
-            callLog(LogLevel.Info, `<${func}> returned early ` 
-                + (line ? `at line ${line}` : '(no location info)'), file);
-        })();
+        func ??= 'unknown';
+        file ??= '?';
+        callLog(LogLevel.Info, `<${func}> returned early ` 
+            + (line ? `at line ${line}` : '(no location info)'), file);
     },
     never(x?: never): never {
         const msg = `Unreachable code reached (never=${x})`;
