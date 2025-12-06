@@ -8,7 +8,6 @@ import * as fs from "@tauri-apps/plugin-fs";
 import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/SimpleFormats";
 
-import { Dialogs } from "./Dialogs";
 import { ChangeType, Source } from "./Source";
 import { Editing } from "./Editing";
 import { Frontend, guardAsync } from "./Frontend";
@@ -27,6 +26,8 @@ import { Memorized } from "../config/MemorizedValue.svelte";
 import { ImportFormatDialogs } from "../dialog/ImportFormatDialogs";
 import { SRTSubtitles } from "../core/SRT.svelte";
 import { JSONSubtitles } from "../core/JSON.svelte";
+import { openDialog } from "../DialogOutlet.svelte";
+import { Dialog } from "../dialog";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -62,7 +63,7 @@ async function readTextFile(path: string) {
             return Basic.normalizeNewlines(decoded);
         } else {
             const result = (await import('chardet')).analyse(file);
-            const out = await Dialogs.encoding.showModal!({path, source: file, result});
+            const out = await openDialog(Dialog.encoding, path, file, result);
             if (!out) return null;
             return Basic.normalizeNewlines(out.decoded);
         }
@@ -143,8 +144,8 @@ export const Interface = {
                 $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
             return;
         }
-        const options = await Dialogs.importOptions
-            .showModal!([newSubs.migrated != 'text', newSubs]);
+        const options = await openDialog(
+            Dialog.importOptions, newSubs.migrated != 'text', newSubs);
         if (!options) return;
 
         const entries = SubtitleUtil.merge(Source.subs, newSubs, options);
@@ -294,7 +295,7 @@ export const InterfaceCommands = {
     {
         name: () => $_('menu.export-ass'),
         isDialog: true,
-        call: () => Dialogs.exportASS.showModal!()
+        call: () => openDialog(Dialog.exportASS)
     }),
     exportSRTPlaintext: new UICommand(() => $_('category.document'),
         [ ],
@@ -302,7 +303,7 @@ export const InterfaceCommands = {
         name: () => $_('menu.export-srt-plaintext'),
         isDialog: true,
         call: async () => {
-            const result = await Dialogs.exportText.showModal!();
+            const result = await openDialog(Dialog.exportText);
             if (!result) return;
             Interface.askExportFile(result.ext, () => result.content);
         }

@@ -1,7 +1,6 @@
 <script lang="ts">
 import { SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { Source } from '../frontend/Source';
-import type { DialogHandler } from '../frontend/Dialogs';
 import DialogBase from '../DialogBase.svelte';
 
 import { _ } from 'svelte-i18n';
@@ -9,17 +8,18 @@ import { LinearFormatCombineStrategy } from '../core/SubtitleUtil.svelte';
 import { Format } from '../core/SimpleFormats';
 import { Frontend } from '../frontend/Frontend';
 import Tooltip from '../ui/Tooltip.svelte';
+  import { onMount } from 'svelte';
 
 interface Props {
-  handler: DialogHandler<void, {content: string, ext: string} | null>;
+  args: [],
+  close: (ret: {content: string, ext: string} | null) => void
 }
 
-let {
-  handler = $bindable(),
-}: Props = $props();
+let { args: _args, close }: Props = $props();
 
-let inner: DialogHandler<void, string> = {};
-handler.showModal = async () => {
+let inner: DialogBase;
+
+onMount(async () => {
   let subs = Source.subs;
   let map = new Map<string, number>();
   for (const entry of subs.entries)
@@ -30,9 +30,9 @@ handler.showModal = async () => {
     (x) => ({style: x, count: map.get(x.name) ?? 0, use: true}));
   makePreview();
   let btn = await inner!.showModal!();
-  if (btn !== 'ok') return null;
-  return { content: preview, ext: extensions[format] };
-};
+  if (btn !== 'ok') return close(null);
+  return close({ content: preview, ext: extensions[format] });
+});
 
 let styles: {style: SubtitleStyle, count: number, use: boolean}[] = $state([]);
 let combine = $state(LinearFormatCombineStrategy.Recombine);
@@ -76,7 +76,7 @@ async function copy() {
 }
 </script>
 
-<DialogBase handler={inner} maxWidth="40em">
+<DialogBase bind:this={inner} maxWidth="40em">
   {#snippet header()}
     <h4>{$_('exportdialog.header')}</h4>
   {/snippet}

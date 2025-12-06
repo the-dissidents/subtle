@@ -1,29 +1,28 @@
 <script lang="ts">
 import DialogBase from '../DialogBase.svelte';
-import { Debug } from '../Debug';
-import { DialogHandler } from '../frontend/Dialogs';
-
+import { onMount } from 'svelte';
 import { _ } from 'svelte-i18n';
 import { openPath, openUrl } from '@tauri-apps/plugin-opener';
 import { appLogDir } from '@tauri-apps/api/path';
 
 interface Props {
-  handler: DialogHandler<void, void>;
+  args: [],
+  close: (ret: void) => void
 }
 
 let {
-  handler = $bindable(),
+  args: _args, close
 }: Props = $props();
 
-let inner = new DialogHandler<void>();
-handler.showModal = async () => {
-  Debug.assert(inner !== undefined);
+let inner: DialogBase;
+
+onMount(async () => {
   await inner.showModal!();
-  return;
-};
+  close();
+});
 </script>
 
-<DialogBase handler={inner} buttons={[{
+<DialogBase bind:this={inner} buttons={[{
   name: 'close',
   localizedName: () => $_('ok')
 }]}>

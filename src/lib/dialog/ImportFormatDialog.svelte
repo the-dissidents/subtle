@@ -25,35 +25,33 @@ export type ImportFormat<P extends SubtitleParser> = {
 <script lang="ts" generics="P extends SubtitleParser">
 import DialogBase from '../DialogBase.svelte';
 import type { SubtitleParseMessage, SubtitleParser } from '../core/Subtitles.svelte';
-import { DialogHandler } from '../frontend/Dialogs';
 import { groupBy, type GroupedBy, type OneGroup } from '../details/GroupBy';
 import { CircleAlertIcon, CircleCheckIcon } from '@lucide/svelte';
 import { Debug } from '../Debug';
 
 import { _ } from 'svelte-i18n';
 import Tooltip from '../ui/Tooltip.svelte';
+  import { onMount } from 'svelte';
 
 interface Props {
-  handler: DialogHandler<[P, ImportFormat<P>], boolean>;
+  args: [P, ImportFormat<P>];
+  close: (ret: boolean) => void;
 }
 
 let {
-  handler = $bindable(),
+  args, close
 }: Props = $props();
 
-let inner = new DialogHandler<void>();
-let parser = $state<P>();
-let categories = $state<GroupedBy<P['messages'][0], 'category'>>();
-let format = $state<ImportFormat<P>>();
+let [parser, format] = $state(args);
 
-handler.showModal = async ([p, f]) => {
-  format = f;
-  parser = p;
+let inner: DialogBase;
+let categories = $state<GroupedBy<P['messages'][0], 'category'>>();
+
+onMount(async () => {
   parse();
-  Debug.assert(inner !== undefined);
   let btn = await inner.showModal!();
-  return btn == 'ok';
-};
+  return close(btn == 'ok');
+});
 
 function parse() {
   Debug.assert(parser !== undefined);
@@ -62,7 +60,7 @@ function parse() {
 }
 </script>
 
-<DialogBase handler={inner}>
+<DialogBase bind:this={inner}>
   {#snippet header()}
   <h3>{format?.header}</h3>
   {/snippet}

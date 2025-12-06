@@ -7,7 +7,6 @@ import { Debug } from '../Debug';
 import { Menu } from '@tauri-apps/api/menu';
 
 import { UICommand } from '../frontend/CommandBase';
-import { Dialogs } from '../frontend/Dialogs';
 import { Source, SourceCommands } from '../frontend/Source';
 
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
@@ -17,6 +16,8 @@ import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type
 import { invoke } from "@tauri-apps/api/core";
   import FontSelect from "../FontSelect.svelte";
   import { Fonts } from "../Fonts";
+  import { openDialog } from "../DialogOutlet.svelte";
+  import { Dialog } from "../dialog";
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -174,7 +175,7 @@ function testAssertion() {
 </button>
 
 <button
-  onclick={() => Dialogs.keybindingInput!.showModal!([SourceCommands.undo, null])}>
+  onclick={() => openDialog(Dialog.keybindingInput, SourceCommands.undo, null)}>
   keybinding input
 </button>
 

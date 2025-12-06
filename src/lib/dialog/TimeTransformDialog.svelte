@@ -1,23 +1,21 @@
 <script lang="ts">
-import { Basic } from '../Basic';
 import { SubtitleEntry } from '../core/Subtitles.svelte';
 import { type TimeShiftOptions } from "../core/SubtitleUtil.svelte";
-import { Debug } from "../Debug";
-import DialogBase from '../DialogBase.svelte';
-import type { DialogHandler } from '../frontend/Dialogs';
 import { Editing } from '../frontend/Editing';
-import TimestampInput from '../TimestampInput.svelte';
 import NumberInput from '../ui/NumberInput.svelte';
+import DialogBase from '../DialogBase.svelte';
+import TimestampInput from '../TimestampInput.svelte';
+import { Basic } from '../Basic';
 
+import { onMount } from 'svelte';
 import { _ } from 'svelte-i18n';
 
 interface Props {
-  handler: DialogHandler<void, TimeShiftOptions | null>;
+  args: [],
+  close: (ret: TimeShiftOptions | null) => void
 }
 
-let {
-  handler = $bindable(),
-}: Props = $props();
+let { args: _args, close }: Props = $props();
 
 // constants
 let selectionStart = $state(0),
@@ -37,22 +35,22 @@ let shiftOption: 'forward' | 'backward' = $state('forward');
 let customAnchor = $state(0);
 let anchorOption: 'zero' | 'start' | 'end' | 'custom' = $state('start');
 
-let inner: DialogHandler<void> = {};
-handler.showModal = async () => {
-  Debug.assert(inner !== undefined);
+let inner: DialogBase;
+
+onMount(async () => {
   updateSelection();
   toTransformed();
   let btn = await inner.showModal!();
   if (btn !== 'ok') return null;
-  return {
+  return close({
     // t = (t0 - anchor) * scale + anchor + offset
     // t = t0 * scale + anchor + offset - anchor * scale
     selection: Editing.getSelection(),
     offset: cpAnchor + cpOffset - cpAnchor * cpScale,
     modifySince,
     scale: cpScale
-  };
-}
+  });
+});
 
 // deriveds
 let cpOffset = $derived(offset * (shiftOption == 'forward' ? 1 : -1));
@@ -96,7 +94,7 @@ function fromTransformed() {
 }
 </script>
 
-<DialogBase handler={inner}>
+<DialogBase bind:this={inner}>
   <table class='config'>
     <tbody>
       <tr>

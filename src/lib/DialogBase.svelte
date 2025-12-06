@@ -1,8 +1,7 @@
 <script lang="ts">
-import { tick } from "svelte";
+import { tick, type Snippet } from "svelte";
 import { _ } from 'svelte-i18n';
 import { Debug } from "./Debug";
-import { DialogHandler } from "./frontend/Dialogs";
 import { Frontend } from "./frontend/Frontend";
 
 export type DialogButton = {
@@ -12,16 +11,14 @@ export type DialogButton = {
 };
 
 interface Props {
-  handler: DialogHandler<void, string>;
   // centerWhenOpen?: boolean;
   maxWidth?: string;
-  header?: import('svelte').Snippet;
-  children?: import('svelte').Snippet;
+  header?: Snippet;
+  children?: Snippet;
   buttons?: DialogButton[];
 }
 
 let {
-  handler = $bindable(),
   maxWidth = '40em',
   header,
   children,
@@ -68,8 +65,8 @@ function startDrag(ev: MouseEvent) {
 }
 
 let resolve: ((btn: string) => void) | undefined;
-Debug.assert(handler !== null);
-handler.showModal = async () => {
+
+export async function showModal() {
   return new Promise((r) => {
     resolve = (btn) => {
       Debug.debug('dialog returning', btn);

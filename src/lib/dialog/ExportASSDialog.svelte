@@ -5,27 +5,26 @@ import { type SubtitleStyle } from '../core/Subtitles.svelte';
 import { ASSWriter } from '../core/ASS.svelte';
 import { Source } from '../frontend/Source';
 import { Interface } from '../frontend/Interface';
-import type { DialogHandler } from '../frontend/Dialogs';
 import Tooltip from '../ui/Tooltip.svelte';
 import DialogBase from '../DialogBase.svelte';
 import { Fonts } from '../Fonts';
 import { MAPI } from '../API';
 import { Debug } from '../Debug';
 
+import { CircleAlertIcon, CircleCheckIcon, CircleHelpIcon, CircleXIcon, InfoIcon, MessageSquareMoreIcon,  } from '@lucide/svelte';
+import { onMount } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { _ } from 'svelte-i18n';
-import { CircleAlertIcon, CircleCheckIcon, CircleHelpIcon, CircleXIcon, InfoIcon, MessageSquareMoreIcon,  } from '@lucide/svelte';
 
 interface Props {
-  handler: DialogHandler<void, void>;
+  args: [],
+  close: (ret: void) => void
 }
 
-let {
-  handler = $bindable(),
-}: Props = $props();
+let { args: _args, close }: Props = $props();
+let inner: DialogBase;
 
-let inner: DialogHandler<void, string> = {};
-handler.showModal = async () => {
+onMount(async () => {
   let subs = Source.subs;
   let map = new Map<string, number>();
   for (const entry of subs.entries)
@@ -54,7 +53,8 @@ handler.showModal = async () => {
   update();
   
   const btn = await inner!.showModal!();
-  if (btn !== 'ok') return;
+  if (btn !== 'ok')
+    return close();
 
   const writer = new ASSWriter(Source.subs);
   for (const [name, setting] of fonts)
@@ -65,7 +65,8 @@ handler.showModal = async () => {
       );
   
   await Interface.askExportFile('ass', () => writer.toString());
-};
+  close();
+});
 
 type FontSetting = {
   used: boolean,
@@ -132,7 +133,7 @@ async function handleSubsetButton(setting: FontSetting) {
 
 </script>
 
-<DialogBase handler={inner} maxWidth="50em">
+<DialogBase bind:this={inner} maxWidth="50em">
   {#snippet header()}
     <h4>{$_('exportassdialog.header')}</h4>
   {/snippet}

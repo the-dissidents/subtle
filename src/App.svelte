@@ -20,19 +20,6 @@ MainConfig.addGroup('timeline', TimelineConfig);
 MainConfig.addGroup('media', MediaConfig);
 MainConfig.addGroup('table', TableConfig);
 
-import CombineDialog from "./lib/dialog/CombineDialog.svelte";
-import ConfigDialog from './lib/dialog/ConfigDialog.svelte';
-import EncodingDialog from './lib/dialog/EncodingDialog.svelte';
-import ExportTextDialog from './lib/dialog/ExportTextDialog.svelte';
-import ExportASSDialog from './lib/dialog/ExportASSDialog.svelte';
-import ImportOptionsDialog from './lib/dialog/ImportOptionsDialog.svelte';
-import SplitByLineDialog from './lib/dialog/SplitByLineDialog.svelte';
-import TimeAdjustmentDialog from './lib/dialog/TimeTransformDialog.svelte';
-import KeybindingDialog from './lib/dialog/KeybindingDialog.svelte';
-import KeybindingInputDialog from './lib/dialog/KeybindingInputDialog.svelte';
-import BugDialog from './lib/dialog/BugDialog.svelte';
-import ReferenceSourcesDialog from './lib/dialog/ReferenceSourcesDialog.svelte';
-
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
 import Timeline from './lib/component/timeline/Timeline.svelte';
@@ -58,7 +45,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { arch, platform, version } from '@tauri-apps/plugin-os';
 import { restoreStateCurrent, saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state';
 
-import { DialogCommands, Dialogs } from './lib/frontend/Dialogs';
+import { DialogCommands } from './lib/frontend/Dialogs';
 import { Interface, InterfaceCommands, MEDIA_EXTENSIONS } from './lib/frontend/Interface';
 import { Playback, PlaybackCommands } from './lib/frontend/Playback';
 import { Source, SourceCommands } from './lib/frontend/Source';
@@ -69,6 +56,9 @@ import { BugIcon, CommandIcon, FilmIcon, SettingsIcon, TriangleAlertIcon } from 
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { MAPI } from './lib/API';
 import { Fonts } from './lib/Fonts';
+import { Dialog } from './lib/dialog';
+import DialogOutlet, { openDialog } from './lib/DialogOutlet.svelte';
+
 import * as z from "zod/v4-mini";
     
 Debug.init();
@@ -216,6 +206,15 @@ onMount(() => {
     versionBanner.open = true;
   }
 });
+
+const observer = new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    if (entry.name === 'first-contentful-paint') {
+      Debug.info(`------ FCP at ${entry.startTime}ms`);
+    }
+  }
+});
+observer.observe({ type: 'paint', buffered: true });
 </script>
 
 <svelte:window
@@ -238,18 +237,7 @@ onMount(() => {
 {:else}
 
 <!-- dialogs -->
-<TimeAdjustmentDialog   handler={Dialogs.timeTransform}/>
-<ImportOptionsDialog    handler={Dialogs.importOptions}/>
-<CombineDialog          handler={Dialogs.combine}/>
-<SplitByLineDialog      handler={Dialogs.splitByLine}/>
-<EncodingDialog         handler={Dialogs.encoding}/>
-<ExportTextDialog       handler={Dialogs.exportText}/>
-<ExportASSDialog        handler={Dialogs.exportASS}/>
-<ConfigDialog           handler={Dialogs.configuration}/>
-<KeybindingDialog       handler={Dialogs.keybinding}/>
-<KeybindingInputDialog  handler={Dialogs.keybindingInput}/>
-<BugDialog              handler={Dialogs.bugs}/>
-<ReferenceSourcesDialog handler={Dialogs.referenceSources}/>
+<DialogOutlet />
 
 <Banner style='error' bind:open={errorBanner.open}
   text={$_('msg.errorbanner')}
@@ -260,7 +248,7 @@ onMount(() => {
   ]}
   onSubmit={async (x) => {
     if (x == 'open') await MAPI.openDevtools();
-    if (x == 'more') Dialogs.bugs.showModal!();
+    if (x == 'more') openDialog(Dialog.bugs);
   }}/>
 
 <Banner style='error' bind:open={versionBanner.open}
@@ -286,8 +274,7 @@ onMount(() => {
       {/key}
       <li class='separator'></li>
       <li><button onclick={() => InterfaceCommands.openVideo.call()}>
-        <FilmIcon />
-        &nbsp;{$_('menu.open-video')}
+        <FilmIcon />&nbsp;{$_('menu.open-video')}
       </button></li>
       <li><button disabled={$loadState !== 'loaded'} 
           onclick={() => PlaybackCommands.selectAudioStream.call()}>
@@ -302,7 +289,7 @@ onMount(() => {
       <li>
         <Tooltip text={$_('menu.bug')} position="bottom">
           <button aria-label={$_('menu.bug')}
-                  onclick={() => Dialogs.bugs.showModal!()}>
+                  onclick={() => openDialog(Dialog.bugs)}>
             <BugIcon />
           </button>
         </Tooltip>

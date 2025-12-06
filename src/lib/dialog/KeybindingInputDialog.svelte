@@ -5,56 +5,59 @@
 <script lang="ts">
 import { Debug } from '../Debug';
 import DialogBase from '../DialogBase.svelte';
-import type { DialogHandler } from '../frontend/Dialogs';
 import { _ } from 'svelte-i18n';
-import { CommandBinding, KeybindingManager, type KeyBinding } from '../frontend/Keybinding';
+import { CommandBinding, KeyBinding, KeybindingManager } from '../frontend/Keybinding';
 import { UIFocusList, type UIFocus } from '../frontend/Frontend';
 import type { UICommand } from '../frontend/CommandBase';
 
+import { onMount } from 'svelte';
+
 interface Props {
-  handler: DialogHandler<[UICommand<unknown>, CommandBinding | null], CommandBinding | null>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args: [cmd: UICommand<any>, bindings: CommandBinding | null],
+  close: (ret: CommandBinding | null) => void
 }
 
 let {
-  handler = $bindable(),
+  args, close
 }: Props = $props();
 
-handler.showModal = async ([cmd, bind]) => {
+let [command, bindings] = args;
+let inner: DialogBase;
+
+onMount(async () => {
   Debug.assert(inner !== undefined);
-  command = cmd;
-  binding = bind?.sequence[0] ?? null;
-  if (bind?.contexts == undefined) {
+  key = bindings?.sequence[0] ?? null;
+  if (bindings?.contexts == undefined) {
     anyContext = true;
     contexts = new Set<UIFocus>;
   } else {
     anyContext = false;
-    contexts = new Set(bind.contexts);
+    contexts = new Set(bindings.contexts);
   }
   check();
   let result = await inner.showModal!();
-  if (result == 'ok' && binding !== null)
-    return cmdBinding();
-  return null;
-};
+  if (result == 'ok' && key !== null)
+    return close(cmdBinding());
+  close(null);
+});
 
-let inner: DialogHandler<void> = {};
-let command = $state<UICommand<unknown>>();
-let binding = $state<KeyBinding | null>(null);
+let key = $state<KeyBinding | null>(null);
 let anyContext = $state(false);
 let contexts = $state(new Set<UIFocus>());
 let error = $state('');
 
 function cmdBinding(): CommandBinding {
-  Debug.assert(binding !== null);
-  return new CommandBinding([binding], anyContext ? undefined : contexts);
+  Debug.assert(key !== null);
+  return new CommandBinding([key], anyContext ? undefined : contexts);
 }
 
 function check() {
-  if (binding === null) {
+  if (key === null) {
     error = '';
     return;
   }
-  const conflicts = KeybindingManager.findConflict(cmdBinding(), command!);
+  const conflicts = KeybindingManager.findConflict(cmdBinding(), command);
   if (conflicts.length == 0)
     error = '';
   else {
@@ -69,12 +72,12 @@ function check() {
 }
 </script>
 
-<DialogBase handler={inner} maxWidth="60em" buttons={[{
+<DialogBase bind:this={inner} maxWidth="60em" buttons={[{
   name: 'cancel',
   localizedName: () => $_('cancel')
 }, {
   name: 'ok',
-  disabled: () => (binding == null || error !== ''),
+  disabled: () => (key == null || error !== ''),
   localizedName: () => $_('ok')
 }]}>
   {#snippet header()}
@@ -84,17 +87,17 @@ function check() {
     <input type='text'
       class={{keybinding: true, flexgrow: true, error}}
       placeholder={$_('keyinput.press-a-key')} 
-      value={binding?.toString() ?? ''}
+      value={key?.toString() ?? ''}
       onkeydown={(ev) => {
         ev.preventDefault();
-        const key = KeybindingManager.parseKey(ev);
-        if (!key) return;
-        binding = key;
+        const parsed = KeybindingManager.parseKey(ev);
+        if (!parsed) return;
+        key = parsed;
         check();
       }} />
     <hr>
     <button onclick={() => {
-      binding = null;
+      key = null;
       check();
     }}>
       {$_('keyinput.clear')}

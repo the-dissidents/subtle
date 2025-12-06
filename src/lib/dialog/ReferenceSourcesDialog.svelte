@@ -1,26 +1,35 @@
 <script lang="ts">
-import DialogBase from '../DialogBase.svelte';
-import { Debug } from '../Debug';
 import { Memorized } from '../config/MemorizedValue.svelte';
 import Tooltip from '../ui/Tooltip.svelte';
-import { DialogHandler } from '../frontend/Dialogs';
 import { guardAsync } from '../frontend/Frontend';
 import { Reference, zReferenceSource, type ReferenceSource, type ReferenceString } from '../frontend/References';
+import DialogBase from '../DialogBase.svelte';
+import { Debug } from '../Debug';
 
 import { ArrowDownIcon, ArrowUpIcon, CopyPlusIcon, PlusIcon, SquareAsteriskIcon, SquareFunctionIcon, Trash2Icon, XIcon } from '@lucide/svelte';
 import { Menu } from '@tauri-apps/api/menu';
 import { confirm, message, open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { onMount } from 'svelte';
 import { _ } from 'svelte-i18n';
 import * as z from 'zod/v4-mini';
 
 interface Props {
-  handler: DialogHandler<void, void>;
+  args: [],
+  close: (ret: void) => void
 }
-    
+
 let {
-  handler = $bindable(),
+  args: _args, close
 }: Props = $props();
+
+let inner: DialogBase;
+
+onMount(async () => {
+  await inner.showModal!();
+  await Memorized.save();
+  close();
+});
 
 let sources = Reference.sources;
 let activeSource = $state<ReferenceSource[]>([]);
@@ -76,14 +85,6 @@ async function update() {
   else activeSource[0].selector = selector;
   
   sources.markChanged();
-}
-
-let inner = new DialogHandler<void>();
-handler.showModal = async () => {
-  Debug.assert(inner !== undefined);
-  await inner.showModal!();
-  await Memorized.save();
-  return;
 }
 
 async function exportJSON() {
@@ -207,7 +208,7 @@ async function importJSON() {
   {/if}
 {/snippet}
 
-<DialogBase handler={inner} maxWidth="60em" buttons={[{
+<DialogBase bind:this={inner} maxWidth="60em" buttons={[{
   name: 'ok',
   localizedName: () => $_('ok')
 }]}>

@@ -1,43 +1,45 @@
 <script lang="ts">
-import * as dialog from "@tauri-apps/plugin-dialog";
-import { ArrowDownToLineIcon, ArrowUpToLineIcon, Undo2Icon } from "@lucide/svelte";
-
+import { Debug } from "../Debug";
 import { SubtitleStyle, type SubtitleEntry } from '../core/Subtitles.svelte';
 import { type LabelType } from "../core/Labels";
-import { Debug } from "../Debug";
-import DialogBase from '../DialogBase.svelte';
-import type { DialogHandler } from '../frontend/Dialogs';
 import { Editing } from '../frontend/Editing';
-
-import { _ } from 'svelte-i18n';
 import { ChangeType, Source } from "../frontend/Source";
-import LabelSelect from "../LabelSelect.svelte";
-import StyleSelect from "../StyleSelect.svelte";
 import NumberInput from "../ui/NumberInput.svelte";
 import Tooltip from "../ui/Tooltip.svelte";
+import DialogBase from '../DialogBase.svelte';
+import LabelSelect from "../LabelSelect.svelte";
+import StyleSelect from "../StyleSelect.svelte";
+
+import * as dialog from "@tauri-apps/plugin-dialog";
+import { ArrowDownToLineIcon, ArrowUpToLineIcon, Undo2Icon } from "@lucide/svelte";
+import { onMount } from "svelte";
+import { _ } from 'svelte-i18n';
 
 interface Props {
-  handler: DialogHandler<void, void>;
+  args: [],
+  close: (ret: void) => void
 }
-    
+
 let {
-  handler = $bindable(),
+  args: _args, close
 }: Props = $props();
 
-let inner: DialogHandler<void> = {};
-handler.showModal = async () => {
+let inner: DialogBase;
+
+onMount(async () => {
   Debug.assert(inner !== undefined);
   selection = Editing.getSelection();
   Debug.assert(selection.length > 0);
   if (selection.some((x) => x.texts.size > 1)) {
     await dialog.message($_('splitbylinedialog.error'));
-    return;
+    return close();
   }
   makeData();
   check();
   selectedRow = -1;
   const btn = await inner.showModal!();
-  if (btn !== 'ok') return;
+  if (btn !== 'ok')
+    return close();
 
   // work
   let newStyles = new Map<string, SubtitleStyle>();
@@ -92,7 +94,8 @@ handler.showModal = async () => {
   Source.markChanged(
     newStyles.size > 0 ? ChangeType.General: ChangeType.InPlace,
     $_('c.split-by-line'));
-}
+  close();
+});
 
 function makeData() {
   for (let i = 0; i < usages.length; i++)
@@ -272,7 +275,7 @@ let hasError = $state(true);
 let updateCounter = $state(0);
 </script>
 
-<DialogBase handler={inner} maxWidth="48em"
+<DialogBase bind:this={inner} maxWidth="48em"
   buttons={[{
     name: 'cancel',
     localizedName: () => $_('cancel')

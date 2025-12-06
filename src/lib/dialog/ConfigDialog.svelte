@@ -2,40 +2,39 @@
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MainConfig } from "../config/Groups";
 import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
-import { Debug } from "../Debug";
-import DialogBase from '../DialogBase.svelte';
-import type { DialogHandler } from '../frontend/Dialogs';
-
-import { appLocalDataDir, appLogDir } from "@tauri-apps/api/path";
-import { _, locale } from 'svelte-i18n';
 import { Interface } from '../frontend/Interface';
 import NumberInput from '../ui/NumberInput.svelte';
+import { Debug } from "../Debug";
+import DialogBase from '../DialogBase.svelte';
+
+import { appLocalDataDir, appLogDir } from "@tauri-apps/api/path";
 import { RefreshCcwIcon } from '@lucide/svelte';
+import { onMount } from 'svelte';
+import { _, locale } from 'svelte-i18n';
 
 interface Props {
-  handler: DialogHandler<void, void>;
+  args: [],
+  close: (ret: void) => void
 }
 
-let {
-  handler = $bindable()
-}: Props = $props();
+let { args: _args, close }: Props = $props();
 
-handler.showModal = async () => {
-  Debug.assert(inner !== undefined);
+onMount(async () => {
   groups = Object.entries(MainConfig.groups);
   groups.sort((a, b) => a[1].priority - b[1].priority);
   await inner.showModal!();
   await Interface.savePublicConfig();
-};
+  close();
+});
 
-let inner: DialogHandler<void> = {}
+let inner: DialogBase;
 let groups = $state<[string, PublicConfigGroup<PublicConfigGroupDefinition>][]>([]);
 let refresh = $state(0);
 
 locale.subscribe(() => refresh++);
 </script>
 
-<DialogBase handler={inner} maxWidth="40em" buttons={[{
+<DialogBase bind:this={inner} maxWidth="40em" buttons={[{
   name: 'ok',
   localizedName: () => $_('ok')
 }]}>

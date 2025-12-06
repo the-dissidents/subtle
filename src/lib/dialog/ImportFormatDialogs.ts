@@ -1,6 +1,4 @@
-import { mount, tick, unmount } from "svelte";
-import assimport, { type ImportFormat } from "./ImportFormatDialog.svelte";
-import { DialogHandler } from "../frontend/Dialogs";
+import { type ImportFormat } from "./ImportFormatDialog.svelte";
 import type { SubtitleParser } from "../core/Subtitles.svelte";
 import { ASSParser, type ASSParseMessage } from "../core/ASS.svelte";
 import { Debug } from "../Debug";
@@ -8,6 +6,7 @@ import { Debug } from "../Debug";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import type { SRTParseMessage, SRTParser } from "../core/SRT.svelte";
 import type { JSONParseMessage, JSONParser } from "../core/JSON.svelte";
+import { openDialog } from "../DialogOutlet.svelte";
 const $_ = unwrapFunctionStore(_);
 
 async function show<P extends SubtitleParser>(
@@ -17,15 +16,8 @@ async function show<P extends SubtitleParser>(
     if (parser.messages.length == 0 && skippable)
         return parser.done();
 
-    const handler = new DialogHandler<[P, ImportFormat<P>], boolean>();
-    const dialog = mount(assimport<P>, {
-        target: document.getElementById('app')!,
-        props: {handler}
-    });
-    await tick();
-    const result = await handler.showModal!([parser, format]);
-    unmount(dialog);
-    return result;
+    return await openDialog(
+        (await import('./ImportFormatDialog.svelte')).default<P>, parser, format);
 }
 
 export const ImportFormatDialogs = {

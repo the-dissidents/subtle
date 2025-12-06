@@ -1,44 +1,41 @@
 <script lang="ts">
 import type { AnalyseResult, EncodingName } from 'chardet';
 import { Debug } from "../Debug";
-import DialogBase from '../DialogBase.svelte';
-import type { DialogHandler } from '../frontend/Dialogs';
-
-import { _ } from 'svelte-i18n';
 import { MAPI } from '../API';
+import DialogBase from '../DialogBase.svelte';
+
+import { onMount } from 'svelte';
+import { _ } from 'svelte-i18n';
 
 interface Props {
-  handler: DialogHandler<
-    {path: string, source: Uint8Array, result: AnalyseResult}, 
-    {decoded: string, encoding: EncodingName} | null>;
+  args: [path: string, source: Uint8Array, result: AnalyseResult],
+  close: (ret: {decoded: string, encoding: EncodingName} | null) => void
 }
 
-let {
-  handler = $bindable(),
-}: Props = $props();
+let { args, close }: Props = $props();
+let [path, source, result] = args;
+let inner: DialogBase;
 
-let inner: DialogHandler<void, string> = {};
-  handler.showModal = async ({path: p, source: s, result}) => {
+onMount(async () => {
   Debug.assert(inner !== undefined);
-  source = s; path = p;
   candidates = result;
   if (candidates.length > 0) {
     selectedEncoding = candidates[0].name;
     makePreview();
   }
   let btn = await inner.showModal!();
-  if (btn !== 'ok' || !selectedEncoding) return null;
-  return {
+  if (btn !== 'ok' || !selectedEncoding)
+    return close(null);
+  
+  close({
     encoding: selectedEncoding, 
     decoded: await MAPI.decodeFile(path, selectedEncoding)
-  };
-}
+  });
+});
 
 let selectedEncoding: EncodingName | undefined = $state();
 let okDisabled = $state(false);
 let preview = $state('');
-let source: Uint8Array;
-let path: string;
 let candidates: AnalyseResult | undefined = $state();
 
 async function makePreview() {
@@ -58,7 +55,7 @@ async function makePreview() {
 }
 </script>
 
-<DialogBase handler={inner} maxWidth="35em"
+<DialogBase bind:this={inner} maxWidth="35em"
   buttons={[{
     name: 'cancel',
     localizedName: () => $_('cancel')

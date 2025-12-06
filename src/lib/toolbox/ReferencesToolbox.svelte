@@ -44,9 +44,10 @@ import { _ } from 'svelte-i18n';
 import Collapsible from '../ui/Collapsible.svelte';
 import { Reference, type ReferenceSource } from '../frontend/References';
 import { Frontend, guardAsync } from '../frontend/Frontend';
-import { Dialogs } from '../frontend/Dialogs';
 import { Memorized } from '../config/MemorizedValue.svelte';
 import * as z from 'zod/v4-mini';
+  import { openDialog } from '../DialogOutlet.svelte';
+  import { Dialog } from '../dialog';
 
 let keyword = $state('');
 let params = new Map<string, string>();
@@ -99,7 +100,7 @@ currentSourceName.subscribe((x) => {
         <option value={source}>{source.name}</option>
       {/each}
     </select>
-    <button onclick={() => Dialogs.referenceSources.showModal!()}>
+    <button onclick={() => openDialog(Dialog.referenceSources)}>
       <PencilLineIcon />
     </button>
   </div>

@@ -1,33 +1,32 @@
 <script lang="ts">
-import { Debug } from "../Debug";
 import type { Subtitles } from "../core/Subtitles.svelte";
 import type { MergePosition, MergeStyleBehavior, MergeStyleSelection, MergeOptions } from "../core/SubtitleUtil.svelte";
-import type { DialogHandler } from '../frontend/Dialogs';
 import { Source } from '../frontend/Source';
-
 import DialogBase from '../DialogBase.svelte';
 import StyleSelect from '../StyleSelect.svelte';
 
+import { onMount } from "svelte";
 import { _ } from 'svelte-i18n';
 
 interface Props {
-  handler: DialogHandler<[boolean, Subtitles], MergeOptions | null>;
+  args: [hasStyles: boolean, subs: Subtitles],
+  close: (ret: MergeOptions | null) => void
 }
 
 let {
-  handler = $bindable(),
+  args, close
 }: Props = $props();
 
-let inner: DialogHandler<void> = {};
-handler.showModal = async ([_hasStyles, _subs]) => {
-  Debug.assert(inner !== undefined);
-  subs = _subs;
-  hasStyles = _hasStyles;
+let [hasStyles, subs] = args;
+let inner: DialogBase;
+
+onMount(async () => {
   if (!hasStyles) styleOption = 'override';
   let btn = await inner.showModal!();
-  if (btn !== 'ok') return null;
+  if (btn !== 'ok')
+    return close(null);
 
-  return {
+  return close({
     style: 
         styleOption == 'createNewOverride' ? { type: styleOption, name: overrideStyleName }
       : styleOption == 'override' ? { type: styleOption, overrideStyle }
@@ -35,10 +34,9 @@ handler.showModal = async ([_hasStyles, _subs]) => {
     position: { type: posOption },
     selection: selectOption,
     overrideMetadata: overrideMetadata
-  };
-}
+  });
+});
 
-let subs: Subtitles;
 let overrideStyle = $state(Source.subs.defaultStyle);
 let overrideStyleName = $state('');
 let duplicateWarning = $state(true);
@@ -47,10 +45,9 @@ let styleOption = $state<MergeStyleBehavior['type']>('keepDifferent');
 let selectOption = $state<MergeStyleSelection>('usedOnly');
 let posOption = $state<Exclude<MergePosition['type'], 'custom'>>('after');
 let overrideMetadata = $state(false);
-let hasStyles = $state(true)
 </script>
 
-<DialogBase handler={inner} buttons={[
+<DialogBase bind:this={inner} buttons={[
   {
     name: 'cancel',
     localizedName: () => $_('cancel')

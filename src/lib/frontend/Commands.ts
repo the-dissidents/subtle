@@ -10,13 +10,14 @@ import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { LABEL_TYPES } from "../core/Labels";
 import { Playback } from "./Playback";
 import { Utils } from "./Utils";
-import { Dialogs } from "./Dialogs";
 import { InputConfig } from "../config/Groups";
 import { Format } from "../core/SimpleFormats";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { TableCommands } from "../component/subtitleTable/Config";
+import { openDialog } from "../DialogOutlet.svelte";
+import { Dialog } from "../dialog";
 const $_ = unwrapFunctionStore(_);
 
 const toJSON = (entries: SubtitleEntry[]) => 
@@ -573,7 +574,7 @@ export const BasicCommands = {
         name: () => $_('action.transform-times'),
         isDialog: true,
         async call() {
-            const options = await Dialogs.timeTransform.showModal!();
+            const options = await openDialog(Dialog.transformTimes);
             if (options && SubtitleUtil.shiftTimes(Source.subs, options))
                 Source.markChanged(ChangeType.Times, $_('c.transform-times'));
         },

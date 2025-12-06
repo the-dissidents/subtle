@@ -1,28 +1,33 @@
 <script lang="ts">
 import { Debug } from '../Debug';
-import DialogBase from '../DialogBase.svelte';
-import { Dialogs, type DialogHandler } from '../frontend/Dialogs';
-import { _, locale } from 'svelte-i18n';
 import { KeybindingManager, type CommandBinding } from '../frontend/Keybinding';
 import type { UICommand } from '../frontend/CommandBase';
+import DialogBase from '../DialogBase.svelte';
+import { openDialog } from '../DialogOutlet.svelte';
+import KeybindingInputDialog from './KeybindingInputDialog.svelte';
+
 import { CreditCardIcon, MenuIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from '@lucide/svelte';
+import { onMount } from 'svelte';
+import { _, locale } from 'svelte-i18n';
 
 interface Props {
-  handler: DialogHandler<void, void>;
+  args: [],
+  close: (ret: void) => void
 }
 
 let {
-  handler = $bindable()
+  args: _args, close
 }: Props = $props();
 
-handler.showModal = async () => {
+let inner: DialogBase;
+
+onMount(async () => {
   Debug.assert(inner !== undefined);
   await inner.showModal!();
   await KeybindingManager.save();
-};
+  close();
+});
 
-let inner: DialogHandler<void> = {};
-// let filter = $state('');
 let refresh = $state(false);
 
 function groupedCommands() {
@@ -45,7 +50,7 @@ function isDefault(cmd: UICommand<unknown>) {
 locale.subscribe(() => refresh = !refresh);
 </script>
 
-<DialogBase handler={inner} maxWidth="60em" buttons={[{
+<DialogBase bind:this={inner} maxWidth="60em" buttons={[{
   name: 'ok',
   localizedName: () => $_('ok')
 }]}>
@@ -73,7 +78,7 @@ locale.subscribe(() => refresh = !refresh);
           <!-- keybinding -->
           <td>
             <button onclick={async () => {
-              const result = await Dialogs.keybindingInput.showModal!([cmd, binding]);
+              const result = await openDialog(KeybindingInputDialog, cmd, binding);
               if (result) {
                 binding.contexts = result.contexts;
                 binding.sequence = result.sequence;
@@ -117,7 +122,7 @@ locale.subscribe(() => refresh = !refresh);
           <td>
             <!-- add -->
             <button class="add" aria-label='add' onclick={async () => {
-              const result = await Dialogs.keybindingInput.showModal!([cmd, null]);
+              const result = await openDialog(KeybindingInputDialog, cmd, null);
               if (result) {
                 cmd.bindings.push(result);
                 refresh = !refresh;

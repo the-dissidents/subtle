@@ -1,25 +1,25 @@
 <script lang="ts">
 import { SubtitleEntry } from '../core/Subtitles.svelte';
 import { type LabelType } from "../core/Labels";
-import { Debug } from "../Debug";
-import DialogBase from '../DialogBase.svelte';
-import type { DialogHandler } from '../frontend/Dialogs';
 import { Editing } from '../frontend/Editing';
 import { ChangeType, Source } from '../frontend/Source';
-
-import { _ } from 'svelte-i18n';
+import DialogBase from '../DialogBase.svelte';
 import LabelSelect from '../LabelSelect.svelte';
 import NumberInput from '../ui/NumberInput.svelte';
 
+import { _ } from 'svelte-i18n';
+import { onMount } from 'svelte';
+
 interface Props {
-  handler: DialogHandler<void, void>;
+  args: [],
+  close: (ret: void) => void
 }
 
 let {
-  handler = $bindable()
+  args: _args, close
 }: Props = $props();
 
-let inner: DialogHandler<void> = {}
+let inner: DialogBase;
 let start = $state(0),
     end = $state(0);
 let markStart = $state(0.05),
@@ -30,14 +30,13 @@ let selectionOnly = $state(true),
     markLabel = $state('red' as LabelType),
     hasbeen = $state(false);
 
-handler.showModal = async () => {
-  Debug.assert(inner !== undefined);
+onMount(async () => {
   run(false);
   await inner.showModal!();
-}
+  close();
+});
 
-function run(doit: boolean) 
-{
+function run(doit: boolean) {
   start = start ?? 0;
   end = end ?? 0;
   number = [0, 0, 0];
@@ -113,7 +112,7 @@ function run(doit: boolean)
 
 </script>
 
-<DialogBase handler={inner} buttons={[{
+<DialogBase bind:this={inner} buttons={[{
   name: 'ok',
   localizedName: () => $_('back')
 }]}>
