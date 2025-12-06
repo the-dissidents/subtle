@@ -12,6 +12,7 @@
 
 <script lang="ts">
   import { onMount } from "svelte";
+  import * as Color from "colorjs.io/fn";
 
   import type { CanvasManager } from "../../CanvasManager";
   import type { SubtitleStyle } from "../../core/Subtitles.svelte";
@@ -60,6 +61,9 @@
               || 'none'}
   {@const outline = box.style.outline * 2 * box.scale}
   {@const shadow = box.style.shadow * box.scale}
+  {@const color = Color.serialize(box.style.color)}
+  {@const outlineColor = Color.serialize(box.style.outlineColor)}
+  {@const shadowColor = Color.serialize(box.style.shadowColor)}
     <div class="box" style="
       left: {box.x}px;
       top: {box.y}px;
@@ -79,12 +83,12 @@
       font-style: {italic};
       text-decoration: {deco};
       {outline > 0
-        ? `color: ${box.style.outlineColor};
+        ? `color: ${outlineColor};
            -webkit-text-stroke-width: ${outline}px;
-           -webkit-text-stroke-color: ${box.style.outlineColor};`
-        : `color: ${box.style.color};`}
+           -webkit-text-stroke-color: ${outlineColor};`
+        : `color: ${color};`}
       {shadow > 0 
-        ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${box.style.shadowColor});` 
+        ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${shadowColor});` 
         : ''}
     ">
       {box.text}
@@ -96,7 +100,7 @@
       top: {box.y}px;
       width: {box.w}px;
       height: {box.h}px;
-      color: {box.style.color};
+      color: {color};
       font: {box.font};
       font-weight: {bold};
       font-style: {italic};

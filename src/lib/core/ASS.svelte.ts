@@ -1,4 +1,4 @@
-import Color from "colorjs.io";
+import * as Color from "colorjs.io/fn";
 import { Basic } from "../Basic";
 import { Debug } from "../Debug";
 import { DeserializationError } from "../Serialization";
@@ -193,7 +193,7 @@ export class ASSParser implements SubtitleParser {
                 if (!isNaN(n) && f(n) !== false) return;
                 this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
-            const color = (field: string, f: (x: Color) => boolean | void) => {
+            const color = (field: string, f: (x: Color.PlainColorObject) => boolean | void) => {
                 if (!styleFieldMap!.has(field)) return;
                 const value = items[styleFieldMap.get(field)!];
                 const color = fromASSColor(value);
@@ -547,27 +547,33 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
 }
 
 // &HAABBGGRR
-export function toASSColor(orginal: Color) {
-    const c = orginal.toGamut();
+export function toASSColor(original: Color.ColorTypes) {
+    const c = Color.to(original, 'srgb', { inGamut: true });
+    const [r, g, b] = c.coords;
     return '&H' 
-        + ((1 - (c.a ?? 1)) * 255).toString(16).toUpperCase().padStart(2, '0')
-        + (c.b * 255).toString(16).toUpperCase().padStart(2, '0')
-        + (c.g * 255).toString(16).toUpperCase().padStart(2, '0')
-        + (c.r * 255).toString(16).toUpperCase().padStart(2, '0');
+        + ((1 - (c.alpha ?? 1)) * 255).toString(16).toUpperCase().padStart(2, '0')
+        + (b * 255).toString(16).toUpperCase().padStart(2, '0')
+        + (g * 255).toString(16).toUpperCase().padStart(2, '0')
+        + (r * 255).toString(16).toUpperCase().padStart(2, '0');
 }
 
-export function fromASSColor(str: string) {
+export function fromASSColor(str: string): Color.PlainColorObject | null {
     str = str.toUpperCase();
     if (!str.startsWith('&H') || str.length != 10) return null;
 
-    const [r, g, b, a] = [
-        Number.parseInt(str.slice(8, 10), 16), 
-        Number.parseInt(str.slice(6, 8), 16),
-        Number.parseInt(str.slice(4, 6), 16),
-        Number.parseInt(str.slice(2, 4), 16)];
-    if ([r, g, b, a].some((x) => Number.isNaN(x))) return null;
+    const [r, g, b, alpha] = [
+        Number.parseInt(str.slice(8, 10), 16) / 255, 
+        Number.parseInt(str.slice(6, 8), 16) / 255,
+        Number.parseInt(str.slice(4, 6), 16) / 255,
+        Number.parseInt(str.slice(2, 4), 16) / 255
+    ];
+    if ([r, g, b, alpha].some((x) => Number.isNaN(x))) return null;
 
-    return new Color(`rgb(${r} ${g} ${b} / ${a / 255})`);
+    return {
+        space: Color.sRGB,
+        coords: [r, g, b],
+        alpha
+    };
 }
 
 function getASSFormatFieldMap(section: string) {

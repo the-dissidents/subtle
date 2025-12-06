@@ -8,6 +8,11 @@ import { getVersion } from "@tauri-apps/api/app";
 let version = '?';
 getVersion().then((x) => version = x);
 
+import * as Color from "colorjs.io/fn";
+Color.ColorSpace.register(Color.sRGB);
+Color.ColorSpace.register(Color.HSL);
+Color.ColorSpace.register(Color.OKLCH);
+
 const osType = os.type(),
       pathSeparator = path.sep(),
       ctrlKey = os.type() == 'macos' ? 'Meta' : 'Control';

@@ -46,4 +46,11 @@ export class BinaryReader<T extends ArrayBufferLike = ArrayBufferLike> {
         this.i += length;
         return content;
     }
+
+    readString() {
+        const len = this.readU32();
+        const str = (new TextDecoder()).decode(this.data.buffer.slice(this.i, this.i + len));
+        this.i += len;
+        return str;
+    }
 }

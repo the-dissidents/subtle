@@ -7,20 +7,20 @@ import { AlignMode, type LabelType } from "./Labels";
 import { parseObjectZ } from "../Serialization";
 
 import * as z from "zod/v4-mini";
-import Color from "colorjs.io";
+import * as Color from "colorjs.io/fn";
 
-const ZColor = z.codec(z.string(), z.instanceof(Color),
+const ZColor = z.codec(z.string(), z.custom<Color.PlainColorObject>(),
 {
     decode: (x, cxt) => {
         try {
-            return new Color(x);
+            return Color.getColor(x);
         } catch (e) {
             cxt.issues.push({
                 input: x,
                 code: "custom",
                 message: `error parsing color: ${e}`
             });
-            return new Color('black');
+            return Color.getColor('black');
         }
     },
     encode: (x) => x.toString()
@@ -30,10 +30,10 @@ export const ZStyleBase = z.object({
     name:                         z.string(),
     font:              z._default(z.string(), ''),
     size:              z._default(z.number().check(z.positive()), 72),
-    color:             z._default(ZColor, new Color('white')),
-    outlineColor:      z._default(ZColor, new Color('black')),
+    color:             z._default(ZColor, Color.getColor('white')),
+    outlineColor:      z._default(ZColor, Color.getColor('black')),
     outline:           z._default(z.number().check(z.gte(0)), 1),
-    shadowColor:       z._default(ZColor, new Color('black')),
+    shadowColor:       z._default(ZColor, Color.getColor('black')),
     shadow:            z._default(z.number().check(z.gte(0)), 0),
     styles: z.object({
         bold:          z._default(z.boolean(), false),

@@ -7,6 +7,8 @@ import { Typography } from "../../details/Typography";
 import { MediaConfig } from "./Config";
 import type { EntryBox } from "./SubtitleView.svelte";
 
+import * as Color from "colorjs.io/fn";
+
 type WrappedEntry = {
     oldIndex: number,
     newIndex: number,
@@ -218,7 +220,7 @@ export class SubtitleRenderer {
             if (isRight(style.alignment)) ctx.textAlign = 'right';
     
             ctx.font = styleFonts.get(style)!;
-            ctx.fillStyle = style.color.toString();
+            ctx.fillStyle = Color.serialize(style.color);
 
             const textWidth = width - this.#hMargin * 2 - 
                 (style.margin.left + style.margin.right) * this.#scale;
@@ -250,7 +252,7 @@ export class SubtitleRenderer {
                         ctx.stroke();
                     }
                     if (style.outline) {
-                        ctx.strokeStyle = style.outlineColor.toString();
+                        ctx.strokeStyle = Color.serialize(style.outlineColor);
                         ctx.lineWidth = style.outline * this.#scale;
                         ctx.strokeText(line, x, newBox.y + newBox.diffy);
                     }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Color from "colorjs.io";
+  import * as Color from "colorjs.io/fn";
   import { untrack } from "svelte";
   import { _ } from "svelte-i18n";
 
@@ -43,7 +43,8 @@
 
   function convertMode(to: ColorMode) {
     console.log('converting to', to, mode);
-    const newColor = new Color(modes[mode].expr(value0, value1, value2)).to(to).toGamut();
+    const newColor = Color.to(
+      Color.parse(modes[mode].expr(value0, value1, value2)), to, { inGamut: true });
     newColor.alpha = alpha;
     updateFromColor(newColor);
     computeBoundaries();
@@ -52,7 +53,7 @@
   function parseHex() {
     let match = /#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/.exec(hex.toLowerCase());
     if (match) {
-      const newColor = new Color(hex);
+      const newColor = Color.getColor(hex);
       newColor.alpha = alpha;
       changed = true;
       updateFromColor(newColor);
@@ -70,22 +71,25 @@
   }
 
   function updateFromValues() {
-    color = new Color(modes[mode].expr(value0, value1, value2, alpha));
+    color = Color.getColor(modes[mode].expr(value0, value1, value2, alpha));
     changed = true;
     updateTexts();
     oninput?.(color);
   }
 
-  function updateFromColor(c: Color) {
+  function updateFromColor(c: Color.PlainColorObject) {
     if (color !== c) color = c;
 
     let modeChanged = false;
+    let normalized: Color.PlainColorObject;
     if (c.space.id !== mode && c.space.id in modes) {
       mode = c.space.id as ColorMode;
       modeChanged = true;
-    }
+      normalized = Color.to(c, mode, { inGamut: true });
+    } else
+      normalized = Color.toGamut(c);
 
-    [value0, value1, value2] = modes[mode].fromColorIo(...color.to(mode).toGamut().coords);
+    [value0, value1, value2] = modes[mode].fromColorIo(...normalized.coords);
     alpha = c.alpha ?? 1;
     // TODO: this isn't entirely correct, but is effective
     if (Number.isNaN(value0)) value0 = 0;
@@ -98,20 +102,22 @@
   }
 
   function updateTexts() {
-    let srgb = color.to('srgb');
-    outOfGamut = !srgb.inGamut();
-    srgb = srgb.toGamut();
+    let srgb = Color.to(color, Color.sRGB);
+    outOfGamut = !Color.inGamut(srgb);
+    srgb = Color.toGamut(srgb);
+    const [r, g, b] = srgb.coords;
     hex = `#${
-      Math.round(srgb.r * 255).toString(16).padStart(2, '0')}${
-      Math.round(srgb.g * 255).toString(16).padStart(2, '0')}${
-      Math.round(srgb.b * 255).toString(16).padStart(2, '0')}`;
+      Math.round(r * 255).toString(16).padStart(2, '0')}${
+      Math.round(g * 255).toString(16).padStart(2, '0')}${
+      Math.round(b * 255).toString(16).padStart(2, '0')}`;
   }
 
   function getGamutBoundary01(
     fun: (x: number) => [v1: number, v2: number, v3: number], precise = false
   ): null | Boundary {
     const EPISION = 1 / 256;
-    const isInside = (x: number) => new Color(modes[mode].expr(...fun(x))).inGamut('srgb');
+    const isInside = (x: number) => 
+      Color.inGamut(Color.parse(modes[mode].expr(...fun(x))), Color.sRGB);
 
     function findSample(insideness: boolean) {
       let division = 1;
@@ -174,9 +180,9 @@
 
   interface Props {
     mode?: ColorMode,
-    oninput?: (color: Color) => void,
-    onchange?: (color: Color) => void,
-    color: Color
+    oninput?: (color: Color.PlainColorObject) => void,
+    onchange?: (color: Color.PlainColorObject) => void,
+    color: Color.PlainColorObject
   };
 
   let { mode = $bindable('srgb'), oninput, onchange, color = $bindable() }: Props = $props();
