@@ -160,6 +160,7 @@ export const SubtitleUtil = {
     /** Note: this method will use and modify the entries in `other` */ 
     merge(original: Subtitles, other: Subtitles, options: MergeOptions): SubtitleEntry[] {
         if (options.overrideMetadata) {
+            // TODO: properly clone it
             other.metadata = JSON.parse(JSON.stringify(original.metadata));
         }
         
@@ -176,10 +177,12 @@ export const SubtitleUtil = {
         }
 
         const styleMap = new Map<SubtitleStyle, SubtitleStyle>();
-        const orginalStyleSerialized = original.styles.map((x) => JSON.stringify(x));
+        
+        const orginalStyleSerialized = original.styles
+            .map((x) => JSON.stringify(SubtitleStyle.serialize(x)));
         const processStyle = (s: SubtitleStyle) => {
             if (styleMap.has(s)) return styleMap.get(s)!;
-            const newStyleSerialized = JSON.stringify(s);
+            const newStyleSerialized = JSON.stringify(SubtitleStyle.serialize(s));
             const iLocalName = original.styles.findIndex((x) => x.name == s.name);
             const iLocalMatch = orginalStyleSerialized.indexOf(newStyleSerialized);
 

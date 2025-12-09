@@ -114,7 +114,9 @@ let selection = $state<SubtitleEntry[]>([]);
 let focusedEntry = Editing.focused.entry;
 
 async function fillIn(range: SubtitleEntry[]) {
-  const lines = Source.subs.metadata.special.untimedText.split('\n');
+  const separator = useDoubleNewline ? '\n\n' : '\n';
+  const lines = Source.subs.metadata.special.untimedText.split(separator);
+
   if (lines.length < range.length) {
     if (!await dialog.confirm($_('untimed.fill-in.too-long-msg', 
       {values: { a: range.length, b: lines.length }}))) return false;
@@ -124,8 +126,8 @@ async function fillIn(range: SubtitleEntry[]) {
   if (already.length > 0
    && !await dialog.confirm($_('untimed.fill-in.already-has-style-msg', 
     {values: { a: already.length, b: fillAsStyle.name }}))) return false;
-  range.forEach((x) => Editing.fillWithFirstLineOfUntimed(x, fillAsStyle));
 
+  range.forEach((x) => Editing.fillWithFirstLineOfUntimed(x, fillAsStyle, separator));
   Source.markChanged(ChangeType.InPlace, $_('c.fill-with-untimed'));
   return true;
 }
@@ -134,6 +136,7 @@ let locked = Memorized.$('untimedLocked', z.boolean(), false);
 let textsize = Memorized.$('untimedTextSize', z.number().check(z.positive()), 14);
 let justify = Memorized.$('untimedJustify', z.boolean(), true);
 let useForNew = Editing.useUntimedForNewEntires;
+let useDoubleNewline = Memorized.$('untimedDoubleNewline', z.boolean(), false);
 
 let subs = $state(Source.subs);
 let threshold = Memorized.$('fuzzyThreshold', z.number(), 0.6);
@@ -275,7 +278,10 @@ function clear() {
   <textarea class={{flexgrow: true, justify: $justify}}
     readonly={$locked}
     style="min-height: 150px; font-size: {$textsize}px"
-    oninput={() => changed = true}
+    oninput={() => {
+      changed = true;
+      Source.markChangedNonSaving();
+    }}
     onblur={() => markChanged()}
     bind:value={subs.metadata.special.untimedText}
     bind:this={textarea}></textarea>
@@ -294,6 +300,9 @@ function clear() {
     </table>
   </Collapsible>
   <Collapsible header={$_('untimed.fill-in.header')}>
+    <label>
+      <input type='checkbox' bind:checked={$useDoubleNewline}/>使用双换行作为分隔符
+    </label>
     <h5>{$_('untimed.fill-in.new-entries')}</h5>
     <label>
       <input id='just' type='checkbox' bind:checked={$useForNew}/>启用（每次一行）

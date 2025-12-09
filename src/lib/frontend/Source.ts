@@ -186,6 +186,11 @@ export const Source = {
         fileChanged.set(false);
     },
 
+    markChangedNonSaving() {
+        fileChanged.set(true);
+        changedSinceLastAutosave = true;
+    },
+
     markChanged(type: ChangeType, description: string) {
         Debug.trace('marking change:', ChangeType[type], description);
         fileChanged.set(true);

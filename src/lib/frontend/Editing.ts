@@ -141,16 +141,16 @@ export const Editing = {
         return entry;
     },
 
-    async fillWithFirstLineOfUntimed(entry: SubtitleEntry, style: SubtitleStyle) {
+    async fillWithFirstLineOfUntimed(entry: SubtitleEntry, style: SubtitleStyle, separator = '\n') {
         const untimed = Source.subs.metadata.special.untimedText;
-        const firstNewline = untimed.indexOf('\n');
+        const firstNewline = untimed.indexOf(separator);
         const line = firstNewline < 0 ? untimed : untimed.substring(0, firstNewline);
         if (line.length > 0 && (line.length < 500 
             || await ask($_('msg.untimed-first-line-very-long'))))
         {
             entry.texts.set(style, line);
             Source.subs.metadata.special.untimedText = 
-                firstNewline < 0 ? '' : untimed.substring(firstNewline+1);
+                firstNewline < 0 ? '' : untimed.substring(firstNewline + separator.length);
         }
     },
 

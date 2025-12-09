@@ -11,19 +11,20 @@ import * as Color from "colorjs.io/fn";
 
 const ZColor = z.codec(z.string(), z.custom<Color.PlainColorObject>(),
 {
-    decode: (x, cxt) => {
+    decode: (x, _cxt) => {
         try {
             return Color.getColor(x);
-        } catch (e) {
-            cxt.issues.push({
-                input: x,
-                code: "custom",
-                message: `error parsing color: ${e}`
-            });
-            return Color.getColor('black');
+        } catch {
+            // cxt.issues.push({
+            //     input: x,
+            //     code: "custom",
+            //     message: `error parsing color: ${e}`,
+            //     continue: true
+            // });
+            return Color.getColor('white');
         }
     },
-    encode: (x) => x.toString()
+    encode: (x) => Color.serialize(x)
 });
 
 export const ZStyleBase = z.object({
