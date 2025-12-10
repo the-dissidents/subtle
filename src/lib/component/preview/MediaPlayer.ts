@@ -3,6 +3,7 @@ import { Basic } from "../../Basic";
 import type { CanvasManager } from "../../CanvasManager";
 import { InterfaceConfig } from "../../config/Groups";
 import { Debug } from "../../Debug";
+import { SlabBuffer } from "../../details/SlabBuffer";
 import { EventHost } from "../../details/EventHost";
 import { Mutex } from "../../details/Mutex";
 import { RestartableTask } from "../../details/RestartableTask";
@@ -36,6 +37,7 @@ export class MediaPlayer {
     // TODO: what's this?
     #internalTimestamp?: number;
 
+    #pool: SlabBuffer<ImageDataArray>;
     #videoBuffer: VideoFrameData[] = [];
     #lastFrame?: VideoFrameData;
     #preloadEOF = false;
@@ -88,6 +90,7 @@ export class MediaPlayer {
         const ctx = this.#bufCanvas.getContext('2d', { alpha: true });
         if (!ctx) throw new Error("VideoPlayer: cannot create offscreen context");
         this.#bufCtx = ctx;
+        this.#pool = this.#reallocatePool();
 
         manager.onDisplaySizeChanged.bind(this, (_, __, w, h) => {
             this.#bufCanvas.width = w;
@@ -97,6 +100,16 @@ export class MediaPlayer {
         
         this.#updateOutputSize();
         this.#populateBuffer();
+    }
+
+    #reallocatePool() {
+        const [w, h] = this.media.video!.size;
+        const len = Math.ceil(MediaConfig.data.videoCacheSize * 1.5);
+        const size = Math.ceil((w * h * 4 + 24) * 1.5);
+        this.#pool = this.#pool 
+            ? this.#pool.resize(len, size)
+            : new SlabBuffer(Uint8ClampedArray, len, size);
+        return this.#pool;
     }
 
     #updateOutputSize() {
@@ -175,6 +188,8 @@ export class MediaPlayer {
         Debug.assert(!this.#closed);
         this.#preloadEOF = false;
         this.#playEOF = false;
+        for (const frame of this.#videoBuffer)
+            frame.content.delete();
         this.#videoBuffer = [];
         await this.audio.clearBuffer();
     }
@@ -188,7 +203,7 @@ export class MediaPlayer {
     // Must be called while locked
     async #receiveAudioFrame(frame: AudioFrameData) {
         if (this.audio.tail !== undefined && this.audio.tail > frame.time) {
-            await Debug.warn(`receiveFrame: abnormal audio frame ordering: ${frame.time} < ${this.audio.tail}`);
+            await Debug.warn(`receiveAudioFrame: abnormal ordering: ${frame.time} < ${this.audio.tail}`);
             await this.#clearCache();
             return;
         }
@@ -208,7 +223,7 @@ export class MediaPlayer {
     // Must be called while locked
     async #receiveVideoFrame(frame: VideoFrameData) {
         if (this.#videoBuffer.length > 0 && this.#videoBuffer.at(-1)!.time > frame.time) {
-            await Debug.warn(`receiveFrame: abnormal video frame ordering: ${frame.time} < ${this.#videoBuffer.at(-1)!.time}`);
+            await Debug.warn(`receiveVideoFrame: abnormal ordering: ${frame.time} < ${this.#videoBuffer.at(-1)!.time}`);
             await this.#clearCache();
             return;
         }
@@ -248,12 +263,11 @@ export class MediaPlayer {
         if (this.#preloadEOF || this.#closed)
             return false;
 
-        const preloadAmount = MediaConfig.data.preloadAmount;
-        if (this.audio.tail !== undefined
-         && this.audio.tail! - this.audio.head! > preloadAmount
-         && this.#videoBuffer.length > 1
-         && this.#videoBuffer.at(-1)!.time - this.#videoBuffer[0].time > preloadAmount)
+        const videoCacheSize = MediaConfig.data.videoCacheSize;
+        if (this.#videoBuffer.length >= videoCacheSize)
         {
+            if (this.audio.tail === undefined)
+                Debug.warn('doDecode: video cache full but audio cache empty');
             // enough frames preloaded
             // update the debug info about buffer lengths
             if (!this.#presenting) this.#present();
@@ -263,12 +277,13 @@ export class MediaPlayer {
         return await this.#mutex.use(async () => {
             const start = performance.now();
             const targetTime = MediaConfig.data.preloadWorkTime;
-            const frames = await this.media.decodeAutomatic(targetTime);
+            const frames = await this.media.decodeAutomatic(targetTime, this.#pool);
             const time = performance.now() - start;
             this.#diag.fetchTimes.push(time);
             if (this.#diag.fetchTimes.length > FETCH_TIME_N)
                 this.#diag.fetchTimes.shift();
             return await this.#receiveFrames(frames);
+
         }) ?? true;
     }
 
@@ -291,7 +306,7 @@ export class MediaPlayer {
         const [dx, dy] = this.#displayOffset;
 
         ctx.clearRect(0, 0, w, h);
-        const imgData = new ImageData(frame.content, frame.stride);
+        const imgData = new ImageData(frame.content.data, frame.stride);
         let rescaled = false;
         if (ow !== dw || oh !== dh) {
             const bitmap = await createImageBitmap(imgData);
@@ -304,7 +319,7 @@ export class MediaPlayer {
 
         if (!MediaConfig.data.showDebug) return;
         const videoSize = this.#videoBuffer
-            .map((x) => x.content.length)
+            .map((x) => x.content.data.length)
             .reduce((a, b) => a + b, 0);
         const audioSize = this.audio.bufferSize;
 
@@ -400,6 +415,11 @@ export class MediaPlayer {
             this.manager.requestRender();
             return -1;
         }
+    
+        // if there's no audio, we can't synchronize and must wait for it
+        if (this.audio.head === undefined)
+            return 0;
+        const clock = this.audio.head;
 
         // if there's no video
         if (this.#videoBuffer.length == 0) {
@@ -414,16 +434,21 @@ export class MediaPlayer {
                 this.#populateBuffer();
             return 0;
         }
-    
-        // if there's no audio, we can't synchronize and must wait for it
-        if (this.audio.head === undefined)
-            return 0;
 
-        // currently we never discard any video frames even when decoding is slow
-        const frame = this.#videoBuffer.shift()!;
+        // discard video frames that are too far behind
+        let frame = this.#videoBuffer.shift()!;
+        let next: VideoFrameData | undefined;
+        while ((next = this.#videoBuffer.at(0)) !== undefined) {
+            if (next.time > clock) break;
+            frame.content.delete();
+            frame = this.#videoBuffer.shift()!; // same as next
+        }
+
+        // render this frame
         this.#timestamp = frame.time;
         MediaPlayerInterface.onPlayback.dispatch(frame.time);
         await this.#drawFrame(frame);
+        frame.content.delete();
         this.manager.requestRender();
 
         // ensure the buffer is refilling since we're consuming frames
@@ -432,7 +457,6 @@ export class MediaPlayer {
 
         // get next frame's time as target or fall back to this frame
         const targetTime = (this.#videoBuffer.at(0) ?? frame).time;
-        const clock = this.audio.head;
         return Math.max(0, Math.min(targetTime - clock, 2 / this.media.video!.framerate));
     }
 
@@ -512,8 +536,10 @@ export class MediaPlayer {
              && target <= this.#videoBuffer.at(-1)!.time)
             {
                 // inside cache
-                while (this.#videoBuffer[0].time < target)
-                    this.#videoBuffer.shift();
+                while (this.#videoBuffer[0].time < target) {
+                    const frame = this.#videoBuffer.shift();
+                    frame?.content.delete();
+                }
                 await this.audio.shiftUntil(target);
                 const frame = this.#videoBuffer[0];
                 this.#internalTimestamp = frame.time;
@@ -553,7 +579,7 @@ export class MediaPlayer {
                 }
 
                 if (!(opt?.imprecise)) {
-                    const frames = await this.media.skipUntil(target);
+                    const frames = await this.media.skipUntil(target, this.#pool);
                     await this.#receiveFrames(frames);
                 }
             }
@@ -576,7 +602,9 @@ export class MediaPlayer {
 
             await this.#mutex.use(async () => {
                 await Debug.trace(`resize: ${ow}x${oh}`);
+                await this.#clearCache();
                 await this.media.setVideoSize(ow, oh);
+                this.#reallocatePool();
                 this.#seekTask.request(this.#timestamp, { force: true });
             })
         },

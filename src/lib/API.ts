@@ -5,6 +5,7 @@ import type { MediaEvent } from './bindings/MediaEvent';
 import type { StreamDescription } from './bindings/StreamDescription';
 import type { ResolvedFontFamily } from './bindings/ResolvedFontFamily';
 import type { SubsetResult } from './bindings/SubsetResult';
+import type { BufferHandle, SlabBuffer } from './details/SlabBuffer';
 
 export class MediaError extends Error {
     constructor(msg: string, public readonly from: string) {
@@ -58,7 +59,7 @@ export type VideoFrameData = {
     stride: number,
     length: number,
     size: [width: number, height: number],
-    content: ImageDataArray
+    content: BufferHandle<ImageDataArray>
 };
 
 export type AudioFrameData = {
@@ -118,7 +119,10 @@ export class MMedia {
         Debug.info(`media ${id} opened`);
     }
 
-    #readFrames(data: ArrayBuffer): DecodeResult {
+    #readFrames(
+        data: ArrayBuffer, 
+        pool: SlabBuffer<ImageDataArray>
+    ): DecodeResult {
         const view = new BinaryReader(data);
         const nA = view.readU32();
         const audio: AudioFrameData[] = [];
@@ -126,9 +130,10 @@ export class MMedia {
             audio.push(this.#readAudioFrame(view));
 
         const nV = view.readU32();
+        // Debug.trace(`readFrames: ${nV} video frames in the pack`);
         const video: VideoFrameData[] = [];
         for (let i = 0; i < nV; i++)
-            video.push(this.#readVideoFrame(view));
+            video.push(this.#readVideoFrame(view, pool));
 
         return { audio, video };
     }
@@ -141,13 +146,18 @@ export class MMedia {
         return { pktpos, time, length, content };
     }
 
-    #readVideoFrame(view: BinaryReader<ArrayBuffer>): VideoFrameData {
+    #readVideoFrame(
+        view: BinaryReader<ArrayBuffer>, 
+        pool: SlabBuffer<ImageDataArray>
+    ): VideoFrameData {
         const time = view.readF64();
         const pktpos = view.readI64();
         const stride = view.readU32();
         const length = view.readU32();
         const content = view.readU8ClampedArray(length, { copy: true });
-        return { pktpos, time, stride, length, content, size: [...this.#outSize] };
+        const buf = pool.allocate(length);
+        buf.data.set(content);
+        return { pktpos, time, stride, length, content: buf, size: [...this.#outSize] };
     }
 
     static async open(path: string) {
@@ -266,7 +276,10 @@ export class MMedia {
         }
     }
 
-    async decodeAutomatic(targetWorkingTimeMs: number) {
+    async decodeAutomatic(
+        targetWorkingTimeMs: number,
+        pool: SlabBuffer<ImageDataArray>
+    ) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
@@ -278,7 +291,7 @@ export class MMedia {
                     id: this.id, targetWorkingTimeMs, channel 
                 }).then(resolve);
             });
-            const frames = this.#readFrames(result);
+            const frames = this.#readFrames(result, pool);
             return frames;
         } finally {
             this.#currentJobs -= 1;
@@ -353,7 +366,7 @@ export class MMedia {
         }
     }
 
-    async skipUntil(time: number) {
+    async skipUntil(time: number, pool: SlabBuffer<ImageDataArray>) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
@@ -365,7 +378,7 @@ export class MMedia {
                     id: this.id, time, channel 
                 }).then((x) => {
                     if (x.byteLength > 0)
-                        resolve(this.#readFrames(x));
+                        resolve(this.#readFrames(x, pool));
                 });
             });
         } finally {

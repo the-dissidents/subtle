@@ -7,12 +7,12 @@ export const MediaConfig = new PublicConfigGroup(
     () => $_('config.media'),
     null, 1,
 {
-    preloadAmount: {
-        localizedName: () => $_('config.preload-amount'),
-        type: 'number',
-        description: () => $_('config.preload-amount-d'),
-        bounds: [0.1, 10],
-        default: 0.2
+    videoCacheSize: {
+        localizedName: () => $_('config.video-cache-size'),
+        type: 'integer',
+        description: () => $_('config.video-cache-size-d'),
+        bounds: [2, 50],
+        default: 10
     },
     preloadWorkTime: {
         localizedName: () => $_('config.preload-work-time'),

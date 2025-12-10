@@ -101,8 +101,6 @@
     "multiselect-drag-reference": "拖曳多選時的吸附基準",
     "navigation-keep-in-view": "僅保證字幕條在可見區域內",
     "navigation-keep-position": "保持新選擇的字幕條屬於同樣螢幕位置",
-    "preload-amount": "預載入量",
-    "preload-amount-d": "影片和音訊播放的預載入量，以秒為單位。設定過高可能導致大量記憶體消耗",
     "resize-area-size": "調整區域大小",
     "resize-area-size-d": "字幕塊左側和右側可調整區域的大小，以 CSS 像素為單位",
     "show-debug-info": "顯示偵錯資訊",

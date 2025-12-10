@@ -17,6 +17,8 @@ const osType = os.type(),
       pathSeparator = path.sep(),
       ctrlKey = os.type() == 'macos' ? 'Meta' : 'Control';
 
+export type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Uint8ClampedArray | Float32Array | Float64Array;
+
 export const Basic = {
     get version() { return version; },
     get platform() { return os.platform(); },

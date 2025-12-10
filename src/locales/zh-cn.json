@@ -250,8 +250,6 @@
     "n-recent-opened": "最近打开文件记忆数量",
     "navigation-keep-in-view": "仅保证字幕条在可见区域内",
     "navigation-keep-position": "保持新选择的字幕条属于同样屏幕位置",
-    "preload-amount": "预加载量",
-    "preload-amount-d": "视频和音频播放的预加载量，以秒为单位。设置过高可能导致大量内存消耗",
     "preload-work-time": "预加载工作时间",
     "preload-work-time-d": "后台确保每次工作至少这么长时间，来提高效率。如果卡顿可尝试减小。单位为毫秒",
     "resize-area-size": "边缘可拖动区域大小",
@@ -287,6 +285,8 @@
     "use-hardware-acceleration": "使用硬件解码",
     "use-hardware-acceleration-d": "让FFmpeg尽可能使用硬件加速（Windows上是D3D11VA，macOS上是videotoolbox）。在多数情况下，这实际上并不会带来可见的性能提升，所以一般不需要启用。",
     "use-system-theme": "使用系统主题",
+    "video-cache-size": "视频缓存大小",
+    "video-cache-size-d": "缓存帧的数量。增大可使播放更流畅，但占用更多内存",
     "waveform-resolution": "波形分辨率",
     "waveform-resolution-d": "每秒用于波形显示的采样点的数量；分辨率越高，加载越慢",
     "whole-of-selection": "整个选区的头尾"

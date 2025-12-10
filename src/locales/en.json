@@ -250,8 +250,6 @@
     "n-recent-opened": "number of remembered recent files",
     "navigation-keep-in-view": "keep entry in sight only",
     "navigation-keep-position": "keep entry at the same screen position",
-    "preload-amount": "preload amount",
-    "preload-amount-d": "Amount of preloading for video and audio playback, in seconds. A high value can lead to high memory consumption.",
     "preload-work-time": "preload batch work time",
     "preload-work-time-d": "Set the minimum time for the backend to work, to reduce IPC overhead. In milliseconds.",
     "resize-area-size": "draggable edge area size",
@@ -286,6 +284,8 @@
     "use-hardware-acceleration": "use hardware decoding",
     "use-hardware-acceleration-d": "Tell FFmpeg to use hardware acceleration (D3D11VA on Windows, videotoolbox on macOS) for decoding when possible. In most cases this does NOT provide a visible speedup and you don't need to enable it.",
     "use-system-theme": "use system theme",
+    "video-cache-size": "video cache size",
+    "video-cache-size-d": "number of frames to preload into the cache",
     "waveform-resolution": "waveform resolution",
     "waveform-resolution-d": "The number of sample point per second for the waveform display. Larger value results in slower loading.",
     "whole-of-selection": "endpoints of the whole selection"
