@@ -80,7 +80,7 @@ pub enum MediaEvent<'a> {
     #[serde(rename_all = "camelCase")]
     NoResult {},
     #[serde(rename_all = "camelCase")]
-    SampleDone2 { 
+    SampleDone { 
         audio: Option<audio::SamplerDeltaData>,
         video: Option<video::SamplerDeltaData>,
         is_eof: bool
@@ -456,7 +456,7 @@ pub async fn get_frames_automatic(
 }
 
 #[tauri::command]
-pub async fn sample_automatic3(
+pub async fn sample_automatic(
     id: i32, target_working_time_ms: u64,
     state: State<'_, Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent<'static>>,
@@ -485,7 +485,7 @@ pub async fn sample_automatic3(
                     } else {
                         None
                     };
-                send(&channel, MediaEvent::SampleDone2 {
+                send(&channel, MediaEvent::SampleDone {
                     audio, video,
                     is_eof: !has_next
                 });

@@ -3,7 +3,7 @@ import { Playback } from "../../frontend/Playback";
 import { ChangeType, Source } from "../../frontend/Source";
 import { SubtitleRenderer } from "./SubtitleRenderer";
 import { MediaConfig } from "./Config";
-import { MediaPlayer2 } from "./MediaPlayer2";
+import { MediaPlayer } from "./MediaPlayer";
 
 export class PreviewLayout {
     #manager: CanvasManager;
@@ -47,7 +47,7 @@ export class PreviewLayout {
         });
 
         Playback.onLoad.bind(this, async (rawurl, id) => {
-            Playback.player = await MediaPlayer2.create(this.#manager, rawurl, id);
+            Playback.player = await MediaPlayer.create(this.#manager, rawurl, id);
         });
         Playback.onClose.bind(this, async () => {
             await Playback.player!.close();

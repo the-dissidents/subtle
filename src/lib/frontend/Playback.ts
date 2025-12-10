@@ -5,13 +5,13 @@ import { get, writable, type Readable } from "svelte/store";
 import { Debug } from "../Debug";
 import { AsyncEventHost, EventHost } from "../details/EventHost";
 import { Overridable } from "../details/Overridable.svelte";
-import type { MediaSampler2 } from "../component/timeline/MediaSampler2";
+import type { MediaSampler } from "../component/timeline/MediaSampler";
 import { InputConfig } from "../config/Groups";
 import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { unwrapFunctionStore, _ } from "svelte-i18n";
 import { guardAsync } from "./Frontend";
-import { MediaPlayerInterface2, type MediaPlayer2, type SetPositionOptions } from "../component/preview/MediaPlayer2";
+import { MediaPlayerInterface, type MediaPlayer, type SetPositionOptions } from "../component/preview/MediaPlayer";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -29,7 +29,7 @@ let position = 0,
 
 const me = {};
 tick().then(() => {
-    MediaPlayerInterface2.onPlayback.bind(me, async (pos) => {
+    MediaPlayerInterface.onPlayback.bind(me, async (pos) => {
         position = pos;
         Playback.onPositionChanged.dispatch(pos);
 
@@ -59,8 +59,8 @@ export const Playback = {
     get loadState(): Readable<LoadState> { return loadState; },
     get isPlaying() { return this.player?.isPlaying ?? false; },
 
-    player: null as MediaPlayer2 | null,
-    sampler: null as MediaSampler2 | null,
+    player: null as MediaPlayer | null,
+    sampler: null as MediaSampler | null,
 
     playArea: new Overridable<PlayArea>({
         start: undefined,

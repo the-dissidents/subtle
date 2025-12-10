@@ -12,7 +12,7 @@ import { Source, SourceCommands } from '../frontend/Source';
 import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
 import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
-import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy2";
+import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy";
 import { invoke } from "@tauri-apps/api/core";
   import FontSelect from "../FontSelect.svelte";
   import { Fonts } from "../Fonts";

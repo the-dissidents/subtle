@@ -100,7 +100,7 @@ fn main() {
             media_api::seek_audio,
             media_api::seek_video,
             media_api::skip_until,
-            media_api::sample_automatic3,
+            media_api::sample_automatic,
             media_api::get_frames_automatic,
             media_api::video_set_size,
             media_api::get_keyframe_before,

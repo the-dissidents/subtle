@@ -3,7 +3,7 @@
   import { Playback } from "../../frontend/Playback";
   import TimestampInput from "../../TimestampInput.svelte";
   import { PreviewLayout } from "./Layout";
-  import { MediaPlayerInterface2 } from "./MediaPlayer2";
+  import { MediaPlayerInterface } from "./MediaPlayer";
   import SubtitleView, { type EntryBox } from "./SubtitleView.svelte";
   import { MediaConfig } from "./Config";
   import Popup from "../../ui/Popup.svelte";
@@ -44,7 +44,7 @@
     playPosInput = Playback.position;
   });
 
-  MediaPlayerInterface2.onPlayStateChanged.bind(me, () => {
+  MediaPlayerInterface.onPlayStateChanged.bind(me, () => {
     isPlaying = Playback.isPlaying;
   });
 </script>

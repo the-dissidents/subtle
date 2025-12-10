@@ -18,15 +18,15 @@ export type SetPositionOptions = {
     force?: boolean;
 };
 
-export const MediaPlayerInterface2 = {
+export const MediaPlayerInterface = {
     onPlayback: new EventHost<[pos: number]>(),
     onPlayStateChanged: new EventHost<[]>(),
 };
 
-export class MediaPlayer2 {
+export class MediaPlayer {
     #closed = false;
     #playing = false;
-    #mutex = new Mutex(1000, 'MediaPlayer2');
+    #mutex = new Mutex(1000, 'MediaPlayer');
 
     /**
      * Current timestamp. This value serves to preserve the progress when the buffers are emptied due to seeking operations. If the buffers are not empty, it must be equal to `videoBuffer[0].time`.
@@ -146,7 +146,7 @@ export class MediaPlayer2 {
             throw e;
         }
         const audio = await Audio.create(audioStatus.sampleRate);
-        const player = new MediaPlayer2(media, manager, rawurl, audio);
+        const player = new MediaPlayer(media, manager, rawurl, audio);
         return player;
     }
 
@@ -224,7 +224,7 @@ export class MediaPlayer2 {
             this.#seekDone();
         if (this.#videoBuffer.length == 1) {
             this.#timestamp = frame.time;
-            MediaPlayerInterface2.onPlayback.dispatch(frame.time);
+            MediaPlayerInterface.onPlayback.dispatch(frame.time);
             await Debug.trace('receiveFrame: first video at', frame.time);
             if (!this.#presenting) this.#present();
         }
@@ -422,7 +422,7 @@ export class MediaPlayer2 {
         // currently we never discard any video frames even when decoding is slow
         const frame = this.#videoBuffer.shift()!;
         this.#timestamp = frame.time;
-        MediaPlayerInterface2.onPlayback.dispatch(frame.time);
+        MediaPlayerInterface.onPlayback.dispatch(frame.time);
         await this.#drawFrame(frame);
         this.manager.requestRender();
 
@@ -460,7 +460,7 @@ export class MediaPlayer2 {
             await this.audio.play();
         });
         if (!this.#presenting) this.#present();
-        MediaPlayerInterface2.onPlayStateChanged.dispatch();
+        MediaPlayerInterface.onPlayStateChanged.dispatch();
     }
 
     async stop() {
@@ -470,7 +470,7 @@ export class MediaPlayer2 {
             await Debug.debug('stopping playback');
             await this.audio.stop();
         });
-        MediaPlayerInterface2.onPlayStateChanged.dispatch();
+        MediaPlayerInterface.onPlayStateChanged.dispatch();
     }
 
     async requestNextFrame() {
@@ -518,7 +518,7 @@ export class MediaPlayer2 {
                 const frame = this.#videoBuffer[0];
                 this.#internalTimestamp = frame.time;
                 this.#timestamp = frame.time;
-                MediaPlayerInterface2.onPlayback.dispatch(frame.time);
+                MediaPlayerInterface.onPlayback.dispatch(frame.time);
                 await Debug.debug(`seek: [${frame.time.toFixed(3)}] inside cache`);
             } else {
                 await this.#clearCache();

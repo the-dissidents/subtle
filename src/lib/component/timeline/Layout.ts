@@ -7,7 +7,7 @@ import { Playback } from "../../frontend/Playback";
 import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { TimelineConfig } from "./Config";
 import { EventHost } from "../../details/EventHost";
-import { MediaSampler2 } from "./MediaSampler2";
+import { MediaSampler } from "./MediaSampler";
 import { TimelineHandle } from "./Input.svelte";
 import { get } from "svelte/store";
 
@@ -45,7 +45,7 @@ export class TimelineLayout {
 
   async #makeSampler(audio: number) {
     Debug.assert(this.#samplerMedia !== undefined);
-    const sampler = await MediaSampler2.open(
+    const sampler = await MediaSampler.open(
       this.#samplerMedia, audio, 
       TimelineConfig.data.waveformResolution);
     sampler.onProgress = () => this.manager.requestRender();

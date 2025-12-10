@@ -12,7 +12,7 @@ import { ChangeType, Source } from '../../frontend/Source';
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
 import { TimelineHandle } from "./Input.svelte";
-import { MediaPlayerInterface2 } from "../preview/MediaPlayer2";
+import { MediaPlayerInterface } from "../preview/MediaPlayer";
 const $_ = unwrapFunctionStore(_);
 
 export const TimelineConfig = new PublicConfigGroup(
@@ -83,7 +83,7 @@ async function make<T>(other: UICommand<T>) {
     Debug.assert(style !== null);
     const pos = Playback.position;
     const entry = Editing.insertAtTime(pos, pos, style);
-    MediaPlayerInterface2.onPlayback.bind(entry, 
+    MediaPlayerInterface.onPlayback.bind(entry, 
         (newpos) => { entry.end = Math.max(entry.end, newpos) });
     return [entry, style] as const;
 }

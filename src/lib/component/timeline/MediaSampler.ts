@@ -20,14 +20,14 @@ class Index {
     }
 }
 
-export class MediaSampler2 {
+export class MediaSampler {
     #samplerStart = 0;
     #sampleEnd = 0;
     #sampleProgress = 0;
     #cancelling = false;
 
     #sampling = false;
-    #mutex = new Mutex(1000, 'MediaSampler2');
+    #mutex = new Mutex(1000, 'MediaSampler');
 
     #eofTimestamp = -1;
 
@@ -92,7 +92,7 @@ export class MediaSampler2 {
         await media.openAudioSampler(audio, resolution);
         await media.openVideoSampler(-1, InterfaceConfig.data.useHwaccel);
         
-        return new MediaSampler2(media, resolution);
+        return new MediaSampler(media, resolution);
     }
 
     async setAudioStream(id: number) {
@@ -158,7 +158,7 @@ export class MediaSampler2 {
 
         const doSampling = async () => {
             const ok = await this.#mutex.use(async () => {
-                const result = await this.media.sampleAutomatic3(20);
+                const result = await this.media.sampleAutomatic(20);
                 if (result.audio) {
                     this.#sampleProgress = result.audio.endTime;
                     this.#intensity.set(result.audio.intensity, result.audio.startIndex);

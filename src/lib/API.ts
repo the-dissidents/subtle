@@ -19,7 +19,7 @@ type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) 
 
 export type VideoStatus = MediaEventData['videoStatus'];
 export type AudioStatus = MediaEventData['audioStatus'];
-export type SampleResult = MediaEventData['sampleDone2'];
+export type SampleResult = MediaEventData['sampleDone'];
 
 function createChannel(
     from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
@@ -249,17 +249,17 @@ export class MMedia {
         this.#outSize = [width, height];
     }
 
-    async sampleAutomatic3(targetWorkingTimeMs: number) {
+    async sampleAutomatic(targetWorkingTimeMs: number) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;
         this.#currentJobs += 1;
         try {
             return await new Promise<SampleResult>((resolve, reject) => {
-                channel = createChannel('sampleAutomatic3', {
-                    sampleDone2: (data) => resolve(data)
+                channel = createChannel('sampleAutomatic', {
+                    sampleDone: (data) => resolve(data)
                 }, reject);
-                invoke('sample_automatic3', { id: this.id, targetWorkingTimeMs, channel });
+                invoke('sample_automatic', { id: this.id, targetWorkingTimeMs, channel });
             });
         } finally {
             this.#currentJobs -= 1;

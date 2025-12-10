@@ -94,7 +94,7 @@ import { onDestroy } from "svelte";
 
 import { SubtitleEntry } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
-import * as fuzzyAlgorithm from "../details/Fuzzy2";
+import * as fuzzyAlgorithm from "../details/Fuzzy";
 import { EventHost } from "../details/EventHost";
 
 import StyleSelect from "../StyleSelect.svelte";
