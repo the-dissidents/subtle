@@ -35,16 +35,16 @@ export class BinaryReader<T extends ArrayBufferLike = ArrayBufferLike> {
         return result;
     }
 
-    readF32Array(length: number) {
+    readF32Array(length: number, opt?: { copy?: boolean }) {
         const content = new Float32Array(this.data.buffer, this.i, length);
         this.i += length * 4;
-        return content;
+        return opt?.copy ? new Float32Array(content) : content;
     }
 
-    readU8ClampedArray(length: number) {
+    readU8ClampedArray(length: number, opt?: { copy?: boolean }) {
         const content = new Uint8ClampedArray(this.data.buffer, this.i, length);
         this.i += length;
-        return content;
+        return opt?.copy ? new Uint8ClampedArray(content) : content;
     }
 
     readString() {

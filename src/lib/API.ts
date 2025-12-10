@@ -137,7 +137,7 @@ export class MMedia {
         const time = view.readF64();
         const pktpos = view.readI64();
         const length = view.readU32();
-        const content = view.readF32Array(length);
+        const content = view.readF32Array(length, { copy: true });
         return { pktpos, time, length, content };
     }
 
@@ -146,7 +146,7 @@ export class MMedia {
         const pktpos = view.readI64();
         const stride = view.readU32();
         const length = view.readU32();
-        const content = view.readU8ClampedArray(length);
+        const content = view.readU8ClampedArray(length, { copy: true });
         return { pktpos, time, stride, length, content, size: [...this.#outSize] };
     }
 
@@ -187,18 +187,6 @@ export class MMedia {
                 }
             }, reject);
             invoke('close_media', {id: this.id, channel});
-        });
-    }
-    
-    async waitUntilAvailable() {
-        return await new Promise<void>((resolve, reject) => {
-            setTimeout(() => reject(
-                new MediaError('timed out [1000ms]', 'waitUntilAvailable')), 1000);
-            const wait = () => {
-                if (!this.hasJob) resolve();
-                else setTimeout(wait, 1);
-            };
-            wait();
         });
     }
 
@@ -245,19 +233,6 @@ export class MMedia {
             invoke('open_video_sampler', {id: this.id, videoId, accel, channel});
         });
         return this.#video;
-    }
-
-    async status() {
-        Debug.assert(!this.#destroyed);
-        return await new Promise<{
-            audioIndex: number,
-            videoIndex: number
-        }>((resolve, reject) => {
-            const channel = createChannel('status', {
-                mediaStatus: (data) => resolve(data)
-            }, reject);
-            invoke('media_status', {id: this.id, channel});
-        });
     }
 
     async setVideoSize(width: number, height: number) {

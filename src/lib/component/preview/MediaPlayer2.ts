@@ -373,7 +373,6 @@ export class MediaPlayer2 {
         }
         const value = H * big / max;
         ctx.fillRect(X + W - 2, Y - value, 2, value);
-        
 
         ctx.textAlign = 'right';
         ctx.fillText(max.toFixed(0), X, Y - H);

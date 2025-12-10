@@ -1,16 +1,18 @@
 console.info('Editing loading');
 
 import { get, writable, type Writable } from "svelte/store";
-import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
-import { Basic } from "../Basic";
-import { ChangeCause, ChangeType, Source } from "./Source";
+import { Memorized } from "../config/MemorizedValue.svelte";
 import { EventHost } from "../details/EventHost";
+import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { MetricDefinition, Metrics } from "../core/Filter";
+import { Basic } from "../Basic";
+import { Debug } from "../Debug";
+import { ChangeCause, ChangeType, Source } from "./Source";
+import { Frontend } from "./Frontend";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
-import { Debug } from "../Debug";
-import { MetricDefinition, Metrics } from "../core/Filter";
-import { Frontend } from "./Frontend";
 import { ask } from "@tauri-apps/plugin-dialog";
+import * as z from "zod/v4-mini";
 const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
@@ -82,7 +84,7 @@ export const Editing = {
 
     editChanged: false,
     isEditingVirtualEntry: writable(false),
-    useUntimedForNewEntires: writable(false),
+    useUntimedForNewEntires: Memorized.$('useUntimedForNewEntires', z.boolean(), false),
 
     styleToEditor: new WeakMap<SubtitleStyle, HTMLTextAreaElement>(),
 
