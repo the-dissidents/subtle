@@ -106,9 +106,14 @@ export class MediaPlayer {
         const [w, h] = this.media.video!.size;
         const len = Math.ceil(MediaConfig.data.videoCacheSize * 1.5);
         const size = Math.ceil((w * h * 4 + 24) * 1.5);
-        this.#pool = this.#pool 
-            ? this.#pool.resize(len, size)
-            : new SlabBuffer(Uint8ClampedArray, len, size);
+        if (!this.#pool) {
+            this.#pool = new SlabBuffer(Uint8ClampedArray, len, size);
+            return this.#pool;
+        }
+        this.#pool = this.#pool.resize(
+            Math.max(this.#pool.maxCapacity, len), 
+            Math.max(this.#pool.maxItemSize, size)
+        );
         return this.#pool;
     }
 
@@ -262,9 +267,8 @@ export class MediaPlayer {
     async #doDecode() {
         if (this.#preloadEOF || this.#closed)
             return false;
-
-        const videoCacheSize = MediaConfig.data.videoCacheSize;
-        if (this.#videoBuffer.length >= videoCacheSize)
+        if (this.#videoBuffer.length >= MediaConfig.data.videoCacheSize
+         && this.audio.tail! - this.audio.head! >= MediaConfig.data.audioPreloadAmount)
         {
             if (this.audio.tail === undefined)
                 Debug.warn('doDecode: video cache full but audio cache empty');
@@ -598,14 +602,13 @@ export class MediaPlayer {
                 if (!this.#presenting) this.#present();
                 return;
             }
-            if (this.#playing) await this.stop();
-
+            
             await this.#mutex.use(async () => {
                 await Debug.trace(`resize: ${ow}x${oh}`);
-                await this.#clearCache();
                 await this.media.setVideoSize(ow, oh);
                 this.#reallocatePool();
-                this.#seekTask.request(this.#timestamp, { force: true });
+                if (!this.#playing)
+                    this.#seekTask.request(this.#timestamp, { force: true });
             })
         },
         { deduplicator: ([a, b], [c, d]) => a == c && b == d }

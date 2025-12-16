@@ -206,6 +206,8 @@
     "arrow-navigation-type-d": "The preferred position of the newly selected entry when navigating the subtitle table with Up/Down arrow keys.",
     "arrow-skip-amount": "arrow skip amount",
     "arrow-skip-amount-d": "Amount of time to skip by pressing the left or right arrow button when a media file is loaded, in seconds.",
+    "audio-preload-amount": "audio preload amount",
+    "audio-preload-amount-d": "length (in seconds) of audio to preload in order to ensure smooth playback",
     "auto-scroll-exponent": "auto scroll exponent",
     "auto-scroll-exponent-d": "Exponent for the automatic scrolling when dragging outside of the table area. The magnitude of autoscroll speed per second is calculated as: (distanceFromEdge * factor) ^ exponent.",
     "auto-scroll-factor": "auto scroll factor",
@@ -299,6 +301,7 @@
   "context": {
     "EditingField": "editing fields",
     "Other": "other",
+    "Preview": "preview",
     "Table": "table",
     "Timeline": "timeline"
   },

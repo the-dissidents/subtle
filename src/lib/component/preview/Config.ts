@@ -14,6 +14,13 @@ export const MediaConfig = new PublicConfigGroup(
         bounds: [2, 50],
         default: 10
     },
+    audioPreloadAmount: {
+        localizedName: () => $_('config.audio-preload-amount'),
+        type: 'number',
+        description: () => $_('config.audio-preload-amount-d'),
+        bounds: [0.1, 2],
+        default: 0.5
+    },
     preloadWorkTime: {
         localizedName: () => $_('config.preload-work-time'),
         type: 'integer',
