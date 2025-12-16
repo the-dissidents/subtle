@@ -96,7 +96,7 @@ async function parseSubtitleSourceInteractive(path: string, text: string) {
 
 export const Interface = {
     async newFile() {
-        await Source.openDocument(new Subtitles());
+        Source.newDocument();
         if (Playback.loaded) await Playback.close();
         Frontend.setStatus($_('msg.created-new-file'));
     },
@@ -107,12 +107,14 @@ export const Interface = {
         if (!text) return;
         const newSubs = await parseSubtitleSourceInteractive(path, text);
         if (!newSubs) return;
+        
+        const previouslyIsEmpty = Source.fileIsEmpty;
         await Debug.debug('opening document');
-        await Source.openDocument(newSubs, path);
+        Source.openDocument(newSubs, path);
         const data = Source.recentOpened.get().find((x) => x.name == path);
         if (data?.video) {
             await this.openVideo(data.video, data.audioStream);
-        } else if (Playback.loaded)
+        } else if (Playback.loaded && !previouslyIsEmpty)
             await Playback.close();
         Frontend.setStatus($_('msg.opened-path', {values: {path}}));
     },

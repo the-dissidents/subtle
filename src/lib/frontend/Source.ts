@@ -93,6 +93,8 @@ function autosaveTimestamp(now: Date = new Date()): string {
 }
 
 async function doAutoSave() {
+    if (isEmpty) return;
+
     if (!changedSinceLastAutosave) {
         Debug.info('no change since last autosave');
         return;
@@ -152,6 +154,7 @@ const fileChanged = writable(false);
 
 let intervalId = 0;
 let changedSinceLastAutosave = false;
+let isEmpty = true;
 
 let undoStack = [] as Snapshot[];
 let redoStack = [] as Snapshot[];
@@ -173,6 +176,7 @@ export const Source = {
 
     get currentFile() { return readonly(currentFile); },
     get fileChanged() { return readonly(fileChanged); },
+    get fileIsEmpty() { return isEmpty; },
     get recentOpened() { return recentOpened; },
     get savedStyles() { return savedStyles; },
 
@@ -182,22 +186,22 @@ export const Source = {
     onSubtitleWillSave: new EventHost<[disk: boolean]>(),
 
     init() {
-        this.markChanged(ChangeType.General, '');
-        fileChanged.set(false);
+        this.newDocument();
     },
 
     markChangedNonSaving() {
         fileChanged.set(true);
         changedSinceLastAutosave = true;
+        isEmpty = false;
     },
 
     markChanged(type: ChangeType, description: string) {
         Debug.trace('marking change:', ChangeType[type], description);
         fileChanged.set(true);
         changedSinceLastAutosave = true;
+        isEmpty = false;
 
         Editing.editChanged = false;
-
         // TODO: why?
         Editing.isEditingVirtualEntry.set(false);
 
@@ -245,7 +249,13 @@ export const Source = {
         return true;
     },
 
-    async openDocument(newSubs: Subtitles, path: string = '') {
+    newDocument() {
+        Source.openDocument(new Subtitles());
+        isEmpty = true;
+        fileChanged.set(false);
+    },
+
+    openDocument(newSubs: Subtitles, path: string = '') {
         if (path !== '') pushRecent(path);
         this.subs = newSubs;
         Editing.clearFocus(false);
@@ -256,6 +266,7 @@ export const Source = {
                 && newSubs.migrated !== 'olderVersion') ? '' : path);
         fileChanged.set(newSubs.migrated == 'olderVersion');
         changedSinceLastAutosave = false;
+        isEmpty = false;
 
         undoStack = [{
             archive: Format.JSON.write(this.subs).toString(), 

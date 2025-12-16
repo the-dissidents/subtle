@@ -21,6 +21,7 @@ export async function openDialog<Args extends unknown[], Ret>(
   comp: DialogComponent<Args, Ret> | Promise<DialogComponent<Args, Ret>>, ...args: Args
 ) {
   const component = await comp;
+  counter++;
   return new Promise<Ret>((resolve) => {
     stack.push({
       id: counter,
