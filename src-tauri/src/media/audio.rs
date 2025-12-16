@@ -305,8 +305,9 @@ impl AudioSink for Sampler {
 
                 let expected_next = sd.start_index + sd.intensity.len();
                 if expected_next > index {
-                    // warn!("audio::Sampler::process: {expected_next} > {index}; revising");
-                    sd.intensity[index - sd.start_index] = sum;
+                    if index >= sd.start_index {
+                        sd.intensity[index - sd.start_index] = sum;
+                    }
                 } else {
                     if expected_next < index {
                         // warn!("audio::Sampler::process: {expected_next} < {index}; filling with 0s");
