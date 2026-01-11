@@ -173,6 +173,7 @@ export class MediaPlayer {
         
         await this.#mutex.use(async () => {
             if (this.#closed) return;
+            await this.#clearCache();
             this.#closed = true;
             await Debug.info('closing media player');
             await this.audio.close();
@@ -194,9 +195,11 @@ export class MediaPlayer {
         this.#preloadEOF = false;
         this.#playEOF = false;
         for (const frame of this.#videoBuffer)
-            frame.content.delete();
+            if (frame !== this.#lastFrame)
+                frame.content.delete();
         this.#videoBuffer = [];
         await this.audio.clearBuffer();
+        await Debug.trace('cache cleared');
     }
 
     #seekDone() {
@@ -212,16 +215,8 @@ export class MediaPlayer {
             await this.#clearCache();
             return;
         }
-        if (this.#seeking !== undefined) {
-            if (frame.time < this.#seeking.target) {
-                await Debug.trace(`skipped audio frame at ${frame.time}`);
-                this.#seeking.skippedAudio++;
-                return;
-            } else if (this.#videoBuffer.length > 0)
-                this.#seekDone();
-        }
-        if (this.audio.bufferLength == 0)
-            await Debug.trace('receiveFrame: first audio at', frame.time, frame.content.length, frame.pktpos);
+        if (this.#seeking !== undefined && this.#videoBuffer.length > 0)
+            this.#seekDone();
         await this.audio.pushFrame(frame);
     }
 
@@ -232,11 +227,8 @@ export class MediaPlayer {
             await this.#clearCache();
             return;
         }
-        if (this.#seeking !== undefined && frame.time < this.#seeking.target) {
-            await Debug.trace(`skipped video frame at ${frame.time}`);
-            this.#seeking.skippedVideo++;
-            return;
-        }
+        if (this.#lastFrame && this.#lastFrame !== this.#videoBuffer.at(-1))
+            this.#lastFrame.content.delete();
         this.#videoBuffer.push(frame);
         this.#lastFrame = frame;
         this.#internalTimestamp = frame.time;
@@ -245,7 +237,6 @@ export class MediaPlayer {
         if (this.#videoBuffer.length == 1) {
             this.#timestamp = frame.time;
             MediaPlayerInterface.onPlayback.dispatch(frame.time);
-            await Debug.trace('receiveFrame: first video at', frame.time);
             if (!this.#presenting) this.#present();
         }
     }
@@ -287,7 +278,6 @@ export class MediaPlayer {
             if (this.#diag.fetchTimes.length > FETCH_TIME_N)
                 this.#diag.fetchTimes.shift();
             return await this.#receiveFrames(frames);
-
         }) ?? true;
     }
 
@@ -415,6 +405,8 @@ export class MediaPlayer {
             if (frame.time !== this.#timestamp) {
                 await Debug.warn(`presentNext: ts=${this.#timestamp} but fts=${frame.time}`);
             }
+            this.#timestamp = frame.time;
+            MediaPlayerInterface.onPlayback.dispatch(frame.time);
             await this.#drawFrame(frame);
             this.manager.requestRender();
             return -1;
@@ -444,15 +436,17 @@ export class MediaPlayer {
         let next: VideoFrameData | undefined;
         while ((next = this.#videoBuffer.at(0)) !== undefined) {
             if (next.time > clock) break;
-            frame.content.delete();
-            frame = this.#videoBuffer.shift()!; // same as next
+            if (frame !== this.#lastFrame)
+                frame.content.delete();
+            frame = this.#videoBuffer.shift()!;
         }
 
         // render this frame
         this.#timestamp = frame.time;
         MediaPlayerInterface.onPlayback.dispatch(frame.time);
         await this.#drawFrame(frame);
-        frame.content.delete();
+        if (frame !== this.#lastFrame)
+            frame.content.delete();
         this.manager.requestRender();
 
         // ensure the buffer is refilling since we're consuming frames
@@ -484,7 +478,7 @@ export class MediaPlayer {
         await this.#mutex.use(async () => {
             if (this.isPlaying || this.#closed) return;
             this.#playing = true;
-            await Debug.debug('starting playback');
+            await Debug.trace('starting playback');
             await this.audio.play();
         });
         if (!this.#presenting) this.#present();
@@ -495,7 +489,7 @@ export class MediaPlayer {
         await this.#mutex.use(async () => {
             if (!this.isPlaying || this.#closed) return;
             this.#playing = false;
-            await Debug.debug('stopping playback');
+            await Debug.trace('stopping playback');
             await this.audio.stop();
         });
         MediaPlayerInterface.onPlayStateChanged.dispatch();
@@ -542,7 +536,8 @@ export class MediaPlayer {
                 // inside cache
                 while (this.#videoBuffer[0].time < target) {
                     const frame = this.#videoBuffer.shift();
-                    frame?.content.delete();
+                    if (frame !== this.#lastFrame)
+                        frame?.content.delete();
                 }
                 await this.audio.shiftUntil(target);
                 const frame = this.#videoBuffer[0];
@@ -567,7 +562,7 @@ export class MediaPlayer {
                     this.#internalTimestamp = undefined;
 
                     await this.media.seekVideo(realTarget);
-                    await Debug.debug(`seek: [${target.toFixed(3)}] by time`);
+                    await Debug.debug(`seek: [${target.toFixed(3)}] by time (${realTarget.toFixed(3)})`);
                     if (lastKeyframe)
                         await Debug.debug(`seek: info: last keyframe is`, lastKeyframe);
 
@@ -583,7 +578,24 @@ export class MediaPlayer {
                 }
 
                 if (!(opt?.imprecise)) {
-                    const frames = await this.media.skipUntil(target, this.#pool);
+                    let frames = await this.media.skipUntil(target, this.#pool);
+                    await Debug.trace('skipUntil: arriving at',
+                        frames.audio[0]?.time, frames.video[0]?.time);
+
+                    let i = 0;
+                    while (frames.audio.length == 0 || frames.video.length == 0) {
+                        i++;
+                        const newTarget = realTarget - i;
+                        if (newTarget < this.startTime) break;
+                        await this.#clearCache();
+                        if (tok.isCancelled) return;
+                        await this.media.seekVideo(newTarget);
+                        frames = await this.media.skipUntil(target, this.#pool);
+                    }
+                    if (i > 0) {
+                        Debug.debug(`seek: retried ${i} time[s]`);
+                    }
+
                     await this.#receiveFrames(frames);
                 }
             }

@@ -1,4 +1,4 @@
-use crate::media::{audio::{self, AudioSink}, demux, internal::MediaError, units, video::{self, VideoSink}};
+use crate::media::{audio::{self, AudioSink}, demux, frame, internal::MediaError, units, video::{self, VideoSink}};
 
 pub struct Session {
     demuxer: demux::Demuxer,
@@ -122,31 +122,42 @@ impl Session {
         Ok(true)
     }
 
-    pub fn try_process(&mut self) -> Result<i32, MediaError> {
+    pub fn try_process(&mut self)
+        -> Result<(i32, Option<frame::Audio>, Option<frame::Video>), MediaError>
+    {
         self.try_process_skipping_before(units::Seconds(f64::NEG_INFINITY))
     }
 
-    pub fn try_process_skipping_before(&mut self, when: units::Seconds) -> Result<i32, MediaError> {
+    pub fn try_process_skipping_before(&mut self, when: units::Seconds)
+        -> Result<(i32, Option<frame::Audio>, Option<frame::Video>), MediaError>
+    {
         let mut count = 0;
+        let mut last_audio: Option<frame::Audio> = None;
+        let mut last_video: Option<frame::Video> = None;
+
         loop {
             if let Some((d, c)) = self.audio_mut()
                 && let Some(f) = d.try_receive()?
-                && f.meta.time >= when
             {
-                c.process(f)?;
-                count += 1;
-                continue;
+                if f.meta.time >= when {
+                    c.process(f)?;
+                    count += 1;
+                    continue;
+                }
+                last_audio = Some(f);
             }
             if let Some((d, c)) = self.video_mut()
                 && let Some(f) = d.try_receive()?
-                && f.meta.time >= when
             {
-                c.process(f)?;
-                count += 1;
-                continue;
+                if f.meta.time >= when {
+                    c.process(f)?;
+                    count += 1;
+                    continue;
+                }
+                last_video = Some(f);
             }
             break;
         }
-        Ok(count)
+        Ok((count, last_audio, last_video))
     }
 }

@@ -135,7 +135,7 @@ async function cleanAutosave() {
             if (match && match[1] < old) {
                 await fs.remove(await join('autosave', name), 
                     { baseDir: fs.BaseDirectory.AppLocalData });
-                Debug.debug('cleaned autosave:', name);
+                Debug.trace('cleaned autosave:', name);
             }
         }
     }, $_('msg.failed-to-clean-autosave'));

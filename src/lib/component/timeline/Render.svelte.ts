@@ -158,7 +158,7 @@ export class TimelineRenderer {
     }
     return { 
       drawStart: start * width_v + offset, 
-      drawEnd: (start + data.length - 1) * width_v + offset, 
+      drawEnd: end * width_v + offset, 
       step
     };
   }

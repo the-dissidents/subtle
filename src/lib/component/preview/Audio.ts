@@ -4,7 +4,7 @@ import { Mutex } from '../../details/Mutex';
 import type { AudioFeedbackData, AudioInputData } from './worker/DecodedAudioLoader';
 import decodedAudioLoaderUrl from './worker/DecodedAudioLoader?worker&url';
 
-const VOLUME_POWER = 3;
+const VOLUME_POWER = 2;
 
 export class Audio {
     #onAudioFeedback?: (data: AudioFeedbackData) => void;

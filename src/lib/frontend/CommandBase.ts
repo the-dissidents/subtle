@@ -154,7 +154,7 @@ export class UICommand<TState = void> {
             return Debug.early(`already running: ${this.name}`);
         if (!this.isApplicable) return false;
 
-        Debug.debug('executing command', this.name);
+        Debug.trace('executing command', this.name);
         // @ts-expect-error -- converting to unknown
         UICommand.#activated.set(this, key);
         await this.#runCommand(this.options);

@@ -400,10 +400,23 @@ pub fn skip_until(
         s.clear();
     }
 
+    let mut last_audio: Option<frame::Audio> = None;
+    let mut last_video: Option<frame::Video> = None;
+
     loop {
-        if let Err(e) = session.try_process_skipping_before(time) {
-            send_error!(&channel, e.to_string());
-            return Err(());
+        match session.try_process_skipping_before(time) {
+            Ok((_, a, v)) => {
+                if let Some(f) = a {
+                    last_audio = Some(f);
+                }
+                if let Some(f) = v {
+                    last_video = Some(f);
+                }
+            },
+            Err(e) => {
+                send_error!(&channel, e.to_string());
+                return Err(());
+            },
         }
 
         if session.audio().as_ref().is_none_or(|(_, s)| !s.is_empty())
@@ -421,7 +434,9 @@ pub fn skip_until(
             }
         }
     };
-    Ok(send_frames(session))
+    send_frames(session, last_audio, last_video).map_err(|e| {
+        send_error!(&channel, e.to_string());
+    })
 }
 
 #[tauri::command]
@@ -442,7 +457,8 @@ pub async fn get_frames_automatic(
         
         match work(session, target_working_time_ms) {
             Ok(_) => {
-                Ok(send_frames(session))
+                send_frames(session, None, None).map_err(
+                    |e| { send_error!(&channel, e.to_string()); })
             }
             Err(e) => {
                 send_error!(&channel, e.to_string());
@@ -527,24 +543,37 @@ fn work(
     }
 }
 
-fn send_frames(session: &mut session::Session) -> tauri::ipc::Response {
+fn send_frames(
+    session: &mut session::Session, 
+    last_audio: Option<frame::Audio>,
+    last_video: Option<frame::Video>
+) -> Result<ipc::Response, MediaError> {
     let mut buf: Vec<u8> = Vec::new();
+
     let audio = 
         if let Some((_, AudioSinkKind::Player(s))) = session.audio_mut() {
+            if s.is_empty() && let Some(f) = last_audio {
+                s.process(f)?;
+            }
             s.get_delta()
         } else {
             VecDeque::new()
         };
+
     let video = 
         if let Some((_, VideoSinkKind::Player(s))) = session.video_mut() {
+            if s.is_empty() && let Some(f) = last_video {
+                s.process(f)?;
+            }
             s.get_delta()
         } else {
             VecDeque::new()
         };
+    
     pack_audio_frames(&audio, &mut buf);
     pack_video_frames(&video, &mut buf);
     // log::trace!("sent frames: {} audio, {} video", audio.len(), video.len());
-    ipc::Response::new(buf)
+    Ok(ipc::Response::new(buf))
 }
 
 /**
