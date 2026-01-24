@@ -40,6 +40,8 @@ export async function contextMenu() {
                 BasicCommands.removeChannel.toMenuItem(),
                 BasicCommands.removeNewlines.toMenuItem(),
                 BasicCommands.removeBlankChannels.toMenuItem(),
+                { item: 'Separator' },
+                BasicCommands.removeHTMLTags.toMenuItem(),
             ]
         },
         { item: 'Separator' },

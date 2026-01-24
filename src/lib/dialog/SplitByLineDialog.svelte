@@ -329,7 +329,9 @@ let updateCounter = $state(0);
               <StyleSelect disabled={line.type !== 'use'}
                 bind:currentStyle={
                   () => line.style ?? Source.subs.defaultStyle, 
-                  (x) => line.style = x}
+                  // work around a strange problem where this can be called when the dialog is being closed, when `line` is undefined
+                  (x) => line ? line.style = x : undefined
+                }
                 onsubmit={() => check()}/>
               &nbsp;
             </label>

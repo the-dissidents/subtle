@@ -249,8 +249,7 @@ impl Player {
             scaler: check!(scaling::Context::get(
                 format, w, h,
                 format::Pixel::RGBA,
-                decoder.inner
-                    .width()
+                decoder.inner.width()
                     .rescale(Rational(1, 1), decoder.sample_aspect_ratio())
                     .try_into()
                     .unwrap(),

@@ -631,6 +631,19 @@ export const BasicCommands = {
             selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
+    removeHTMLTags: new UICommand(() => $_('category.tool'),
+        [],
+    {
+        name: () => $_('action.remove-html-tags'),
+        isApplicable: () => hasSelection(),
+        call() {
+            const n = SubtitleUtil.processHTMLTags(Editing.getSelection(), true);
+            Frontend.setStatus($_('msg.changed-n-entries', {values: { n }}));
+            if (n > 0)
+                Source.markChanged(ChangeType.Times, $_('action.remove-html-tags'));
+        },
+        emptyText: () => $_('msg.no-available-item')
+    }),
     removeBlankChannels: new UICommand(() => $_('category.tool'),
         [],
     {

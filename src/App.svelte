@@ -339,10 +339,6 @@ observer.observe({ type: 'paint', buffered: true });
             {#snippet header()}{$_('tab.search-replace')}{/snippet}
             <SearchToolbox/>
           </TabPage>
-          <TabPage id='test'>
-            {#snippet header()}Test{/snippet}
-            <TestToolbox/>
-          </TabPage>
           <TabPage id='references'>
             {#snippet header()}
               <Tooltip position='top' text={$_('msg.experimental')}>
@@ -350,6 +346,10 @@ observer.observe({ type: 'paint', buffered: true });
               </Tooltip>
             {/snippet}
             <ReferencesToolbox/>
+          </TabPage>
+          <TabPage id='test'>
+            {#snippet header()}Test{/snippet}
+            <TestToolbox/>
           </TabPage>
         </TabView>
       </div>
@@ -502,7 +502,7 @@ header {
 
 footer {
   text-align: left;
-  padding: 5px;
+  padding: 5px 7px;
   margin: 5px 0 0 0;
   line-height: normal;
   white-space: nowrap;

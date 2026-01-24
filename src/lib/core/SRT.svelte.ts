@@ -2,6 +2,7 @@ import { Basic } from "../Basic";
 import { DeserializationError } from "../Serialization";
 import { SubtitleLinearFormatWriter } from "./SimpleFormats";
 import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser } from "./Subtitles.svelte";
+import { SubtitleUtil } from "./SubtitleUtil.svelte";
 
 function getTime(h: string, m: string, s: string, ms: string) {
     return Number.parseInt(h) * 3600 
@@ -26,7 +27,6 @@ export class SRTParser implements SubtitleParser {
     #subs: Subtitles;
     #messages: SRTParseMessage[] = [];
     #ignoredCoords = 0;
-    #ignoredTags = 0;
     #parsed = false;
 
     preserveTags = true;
@@ -41,7 +41,6 @@ export class SRTParser implements SubtitleParser {
      */
     update() {
         this.#subs = new Subtitles();
-        this.#ignoredTags = 0;
         this.#ignoredCoords = 0;
         this.#messages = [];
         this.#parsed = true;
@@ -100,6 +99,8 @@ export class SRTParser implements SubtitleParser {
         } else {
             throw new DeserializationError('invalid or empty SRT');
         }
+
+        const ignoredTags = SubtitleUtil.processHTMLTags(this.#subs.entries, !this.preserveTags);
         
         this.#subs.migrated = 'text';
         if (this.#ignoredCoords > 0) this.#messages.push({
@@ -107,20 +108,14 @@ export class SRTParser implements SubtitleParser {
             category: 'ignored',
             occurrence: this.#ignoredCoords
         });
-        if (this.#ignoredTags > 0) this.#messages.push({
+        if (ignoredTags > 0) this.#messages.push({
             type: 'ignored-format-tags',
             category: 'ignored',
-            occurrence: this.#ignoredTags
+            occurrence: ignoredTags
         });
     }
 
     #createEntry(start: number, end: number, text: string) {
-        const tagRegex = /<\s*(\w+)(?:\s.+)?>(.+)<\/\1>/gs;
-        const stripped = text.replaceAll(tagRegex, '$2');
-        if (stripped !== text) {
-            this.#ignoredTags++;
-            if (!this.preserveTags) text = stripped;
-        }
         const entry = new SubtitleEntry(start, end);
         entry.texts.set(this.#subs.defaultStyle, text);
         this.#subs.entries.push(entry);

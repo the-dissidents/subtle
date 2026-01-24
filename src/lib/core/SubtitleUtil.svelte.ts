@@ -302,9 +302,24 @@ export const SubtitleUtil = {
             if (set.has(ent) || (ent.start >= start && modifySince)) {
                 ent.start = Math.max(0, ent.start * scale + offset);
                 ent.end = Math.max(0, ent.end * scale + offset);
-                // ent.update.dispatch();
             }
         }
         return true;
+    },
+
+    processHTMLTags(entries: SubtitleEntry[], strip: boolean) {
+        const tagRegex = /<\s*(\w+)(?:\s.+)?>(.+)<\/\1>/gs;
+        let ignoredTags = 0;
+
+        for (const entry of entries) {
+            for (const [style, text] of [...entry.texts]) {
+                const stripped = text.replaceAll(tagRegex, '$2');
+                if (stripped !== text) {
+                    ignoredTags++;
+                    if (strip) entry.texts.set(style, stripped);
+                }
+            }
+        }
+        return ignoredTags;
     }
 }

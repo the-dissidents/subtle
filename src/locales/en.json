@@ -59,6 +59,7 @@
     "previous-frame": "previous frame",
     "remove-channel": "remove channel",
     "remove-empty": "remove empty",
+    "remove-html-tags": "remove HTML tags",
     "remove-newlines": "remove newlines",
     "replace-channel": "replace channel",
     "replace-n-th-channel": "replace n-th channel",

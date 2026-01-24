@@ -268,7 +268,6 @@ async function execute(type: SearchAction, option: SearchOption) {
     if (type == 'select' && option == 'all') {
       Editing.selection.submitted.add(entry);
       res = gen.next(true);
-      // Debug.trace('selected', text);
       continue; // selecting one channel suffices
     }
 
@@ -279,7 +278,6 @@ async function execute(type: SearchAction, option: SearchOption) {
       // FIXME: should warn when overwriting? or add an option
       entry.texts.delete(style);
       entry.texts.set(replaceStyle, text);
-      // Debug.trace('replaced with style:', text);
       newStyle = replaceStyle;
     }
 

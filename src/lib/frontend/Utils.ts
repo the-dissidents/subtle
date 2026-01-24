@@ -77,7 +77,6 @@ export const Utils = {
                     count++;
                 }
             }
-            // entry.update.dispatch();
         }
 
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: count}}));
