@@ -65,6 +65,7 @@ import Collapsible from '../ui/Collapsible.svelte';
 import FilterEdit from '../FilterEdit.svelte';
 import { Filter, type MetricFilter } from '../core/Filter';
 import Tooltip from '../ui/Tooltip.svelte';
+    import { RichText } from '../core/RichText';
 
 handler.execute = execute;
 handler.focus = () => {
@@ -115,7 +116,7 @@ function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
 
 function* iterate(
   startIndex: number, startStyleIndex: number, backwards = false
-): Generator<[SubtitleEntry, SubtitleStyle, string, boolean], void, boolean> {
+): Generator<[SubtitleEntry, SubtitleStyle, RichText, boolean], void, boolean> {
   const entries = Source.subs.entries;
   let first = true;
   for (let i = startIndex;
@@ -257,7 +258,8 @@ async function execute(type: SearchAction, option: SearchOption) {
     // Debug.trace('search at', text);
     expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
 
-    if (!expr.test(text) || (first && resumeFrom && type == 'select')) {
+    const str = RichText.toString(text);
+    if (!expr.test(str) || (first && resumeFrom && type == 'select')) {
       res = gen.next(false);
       continue;
     }
@@ -282,14 +284,15 @@ async function execute(type: SearchAction, option: SearchOption) {
     }
 
     let match: RegExpExecArray | null;
-    let newText = text;
+    let newStr = str;
     expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
-    while ((match = expr.exec(newText)) !== null) {
+    while ((match = expr.exec(newStr)) !== null) {
       nDone++;
       if (newType == 'replace') {
-        newText = newText.slice(0, match.index) 
+        // FIXME: rt
+        newStr = newStr.slice(0, match.index) 
           + processReplacement(text, match, repl) 
-          + newText.slice(match.index + match[0].length);
+          + newStr.slice(match.index + match[0].length);
         expr.lastIndex += repl.length - match[0].length;
       }
       if (option != "all") {
@@ -312,7 +315,7 @@ async function execute(type: SearchAction, option: SearchOption) {
           break outer;
         } else {
           // just replaced one, select next
-          entry.texts.set(newStyle, newText);
+          entry.texts.set(newStyle, newStr);
           // Debug.trace('replaced 1:', text, '->', newText);
           newType = 'select';
           Debug.trace('just replaced, start selecting');
@@ -321,7 +324,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     }
 
     if (type == 'replace') {
-      entry.texts.set(newStyle, newText);
+      entry.texts.set(newStyle, newStr);
       // Debug.trace('replacing:', text, '->', newText);
     }
     

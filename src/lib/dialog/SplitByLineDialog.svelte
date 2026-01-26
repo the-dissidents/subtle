@@ -14,6 +14,8 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import { ArrowDownToLineIcon, ArrowUpToLineIcon, Undo2Icon } from "@lucide/svelte";
 import { onMount } from "svelte";
 import { _ } from 'svelte-i18n';
+    import RichEdit from "../component/richedit/RichEdit.svelte";
+    import { RichText } from "../core/RichText";
 
 interface Props {
   args: [],
@@ -42,15 +44,10 @@ onMount(async () => {
     return close();
 
   // work
-  let newStyles = new Map<string, SubtitleStyle>();
+  const newStyles = new Map<string, SubtitleStyle>();
   for (const ent of selection) {
-    let lines = [...ent.texts.values()][0].split('\n');
-    if (reversed)
-      lines = lines.reverse();
-    if (removeEmptyLines) {
-      lines = lines.filter((x) => x.trim().length > 0);
-      if (lines.length == 0) continue;
-    }
+    const lines = processEntry(ent);
+    if (lines.length == 0) continue;
     ent.texts.clear();
     let dataIndex = 0;
     for (let i = 0; i < lines.length; i++) {
@@ -102,11 +99,11 @@ function makeData() {
     usages[i] = 0;
   
   for (const ent of selection) {
-    let lines = [...ent.texts.values()][0].split('\n');
+    let lines = RichText.split([...ent.texts.values()][0], '\n');
     if (reversed)
       lines = lines.reverse();
     if (removeEmptyLines)
-      lines = lines.filter((x) => x.trim().length > 0);
+      lines = lines.filter((x) => RichText.length(RichText.trim(x)) > 0);
     for (let i = 0; i < lines.length; i++) {
       if (i >= usages.length)
         usages[i] = 1;
@@ -147,13 +144,9 @@ function makePreview() {
   if (selectedRow < 0) return;
 
   for (const ent of selection) {
-    let lines = [...ent.texts.values()][0].split('\n');
-    if (reversed)
-      lines = lines.reverse();
-    if (removeEmptyLines)
-      lines = lines.filter((x) => x.trim().length > 0);
+    let lines = processEntry(ent);
     if (selectedRow < lines.length)
-      previewLines.push(lines[selectedRow]);
+      previewLines.push(RichText.toString(lines[selectedRow]));
   }
 }
 
@@ -273,6 +266,17 @@ let markLessThan = $state({use: false, n: 2, label: 'red' as LabelType});
 let hasError = $state(true);
 
 let updateCounter = $state(0);
+
+function processEntry(ent: SubtitleEntry) {
+  let lines = RichText.split([...ent.texts.values()][0], '\n');
+  if (reversed)
+    lines = lines.reverse();
+  if (removeEmptyLines)
+    lines = lines.filter((x) => RichText.length(RichText.trim(x)) > 0);
+
+  return lines;
+}
+
 </script>
 
 <DialogBase bind:this={inner} maxWidth="48em"

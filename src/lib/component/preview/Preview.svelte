@@ -4,12 +4,13 @@
   import TimestampInput from "../../TimestampInput.svelte";
   import { PreviewLayout } from "./Layout";
   import { MediaPlayerInterface } from "./MediaPlayer";
-  import SubtitleView, { type EntryBox } from "./SubtitleView.svelte";
+  import SubtitleView from "./SubtitleView.svelte";
   import { MediaConfig } from "./Config";
   import Popup from "../../ui/Popup.svelte";
   import { Memorized } from "../../config/MemorizedValue.svelte";
   import { z } from "zod/v4-mini";
   import { Frontend } from "../../frontend/Frontend";
+  import type { LineBox } from "./SubtitleRenderer";
 
   let volume = Memorized.$('playbackVolume', z.number().check(z.gt(0)).check(z.lt(1)), 0.8);
   volume.subscribe((x) => Playback.player?.setVolume(x));
@@ -22,7 +23,7 @@
   let loadState = Playback.loadState;
   let uiFocus = Frontend.uiFocus;
   let layout = $state<PreviewLayout>();
-  let boxes = $state<EntryBox[]>([]);
+  let boxes = $state<LineBox[]>([]);
 
   let volumePopup: Popup;
 
@@ -63,22 +64,7 @@
 >
   <div class='player-container fixminsize'>
     <canvas class="fill" use:setup></canvas>
-    {#if MediaConfig.data.subtitleRenderer == 'dom'}
-      <SubtitleView manager={layout?.manager} {boxes}/>
-    {/if}
-    {#if MediaConfig.data.showDebug}
-      <label style="position: absolute; left: 0; bottom: 0;">
-        <input type="checkbox" checked={MediaConfig.data.subtitleRenderer == 'dom'}
-          onchange={(x) => {
-            if (x.currentTarget.checked)
-              MediaConfig.data.subtitleRenderer = 'dom';
-            else
-              MediaConfig.data.subtitleRenderer = 'canvas';
-            layout?.manager.requestRender();
-          }}/>
-        dom
-      </label>
-    {/if}
+    <SubtitleView manager={layout?.manager} {boxes}/>
   </div>
 
   <!-- video playback controls -->
@@ -119,7 +105,7 @@
 <style>
 @media (prefers-color-scheme: light) {
   canvas {
-    background-color: lightgray;
+    background-color: gray;
   }
 }
 

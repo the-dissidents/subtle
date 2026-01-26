@@ -13,6 +13,7 @@ import { Frontend } from "./Frontend";
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { ask } from "@tauri-apps/plugin-dialog";
 import * as z from "zod/v4-mini";
+import type RichEdit from "../component/richedit/RichEdit.svelte";
 const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
@@ -23,7 +24,7 @@ export type SelectionState = {
 
 export type FocusState = {
     entry: Writable<SubtitleEntry | null | 'virtual'>,
-    control: HTMLTextAreaElement | null,
+    control: RichEdit | null,
     style: Writable<SubtitleStyle | null>
 }
 
@@ -86,7 +87,7 @@ export const Editing = {
     isEditingVirtualEntry: writable(false),
     useUntimedForNewEntires: Memorized.$('useUntimedForNewEntires', z.boolean(), false),
 
-    styleToEditor: new WeakMap<SubtitleStyle, HTMLTextAreaElement>(),
+    styleToEditor: new WeakMap<SubtitleStyle, RichEdit>(),
 
     onSelectionChanged: new EventHost<[cause: ChangeCause]>(),
     onKeepEntryInView: new EventHost<[entry: SubtitleEntry | 'virtual']>(),
@@ -112,9 +113,10 @@ export const Editing = {
 
     startEditingFocusedEntry() {
         const style = updateFocusedStyle();
-        const elem = this.styleToEditor.get(style)!;
-        elem.focus();
-        elem.scrollIntoView();
+        const editor = this.styleToEditor.get(style);
+        Debug.assert(!!editor);
+        editor.focus();
+        editor.scrollIntoView();
     },
 
     insertAtTime(start: number, end: number, style: SubtitleStyle) {
@@ -211,7 +213,7 @@ export const Editing = {
         const control = this.focused.control;
         Debug.assert(style !== null);
         Debug.assert(control !== null);
-        focused.texts.set(style, control.value);
+        focused.texts.set(style, control.getText());
         Source.markChanged(ChangeType.InPlace, $_('c.edit-entry'));
     },
 

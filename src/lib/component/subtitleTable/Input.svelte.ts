@@ -111,11 +111,11 @@ export class TableInput {
     async #handleDoubleClick() {
         this.focus();
         const focused = Editing.getFocusedEntry();
-        Debug.assert(focused !== null);
+        
         if (focused == 'virtual') {
             if (TableConfig.data.doubleClickStartEdit)
             Editing.startEditingNewVirtualEntry();
-        } else {
+        } else if (focused !== null) {
             switch (TableConfig.data.doubleClickPlaybackBehavior) {
                 case 'none': break;
                 case 'seek':

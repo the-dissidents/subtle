@@ -7,6 +7,7 @@ import { Debug } from "../../Debug";
 import { ChangeType, Source } from "../../frontend/Source";
 import { TableConfig } from "./Config";
 import { _ } from "svelte-i18n";
+import { RichText } from "../../core/RichText";
 
 export type Column = {
   metric: keyof typeof Metrics,
@@ -143,7 +144,8 @@ export class TableLayout {
                 }
 
                 texts.push({
-                    style, text: text,
+                    style, text: RichText.toString(text),
+                    // FIXME: rt
                     height: lineHeight,
                     line: this.totalLines + entryHeight,
                     failed: style.validator === null 

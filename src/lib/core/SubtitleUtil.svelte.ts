@@ -1,6 +1,7 @@
 import { SvelteMap } from "svelte/reactivity";
 import { Debug } from "../Debug";
 import { SubtitleEntry, Subtitles, SubtitleStyle } from "./Subtitles.svelte";
+import { RichText } from "./RichText";
 
 export type MergeStyleSelection =
     'usedOnly' | 'all' | 'onlyStyles';
@@ -308,12 +309,14 @@ export const SubtitleUtil = {
     },
 
     processHTMLTags(entries: SubtitleEntry[], strip: boolean) {
+        // FIXME: rt
+
         const tagRegex = /<\s*(\w+)(?:\s.+)?>(.+)<\/\1>/gs;
         let ignoredTags = 0;
 
         for (const entry of entries) {
             for (const [style, text] of [...entry.texts]) {
-                const stripped = text.replaceAll(tagRegex, '$2');
+                const stripped = RichText.toString(text).replaceAll(tagRegex, '$2');
                 if (stripped !== text) {
                     ignoredTags++;
                     if (strip) entry.texts.set(style, stripped);

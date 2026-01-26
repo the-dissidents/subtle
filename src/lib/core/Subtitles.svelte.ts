@@ -7,25 +7,9 @@ import { AlignMode, type LabelType } from "./Labels";
 import { parseObjectZ } from "../Serialization";
 
 import * as z from "zod/v4-mini";
+import { ZColor } from "./Serialization";
 import * as Color from "colorjs.io/fn";
-
-const ZColor = z.codec(z.string(), z.custom<Color.PlainColorObject>(),
-{
-    decode: (x, _cxt) => {
-        try {
-            return Color.getColor(x);
-        } catch {
-            // cxt.issues.push({
-            //     input: x,
-            //     code: "custom",
-            //     message: `error parsing color: ${e}`,
-            //     continue: true
-            // });
-            return Color.getColor('white');
-        }
-    },
-    encode: (x) => Color.serialize(x)
-});
+import type { RichText } from "./RichText";
 
 export const ZStyleBase = z.object({
     name:                         z.string(),
@@ -102,7 +86,7 @@ export type SubtitleMetadata = z.infer<typeof ZMetadata>;
 
 export class SubtitleEntry {
     label: LabelType = $state('none');
-    texts = new SvelteMap<SubtitleStyle, string>();
+    texts = new SvelteMap<SubtitleStyle, RichText>();
     start: number = $state(0);
     end: number = $state(0);
 

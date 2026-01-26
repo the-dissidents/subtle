@@ -2,6 +2,8 @@
 import LabelSelect from './LabelSelect.svelte';
 import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
+import RichEdit from './component/richedit/RichEdit.svelte';
+
 import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
 
 import { SubtitleEntry, type SubtitleStyle } from './core/Subtitles.svelte';
@@ -12,9 +14,9 @@ import { Frontend } from './frontend/Frontend';
 
 import { Menu } from '@tauri-apps/api/menu';
 import * as dialog from "@tauri-apps/plugin-dialog";
-import { tick } from 'svelte';
 import { _ } from 'svelte-i18n';
 import { Debug } from './Debug';
+
 
 let editFormUpdateCounter = $state(0);
 let editAnchor: 'start' | 'end' = $state('start');
@@ -39,13 +41,13 @@ Editing.onSelectionChanged.bind(me, () => {
   if (focused instanceof SubtitleEntry) {
     updateForm();
     const isEditingNow = $uiFocus == 'EditingField';
-    tick().then(() => {
-      let col = document.getElementsByClassName('contentarea');
-      for (const target of col) {
-        contentSelfAdjust(target as HTMLTextAreaElement);
-      }
-      if (isEditingNow) Editing.startEditingFocusedEntry();
-    });
+    // tick().then(() => {
+    //   let col = document.getElementsByClassName('contentarea');
+    //   for (const target of col) {
+    //     contentSelfAdjust(target as HTMLTextAreaElement);
+    //   }
+    //   if (isEditingNow) Editing.startEditingFocusedEntry();
+    // });
   }
 });
 
@@ -67,23 +69,12 @@ function applyEditForm() {
   focused.label = editingLabel;
 }
 
-function contentSelfAdjust(elem: HTMLTextAreaElement) {
-  elem.style.height = "auto";
-  elem.style.height = `${elem.scrollHeight + 3}px`; // grows to fit content
-}
-
-function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
+function setupEditor(editor: RichEdit, style: SubtitleStyle) {
   const state = Source.subs.styles.find((x) => x.name == style.name);
   Debug.assert(state !== undefined);
-  Editing.styleToEditor.set(state, node);
-  return {
-    update: (style: SubtitleStyle) => {
-      const state = Source.subs.styles.find((x) => x.name == style.name);
-      Debug.assert(state !== undefined);
-      Editing.styleToEditor.set(state, node);
-    }
-  };
+  Editing.styleToEditor.set(state, editor);
 }
+
 </script>
 
 <div class="outer hlayout">
@@ -202,7 +193,32 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
           }}><EllipsisIcon /></button>
         </td>
         <td style='width:100%'>
-          <textarea class='contentarea' tabindex=0
+          <RichEdit text={focused.texts.get(style)!}
+            bind:this={
+              () => Editing.styleToEditor.get(style), 
+              (x) => setupEditor(x, style)
+            }
+            onFocus={(_, ) => {
+              console.log('focus');
+              const state = Source.subs.styles.find((x) => x.name == style.name)!;
+              const self = Editing.styleToEditor.get(state);
+              Debug.assert(!!self);
+              $uiFocus = 'EditingField';
+              Editing.focused.style.set(style);
+              Editing.focused.control = self;
+            }}
+            onBlur={() => {
+              console.log('blur');
+              if ($uiFocus === 'EditingField')
+                $uiFocus = 'Other';
+              Editing.submitFocusedEntry();
+            }}
+            onInput={() => {
+              $uiFocus = 'EditingField';
+              Editing.editChanged = true;
+            }}
+          />
+          <!-- <textarea class='contentarea' tabindex=0
             use:setupTextArea={style}
             value={focused.texts.get(style)!}
             onfocus={(ev) => {
@@ -219,7 +235,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
               $uiFocus = 'EditingField';
               contentSelfAdjust(x.currentTarget);
               Editing.editChanged = true;
-            }}></textarea>
+            }}></textarea> -->
         </td>
       </tr>
       {/if}
@@ -267,7 +283,7 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   margin-left: 3px;
 }
 
-.contentarea {
+:global(.ProseMirror) {
   width: 100%;
   resize: none;
   overflow: visible;

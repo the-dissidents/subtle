@@ -65,7 +65,7 @@ body {
   }
   input[type=number], input[type=text], 
   select, [data-select-trigger], div.combobox,
-  textarea, ol[role='listbox'] {
+  textarea, ol[role='listbox'], div.ProseMirror {
     border: 1px solid var(--uchu-gray-4);
     background-color: white;
     color: var(--uchu-yin);
@@ -154,7 +154,7 @@ body {
   }
   input[type=number], input[type=text], 
   select, [data-select-trigger], div.combobox,
-  textarea, ol[role='listbox'] {
+  textarea, ol[role='listbox'], div.ProseMirror {
     border: none;
     background-color: var(--uchu-yin-8);
     color: var(--uchu-yang);
@@ -272,21 +272,21 @@ label:has(input[type='checkbox'].button) {
   }
 }
 
-button.left {
+button.left, label:has(input[type='checkbox'].button.left) {
   border-radius: 3px 0 0 3px;
   margin-right: 0;
   border-right: none;
   text-align: right;
 }
 
-button.middle {
+button.middle, label:has(input[type='checkbox'].button.middle) {
   border-radius: 0;
   border-right: none;
   margin-left: 0;
   margin-right: 0;
 }
 
-button.right {
+button.right, label:has(input[type='checkbox'].button.right) {
   border-radius: 0 3px 3px 0;
   margin-left: 0;
   text-align: left;
@@ -388,7 +388,7 @@ div.combobox {
   }
 }
 
-textarea {
+textarea, div.ProseMirror {
   font-family: var(--fontFamily);
   font-size: 1rem;
   border-radius: 2px;

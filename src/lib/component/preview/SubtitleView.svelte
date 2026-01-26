@@ -1,27 +1,16 @@
-<script lang="ts" module>
-  export type EntryBox = {
-    x: number, y: number,
-    w: number, h: number, 
-    ascent: number,
-    style: SubtitleStyle,
-    scale: number,
-    text: string,
-    font: string,
-  };
-</script>
-
 <script lang="ts">
   import { onMount } from "svelte";
   import * as Color from "colorjs.io/fn";
 
   import type { CanvasManager } from "../../CanvasManager";
-  import type { SubtitleStyle } from "../../core/Subtitles.svelte";
   import { EventHost } from "../../details/EventHost";
   import { MediaConfig } from "./Config";
+  import type { LineBox } from "./SubtitleRenderer";
+  import type { Line } from "../../details/TextLayout";
 
   interface Props {
     manager?: CanvasManager,
-    boxes: EntryBox[]
+    boxes: LineBox[]
   }
 
   let {manager, boxes}: Props = $props();
@@ -51,14 +40,31 @@
   }
 </script>
 
-<div class="subview" style="width: {width}px; height: {height}px;">
+{#snippet line(line: Line)}
+  {#if MediaConfig.data.showBoundingBoxes}
+    <div class="origin"></div>
+  {/if}
+  {#each line.chunks as word, i}
+    {#each word.chunks as chunk}
+      <span style="
+        font: {chunk.format.cssFont};
+        text-decoration: {chunk.format.textDecoration};
+        width: {chunk.width}px;
+      ">{chunk.text}</span>
+    {/each}
+    {#if i < line.chunks.length - 1}
+      <span style="width: {word.spaceWidth}px; height: 1lh;"></span>
+    {/if}
+  {/each}
+{/snippet}
+
+<div class="subview" style="width: {width}px; height: {height}px;"
+  onscroll={(e) => {
+    
+  }}
+>
   <div style="transform: {transform}; transform-origin: left top;">
   {#each boxes as box (box)}
-  {@const bold = box.style.styles.bold ? 'bold' : 'normal'}
-  {@const italic = box.style.styles.italic ? 'italic' : 'normal'}
-  {@const deco = ((box.style.styles.underline ? 'underline' : '')
-                + (box.style.styles.strikethrough ? ' line-through' : ''))
-              || 'none'}
   {@const outline = box.style.outline * 2 * box.scale}
   {@const shadow = box.style.shadow * box.scale}
   {@const color = Color.serialize(box.style.color)}
@@ -67,21 +73,16 @@
     <div class="box" style="
       left: {box.x}px;
       top: {box.y}px;
-      width: {box.w}px;
-      height: {box.h}px;
-      border: {MediaConfig.data.showBoundingBoxes ? '1px solid white' : 'none'};
+      width: {box.line.width}px;
+      height: {box.line.height}px;
     "></div>
 
     <!-- outline + shadow -->
     <div class="text" style="
       left: {box.x}px;
       top: {box.y}px;
-      width: {box.w}px;
-      height: {box.h}px;
-      font: {box.font};
-      font-weight: {bold};
-      font-style: {italic};
-      text-decoration: {deco};
+      width: {box.line.width}px;
+      height: {box.line.height}px;
       {outline > 0
         ? `color: ${outlineColor};
            -webkit-text-stroke-width: ${outline}px;
@@ -91,22 +92,19 @@
         ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${shadowColor});` 
         : ''}
     ">
-      {box.text}
+      {@render line(box.line)}
     </div>
 
     <!-- text -->
     <div class="text" style="
       left: {box.x}px;
       top: {box.y}px;
-      width: {box.w}px;
-      height: {box.h}px;
+      width: {box.line.width}px;
+      height: {box.line.height}px;
       color: {color};
-      font: {box.font};
-      font-weight: {bold};
-      font-style: {italic};
-      text-decoration: {deco};
+      outline: {MediaConfig.data.showBoundingBoxes ? '0.5px solid white' : 'none'};
     ">
-      {box.text}
+      {@render line(box.line)}
     </div>
   {/each}
   </div>
@@ -116,8 +114,8 @@
   .subview {
     box-sizing: border-box;
     position: absolute;
-    left: 3px;
-    top: 3px;
+    left: 0;
+    top: 0;
     pointer-events: none;
     overflow: hidden;
   }
@@ -126,10 +124,27 @@
     position: absolute;
     box-sizing: border-box;
     white-space: pre;
+    display: flex;
+    flex-direction: row;
+    font-synthesis: style;
+    align-items: baseline;
   }
 
   .box {
     position: absolute;
     box-sizing: border-box;
+  }
+
+  .text:hover {
+    outline: 1px solid white !important;
+  }
+
+  .origin {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 5px;
+    height: 5px;
+    background-color: red;
   }
 </style>

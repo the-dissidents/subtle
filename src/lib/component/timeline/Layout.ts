@@ -10,6 +10,7 @@ import { EventHost } from "../../details/EventHost";
 import { MediaSampler } from "./MediaSampler";
 import { TimelineHandle } from "./Input.svelte";
 import { get } from "svelte/store";
+import { RichText } from "../../core/RichText";
 
 const PRELOAD_MARGIN = 3;
 const PRELOAD_MARGIN_FACTOR = 0.1;
@@ -224,7 +225,7 @@ export class TimelineLayout {
       const i = this.#stylesMap.get(style) ?? 0;
       const y = this.entryHeight * i 
         + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
-      return [{x: x, y: y, w: w, h: this.entryHeight, text, style}];
+      return [{x: x, y: y, w: w, h: this.entryHeight, text: RichText.toString(text), style}];
     });
   }
 

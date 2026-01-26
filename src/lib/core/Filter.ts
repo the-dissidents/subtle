@@ -9,6 +9,7 @@ import wcwidth from "wcwidth";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { DeserializationError } from "../Serialization";
+import { RichText } from "./RichText";
 const $_ = unwrapFunctionStore(_);
 
 export const METRIC_CONTEXTS = ['editing', 'entry', 'style', 'channel'] as const;
@@ -166,11 +167,11 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
     content: new MetricDefinition('string', 'channel',
         () => $_('metrics.content'), 
         () => $_('metrics.content'), 
-        (e, s) => e.texts.get(s)!),
+        (e, s) => RichText.toString(e.texts.get(s)!)),
     lines: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-lines'), 
         () => $_('metrics.number-of-lines-short'), 
-        (e, s) => e.texts.get(s)!.split('\n').length,
+        (e, s) => RichText.toString(e.texts.get(s)!).split('\n').length,
         { integer: true }),
     chars: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-characters'), 
@@ -180,7 +181,7 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
     letters: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-readable-characters'), 
         () => $_('metrics.number-of-readable-characters-short'), 
-        (e, s) => getTextLength(e.texts.get(s)!),
+        (e, s) => getTextLength(RichText.toString(e.texts.get(s)!)),
         {
             integer: true,
             description: () => $_('metrics.readable-characters-d')
@@ -188,12 +189,14 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
     charsInLongestLine: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-characters-in-longest-line'), 
         () => $_('metrics.number-of-characters-in-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map((x) => x.length)),
+        (e, s) => Math.max(0, 
+            ...RichText.toString(e.texts.get(s)!).split('\n').map((x) => x.length)),
         { integer: true }),
     lettersInLongestLine: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-letters-in-longest-line'), 
         () => $_('metrics.number-of-letters-in-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(getTextLength)),
+        (e, s) => Math.max(0, 
+            ...RichText.toString(e.texts.get(s)!).split('\n').map(getTextLength)),
         {
             integer: true,
             description: () => $_('metrics.readable-characters-d')
@@ -201,7 +204,8 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
     widthOfLongestLine: new MetricDefinition('number', 'channel',
         () => $_('metrics.width-of-longest-line'), 
         () => $_('metrics.width-of-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(wcwidth)),
+        (e, s) => Math.max(0, 
+            ...RichText.toString(e.texts.get(s)!).split('\n').map(wcwidth)),
         {
             integer: true,
             description: () => $_('metrics.width-d')
@@ -210,7 +214,7 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
         () => $_('metrics.readable-characters-per-second'), 
         () => $_('metrics.readable-characters-per-second-short'), 
         (e, s) => {
-            const value = getTextLength(e.texts.get(s)!) / (e.end - e.start);
+            const value = getTextLength(RichText.toString(e.texts.get(s)!)) / (e.end - e.start);
             // TODO: is it ok to return 0 for NaN?
             return isNaN(value) ? 0 : value;
         },

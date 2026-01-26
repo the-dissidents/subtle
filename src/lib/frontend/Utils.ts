@@ -10,6 +10,7 @@ import { Debug } from "../Debug";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Frontend } from "./Frontend";
 import { get } from "svelte/store";
+import { RichText } from "../core/RichText";
 const $_ = unwrapFunctionStore(_);
 
 export const Utils = {
@@ -122,9 +123,9 @@ export const Utils = {
     mergeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
-            const textA = ent.texts.get(a)?.trimEnd() ?? '';
-            const textB = ent.texts.get(b)?.trimStart();
-            if (textB == undefined) continue;
+            const textA = RichText.trimEnd(ent.texts.get(a) ?? '');
+            const textB = RichText.trimEnd(ent.texts.get(b) ?? '');
+            if (textB === '') continue;
             ent.texts.set(a, textA + ' ' + textB);
             ent.texts.delete(b);
             done++;
@@ -191,9 +192,11 @@ export const Utils = {
     removeNewlines(entries: SubtitleEntry[], style: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
-            const text = ent.texts.get(style)?.split('\n');
-            if (text === undefined || text.length == 1) continue;
-            ent.texts.set(style, text.join(' '));
+            const rt = ent.texts.get(style);
+            if (!rt) continue;
+            const split = RichText.split(rt, '\n');
+            if (split.length == 1) continue;
+            ent.texts.set(style, RichText.join(split, ' '));
             done++;
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
@@ -207,7 +210,7 @@ export const Utils = {
         for (let i = 1; i < selection.length; i++) {
             if (keepAll) for (const [style, text] of selection[i].texts) {
                 const oldText = first.texts.get(style);
-                first.texts.set(style, (oldText ?? '') + text);
+                first.texts.set(style, RichText.concat(oldText ?? '', text));
             }
             start = Math.min(start, selection[i].start);
             end = Math.max(end, selection[i].end);

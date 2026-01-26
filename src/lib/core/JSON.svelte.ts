@@ -6,6 +6,7 @@ import { Filter, Metrics } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
 
 import * as z from "zod/v4-mini";
+import { ZRichText } from "./RichText";
 
 /**
  * Version details:
@@ -16,9 +17,10 @@ import * as z from "zod/v4-mini";
  *  - 000501 (minor) timelineActiveChannel in view
  *  - 000502 (minor) uiState structure in metadata
  *  - 000503 (minor) shadow color in style
+ *  - 000700 (major) inline formatting through RichText
  */
-export const SubtitleFormatVersion = '000503';
-export const SubtitleCompatibleVersion = '000400';
+export const SubtitleFormatVersion = '000700';
+export const SubtitleCompatibleVersion = '000700';
 
 export type JSONParseMessage = {
     type: 'fixed-style',
@@ -55,7 +57,10 @@ const ZEntry = z.object({
     start: z.number(),
     end: z.number(),
     label: z.enum(LABEL_TYPES),
-    texts: z.array(z.readonly(z.tuple([z.string(), z.string()])))
+    texts: z.array(z.readonly(z.tuple([
+        z.string(), 
+        ZRichText
+    ])))
 });
 
 function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {

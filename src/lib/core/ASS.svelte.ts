@@ -5,6 +5,7 @@ import { DeserializationError } from "../Serialization";
 import { SubtitleEntry, Subtitles, SubtitleStyle, type SubtitleFormat, type SubtitleParser, type SubtitleWriter } from "./Subtitles.svelte";
 import { AlignMode } from "./Labels";
 import { SubtitleTools } from "./SubtitleUtil.svelte";
+import { RichText } from "./RichText";
 
 export const ASSSubtitles = {
     detect(source) {
@@ -481,7 +482,8 @@ export class ASSWriter implements SubtitleWriter {
                 const styleName = this.#styleNames.get(style);
                 Debug.assert(styleName !== undefined);
                 result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${
-                    text.replaceAll('\n', '\\N')}\n`;
+                    RichText.toString(text).replaceAll('\n', '\\N')}\n`;
+                // FIXME: rt
             }
         }
         return result;
