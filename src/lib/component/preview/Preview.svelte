@@ -5,7 +5,6 @@
   import { PreviewLayout } from "./Layout";
   import { MediaPlayerInterface } from "./MediaPlayer";
   import SubtitleView from "./SubtitleView.svelte";
-  import { MediaConfig } from "./Config";
   import Popup from "../../ui/Popup.svelte";
   import { Memorized } from "../../config/MemorizedValue.svelte";
   import { z } from "zod/v4-mini";

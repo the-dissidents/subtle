@@ -1,13 +1,9 @@
-import { Basic } from "../../Basic";
 import type { CanvasManager } from "../../CanvasManager";
 import { SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitles.svelte";
 import { AlignMode } from "../../core/Labels";
 import { EventHost } from "../../details/EventHost";
 import { Typography } from "../../details/Typography";
-import { MediaConfig } from "./Config";
-
 import * as Color from "colorjs.io/fn";
-import type { RichText } from "../../core/RichText";
 import { layoutText, WarpStyle, type Line } from "../../details/TextLayout";
 
 export type LineBox = {
@@ -223,8 +219,8 @@ export class SubtitleRenderer {
                     const overlapping = boxes.find((box) => boxIntersects(box, newBox));
                     if (!overlapping) break;
                     newBox.y = dy > 0
-                        ? Math.max(newBox.y + 1, overlapping.y + overlapping.line.height)
-                        : Math.min(newBox.y - 1, overlapping.y - overlapping.line.height);
+                        ? Math.max(newBox.y + 1, overlapping.y + overlapping.line.height + newBox.h)
+                        : Math.min(newBox.y - 1, overlapping.y - newBox.h);
                 }
 
                 boxes.push({

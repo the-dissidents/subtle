@@ -16,6 +16,8 @@ import { Menu } from '@tauri-apps/api/menu';
 import * as dialog from "@tauri-apps/plugin-dialog";
 import { _ } from 'svelte-i18n';
 import { Debug } from './Debug';
+import RichEditToolbar from './component/richedit/RichEditToolbar.svelte';
+import { tick } from 'svelte';
 
 
 let editFormUpdateCounter = $state(0);
@@ -31,7 +33,6 @@ let focusedStyle = Editing.focused.style;
 const me = {};
 
 Source.onSubtitlesChanged.bind(me, () => {
-  editFormUpdateCounter++;
   updateForm();
 });
 
@@ -40,14 +41,8 @@ Editing.onSelectionChanged.bind(me, () => {
   const focused = Editing.getFocusedEntry();
   if (focused instanceof SubtitleEntry) {
     updateForm();
-    const isEditingNow = $uiFocus == 'EditingField';
-    // tick().then(() => {
-    //   let col = document.getElementsByClassName('contentarea');
-    //   for (const target of col) {
-    //     contentSelfAdjust(target as HTMLTextAreaElement);
-    //   }
-    //   if (isEditingNow) Editing.startEditingFocusedEntry();
-    // });
+    if ($uiFocus == 'EditingField')
+      tick().then(() => Editing.startEditingFocusedEntry());
   }
 });
 
@@ -67,12 +62,6 @@ function applyEditForm() {
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
   focused.label = editingLabel;
-}
-
-function setupEditor(editor: RichEdit, style: SubtitleStyle) {
-  const state = Source.subs.styles.find((x) => x.name == style.name);
-  Debug.assert(state !== undefined);
-  Editing.styleToEditor.set(state, editor);
 }
 
 </script>
@@ -141,6 +130,12 @@ function setupEditor(editor: RichEdit, style: SubtitleStyle) {
 </fieldset>
 <!-- channels view -->
 <div class="channels flexgrow isolated area" class:focused={$uiFocus == 'EditingField'}>
+  {#if $focusedStyle && Editing.styleToEditor.has($focusedStyle)}
+    <RichEditToolbar
+      target={Editing.styleToEditor.get($focusedStyle)!}
+      onAction={() => Editing.submitFocusedEntry()} />
+  {/if}
+
   {#if Editing.getFocusedEntry() instanceof SubtitleEntry}
   {@const focused = Editing.getFocusedEntry() as SubtitleEntry}
   <table class='fields'>
@@ -196,19 +191,17 @@ function setupEditor(editor: RichEdit, style: SubtitleStyle) {
           <RichEdit text={focused.texts.get(style)!}
             bind:this={
               () => Editing.styleToEditor.get(style), 
-              (x) => setupEditor(x, style)
+              (x) => Editing.styleToEditor.set(style, x)
             }
+            deinit={() => Editing.styleToEditor.delete(style)}
             onFocus={(_, ) => {
-              console.log('focus');
-              const state = Source.subs.styles.find((x) => x.name == style.name)!;
-              const self = Editing.styleToEditor.get(state);
+              const self = Editing.styleToEditor.get(style);
               Debug.assert(!!self);
               $uiFocus = 'EditingField';
               Editing.focused.style.set(style);
               Editing.focused.control = self;
             }}
             onBlur={() => {
-              console.log('blur');
               if ($uiFocus === 'EditingField')
                 $uiFocus = 'Other';
               Editing.submitFocusedEntry();
@@ -218,24 +211,6 @@ function setupEditor(editor: RichEdit, style: SubtitleStyle) {
               Editing.editChanged = true;
             }}
           />
-          <!-- <textarea class='contentarea' tabindex=0
-            use:setupTextArea={style}
-            value={focused.texts.get(style)!}
-            onfocus={(ev) => {
-              $uiFocus = 'EditingField';
-              Editing.focused.style.set(style);
-              Editing.focused.control = ev.currentTarget;
-            }}
-            onblur={() => {
-              if ($uiFocus === 'EditingField')
-                $uiFocus = 'Other';
-              Editing.submitFocusedEntry();
-            }}
-            oninput={(x) => {
-              $uiFocus = 'EditingField';
-              contentSelfAdjust(x.currentTarget);
-              Editing.editChanged = true;
-            }}></textarea> -->
         </td>
       </tr>
       {/if}
@@ -277,19 +252,21 @@ function setupEditor(editor: RichEdit, style: SubtitleStyle) {
 }
 
 .channels {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: scroll;
   /* box-shadow: gray 0px 0px 3px inset; */
   border: solid var(--uchu-gray-2) 1px;
   margin-left: 3px;
 }
 
-:global(.ProseMirror) {
+:global(.ProseMirror.ProseMirror) {
   width: 100%;
   resize: none;
   overflow: visible;
   box-sizing: border-box;
   font-family: var(--editorFontFamily);
   font-size: var(--editorFontSize);
+  min-height: 2lh;
 }
 
 td {

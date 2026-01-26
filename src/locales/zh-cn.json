@@ -629,6 +629,9 @@
     "url-d": "不支持锚点（如#English）。若要达到自动定位的效果，请选中“使用自动滚动”",
     "use-auto-scroll": "使用自动滚动"
   },
+  "richedit": {
+    "override-styles": "覆盖样式"
+  },
   "search": {
     "advanced": "高级",
     "all": "全部",

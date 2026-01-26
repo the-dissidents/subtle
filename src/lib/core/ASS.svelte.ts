@@ -326,7 +326,7 @@ export class ASSParser implements SubtitleParser {
             ignore('MarginT', '0');
             ignore('MarginB', '0');
             ignore('Marked', '0');
-            // FIXME: Layer is currently ignored, but we do export it, so we don't emit a warning
+            ignore('Layer', '0');
 
             const entry = new SubtitleEntry(start, end);
             const style = getStyleOrCreate(opts[fieldMap.get('Style')!]);

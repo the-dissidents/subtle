@@ -14,6 +14,7 @@ import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { ask } from "@tauri-apps/plugin-dialog";
 import * as z from "zod/v4-mini";
 import type RichEdit from "../component/richedit/RichEdit.svelte";
+import { SvelteMap } from "svelte/reactivity";
 const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
@@ -87,7 +88,7 @@ export const Editing = {
     isEditingVirtualEntry: writable(false),
     useUntimedForNewEntires: Memorized.$('useUntimedForNewEntires', z.boolean(), false),
 
-    styleToEditor: new WeakMap<SubtitleStyle, RichEdit>(),
+    styleToEditor: new SvelteMap<SubtitleStyle, RichEdit>(),
 
     onSelectionChanged: new EventHost<[cause: ChangeCause]>(),
     onKeepEntryInView: new EventHost<[entry: SubtitleEntry | 'virtual']>(),

@@ -111,7 +111,7 @@ export const RichTextSchema = new Schema({
                 }
             },
             toDOM(mark) {
-                return ['span', { style: `font-size: ${mark.attrs.value * 100}%` }, 0]
+                return ['span', { style: `font-size: ${mark.attrs.value * 100}%; line-height: ${mark.attrs.value * 100}%;` }, 0]
             },
         },
     }

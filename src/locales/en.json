@@ -612,6 +612,9 @@
     "url-d": "Anchors (e.g. #English) are not supported. To automatically navigate to a specified element, enable \"Use auto-scroll\"",
     "use-auto-scroll": "use auto-scroll"
   },
+  "richedit": {
+    "override-styles": "style override"
+  },
   "search": {
     "advanced": "advanced",
     "all": "all",
