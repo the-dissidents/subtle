@@ -10,6 +10,7 @@ import * as z from "zod/v4-mini";
 import { ZColor } from "./Serialization";
 import * as Color from "colorjs.io/fn";
 import type { RichText } from "./RichText";
+import { WrapStyle } from "../details/TextLayout";
 
 export const ZStyleBase = z.object({
     name:                         z.string(),
@@ -33,6 +34,7 @@ export const ZStyleBase = z.object({
         right:         z._default(z.number(), 10),
     }),
     alignment:         z._default(z.enum(AlignMode), AlignMode.BottomCenter),
+    wrapStyle:         z._default(z.enum(WrapStyle), WrapStyle.Balanced),
     validator:         z._default(z.nullable(z.unknown()), null)
 });
 

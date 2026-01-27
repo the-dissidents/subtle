@@ -7,7 +7,7 @@ import { Debug } from "../../Debug";
 import { ChangeType, Source } from "../../frontend/Source";
 import { TableConfig } from "./Config";
 import { _ } from "svelte-i18n";
-import { applyStyle, layoutText, toCSSStyle, WarpStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
+import { applyStyle, layoutText, toCSSStyle, WrapStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
 
 export type Column = {
     metric: keyof typeof Metrics,
@@ -131,7 +131,7 @@ export class TableLayout {
                 const layout = layoutText(value, ctx, {
                     baseStyle: metric.type.isMonospace
                         ? this.baseStyleMonospace : this.baseStyle,
-                    warpStyle: WarpStyle.NoWrap,
+                    warpStyle: WrapStyle.NoWrap,
                     disableSize: true,
                 });
                 const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
@@ -153,7 +153,7 @@ export class TableLayout {
 
                     const layout = layoutText(value, ctx, {
                         baseStyle: this.baseStyle,
-                        warpStyle: WarpStyle.NoWrap,
+                        warpStyle: WrapStyle.NoWrap,
                         disableSize: true,
                     });
                     const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;

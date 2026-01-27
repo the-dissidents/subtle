@@ -59,9 +59,6 @@ export class TableRenderer {
             this.layout.layout(ctx);
         }
 
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = textColor;
-
         const [sx, sy] = this.manager.scroll;
         const [width, height] = this.manager.size;
 
@@ -173,6 +170,7 @@ export class TableRenderer {
             ctx.fillStyle = textColor;
             ctx.textBaseline = 'middle';
             ctx.textAlign = 'end';
+            applyStyle(this.layout.baseStyleMonospaceCSS, ctx);
             ctx.fillText(`*`,
                 this.layout.indexColumnLayout.width - this.layout.cellPadding,
                 y + this.layout.lineHeight * 0.5);
@@ -191,12 +189,14 @@ export class TableRenderer {
         drawLine(0, this.manager.scroll[1] + this.layout.headerHeight,
             width + sx, this.manager.scroll[1] + this.layout.headerHeight);
 
-        ctx.fillStyle = textColor;
         const cols = [this.layout.indexColumnLayout,
             ...this.layout.entryColumns.map((x) => x.layout!),
             ...this.layout.channelColumns.map((x) => x.layout!)];
+
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = textColor;
+        applyStyle(this.layout.baseStyleCSS, ctx);
         for (const col of cols) {
-            ctx.textBaseline = 'middle';
             ctx.textAlign = col.align;
             ctx.fillText(col.name, col.textX, sy + this.layout.lineHeight * 0.5);
         }

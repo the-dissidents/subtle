@@ -53,9 +53,7 @@ export const ImportFormatDialogs = {
                 };
             }
         },
-        categoryDescription() {
-            return undefined;
-        },
+        categoryDescription: () => undefined,
     }),
 
     SRT: (p: SRTParser) => show(p, true, {
@@ -173,20 +171,5 @@ export const ImportFormatDialogs = {
                     return $_('assimport.info-ignored');
             }
         },
-        options: [
-            {
-                type: 'boolean',
-                name: $_('assimport.preserve-inlines'),
-                getValue: (p) => p.preserveInlines,
-                setValue: (p, v) => p.preserveInlines = v
-            },
-            {
-                type: 'boolean',
-                name: $_('assimport.transform-inline-multichannel'),
-                description: $_('assimport.transform-info'),
-                getValue: (p) => p.transformInlineMultichannel,
-                setValue: (p, v) => p.transformInlineMultichannel = v
-            }
-        ]
     })
 };

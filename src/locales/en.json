@@ -171,7 +171,8 @@
     "style-shadow-color": "edit style shadow color",
     "timeline-row-view": "change row view in timeline",
     "timestamp": "edit timestamp",
-    "transform-times": "transform times"
+    "transform-times": "transform times",
+    "wrap-style": "edit warp style"
   },
   "cancel": "cancel",
   "category": {
@@ -707,7 +708,11 @@
     "top-center": "top center",
     "top-left": "top left",
     "top-right": "top right",
-    "validator": "validator"
+    "validator": "validator",
+    "wrap-balanced": "balanced",
+    "wrap-greedy": "greedy (wrap at end-of-line)",
+    "wrap-nowrap": "no word wrap",
+    "wrap-style": "wrap style"
   },
   "tab": {
     "properties": "Properties",

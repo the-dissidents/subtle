@@ -17,6 +17,7 @@ import FontSelect from "./FontSelect.svelte";
 import NumberInput from "./ui/NumberInput.svelte";
 import Collapsible from "./ui/Collapsible.svelte";
 import Colorpicker from "./ui/Colorpicker.svelte";
+    import { WrapStyle } from "./details/TextLayout";
 
 interface Props {
   style: SubtitleStyle;
@@ -26,6 +27,7 @@ interface Props {
 
 let { style: _style, subtitles = $bindable(), onsubmit }: Props = $props();
 let alignSelector: HTMLSelectElement | undefined = $state();
+let wrapSelector: HTMLSelectElement | undefined = $state();
 let button: HTMLButtonElement | undefined = $state();
 let duplicateWarning = $state(false);
 let style = writable(_style);
@@ -246,13 +248,6 @@ async function contextMenu() {
               /><s>S</s></label>
           </td>
         </tr>
-        <tr>
-          <td></td>
-          <td>
-            <div class="flex style">
-            </div>
-          </td>
-        </tr>
       </tbody>
     </table>
     <!-- validator -->
@@ -316,6 +311,20 @@ async function contextMenu() {
               <option value="TopLeft">{$_('style.top-left')}</option>
               <option value="TopCenter">{$_('style.top-center')}</option>
               <option value="TopRight">{$_('style.top-right')}</option>
+            </select></td>
+          </tr>
+          <tr>
+            <td>{$_('style.wrap-style')}</td>
+            <td><select
+                bind:this={wrapSelector}
+                value={$style.wrapStyle}
+                oninput={() => {
+                  $style.wrapStyle = wrapSelector!.selectedIndex;
+                  Source.markChanged(ChangeType.InPlace, $_('c.wrap-style'));
+                }}>
+              <option value={WrapStyle.Balanced}>{$_('style.wrap-balanced')}</option>
+              <option value={WrapStyle.Greedy}>{$_('style.wrap-greedy')}</option>
+              <option value={WrapStyle.NoWrap}>{$_('style.wrap-nowrap')}</option>
             </select></td>
           </tr>
           <tr>

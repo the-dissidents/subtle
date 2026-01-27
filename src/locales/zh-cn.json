@@ -171,7 +171,8 @@
     "style-shadow-color": "编辑样式阴影颜色",
     "timeline-row-view": "改变时间线的样式显示",
     "timestamp": "编辑时间戳",
-    "transform-times": "变换时间"
+    "transform-times": "变换时间",
+    "wrap-style": "编辑自动换行方式"
   },
   "cancel": "取消",
   "category": {
@@ -724,7 +725,11 @@
     "top-center": "顶部居中",
     "top-left": "左上",
     "top-right": "右上",
-    "validator": "验证条件"
+    "validator": "验证条件",
+    "wrap-balanced": "平衡",
+    "wrap-greedy": "贪心（总是在最后换行）",
+    "wrap-nowrap": "禁止自动换行",
+    "wrap-style": "自动换行方式"
   },
   "tab": {
     "properties": "属性",

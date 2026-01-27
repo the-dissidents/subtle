@@ -21,7 +21,7 @@ export type EvaluatedStyle = {
 export type TextLayoutOptions = {
     baseStyle: EvaluatedStyle,
     lineWidth?: number,
-    warpStyle?: WarpStyle,
+    warpStyle?: WrapStyle,
     disableSize?: boolean,
 };
 
@@ -116,8 +116,9 @@ function lineBreakKnuthPlass(chunks: LayoutChunk[], lineWidth: number): Line[] {
 
     for (let i = 1; i <= n; i++)
     for (let j = i; j > 0; j--) {
-        const line = chunks.slice(j-1, i)
-            .reduce((p, x, k) => p + x.width + (k == j - i ? 0 : x.spaceWidth), 0);
+        const lineChunks = chunks.slice(j-1, i);
+        const line = lineChunks.reduce(
+            (p, x, k) => p + x.width + (k > 0 ? lineChunks[k-1].spaceWidth : 0), 0);
 
         // check that j < i to handle a single chunk being longer than lineWidth
         if (line > lineWidth && j < i) break;
@@ -132,7 +133,7 @@ function lineBreakKnuthPlass(chunks: LayoutChunk[], lineWidth: number): Line[] {
     const breaks: number[] = [];
     for (let i = n; i > 0; i = lastBreak[i]) {
         breaks.unshift(i);
-        // Debug.assert(lastBreak[i] !== i);
+        Debug.assert(lastBreak[i] !== i);
     }
 
     let lastLine = emptyLine(),
@@ -160,10 +161,11 @@ function lineBreakGreedy(chunks: LayoutChunk[], lineWidth: number): Line[] {
         lines: Line[] = [];
     
     chunks.forEach((c, i) => {
-        const delta = c.width + (lastLine.chunks.at(-1)?.spaceWidth ?? 0);
+        let delta = c.width + (lastLine.chunks.at(-1)?.spaceWidth ?? 0);
         if (lastLine.width + delta > lineWidth && i > 0) {
             lines.push(lastLine);
             lastLine = emptyLine();
+            delta = c.width; // should not count in the last space width
         }
         lastLine.width += delta;
         lastLine.height = Math.max(lastLine.height, c.height);
@@ -187,11 +189,13 @@ function lineBreakNone(chunks: LayoutChunk[], _lineWidth: number): Line[] {
     }];
 }
 
-export enum WarpStyle {
+export enum WrapStyle {
     Balanced = 0,
     Greedy = 1,
     NoWrap = 2,
-    Pretty = 3
+
+    // This value exists in https://aegisub.org/docs/latest/ass_tags/; however, it is not recommended and usually unimplemented, per https://github.com/libass/libass/wiki/ASS-File-Format-Guide#ft_q3
+    // Pretty = 3,
 }
 
 export function layoutText(
@@ -303,12 +307,11 @@ export function layoutText(
     
     newLine();
 
-    const warpStyle = opts?.warpStyle ?? WarpStyle.Balanced;
+    const warpStyle = opts?.warpStyle ?? WrapStyle.Balanced;
     const method =
-        warpStyle == WarpStyle.Balanced ? lineBreakKnuthPlass
-      : warpStyle == WarpStyle.Greedy ? lineBreakGreedy
-      : warpStyle == WarpStyle.NoWrap ? lineBreakNone
-      : warpStyle == WarpStyle.Pretty ? lineBreakKnuthPlass
+        warpStyle == WrapStyle.Balanced ? lineBreakKnuthPlass
+      : warpStyle == WrapStyle.Greedy ? lineBreakGreedy
+      : warpStyle == WrapStyle.NoWrap ? lineBreakNone
       : Debug.never(warpStyle);
 
     return hardLines.flatMap((chunks) => method(chunks, opts.lineWidth ?? Infinity));

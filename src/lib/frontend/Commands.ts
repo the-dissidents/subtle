@@ -249,7 +249,7 @@ export const BasicCommands = {
             selection.forEach((x) => {
                 const text = x.texts.get(style);
                 if (text) results.push(RichText.toString(text));
-            })
+            });
             // FIXME: rt
             clipboard.writeText(results.join(' '));
             Frontend.setStatus($_('msg.copied'));

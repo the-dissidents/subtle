@@ -1,4 +1,5 @@
 import { Debug } from "../Debug";
+import type { WrapStyle } from "../details/TextLayout";
 import type { RichText, RichTextAttr, RichTextNode } from "./RichText";
 import type { SubtitleStyle } from "./Subtitles.svelte";
 
@@ -44,16 +45,18 @@ class ASSState {
         return state;
     }
 
-    static emitDifference(before: ASSState, after: ASSState): string {
+    static emitDifference(before: ASSState, after: ASSState, base: SubtitleStyle): string {
         let result = '';
-        if (before.#italic !== after.#italic)       result += `{\\i${after.#italic ? 1 : 0}}`;
-        if (before.#underline !== after.#underline) result += `{\\u${after.#underline ? 1 : 0}}`;
-        if (before.#strikeout !== after.#strikeout) result += `{\\s${after.#strikeout ? 1 : 0}}`;
-        if (before.#bold !== after.#bold)           result += `{\\b${after.#bold}}`;
+        if (before.#italic !== after.#italic)       result += `\\i${after.#italic ? 1 : 0}`;
+        if (before.#underline !== after.#underline) result += `\\u${after.#underline ? 1 : 0}`;
+        if (before.#strikeout !== after.#strikeout) result += `\\s${after.#strikeout ? 1 : 0}`;
+        if (before.#bold !== after.#bold)           result += `\\b${after.#bold}`;
 
-        if (before.#fontsize !== after.#fontsize)
-            result += `{\\fs${after.#fontsize ? after.#fontsize.toFixed(0) : ''}}`;
-        return result;
+        const f0 = before.#fontsize == base.size ? undefined : before.#fontsize;
+        const f1 = after.#fontsize == base.size ? undefined : after.#fontsize;
+        if (f0 !== f1)
+            result += `\\fs${f1 ? f1.toFixed(0) : ''}`;
+        return result.length > 0 ? `{${result}}` : '';
     }
 
     #toAttrs(base: SubtitleStyle): RichTextAttr[] {
@@ -131,19 +134,21 @@ class ASSState {
 }
 
 export namespace ASSString {
-    export function serialize(rt: RichText, base: SubtitleStyle): string {
+    export function serialize(rt: RichText, base: SubtitleStyle, opts?: {
+        defaultWrapStyle?: WrapStyle
+    }): string {
         let state = new ASSState();
         if (typeof rt === 'string') return state.formatASSString(rt);
 
         let result = '';
+        if (base.wrapStyle !== opts?.defaultWrapStyle)
+            result += `{\\q${base.wrapStyle}}`;
         for (const part of rt) {
-            if (typeof part === 'string') {
-                result += state.formatASSString(part);
-                continue;
-            }
-            const newState = ASSState.fromAttrs(part.attrs, base);
-            result += ASSState.emitDifference(state, newState);
-            result += state.formatASSString(part.content);
+            const attrs = typeof part === 'string' ? [] : part.attrs;
+            const content = typeof part === 'string' ? part : part.content;
+            const newState = ASSState.fromAttrs(attrs, base);
+            result += ASSState.emitDifference(state, newState, base);
+            result += state.formatASSString(content);
             state = newState;
         }
         return result;

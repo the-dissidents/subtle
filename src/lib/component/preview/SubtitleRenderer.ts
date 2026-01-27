@@ -3,7 +3,7 @@ import { SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitl
 import { AlignMode } from "../../core/Labels";
 import { EventHost } from "../../details/EventHost";
 import { Typography } from "../../details/Typography";
-import { layoutText, WarpStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
+import { layoutText, WrapStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
 
 export type LineBox = {
     x: number, y: number,
@@ -203,7 +203,7 @@ export class SubtitleRenderer {
             const lineWidth = width - this.#hMargin * 2 - 
                 (style.margin.left + style.margin.right) * this.#scale;
             const lines = layoutText(text, ctx, {
-                warpStyle: WarpStyle.Balanced, 
+                warpStyle: style.wrapStyle, 
                 baseStyle: styleFonts.get(style)!,
                 lineWidth,
             });
