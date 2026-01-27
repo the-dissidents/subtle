@@ -3,8 +3,7 @@ import { SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitl
 import { AlignMode } from "../../core/Labels";
 import { EventHost } from "../../details/EventHost";
 import { Typography } from "../../details/Typography";
-import * as Color from "colorjs.io/fn";
-import { layoutText, WarpStyle, type Line } from "../../details/TextLayout";
+import { layoutText, WarpStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
 
 export type LineBox = {
     x: number, y: number,
@@ -181,13 +180,18 @@ export class SubtitleRenderer {
             width - 2 * this.#hMargin, height - 2 * this.#vMargin);
         ctx.stroke();
 
-        const styleFonts = new Map(this.#subs.styles.map((style) => {
-            const size = style.size || 48;
-            const font = style.font || 'sans-serif';
-            const fontFamily = `"${font}", sans-serif`;
-            const cssSize = 
-                Typography.getRealDimFactor(fontFamily, ctx) * size * this.#scale;
-            return [style, `${style.styles.bold ? 'bold ' : ''} ${style.styles.italic ? 'italic ' : ''} ${cssSize}px ${fontFamily}`];
+        const styleFonts = new Map<SubtitleStyle, EvaluatedStyle>(this.#subs.styles.map((style) => {
+            const fontFamily = style.font ? `"${style.font}", sans-serif` : 'sans-serif';
+            const factor = style.font ? Typography.getRealDimFactor(style.font) : 1;
+            const cssSize = factor * style.size * this.#scale;
+            return [style, {
+                size: cssSize, fontFamily,
+                color: style.color,
+                bold: style.styles.bold,
+                italic: style.styles.italic,
+                underline: style.styles.underline,
+                strikethrough: style.styles.strikethrough
+            }];
         }));
 
         const reverseStyles = this.#subs.styles.toReversed();
@@ -196,13 +200,14 @@ export class SubtitleRenderer {
             const text = ent.entry.texts.get(style);
             if (!text) continue;
 
-            ctx.font = styleFonts.get(style)!;
-            ctx.fillStyle = Color.serialize(style.color);
-
-            const textWidth = width - this.#hMargin * 2 - 
+            const lineWidth = width - this.#hMargin * 2 - 
                 (style.margin.left + style.margin.right) * this.#scale;
+            const lines = layoutText(text, ctx, {
+                warpStyle: WarpStyle.Balanced, 
+                baseStyle: styleFonts.get(style)!,
+                lineWidth,
+            });
 
-            const lines = layoutText(text, style, textWidth, ctx, WarpStyle.Balanced, this.#scale);
             const [bx, by, dy] = this.#basePoint(style);
 
             // start from the bottom if aligned at the bottom, or vice versa

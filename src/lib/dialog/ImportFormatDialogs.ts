@@ -144,20 +144,19 @@ export const ImportFormatDialogs = {
                             {values: {a: w.line, b: w.field, c: w.value}}))
                 };
                 case 'ignored-special-character': return {
-                    heading: $_('assimport.ignored-special-character') + ' '
-                        + one<'ignored-special-character'>((x) => 
-                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                    heading: $_('assimport.ignored-special-character'),
+                    items: map<'ignored-special-character'>((x) => 
+                          x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-drawing-command': return {
                     heading: $_('assimport.ignored-drawing-command') + ' '
                         + one<'ignored-drawing-command'>((x) => 
                             $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
-                case 'ignored-override-tag': return {
-                    heading: $_('assimport.ignored-override-tag') + ' '
-                        + one<'ignored-override-tag'>((x) => 
-                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
-                    description: $_('assimport.info-override-tag')
+                case 'unsupported-override-tag': return {
+                    heading: $_('assimport.unsupported-override-tag'),
+                    items: map<'unsupported-override-tag'>((x) => 
+                          x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-embedded-fonts': return {
                     heading: $_('assimport.ignored-embedded-fonts'),

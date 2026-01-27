@@ -1,66 +1,78 @@
 import * as Color from "colorjs.io/fn";
 import type { RichText, RichTextAttr, RichTextNode } from "../core/RichText";
-import type { SubtitleStyle } from "../core/Subtitles.svelte";
-import { Typography } from "./Typography";
 import { Debug } from "../Debug";
 
-export type EvaluatedFormat = {
-    cssSize: number,
+type CSSStyle = {
     fillStyle: string,
-    cssFont: string,
+    font: string,
     textDecoration: string;
 };
 
-export function format(
+export type EvaluatedStyle = {
+    size: number,
+    fontFamily: string,
+    bold?: boolean,
+    italic?: boolean,
+    underline?: boolean,
+    strikethrough?: boolean,
+    color?: Color.ColorTypes
+}
+
+export type TextLayoutOptions = {
+    baseStyle: EvaluatedStyle,
+    lineWidth?: number,
+    warpStyle?: WarpStyle,
+    disableSize?: boolean,
+};
+
+export function applyStyle(style: CSSStyle, ctx: CanvasRenderingContext2D) {
+    ctx.font = style.font;
+    if (style.fillStyle)
+        ctx.fillStyle = style.fillStyle;
+}
+
+export function toCSSStyle(style: EvaluatedStyle): CSSStyle {
+    const sizeClause = style.size ? `${style.size}px` : '';
+    return {
+        font: `${style.bold ? 'bold ' : ''} ${style.italic ? 'italic ' : ''} ${sizeClause} ${style.fontFamily}`,
+        fillStyle: style.color ? Color.serialize(style.color) : '',
+        textDecoration: (style.underline ? 'underline' : '') + ' ' + (style.strikethrough ? ' line-through' : '')
+    };
+}
+
+function format(
     attrs: RichTextAttr[],
-    baseStyle: SubtitleStyle, 
-    ctx: CanvasRenderingContext2D,
-    scale: number
-): EvaluatedFormat {
-    let size = baseStyle.size || 48;
-    let font = baseStyle.font || 'sans-serif';
-    let fontFamily = `"${font}", sans-serif`;
-
-    let cssSize = 
-        Typography.getRealDimFactor(fontFamily, ctx) * size * scale;
-
-    let bold = baseStyle.styles.bold;
-    let italic = baseStyle.styles.italic;
-    let underline = baseStyle.styles.underline;
-    let strikethrough = baseStyle.styles.strikethrough;
-
+    opts: TextLayoutOptions
+): EvaluatedStyle {
+    const style: EvaluatedStyle = { ...opts.baseStyle };
     attrs.forEach((x) => {
         if (typeof x == 'string') switch (x) {
             case "bold":
-                bold = true; break;
+                style.bold = true; break;
             case "italic":
-                italic = true; break;
+                style.italic = true; break;
             case "underline":
-                underline = true; break;
+                style.underline = true; break;
             case "strikethrough":
-                strikethrough = true; break;
+                style.strikethrough = true; break;
             default:
                 Debug.never(x);
         } else switch (x.type) {
             case 'size':
-                cssSize *= x.value;
+                if (!opts.disableSize)
+                    style.size! *= x.value;
                 break;
             default:
                 Debug.never(x.type);
         }
     });
-
-    return {
-        cssSize,
-        cssFont: `${bold ? 'bold ' : ''} ${italic ? 'italic ' : ''} ${cssSize}px ${fontFamily}`,
-        fillStyle: Color.serialize(baseStyle.color),
-        textDecoration: (underline ? 'underline' : '') + (strikethrough ? ' line-through' : '')
-    }
+    
+    return style;
 }
 
 export type FormatChunk = {
     text: string,
-    format: EvaluatedFormat,
+    format: EvaluatedStyle,
     width: number,
 
     descent: number,
@@ -183,17 +195,16 @@ export enum WarpStyle {
 }
 
 export function layoutText(
-    text: RichText, 
-    baseStyle: SubtitleStyle, 
-    width: number, 
+    text: RichText,
     ctx: CanvasRenderingContext2D,
-    warpStyle: WarpStyle,
-    scale: number = 1,
+    opts: TextLayoutOptions
 ): Line[] {
     const hardLines: LayoutChunk[][] = [];
 
     let currentLine: LayoutChunk[] = [];
     let lastChunk = emptyLayoutChunk();
+
+    ctx.font = toCSSStyle(opts.baseStyle).font;
 
     function newLine() {
         if (lastChunk.chunks.length > 0 || currentLine.length == 0)
@@ -216,9 +227,9 @@ export function layoutText(
     function processNode(part: RichTextNode) {
         const attrs = typeof part === 'string' ? [] : part.attrs;
         const text = typeof part === 'string' ? part : part.content;
-        const fmt = format(attrs, baseStyle, ctx, scale);
+        const fmt = format(attrs, opts);
 
-        ctx.font = fmt.cssFont;
+        ctx.font = toCSSStyle(fmt).font;
 
         let formatChunk: FormatChunk = {
             text: '', width: 0, format: fmt, ascent: 0, descent: 0
@@ -257,10 +268,7 @@ export function layoutText(
         let i = 0;
         while (i < text.length) {
             const ch = text[i];
-            if (ch == '\n') {
-                submitWordEnd('');
-                newLine();
-            } else if (/\s/.exec(ch)) {
+            if (/\s/.exec(ch)) {
                 let spaces = '';
                 while (i < text.length && /\s/.exec(text[i])) {
                     if (text[i] == '\n') {
@@ -275,9 +283,13 @@ export function layoutText(
                 if (spaces.length > 0)
                     submitWordEnd(spaces);
                 continue;
-            } else {
-                formatChunk.text += ch;
             }
+
+            if (ch == '\n') {
+                submitWordEnd('');
+                newLine();
+            } else
+                formatChunk.text += ch;
             i++;
         }
         submit();
@@ -291,6 +303,7 @@ export function layoutText(
     
     newLine();
 
+    const warpStyle = opts?.warpStyle ?? WarpStyle.Balanced;
     const method =
         warpStyle == WarpStyle.Balanced ? lineBreakKnuthPlass
       : warpStyle == WarpStyle.Greedy ? lineBreakGreedy
@@ -298,5 +311,5 @@ export function layoutText(
       : warpStyle == WarpStyle.Pretty ? lineBreakKnuthPlass
       : Debug.never(warpStyle);
 
-    return hardLines.flatMap((chunks) => method(chunks, width));
+    return hardLines.flatMap((chunks) => method(chunks, opts.lineWidth ?? Infinity));
 }

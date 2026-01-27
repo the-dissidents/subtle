@@ -7,33 +7,34 @@ import { Debug } from "../../Debug";
 import { ChangeType, Source } from "../../frontend/Source";
 import { TableConfig } from "./Config";
 import { _ } from "svelte-i18n";
-import { RichText } from "../../core/RichText";
+import { applyStyle, layoutText, toCSSStyle, WarpStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
 
 export type Column = {
-  metric: keyof typeof Metrics,
-  layout?: ColumnLayout
+    metric: keyof typeof Metrics,
+    layout?: ColumnLayout
 };
 
 type ColumnLayout = {
-  name: string,
-  align: 'start' | 'center' | 'end',
-  position: number,
-  textX: number
-  width: number
+    name: string,
+    align: 'start' | 'center' | 'end',
+    position: number,
+    textX: number
+    width: number
 };
 
-export type TextLayout = {
-  style: SubtitleStyle,
-  text: string,
-  line: number, height: number,
-  failed: SimpleMetricFilter[],
+export type ChannelLayout = {
+    style: SubtitleStyle,
+    line: number, height: number,
+    failed: SimpleMetricFilter[],
+    cells: Line[][],
 };
 
 type LineLayout = {
     entry: SubtitleEntry, 
     line: number, 
     height: number,
-    texts: TextLayout[]
+    texts: ChannelLayout[],
+    cells: Line[][],
 }
 
 export class TableLayout {
@@ -41,10 +42,18 @@ export class TableLayout {
     readonly lineHeight    = $derived(InterfaceConfig.data.fontSize + this.linePadding * 2);
     readonly headerHeight  = $derived(this.lineHeight);
     readonly cellPadding   = $derived(InterfaceConfig.data.fontSize * 0.4);
-    readonly font = $derived(
-        `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`);
-    readonly monospaceFont = $derived(
-        `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.monospaceFontFamily}`);
+
+    readonly baseStyle: EvaluatedStyle = $derived({
+        size: InterfaceConfig.data.fontSize,
+        fontFamily: InterfaceConfig.data.fontFamily
+    });
+    readonly baseStyleCSS = $derived(toCSSStyle(this.baseStyle));
+
+    readonly baseStyleMonospace: EvaluatedStyle = $derived({
+        size: InterfaceConfig.data.fontSize,
+        fontFamily: InterfaceConfig.data.monospaceFontFamily
+    });
+    readonly baseStyleMonospaceCSS = $derived(toCSSStyle(this.baseStyleMonospace));
 
     manager: CanvasManager;
     entryColumns = $state<Column[]>([{ metric: 'startTime' }, { metric: 'endTime' }]);
@@ -88,15 +97,18 @@ export class TableLayout {
                 this.requestedLayout = true;
                 this.manager.requestRender();
             }
-        })
+        });
+
+        $inspect(this.baseStyleCSS);
     }
 
-    layout(cxt: CanvasRenderingContext2D) {
+    layout(ctx: CanvasRenderingContext2D) {
         this.requestedLayout = false;
         const startTime = performance.now();
-        cxt.resetTransform();
-        cxt.scale(devicePixelRatio, devicePixelRatio);
-        cxt.font = this.font;
+        ctx.resetTransform();
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+
+        applyStyle(this.baseStyleCSS, ctx);
 
         for (const col of [...this.entryColumns, ...this.channelColumns]) {
             const metric = Metrics[col.metric];
@@ -104,7 +116,7 @@ export class TableLayout {
             col.layout = {
                 name, align: 'start',
                 position: -1, 
-                width: cxt.measureText(name).width + this.cellPadding * 2, 
+                width: ctx.measureText(name).width + this.cellPadding * 2, 
                 textX: -1
             };
         }
@@ -112,57 +124,65 @@ export class TableLayout {
         this.lines = []; this.totalLines = 0;
         for (const entry of Source.subs.entries) {
             let entryColumnsHeight = 1;
-            for (const col of this.entryColumns) {
+
+            let cells = this.entryColumns.map((col) => {
                 const metric = Metrics[col.metric];
-                const value = metric.stringValue(entry, Source.subs.defaultStyle);
-                const splitLines = value.split('\n');
+                const value = metric.textValue(entry, Source.subs.defaultStyle);
+                const layout = layoutText(value, ctx, {
+                    baseStyle: metric.type.isMonospace
+                        ? this.baseStyleMonospace : this.baseStyle,
+                    warpStyle: WarpStyle.NoWrap,
+                    disableSize: true,
+                });
+                const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
 
-                cxt.font = metric.type.isMonospace
-                    ? this.monospaceFont
-                    : this.font;
-                const w = Math.max(...splitLines.map((x) => cxt.measureText(x).width)) 
-                    + this.cellPadding * 2;
                 col.layout!.width = Math.max(col.layout!.width, w);
-                entryColumnsHeight = Math.max(entryColumnsHeight, splitLines.length);
-            }
+                entryColumnsHeight = Math.max(entryColumnsHeight, layout.length);
+                return layout;
+            });
 
-            cxt.font = this.font;
             let entryHeight = 0;
-            const texts: TextLayout[] = [];
+            const texts: ChannelLayout[] = [];
             for (const style of Source.subs.styles) {
                 const text = entry.texts.get(style);
                 if (text === undefined) continue;
 
                 let lineHeight = 1;
-                for (const col of this.channelColumns) {
-                    const value = Metrics[col.metric].stringValue(entry, style);
-                    const splitLines = value.split('\n');
-                    const w = Math.max(...splitLines.map((x) => cxt.measureText(x).width)) 
-                        + this.cellPadding * 2;
+                let cells = this.channelColumns.map((col) => {
+                    const value = Metrics[col.metric].textValue(entry, style);
+
+                    const layout = layoutText(value, ctx, {
+                        baseStyle: this.baseStyle,
+                        warpStyle: WarpStyle.NoWrap,
+                        disableSize: true,
+                    });
+                    const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
+
                     col.layout!.width = Math.max(col.layout!.width, w);
-                    lineHeight = Math.max(lineHeight, splitLines.length);
-                }
+                    lineHeight = Math.max(lineHeight, layout.length);
+                    return layout;
+                });
 
                 texts.push({
-                    style, text: RichText.toString(text),
-                    // FIXME: rt
-                    height: lineHeight,
-                    line: this.totalLines + entryHeight,
+                    style, height: lineHeight,
+                    line: this.totalLines + entryHeight, cells,
                     failed: style.validator === null 
-                    ? [] : Filter.evaluate(style.validator, entry, style).failed
+                        ? [] : Filter.evaluate(style.validator, entry, style).failed
                 });
                 entryHeight += lineHeight;
             }
-            this.lines.push({entry, line: this.totalLines, height: entryHeight, texts});
+
+            this.lines.push({entry, line: this.totalLines, height: entryHeight, texts, cells});
             this.lineMap.set(entry, {line: this.totalLines, height: entryHeight});
             this.totalLines += Math.max(entryHeight, entryColumnsHeight);
         }
 
-        cxt.font = this.monospaceFont;
+        applyStyle(this.baseStyleMonospaceCSS, ctx);
+
         let pos = 0;
         this.indexColumnLayout.position = 0;
         this.indexColumnLayout.width = this.cellPadding * 2 
-            + cxt.measureText(`${Math.max(this.lines.length+1, 100)}`).width;
+            + ctx.measureText(`${Math.max(this.lines.length+1, 100)}`).width;
         this.indexColumnLayout.textX = this.indexColumnLayout.width - this.cellPadding;
         pos += this.indexColumnLayout.width;
 

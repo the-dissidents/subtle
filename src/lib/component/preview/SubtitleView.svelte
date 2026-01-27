@@ -6,14 +6,14 @@
   import { EventHost } from "../../details/EventHost";
   import { MediaConfig } from "./Config";
   import type { LineBox } from "./SubtitleRenderer";
-  import type { Line } from "../../details/TextLayout";
+  import { toCSSStyle, type Line } from "../../details/TextLayout";
 
   interface Props {
     manager?: CanvasManager,
     boxes: LineBox[]
   }
 
-  let {manager, boxes}: Props = $props();
+  let { manager, boxes }: Props = $props();
 
   let width = $state(0);
   let height = $state(0);
@@ -46,9 +46,10 @@
   {/if}
   {#each line.chunks as word, i}
     {#each word.chunks as chunk}
+    {@const css = toCSSStyle(chunk.format)}
       <span style="
-        font: {chunk.format.cssFont};
-        text-decoration: {chunk.format.textDecoration};
+        font: {css.font};
+        text-decoration: {css.textDecoration};
         width: {chunk.width}px;
       ">{chunk.text}</span>
     {/each}
@@ -102,7 +103,7 @@
       width: {box.line.width}px;
       height: {box.line.height}px;
       color: {color};
-      outline: {MediaConfig.data.showBoundingBoxes ? '0.5px solid white' : 'none'};
+      border: {MediaConfig.data.showBoundingBoxes ? '0.5px solid white' : 'none'};
     ">
       {@render line(box.line)}
     </div>
@@ -122,7 +123,7 @@
 
   .text {
     position: absolute;
-    box-sizing: border-box;
+    box-sizing: content-box;
     white-space: pre;
     display: flex;
     flex-direction: row;
@@ -136,7 +137,7 @@
   }
 
   .text:hover {
-    outline: 1px solid white !important;
+    border: 1px solid white !important;
   }
 
   .origin {

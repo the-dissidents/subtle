@@ -111,7 +111,8 @@
     "preserve-tags": "preserve format tags",
     "transform-info": "",
     "transform-inline-multichannel": "transform \\N{\\r...} syntax",
-    "undefined-style": "undefined style"
+    "undefined-style": "undefined style",
+    "unsupported-override-tag": "unsupported override tag"
   },
   "assimportdialog": {
     "no-problems": "no problems found",

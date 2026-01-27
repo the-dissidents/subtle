@@ -5,7 +5,7 @@ import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
 import { ChangeCause, Source } from "../../frontend/Source";
 
-import type { TableLayout, TextLayout } from "./Layout.svelte";
+import type { TableLayout, ChannelLayout } from "./Layout.svelte";
 import { TableConfig } from "./Config";
 
 import { _ } from 'svelte-i18n';
@@ -139,7 +139,7 @@ export class TableInput {
     }
 
     #getTextFromLineIndex(i: number) {
-        let result: [TextLayout, SubtitleEntry] | [undefined, undefined] = [undefined, undefined];
+        let result: [ChannelLayout, SubtitleEntry] | [undefined, undefined] = [undefined, undefined];
         if (this.layout.totalLines < i) return result;
         outer: for (const entryLayout of this.layout.lines) {
             for (const text of entryLayout.texts) {

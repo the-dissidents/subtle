@@ -111,7 +111,8 @@
     "preserve-tags": "保留格式标签",
     "transform-info": "某些多语言字幕使用这种指令将几个不同样式的行合并在一个字幕条里。选择这个选项，可以将其转化为适用于subtle的格式，否则将会无法正确显示。但是，这可能造成排版发生一些变化。",
     "transform-inline-multichannel": "将\\N{\\r...}语法转化为多频道字幕块",
-    "undefined-style": "未定义样式"
+    "undefined-style": "未定义样式",
+    "unsupported-override-tag": "不支持的行内样式指令"
   },
   "assimportdialog": {
     "no-problems": "没有发现问题",
