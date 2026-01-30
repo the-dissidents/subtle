@@ -152,6 +152,7 @@
     "label": "edit label",
     "metadata": "edit metadata",
     "move-entries": "move entries",
+    "positioning": "edit positioning",
     "remove-unused-styles": "remove unused styles",
     "reorder-styles": "reorder styles",
     "replace": "search and replace",
@@ -326,6 +327,7 @@
     "anchor-end": "anchor end",
     "anchor-start": "anchor start",
     "at-virtual-entry": "double-click or press enter to append new entry",
+    "custom-positioning": "custom position",
     "keep-duration": "keep duration",
     "label": "Label",
     "no-selection": "select a line to start editing"

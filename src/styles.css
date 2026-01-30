@@ -64,7 +64,7 @@ body {
     }
   }
   input[type=number], input[type=text], 
-  select, [data-select-trigger], div.combobox,
+  select, [data-select-trigger], div.combobox, [data-combobox-input],
   textarea, ol[role='listbox'], div.ProseMirror {
     border: 1px solid var(--uchu-gray-4);
     background-color: white;
@@ -153,7 +153,7 @@ body {
     }
   }
   input[type=number], input[type=text], 
-  select, [data-select-trigger], div.combobox,
+  select, [data-select-trigger], div.combobox, [data-combobox-input],
   textarea, ol[role='listbox'], div.ProseMirror {
     border: none;
     background-color: var(--uchu-yin-8);
@@ -162,7 +162,7 @@ body {
       outline: 2px solid color-mix(in oklab, var(--uchu-blue-8), transparent 40%);
     }
     &:disabled {
-      background-color: var(--uchu-yin-8);
+      background-color: var(--uchu-yin-7);
       color: var(--uchu-gray-9);
     }
   }
@@ -180,7 +180,7 @@ body {
       filter: brightness(110%);
     }
     &:disabled {
-      background-color: var(--uchu-yin-8);
+      background-color: var(--uchu-yin-7);
       color: var(--uchu-gray-9);
     }
   }
@@ -329,13 +329,13 @@ div.combobox {
   & [data-combobox-input] {
     padding: 2px 5px 2px 5px;
     flex-grow: 1;
-    border-radius: 0;
+    border-radius: 2px 0 0 2px;
     border: none;
     outline: none;
   }
 
   & [data-combobox-trigger] {
-    border-radius: 0;
+    border-radius: 0 2px 2px 0;
     border: none;
     box-shadow: none;
     width: 15px;

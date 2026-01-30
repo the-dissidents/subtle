@@ -10,10 +10,11 @@
 
   interface Props {
     manager?: CanvasManager,
+    element?: HTMLElement,
     boxes: LineBox[]
   }
 
-  let { manager, boxes }: Props = $props();
+  let { manager, boxes, element = $bindable() }: Props = $props();
 
   let width = $state(0);
   let height = $state(0);
@@ -38,12 +39,17 @@
   function updateTransform() {
     transform = `scale(${manager!.scale}) translate(${-manager!.scroll[0]}px, ${-manager!.scroll[1]}px) scale(${1/devicePixelRatio})`;
   }
+
+  function cloneEvent<E extends Event>(e: E): E {
+    // @ts-expect-error
+    return new e.constructor(e.type, e);
+  }
 </script>
 
 {#snippet line(line: Line)}
-  {#if MediaConfig.data.showBoundingBoxes}
+  <!-- {#if MediaConfig.data.showBoundingBoxes}
     <div class="origin"></div>
-  {/if}
+  {/if} -->
   {#each line.chunks as word, i}
     {#each word.chunks as chunk}
     {@const css = toCSSStyle(chunk.format)}
@@ -59,10 +65,9 @@
   {/each}
 {/snippet}
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="subview" style="width: {width}px; height: {height}px;"
-  onscroll={(e) => {
-    
-  }}
+  bind:this={element}
 >
   <div style="transform: {transform}; transform-origin: left top;">
   {#each boxes as box (box)}
@@ -76,36 +81,28 @@
       top: {box.y}px;
       width: {box.line.width}px;
       height: {box.line.height}px;
-    "></div>
-
-    <!-- outline + shadow -->
-    <div class="text" style="
-      left: {box.x}px;
-      top: {box.y}px;
-      width: {box.line.width}px;
-      height: {box.line.height}px;
-      {outline > 0
-        ? `color: ${outlineColor};
-           -webkit-text-stroke-width: ${outline}px;
-           -webkit-text-stroke-color: ${outlineColor};`
-        : `color: ${color};`}
-      {shadow > 0 
-        ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${shadowColor});` 
-        : ''}
-    ">
-      {@render line(box.line)}
-    </div>
-
-    <!-- text -->
-    <div class="text" style="
-      left: {box.x}px;
-      top: {box.y}px;
-      width: {box.line.width}px;
-      height: {box.line.height}px;
-      color: {color};
       border: {MediaConfig.data.showBoundingBoxes ? '0.5px solid white' : 'none'};
     ">
-      {@render line(box.line)}
+      <!-- outline + shadow -->
+      <div class="text" style="
+        {outline > 0
+          ? `color: ${outlineColor};
+            -webkit-text-stroke-width: ${outline}px;
+            -webkit-text-stroke-color: ${outlineColor};`
+          : `color: ${color};`}
+        {shadow > 0 
+          ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${shadowColor});` 
+          : ''}
+      ">
+        {@render line(box.line)}
+      </div>
+
+      <!-- text -->
+      <div class="text" style="
+        color: {color};
+      ">
+        {@render line(box.line)}
+      </div>
     </div>
   {/each}
   </div>
@@ -117,12 +114,14 @@
     position: absolute;
     left: 0;
     top: 0;
-    pointer-events: none;
     overflow: hidden;
+    pointer-events: none;
   }
 
   .text {
     position: absolute;
+    left: 0;
+    top: 0;
     box-sizing: content-box;
     white-space: pre;
     display: flex;
@@ -133,12 +132,12 @@
 
   .box {
     position: absolute;
-    box-sizing: border-box;
+    box-sizing: content-box;
   }
 
-  .text:hover {
-    border: 1px solid white !important;
-  }
+  /* .box:hover {
+    outline: 1px solid white !important;
+  } */
 
   .origin {
     position: absolute;

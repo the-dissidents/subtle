@@ -1,5 +1,5 @@
 import type { CanvasManager } from "../../CanvasManager";
-import { SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitles.svelte";
+import { type Positioning, SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitles.svelte";
 import { AlignMode } from "../../core/Labels";
 import { EventHost } from "../../details/EventHost";
 import { Typography } from "../../details/Typography";
@@ -8,6 +8,8 @@ import { layoutText, WrapStyle, type EvaluatedStyle, type Line } from "../../det
 export type LineBox = {
     x: number, y: number,
     style: SubtitleStyle,
+    entry: SubtitleEntry,
+    refX: number, refY: number,
     scale: number,
     line: Line
 };
@@ -85,11 +87,22 @@ export class SubtitleRenderer {
     #hMargin = 0;
     #vMargin = 0;
     #scale = 1;
+
+    #layout: LineBox[] = [];
+
+    get layout() {
+        return this.#layout;
+    }
+
     get currentTime() {
         return this.#currentTime;
     }
 
-    readonly getBoxes = new EventHost<[LineBox[]]>();
+    get scale() {
+        return this.#scale;
+    }
+
+    readonly onLayoutChanged = new EventHost<[LineBox[]]>();
 
     constructor(
         private readonly manager: CanvasManager,
@@ -149,29 +162,34 @@ export class SubtitleRenderer {
         this.#currentEntries.sort((a, b) => a.oldIndex - b.oldIndex);
     }
 
-    #basePoint(style: SubtitleStyle): [number, number, 1 | -1] {
-        const [width, height] = this.manager.physicalSize;
+    #basePoint(style: SubtitleStyle, pos: Positioning): [number, number, 1 | -1] {
         let x = 0, y = 0, dy: 1 | -1 = 1;
-        if (isLeft(style.alignment))
-            x = style.margin.left * this.#scale + this.#hMargin;
-        if (isCenterH(style.alignment))
-            x = width / 2;
-        if (isRight(style.alignment))
-            x = width - (style.margin.right * this.#scale + this.#hMargin);
+        if (pos !== null) {
+            x = pos.x * this.#scale + this.#hMargin;
+            y = pos.y * this.#scale + this.#vMargin;
+            dy = isBottom(style.alignment) ? -1 : 1;
+        } else {
+            const [width, height] = this.manager.physicalSize;
+            if (isLeft(style.alignment))
+                x = style.margin.left * this.#scale + this.#hMargin;
+            if (isCenterH(style.alignment))
+                x = width / 2;
+            if (isRight(style.alignment))
+                x = width - (style.margin.right * this.#scale + this.#hMargin);
 
-        if (isTop(style.alignment))
-            y = style.margin.top * this.#scale + this.#vMargin;
-        if (isCenterV(style.alignment))
-            y = height / 2;
-        if (isBottom(style.alignment)) {
-            y = height - (style.margin.bottom * this.#scale + this.#vMargin);
-            dy = -1;
+            if (isTop(style.alignment))
+                y = style.margin.top * this.#scale + this.#vMargin;
+            if (isCenterV(style.alignment))
+                y = height / 2;
+            if (isBottom(style.alignment)) {
+                y = height - (style.margin.bottom * this.#scale + this.#vMargin);
+                dy = -1;
+            }
         }
         return [x, y, dy];
     }
 
     render(ctx: CanvasRenderingContext2D) {
-        const boxes: LineBox[] = [];
         const [width, height] = this.manager.physicalSize;
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
@@ -194,6 +212,8 @@ export class SubtitleRenderer {
             }];
         }));
 
+        this.#layout = [];
+
         const reverseStyles = this.#subs.styles.toReversed();
         for (const ent of this.#currentEntries)
         for (const style of reverseStyles) {
@@ -208,7 +228,7 @@ export class SubtitleRenderer {
                 lineWidth,
             });
 
-            const [bx, by, dy] = this.#basePoint(style);
+            const [bx, by, dy] = this.#basePoint(style, ent.entry.positioning);
 
             // start from the bottom if aligned at the bottom, or vice versa
             if (dy < 0) lines.reverse();
@@ -220,22 +240,25 @@ export class SubtitleRenderer {
                           : isCenterH(style.alignment) ? -newBox.w * 0.5 : 0;
                 newBox.y += isTop(style.alignment)     ? newBox.h
                           : isCenterV(style.alignment) ? newBox.h * 0.5 : 0;
-                while (true) {
-                    const overlapping = boxes.find((box) => boxIntersects(box, newBox));
+
+                while (!ent.entry.positioning) {
+                    const overlapping = this.#layout.find((box) => boxIntersects(box, newBox));
                     if (!overlapping) break;
                     newBox.y = dy > 0
                         ? Math.max(newBox.y + 1, overlapping.y + overlapping.line.height + newBox.h)
                         : Math.min(newBox.y - 1, overlapping.y - newBox.h);
                 }
 
-                boxes.push({
-                    ...newBox,
+                this.#layout.push({
+                    ...newBox, entry: ent.entry,
                     scale: this.#scale, line, style,
+                    refX: (bx - this.#hMargin) / this.#scale,
+                    refY: (by - this.#vMargin) / this.#scale,
                 });
             }
         }
 
-        this.getBoxes.dispatch(boxes);
+        this.onLayoutChanged.dispatch(this.#layout);
     }
 
     setTime(time: number) {

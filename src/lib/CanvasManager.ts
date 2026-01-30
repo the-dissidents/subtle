@@ -165,20 +165,23 @@ export class CanvasManager {
         return this.#dragType;
     }
 
-    constructor(public canvas: HTMLCanvasElement)  {
+    constructor(
+        readonly canvas: HTMLCanvasElement,
+        readonly eventReceiver: HTMLElement = canvas,
+    )  {
         const context = canvas.getContext('2d', { alpha: true });
         Debug.assert(context !== null);
         this.#cxt = context;
 
         new ResizeObserver(
             () => requestAnimationFrame(() => this.#updateSize()))
-                .observe(canvas);
+                .observe(eventReceiver);
         this.#updateSize();
 
-        canvas.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));
-        canvas.addEventListener('mousemove', (ev) => this.#onMouseMove(ev));
-        canvas.addEventListener('wheel', (ev) => this.#onMouseWheel(ev));
-        canvas.addEventListener('mouseleave', () => {
+        eventReceiver.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));
+        eventReceiver.addEventListener('mousemove', (ev) => this.#onMouseMove(ev));
+        eventReceiver.addEventListener('wheel', (ev) => this.#onMouseWheel(ev));
+        eventReceiver.addEventListener('mouseleave', () => {
             if (this.#scrollerHighlight !== 'none')
                 this.requestRender();
             this.#scrollerHighlight = 'none';
@@ -235,7 +238,7 @@ export class CanvasManager {
 
     get #vscrollSpace() {
         return this.contentRect.h - this.#height / this.#scale;
-    } 
+    }
 
     #onMouseDown(ev: MouseEvent) {
         let doDrag = false;

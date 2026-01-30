@@ -5,6 +5,11 @@ import { SubtitleRenderer } from "./SubtitleRenderer";
 import { MediaConfig } from "./Config";
 import { MediaPlayer } from "./MediaPlayer";
 
+import { unwrapFunctionStore, _ } from "svelte-i18n";
+import type { Positioning, SubtitleEntry } from "../../core/Subtitles.svelte";
+
+const $_ = unwrapFunctionStore(_);
+
 export class PreviewLayout {
     #manager: CanvasManager;
     #subsRenderer: SubtitleRenderer;
@@ -17,7 +22,10 @@ export class PreviewLayout {
         return this.#subsRenderer;
     }
 
-    constructor(public readonly canvas: HTMLCanvasElement) {
+    constructor(
+        readonly canvas: HTMLCanvasElement,
+        readonly overlay: HTMLElement,
+    ) {
         this.#manager = new CanvasManager(canvas);
         this.#manager.doNotPrescaleHighDPI = true;
         this.#manager.onDisplaySizeChanged.bind(this, () => this.#updateContentRect());
@@ -57,11 +65,77 @@ export class PreviewLayout {
             this.#subsRenderer.setTime(pos);
             this.#manager.requestRender();
         });
+
+        this.#manager.onMouseMove.bind(this, (ev) => {
+            let [x, y] = this.#manager.convertPosition(
+                'offset', 'canvas', ev.offsetX, ev.offsetY);
+            x *= devicePixelRatio;
+            y *= devicePixelRatio;
+            const h = this.#subsRenderer.layout.find((b) => 
+                b.x <= x && b.y <= y && b.x + b.line.width >= x && b.y + b.line.height >= y);
+            if (h !== this.#hovering) {
+                if (h) {
+                    this.#hovering = h.entry;
+                    this.#startPos = [h.refX, h.refY];
+                } else {
+                    this.#hovering = undefined;
+                }
+                this.#manager.requestRender();
+            }
+        });
+
+        this.#manager.canBeginDrag = (ev) => {
+            if (this.#hovering) {
+                this.#startMousePos = [ev.offsetX, ev.offsetY];
+                this.#originalPositioning = this.#hovering.positioning;
+                return true;
+            }
+            return false;
+        };
+
+        this.#manager.onDrag.bind(this, (ox, oy) => {
+            const dx = ox - this.#startMousePos[0];
+            const dy = oy - this.#startMousePos[1];
+            const scale = devicePixelRatio / this.#subsRenderer.scale / this.manager.scale;
+            this.#hovering!.positioning = {
+                type: 'absolute',
+                x: Math.round(this.#startPos[0] + dx * scale),
+                y: Math.round(this.#startPos[1] + dy * scale),
+            };
+            this.manager.requestRender();
+        });
+
+        this.#manager.onDragEnd.bind(this, () => {
+            Source.markChanged(ChangeType.InPlace, $_('c.positioning'));
+        });
+
+        this.manager.onDragInterrupted.bind(this, () => {
+            this.#hovering!.positioning = this.#originalPositioning;
+        });
     }
 
+    #hovering?: SubtitleEntry;
+    #startPos: [number, number] = [0, 0];
+    #startMousePos: [number, number] = [0, 0];
+    #originalPositioning: Positioning = null;
+    #debug = '';
+
     #render(ctx: CanvasRenderingContext2D) {
+        ctx.fillStyle = 'white';
+        ctx.font = '30px sans-serif'
+        ctx.fillText(this.#debug, 100, 100);
+
         Playback.player?.renderTo(ctx);
         this.#subsRenderer.render(ctx);
+
+        if (this.#hovering) {
+            ctx.strokeStyle = '2px solid white';
+            this.#subsRenderer.layout
+                .filter((x) => x.entry == this.#hovering)
+                .forEach((box) => {
+                    ctx.strokeRect(box.x, box.y, box.line.width, box.line.height);
+                });
+        }
     }
 
     #updateContentRect() {

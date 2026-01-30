@@ -201,9 +201,13 @@
     padding: 5px;
     margin-block: 2px;
     border-radius: 3px;
-    border: 1px solid lightgray;
+    border: 1px solid var(--uchu-gray-4);
     min-width: none;
     overflow-x: scroll;
+
+    @media (prefers-color-scheme: dark) {
+      border-color: var(--uchu-yin-7);
+    }
 
     & label {
       padding-inline: 15px;

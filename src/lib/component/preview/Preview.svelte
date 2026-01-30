@@ -10,6 +10,8 @@
   import { z } from "zod/v4-mini";
   import { Frontend } from "../../frontend/Frontend";
   import type { LineBox } from "./SubtitleRenderer";
+    import { onMount } from "svelte";
+    import { Debug } from "../../Debug";
 
   let volume = Memorized.$('playbackVolume', z.number().check(z.gt(0)).check(z.lt(1)), 0.8);
   volume.subscribe((x) => Playback.player?.setVolume(x));
@@ -26,10 +28,15 @@
 
   let volumePopup: Popup;
 
-  const setup = (canvas: HTMLCanvasElement) => {
-    layout = new PreviewLayout(canvas);
-    layout.subsRenderer.getBoxes.bind(layout, (x) => {boxes = x});
-  };
+  let canvas: HTMLCanvasElement;
+  let overlay = $state<HTMLElement>();
+
+  onMount(() => {
+    Debug.assert(!!canvas);
+    Debug.assert(!!overlay);
+    layout = new PreviewLayout(canvas, overlay!);
+    layout.subsRenderer.onLayoutChanged.bind(layout, (x) => {boxes = x});
+  });
 
   const me = {};
 
@@ -62,8 +69,8 @@
   onclick={() => $uiFocus = 'Preview'}
 >
   <div class='player-container fixminsize'>
-    <canvas class="fill" use:setup></canvas>
-    <SubtitleView manager={layout?.manager} {boxes}/>
+    <canvas class="fill" bind:this={canvas}></canvas>
+    <SubtitleView bind:element={overlay} manager={layout?.manager} {boxes}/>
   </div>
 
   <!-- video playback controls -->

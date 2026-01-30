@@ -86,11 +86,22 @@ export const SubtitleStyle = {
 
 export type SubtitleMetadata = z.infer<typeof ZMetadata>;
 
+export const ZPositioning = z._default(z.union([
+    z.null(),
+    z.object({
+        type: z.literal('absolute'),
+        x: z.number(), y: z.number(),
+    }),
+]), null);
+
+export type Positioning = z.infer<typeof ZPositioning>;
+
 export class SubtitleEntry {
     label: LabelType = $state('none');
     texts = new SvelteMap<SubtitleStyle, RichText>();
     start: number = $state(0);
     end: number = $state(0);
+    positioning: Positioning = $state(null);
 
     constructor(start: number, end: number) 
     {

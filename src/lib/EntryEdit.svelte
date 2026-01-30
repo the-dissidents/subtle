@@ -6,7 +6,7 @@ import RichEdit from './component/richedit/RichEdit.svelte';
 
 import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
 
-import { SubtitleEntry, type SubtitleStyle } from './core/Subtitles.svelte';
+import { SubtitleEntry, type Positioning } from './core/Subtitles.svelte';
 import { type LabelType } from "./core/Labels";
 import { Editing } from './frontend/Editing';
 import { ChangeType, Source } from './frontend/Source';
@@ -18,7 +18,7 @@ import { _ } from 'svelte-i18n';
 import { Debug } from './Debug';
 import RichEditToolbar from './component/richedit/RichEditToolbar.svelte';
 import { tick } from 'svelte';
-
+import NumberInput from './ui/NumberInput.svelte';
 
 let editFormUpdateCounter = $state(0);
 let editAnchor: 'start' | 'end' = $state('start');
@@ -26,6 +26,7 @@ let keepDuration = $state(false);
 let editingT0 = $state(0);
 let editingT1 = $state(0);
 let editingDt = $state(0);
+let editingPos: Positioning = $state(null);
 let editingLabel: LabelType = $state('none');
 let uiFocus = Frontend.uiFocus;
 let focusedStyle = Editing.focused.style;
@@ -53,6 +54,7 @@ function updateForm() {
   editingT1 = focused.end;
   editingDt = editingT1 - editingT0;
   editingLabel = focused.label;
+  editingPos = focused.positioning;
 }
 
 function applyEditForm() {
@@ -62,6 +64,7 @@ function applyEditForm() {
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
   focused.label = editingLabel;
+  focused.positioning = editingPos;
 }
 
 </script>
@@ -99,7 +102,8 @@ function applyEditForm() {
     onchange={() => {
       if (editingT1 < editingT0) editingT1 = editingT0;
       applyEditForm();
-      Source.markChanged(ChangeType.Times, $_('c.timestamp'));}}/>
+      Source.markChanged(ChangeType.Times, $_('c.timestamp'));
+    }}/>
   <br>
   <TimestampInput bind:timestamp={editingDt}
     stretch={true}
@@ -127,6 +131,27 @@ function applyEditForm() {
         Source.markChanged(ChangeType.InPlace, $_('c.label'));
       }}/>
   </label>
+  <hr>
+  <label>
+    <input type="checkbox" checked={!!editingPos}
+      onchange={(x) => {
+        if (x.currentTarget.checked)
+          editingPos = { type: 'absolute', x: 0, y: 0 };
+        else
+          editingPos = null;
+        applyEditForm();
+        Source.markChanged(ChangeType.InPlace, $_('c.positioning'));
+      }}>
+    {$_('editbox.custom-positioning')}
+  </label>
+  {#if !!editingPos}
+  <div class="hlayout">
+    <NumberInput bind:value={editingPos.x} min="0" max="10000" style="flex-grow:1"
+      onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.positioning'))} />
+    <NumberInput bind:value={editingPos.y} min="0" max="10000" style="flex-grow:1"
+      onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.positioning'))} />
+  </div>
+  {/if}
 </fieldset>
 <!-- channels view -->
 <div class="channels flexgrow isolated area" class:focused={$uiFocus == 'EditingField'}>
@@ -257,6 +282,10 @@ function applyEditForm() {
   /* box-shadow: gray 0px 0px 3px inset; */
   border: solid var(--uchu-gray-2) 1px;
   margin-left: 3px;
+
+  @media (prefers-color-scheme: dark) {
+    border-color: var(--uchu-yin-7);
+  }
 }
 
 :global(.ProseMirror.ProseMirror) {

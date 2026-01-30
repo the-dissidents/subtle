@@ -98,7 +98,7 @@ class BoxSelect extends TimelineAction {
 
     onDrag(offsetX: number, offsetY: number): void {
         const x2 = offsetX + this.layout.manager.scroll[0],
-                    y2 = offsetY + this.layout.manager.scroll[1];
+              y2 = offsetY + this.layout.manager.scroll[1];
         const b: Box = {
             x: Math.min(this.x1, x2), y: Math.min(this.y1, y2), 
             w: Math.abs(this.x1 - x2), h: Math.abs(this.y1 - y2)};
