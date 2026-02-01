@@ -1,6 +1,3 @@
-<!-- TODO: SearchToolbox.svelte
- 1. only search for/replace one occurence at a time, and highlight it in the editing boxes
--->
 <script lang="ts" module>
 import { Frontend } from '../frontend/Frontend';
 import { UICommand } from '../frontend/CommandBase';
@@ -52,20 +49,24 @@ KeybindingManager.register(SearchCommands);
 
 <script lang="ts">
 import { Basic } from '../Basic';
+import { Debug } from "../Debug";
+
 import { SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { LABEL_TYPES, type LabelType } from "../core/Labels";
-import { Debug } from "../Debug";
-import StyleSelect from '../StyleSelect.svelte';
+import { Filter, type MetricFilter } from '../core/Filter';
+import { RichText } from '../core/RichText';
 
 import { Editing, SelectMode } from '../frontend/Editing';
 import { ChangeCause, ChangeType, Source } from '../frontend/Source';
+import Collapsible from '../ui/Collapsible.svelte';
+import Tooltip from '../ui/Tooltip.svelte';
+import FilterEdit from '../FilterEdit.svelte';
+import StyleSelect from '../StyleSelect.svelte';
 
 import { _ } from 'svelte-i18n';
-import Collapsible from '../ui/Collapsible.svelte';
-import FilterEdit from '../FilterEdit.svelte';
-import { Filter, type MetricFilter } from '../core/Filter';
-import Tooltip from '../ui/Tooltip.svelte';
-    import { RichText } from '../core/RichText';
+import * as z from "zod/v4-mini";
+
+import { Memorized } from '../config/MemorizedValue.svelte';
 
 handler.execute = execute;
 handler.focus = () => {
@@ -75,15 +76,15 @@ handler.focus = () => {
 
 let termInput = $state<HTMLInputElement>();
 
-let term            = $state(''),
-    replaceTerm     = $state(''),
-    useRegex        = $state(false),
-    useEscape       = $state(true),
-    caseSensitive   = $state(true),
+let term            = Memorized.$('search-term', z.string(), ''),
+    replaceTerm     = Memorized.$('search-replaceTerm', z.string(), ''),
+    useRegex        = Memorized.$('search-useRegex', z.boolean(), false),
+    useEscape       = Memorized.$('search-useEscape', z.boolean(), true),
+    caseSensitive   = Memorized.$('search-caseSensitive', z.boolean(), true),
     replaceStyle    = $state(Source.subs.defaultStyle);
 
 // condition (simple)
-let selectionOnly   = $state(false),
+let selectionOnly   = Memorized.$('search-selectionOnly', z.boolean(), false),
     useStyle        = $state(false), 
     useReplaceStyle = $state(false),
     useLabel        = $state(false);
@@ -109,7 +110,7 @@ function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
   } else {
     // not using filter
     return (!useStyle || style.name === searchStyle.name)
-        && (!selectionOnly || Editing.inSelection(entry))
+        && (!$selectionOnly || Editing.inSelection(entry))
         && (!useLabel || entry.label === label);
   }
 }
@@ -144,7 +145,7 @@ const replEscapedSequences = {
 }
 
 function processReplacement(original: string, match: RegExpExecArray, repl: string) {
-  if (!useEscape)
+  if (!$useEscape)
     return repl;
   let i = 0;
   let result = '';
@@ -202,7 +203,7 @@ async function execute(type: SearchAction, option: SearchOption) {
 
   const focusedEntry = Editing.getFocusedEntry();
   let focus = focusedEntry instanceof SubtitleEntry ? focusedEntry : entries[0];
-  if (selectionOnly) 
+  if ($selectionOnly) 
     focus = Source.subs.entries.find((x) => Editing.inSelection(x)) ?? focus;
 
   if (resumeFrom)
@@ -215,11 +216,11 @@ async function execute(type: SearchAction, option: SearchOption) {
   }
 
   let expr: RegExp;
-  if (term !== '') {
+  if ($term !== '') {
     // construct regex from search term
     try {
-      expr = new RegExp(useRegex ? term : Basic.escapeRegexp(term), 
-        `ug${caseSensitive ? '' : 'i'}`);
+      expr = new RegExp($useRegex ? $term : Basic.escapeRegexp($term), 
+        `ug${$caseSensitive ? '' : 'i'}`);
     } catch (e) {
       Debug.assert(e instanceof Error);
       Frontend.setStatus($_('msg.search-failed') + e.message, 'error');
@@ -235,11 +236,11 @@ async function execute(type: SearchAction, option: SearchOption) {
 
   Debug.debug('executing search:', expr.source, type, option);
 
-  if (type == "select" || !selectionOnly) {
+  if (type == "select" || !$selectionOnly) {
     Editing.clearSelection(ChangeCause.Action);
   }
 
-  const repl = type == "replace" ? replaceTerm : '';
+  const repl = type == "replace" ? $replaceTerm : '';
   const startIndex = option == "all" 
     ? 0 : Math.max(entries.indexOf(focus), 0);
   const styleIndex = resumeFrom ? Source.subs.styles.indexOf(resumeFrom.style) : 0;
@@ -255,7 +256,6 @@ async function execute(type: SearchAction, option: SearchOption) {
   let newType = type;
   outer: while (!res.done) {
     const [entry, style, text, first] = res.value;
-    // Debug.trace('search at', text);
     expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
 
     const str = RichText.toString(text);
@@ -284,16 +284,18 @@ async function execute(type: SearchAction, option: SearchOption) {
     }
 
     let match: RegExpExecArray | null;
-    let newStr = str;
+    let newStr = str, newRich = text;
     expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
     while ((match = expr.exec(newStr)) !== null) {
       nDone++;
       if (newType == 'replace') {
-        // FIXME: rt
-        newStr = newStr.slice(0, match.index) 
-          + processReplacement(text, match, repl) 
-          + newStr.slice(match.index + match[0].length);
-        expr.lastIndex += repl.length - match[0].length;
+        const replacement = processReplacement(newStr, match, repl);
+        const attrs = RichText.attrsAt(newRich, match.index);
+        newRich = RichText.edit(newRich, match.index, match[0].length, [{
+          type: 'leaf', content: replacement, attrs
+        }]);
+        newStr = RichText.toString(newRich);
+        expr.lastIndex += replacement.length - match[0].length;
       }
       if (option != "all") {
         if (newType == 'select') {
@@ -315,8 +317,7 @@ async function execute(type: SearchAction, option: SearchOption) {
           break outer;
         } else {
           // just replaced one, select next
-          entry.texts.set(newStyle, newStr);
-          // Debug.trace('replaced 1:', text, '->', newText);
+          entry.texts.set(newStyle, newRich);
           newType = 'select';
           Debug.trace('just replaced, start selecting');
         }
@@ -324,8 +325,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     }
 
     if (type == 'replace') {
-      entry.texts.set(newStyle, newStr);
-      // Debug.trace('replacing:', text, '->', newText);
+      entry.texts.set(newStyle, newRich);
     }
     
     res = gen.next(false);
@@ -362,13 +362,13 @@ async function execute(type: SearchAction, option: SearchOption) {
 
 <input class='wfill' type="text"
   spellcheck="false" autocomplete="off"
-  bind:value={term}
+  bind:value={$term}
   bind:this={termInput}
   id='expr' placeholder={$_('search.expression')}/>
 <div class="hlayout">
   <input class='wfill' type="text"
     spellcheck="false" autocomplete="off"
-    bind:value={replaceTerm}
+    bind:value={$replaceTerm}
     id='repl' placeholder={$_('search.replace-term')}/>
   <!-- TODO: make a menu for inserting common escape sequences,
     but problem is that text inputs lose cursor once unfocused
@@ -427,16 +427,16 @@ async function execute(type: SearchAction, option: SearchOption) {
 <div class='form vlayout'>
   <h5>{$_('search.options')}</h5>
   <label>
-    <input type='checkbox' bind:checked={useRegex}/>
+    <input type='checkbox' bind:checked={$useRegex}/>
     {$_('search.use-regular-expressions')}
     <Tooltip text={$_('search.regex-help')} />
   </label>
   <label>
-    <input type='checkbox' bind:checked={useEscape}/>
+    <input type='checkbox' bind:checked={$useEscape}/>
     {$_('search.use-escape-sequences-in-replacement')}
     <Tooltip text={$_('search.escape-sequence-help')} />
   </label>
-  <label><input type='checkbox' bind:checked={caseSensitive}/>
+  <label><input type='checkbox' bind:checked={$caseSensitive}/>
     {$_('search.case-sensitive')}
   </label>
   <label><input type='checkbox' bind:checked={useReplaceStyle}/>
@@ -452,7 +452,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     onActiveChanged={(a) => useFilter = !a}
   >
     <div class="form vlayout">
-      <label><input type='checkbox' bind:checked={selectionOnly}/>
+      <label><input type='checkbox' bind:checked={$selectionOnly}/>
         {$_('search.search-only-in-selected-entries')}
       </label>
       <label><input type='checkbox' bind:checked={useLabel}/>

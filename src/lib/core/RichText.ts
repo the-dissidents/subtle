@@ -46,6 +46,13 @@ export type RichText = z.infer<typeof ZRichText>;
 
 const eq = zx.deepEqual(ZRichText);
 
+const attrEq = zx.deepEqual(ZRtAttr);
+
+function sameAttrs(x: RichTextAttr[], y: RichTextAttr[]) {
+    if (x.length !== y.length) return false;
+    return !x.find((a) => !y.find((b) => attrEq(a, b)));
+}
+
 export namespace RichText {
     export function equals(a: RichText, b: RichText) {
         return eq(a, b);
@@ -114,7 +121,7 @@ export namespace RichText {
 
         const totalLength = RichText.length(rt);
         end = end ?? totalLength;
-        Debug.assert(!Number.isNaN(end) && end <= 0);
+        Debug.assert(!Number.isNaN(end) && end >= 0);
         Debug.assert(start <= end);
 
         if (start === end) return "";
@@ -172,20 +179,56 @@ export namespace RichText {
 
     export function concat(...rts: RichText[]): RichText {
         const result: RichTextNode[] = [];
-        rts.forEach((x) => {
-            result.push(...(typeof x === 'string' ? [x] : x));
+        rts.flat().forEach((x, i) => {
+            if (x === "") return;
+
+            if (typeof x === 'string') {
+                if (typeof result[i-1] === 'string')
+                    result[i-1] += x;
+                else
+                    result.push(x);
+            } else {
+                // leaf
+                const last = result[i-1];
+                if (typeof last === 'object' && sameAttrs(last.attrs, x.attrs))
+                    last.content += x.content;
+                else
+                    result.push(x);
+            }
         });
-        return result;
+        return result.length == 0 ? '' : result;
+    }
+
+    export function attrsAt(rt: RichText, index: number) {
+        Debug.assert(index >= 0);
+        if (rt.length == 0 || typeof rt === 'string')
+            return [];
+
+        let i = 0;
+        for (const x of rt) {
+            const attrs = typeof x === 'string' ? [] : x.attrs;
+            i += typeof x === 'string' ? x.length : x.content.length;
+            if (i > index) return attrs;
+        }
+        throw new RangeError('index');
+    }
+
+    export function edit(rt: RichText, index: number, deleteCount: number, insert: RichText = "") {
+        return RichText.concat(
+            RichText.substring(rt, 0, index),
+            insert,
+            RichText.substring(rt, index + deleteCount)
+        );
     }
 
     export function join(rts: RichText[], sep: RichText): RichText {
         sep = typeof sep === 'string' ? [sep] : sep;
-        const result: RichTextNode[] = [];
+        const result: RichText[] = [];
         rts.forEach((x, i) => {
-            result.push(...(typeof x === 'string' ? [x] : x));
+            result.push(x);
             if (i < rts.length - 1)
-                result.push(...sep);
+                result.push(sep);
         });
-        return result;
+        return RichText.concat(...result);
     }
 }
