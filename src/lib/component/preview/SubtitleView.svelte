@@ -127,24 +127,11 @@
     display: flex;
     flex-direction: row;
     font-synthesis: style;
-    align-items: baseline;
+    /* align-items: baseline; */
   }
 
   .box {
     position: absolute;
     box-sizing: content-box;
-  }
-
-  /* .box:hover {
-    outline: 1px solid white !important;
-  } */
-
-  .origin {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 5px;
-    height: 5px;
-    background-color: red;
   }
 </style>

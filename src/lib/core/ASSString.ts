@@ -1,7 +1,7 @@
 import { Debug } from "../Debug";
 import type { WrapStyle } from "../details/TextLayout";
 import type { RichText, RichTextAttr, RichTextNode } from "./RichText";
-import type { SubtitleStyle } from "./Subtitles.svelte";
+import type { Positioning, SubtitleStyle } from "./Subtitles.svelte";
 
 export type ASSStringWarnings = {
     ignoredTags: Map<string, number>,
@@ -15,19 +15,29 @@ class ASSState {
     #underline = false;
     #strikeout = false;
     #fontsize?: number;
-    // #pos?: [number, number];
+    #pos: Positioning = null;
+
+    get positioning() {
+        return this.#pos;
+    }
 
     constructor(readonly warnings: ASSStringWarnings = {
         ignoredTags: new Map<string, number>(),
         ignoredDrawing: 0,
         ignoredSpecialCharacter: new Map<string, number>(),
-    }) {
+    }) { }
 
+    static fromGlobals(opts: { pos?: Positioning }) {
+        const obj = new ASSState();
+        obj.#pos = opts.pos ?? null;
+        return obj;
     }
 
     static fromAttrs(attrs: RichTextAttr[], base: SubtitleStyle, from?: ASSState): ASSState {
         const state = new ASSState(from?.warnings);
         state.#fontsize = base.size;
+        if (from) state.#pos = from.#pos;
+
         attrs.forEach((x) => {
             if (typeof x === 'string') switch (x) {
                 case "bold":          state.#bold = 1; break;
@@ -43,6 +53,13 @@ class ASSState {
             }
         });
         return state;
+    }
+
+    emitGlobals(): string {
+        let result = '';
+        if (this.#pos) result += `\\pos(${this.#pos.x.toFixed(0)}, ${this.#pos.y.toFixed(0)})`;
+
+        return result.length > 0 ? `{${result}}` : '';
     }
 
     static emitDifference(before: ASSState, after: ASSState, base: SubtitleStyle): string {
@@ -82,7 +99,7 @@ class ASSState {
     }
 
     formatASSString(s: string): string {
-        // FIXME: there seems to be no way in ASS to escape '\', should warn about that
+        // FIXME: there seems to be no way in ASS to escape '\n', '\N' or '\H', should warn about that
         // but '{' can be escaped
         return s.replaceAll('{', '\\{');
     }
@@ -102,8 +119,12 @@ class ASSState {
             else if (m = /^b\s*(\d+)?$/.exec(s))  this.#bold = Number.parseInt(m[1] ?? '0');
             else if (m = /^fs\s*(\d+)?$/.exec(s))
                 this.#fontsize = m[1] ? Number.parseInt(m[1]) : undefined;
-            // else if (m = /pos\((\d+),(\d+)\)/.exec(s))
-            //     this.#pos = [Number.parseInt(m[1]), Number.parseInt(m[2])];
+            else if (m = /pos\((\d+),(\d+)\)/.exec(s))
+                this.#pos = {
+                    type: 'absolute',
+                    x: Number.parseInt(m[1]), 
+                    y: Number.parseInt(m[2])
+                };
 
             else this.warnings.ignoredTags.set('\\' + s, 
                 (this.warnings.ignoredTags.get('\\' + s) ?? 0) + 1);
@@ -135,9 +156,10 @@ class ASSState {
 
 export namespace ASSString {
     export function serialize(rt: RichText, base: SubtitleStyle, opts?: {
-        defaultWrapStyle?: WrapStyle
+        defaultWrapStyle?: WrapStyle,
+        pos?: Positioning;
     }): string {
-        let state = new ASSState();
+        let state = ASSState.fromGlobals({ pos: opts?.pos });
         if (typeof rt === 'string') return state.formatASSString(rt);
 
         let result = '';
@@ -157,7 +179,10 @@ export namespace ASSString {
     export function parse(
         source: string, base: SubtitleStyle, 
         warnings: ASSStringWarnings
-    ): RichText {
+    ): {
+        result: RichText,
+        pos: Positioning
+     } {
         const state = new ASSState(warnings);
         const result: RichTextNode[] = [];
         let lastWord = '';
@@ -217,6 +242,6 @@ export namespace ASSString {
         }
         submit();
 
-        return result;
+        return { result, pos: state.positioning };
     }
 }
