@@ -455,6 +455,22 @@ export const MAPI = {
         await invoke<void>('open_devtools');
     },
 
+    async pushHistory(data: string) {
+        await invoke<void>('push_history', { data });
+    },
+
+    async clearHistory(data: string) {
+        await invoke<void>('clear_history', { data });
+    },
+
+    async readUndo() {
+        return await invoke<string>('read_undo');
+    },
+
+    async readRedo() {
+        return await invoke<string>('read_redo');
+    },
+
     async resolveFontFamily(name: string) {
         return await invoke<ResolvedFontFamily | null>('resolve_family', { name });
     },

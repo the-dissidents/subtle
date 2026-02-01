@@ -19,11 +19,12 @@ import * as z from "zod/v4-mini";
 
 import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { TimelineHandle } from "../component/timeline/Input.svelte";
+import { MAPI } from "../API";
 const $_ = unwrapFunctionStore(_);
 
 export type Snapshot = {
-    archive: string,
-    change: ChangeType,
+    // archive: string,
+    // change: ChangeType,
     saved: boolean,
     description: string
 };
@@ -72,11 +73,11 @@ class MemorizedStyles extends Memorized<SerializedSubtitleStyle[], SubtitleStyle
   }
 }
 
-function readSnapshot(s: Snapshot) {
-    Source.subs = Format.JSON.parse(s.archive).done();
+function readSnapshot(s: Snapshot, archive: string) {
+    Source.subs = Format.JSON.parse(archive).done();
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch(false);
-    Source.onSubtitlesChanged.dispatch(s.change);
+    // Source.onSubtitlesChanged.dispatch(s.change);
 }
 
 function autosaveTimestamp(now: Date = new Date()): string {
@@ -185,8 +186,8 @@ export const Source = {
     onSubtitleObjectReload: new EventHost<[newFile: boolean]>(),
     onSubtitleWillSave: new EventHost<[disk: boolean]>(),
 
-    init() {
-        this.newDocument();
+    async init() {
+        await this.newDocument();
     },
 
     markChangedNonSaving() {
@@ -195,7 +196,7 @@ export const Source = {
         isEmpty = false;
     },
 
-    markChanged(type: ChangeType, description: string) {
+    async markChanged(type: ChangeType, description: string) {
         Debug.trace('marking change:', ChangeType[type], description);
         fileChanged.set(true);
         changedSinceLastAutosave = true;
@@ -207,13 +208,13 @@ export const Source = {
 
         Source.onSubtitleWillSave.dispatch(true);
         undoStack.push({
-            archive: Format.JSON.write(this.subs).toString(), 
-            change: type,
+            // change: type,
             saved: false,
             description
         });
-
         redoStack = [];
+        await MAPI.pushHistory(Format.JSON.write(this.subs).toString());
+
         this.onUndoBufferChanged.dispatch();
         this.onSubtitlesChanged.dispatch(type);
     },
@@ -221,7 +222,7 @@ export const Source = {
     canUndo() { return undoStack.length > 1; },
     canRedo() { return redoStack.length > 0; },
 
-    undo() {
+    async undo() {
         if (!this.canUndo()) {
             Frontend.setStatus($_('msg.nothing-to-undo'), 'error');
             return false;
@@ -229,13 +230,13 @@ export const Source = {
         const top = undoStack.pop()!;
         redoStack.push(top);
         const snap = undoStack.at(-1)!;
-        readSnapshot(snap);
+        readSnapshot(snap, await MAPI.readUndo());
         this.onUndoBufferChanged.dispatch();
         Frontend.setStatus($_('msg.undone', {values: {op: top.description}}), 'info');
         return true;
     },
 
-    redo() {
+    async redo() {
         if (!this.canRedo()) {
             Frontend.setStatus($_('msg.nothing-to-redo'), 'error');
             return false;
@@ -243,19 +244,19 @@ export const Source = {
         const top = redoStack.pop()!;
         redoStack.push(top);
         const snap = redoStack.at(-1)!;
-        readSnapshot(snap);
+        readSnapshot(snap, await MAPI.readRedo());
         this.onUndoBufferChanged.dispatch();
         Frontend.setStatus($_('msg.redone', {values: {op: top.description}}), 'info');
         return true;
     },
 
-    newDocument() {
-        Source.openDocument(new Subtitles());
+    async newDocument() {
+        await Source.openDocument(new Subtitles());
         isEmpty = true;
         fileChanged.set(false);
     },
 
-    openDocument(newSubs: Subtitles, path: string = '') {
+    async openDocument(newSubs: Subtitles, path: string = '') {
         if (path !== '') pushRecent(path);
         this.subs = newSubs;
         Editing.clearFocus(false);
@@ -269,11 +270,11 @@ export const Source = {
         isEmpty = false;
 
         undoStack = [{
-            archive: Format.JSON.write(this.subs).toString(), 
-            change: ChangeType.General,
+            // change: ChangeType.General,
             saved: !get(fileChanged),
             description: 'You should NOT see this unless there is a bug'
         }];
+        await MAPI.clearHistory(Format.JSON.write(this.subs).toString());
         redoStack = [];
 
         this.onSubtitleObjectReload.dispatch(true);
@@ -328,11 +329,11 @@ export const SourceCommands = {
           CommandBinding.from(['CmdOrCtrl+Alt+Z']) ],
     {
         name: () => $_('menu.undo'),
-        call: () => {
+        call: async () => {
             if (TimelineHandle.isDuringAction())
                 TimelineHandle.interruptAction();
             else
-                Source.undo();
+                await Source.undo();
         }
     }),
     redo: new UICommand(() => $_('category.document'),
@@ -340,11 +341,11 @@ export const SourceCommands = {
           CommandBinding.from(['CmdOrCtrl+Alt+Shift+Z']) ],
     {
         name: () => $_('menu.redo'),
-        call: () => {
+        call: async () => {
             if (TimelineHandle.isDuringAction())
                 TimelineHandle.interruptAction();
             else
-                Source.redo();
+                await Source.redo();
         }
     }),
 }
