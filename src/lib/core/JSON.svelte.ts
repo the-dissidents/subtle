@@ -1,6 +1,6 @@
 import { Debug } from "../Debug";
-import { SubtitleEntry, Subtitles, SubtitleStyle, ZMetadata, type SubtitleFormat, type SubtitleParser, ZStyleBase } from "./Subtitles.svelte";
-import { LABEL_TYPES } from "./Labels";
+import { SubtitleEntry, Subtitles, SubtitleStyle, ZMetadata, type SubtitleFormat, type SubtitleParser, ZStyleBase, ZPositioning } from "./Subtitles.svelte";
+import { AlignMode, LABEL_TYPES } from "./Labels";
 import { DeserializationError, parseObjectZ } from "../Serialization";
 import { Filter, Metrics } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
@@ -58,6 +58,8 @@ const ZEntry = z.object({
     start: z.number(),
     end: z.number(),
     label: z.enum(LABEL_TYPES),
+    pos: z._default(ZPositioning, null),
+    align: z.optional(z.enum(AlignMode)),
     texts: z.array(z.readonly(z.tuple([
         z.string(), 
         ZRichText
@@ -69,6 +71,8 @@ function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
         start: entry.start,
         end: entry.end,
         label: entry.label,
+        pos: entry.positioning,
+        align: entry.alignment ?? undefined,
         texts: [...entry.texts.entries()]
             .map(([style, text]) => [style.name, text] as const)
     }
@@ -200,6 +204,8 @@ export class JSONParser implements SubtitleParser {
     #parseEntry(obj: z.infer<typeof ZEntry>): SubtitleEntry {
         const entry = new SubtitleEntry(obj.start, obj.end);
         entry.label = obj.label;
+        entry.positioning = obj.pos;
+        entry.alignment = obj.align ?? null;
 
         for (const [styleName, text] of obj.texts) {
             let style = this.#subs.styles.find((x) => x.name == styleName);

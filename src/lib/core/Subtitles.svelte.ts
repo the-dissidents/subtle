@@ -102,6 +102,7 @@ export class SubtitleEntry {
     start: number = $state(0);
     end: number = $state(0);
     positioning: Positioning = $state(null);
+    alignment: AlignMode | null = $state(null);
 
     constructor(start: number, end: number) 
     {

@@ -7,7 +7,7 @@ import RichEdit from './component/richedit/RichEdit.svelte';
 import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
 
 import { SubtitleEntry, type Positioning } from './core/Subtitles.svelte';
-import { type LabelType } from "./core/Labels";
+import { AlignMode, type LabelType } from "./core/Labels";
 import { Editing } from './frontend/Editing';
 import { ChangeType, Source } from './frontend/Source';
 import { Frontend } from './frontend/Frontend';
@@ -27,6 +27,7 @@ let editingT0 = $state(0);
 let editingT1 = $state(0);
 let editingDt = $state(0);
 let editingPos: Positioning = $state(null);
+let editingAlign: AlignMode | null = $state(null);
 let editingLabel: LabelType = $state('none');
 let uiFocus = Frontend.uiFocus;
 let focusedStyle = Editing.focused.style;
@@ -55,6 +56,7 @@ function updateForm() {
   editingDt = editingT1 - editingT0;
   editingLabel = focused.label;
   editingPos = focused.positioning;
+  editingAlign = focused.alignment;
 }
 
 function applyEditForm() {
@@ -65,6 +67,7 @@ function applyEditForm() {
   editingDt = editingT1 - editingT0;
   focused.label = editingLabel;
   focused.positioning = editingPos;
+  focused.alignment = editingAlign;
 }
 
 </script>
@@ -151,6 +154,37 @@ function applyEditForm() {
     <NumberInput bind:value={editingPos.y} min="0" max="10000" style="flex-grow:1"
       onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.positioning'))} />
   </div>
+  {/if}
+  <hr>
+  <label>
+    <input type="checkbox" checked={!!editingAlign}
+      onchange={(x) => {
+        if (x.currentTarget.checked)
+          editingAlign = $focusedStyle?.alignment ?? AlignMode.BottomCenter;
+        else
+          editingAlign = null;
+        applyEditForm();
+        Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
+      }}>
+    {$_('editbox.custom-alignment')}
+  </label>
+  {#if !!editingAlign}
+    <select
+        value={AlignMode[editingAlign]}
+        oninput={(x) => {
+          editingAlign = x.currentTarget.selectedIndex + 1;
+          Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
+        }}>
+      <option value="BottomLeft">{$_('style.bottom-left')}</option>
+      <option value="BottomCenter">{$_('style.bottom-center')}</option>
+      <option value="BottomRight">{$_('style.bottom-right')}</option>
+      <option value="CenterLeft">{$_('style.center-left')}</option>
+      <option value="Center">{$_('style.center')}</option>
+      <option value="CenterRight">{$_('style.center-right')}</option>
+      <option value="TopLeft">{$_('style.top-left')}</option>
+      <option value="TopCenter">{$_('style.top-center')}</option>
+      <option value="TopRight">{$_('style.top-right')}</option>
+    </select>
   {/if}
 </fieldset>
 <!-- channels view -->
@@ -274,6 +308,10 @@ function applyEditForm() {
 .outer {
   width: 100%;
   height: 100%;
+}
+
+fieldset {
+  overflow-y: scroll;
 }
 
 .channels {

@@ -162,26 +162,26 @@ export class SubtitleRenderer {
         this.#currentEntries.sort((a, b) => a.oldIndex - b.oldIndex);
     }
 
-    #basePoint(style: SubtitleStyle, pos: Positioning): [number, number, 1 | -1] {
+    #basePoint(align: AlignMode, style: SubtitleStyle, pos: Positioning): [number, number, 1 | -1] {
         let x = 0, y = 0, dy: 1 | -1 = 1;
         if (pos !== null) {
             x = pos.x * this.#scale + this.#hMargin;
             y = pos.y * this.#scale + this.#vMargin;
-            dy = isBottom(style.alignment) ? -1 : 1;
+            dy = isBottom(align) ? -1 : 1;
         } else {
             const [width, height] = this.manager.physicalSize;
-            if (isLeft(style.alignment))
+            if (isLeft(align))
                 x = style.margin.left * this.#scale + this.#hMargin;
-            if (isCenterH(style.alignment))
+            if (isCenterH(align))
                 x = width / 2;
-            if (isRight(style.alignment))
+            if (isRight(align))
                 x = width - (style.margin.right * this.#scale + this.#hMargin);
 
-            if (isTop(style.alignment))
+            if (isTop(align))
                 y = style.margin.top * this.#scale + this.#vMargin;
-            if (isCenterV(style.alignment))
+            if (isCenterV(align))
                 y = height / 2;
-            if (isBottom(style.alignment)) {
+            if (isBottom(align)) {
                 y = height - (style.margin.bottom * this.#scale + this.#vMargin);
                 dy = -1;
             }
@@ -228,7 +228,8 @@ export class SubtitleRenderer {
                 lineWidth,
             });
 
-            const [bx, by, dy] = this.#basePoint(style, ent.entry.positioning);
+            const alignment = ent.entry.alignment ?? style.alignment;
+            const [bx, by, dy] = this.#basePoint(alignment, style, ent.entry.positioning);
 
             // start from the bottom if aligned at the bottom, or vice versa
             if (dy < 0) lines.reverse();
@@ -236,10 +237,10 @@ export class SubtitleRenderer {
             for (const line of lines) {
                 const [x, y] = [bx, by];
                 const newBox = getBoxFromLine(line, x, y);
-                newBox.x += isRight(style.alignment)   ? -newBox.w
-                          : isCenterH(style.alignment) ? -newBox.w * 0.5 : 0;
-                newBox.y += isTop(style.alignment)     ? newBox.h
-                          : isCenterV(style.alignment) ? newBox.h * 0.5 : 0;
+                newBox.x += isRight(alignment)   ? -newBox.w
+                          : isCenterH(alignment) ? -newBox.w * 0.5 : 0;
+                newBox.y += isTop(alignment)     ? newBox.h
+                          : isCenterV(alignment) ? newBox.h * 0.5 : 0;
 
                 while (!ent.entry.positioning) {
                     const overlapping = this.#layout.find((box) => boxIntersects(box, newBox));

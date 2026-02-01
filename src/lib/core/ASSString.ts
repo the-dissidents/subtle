@@ -1,5 +1,6 @@
 import { Debug } from "../Debug";
 import type { WrapStyle } from "../details/TextLayout";
+import type { AlignMode } from "./Labels";
 import type { RichText, RichTextAttr, RichTextNode } from "./RichText";
 import type { Positioning, SubtitleStyle } from "./Subtitles.svelte";
 
@@ -16,9 +17,14 @@ class ASSState {
     #strikeout = false;
     #fontsize?: number;
     #pos: Positioning = null;
+    #align: AlignMode | null = null;
 
     get positioning() {
         return this.#pos;
+    }
+
+    get alignment() {
+        return this.#align;
     }
 
     constructor(readonly warnings: ASSStringWarnings = {
@@ -36,7 +42,10 @@ class ASSState {
     static fromAttrs(attrs: RichTextAttr[], base: SubtitleStyle, from?: ASSState): ASSState {
         const state = new ASSState(from?.warnings);
         state.#fontsize = base.size;
-        if (from) state.#pos = from.#pos;
+        if (from) {
+            state.#pos = from.#pos;
+            state.#align = from.#align;
+        }
 
         attrs.forEach((x) => {
             if (typeof x === 'string') switch (x) {
@@ -58,6 +67,7 @@ class ASSState {
     emitGlobals(): string {
         let result = '';
         if (this.#pos) result += `\\pos(${this.#pos.x.toFixed(0)}, ${this.#pos.y.toFixed(0)})`;
+        if (this.#align) result += `\\an${this.#align}`;
 
         return result.length > 0 ? `{${result}}` : '';
     }
@@ -125,6 +135,8 @@ class ASSState {
                     x: Number.parseInt(m[1]), 
                     y: Number.parseInt(m[2])
                 };
+            else if (m = /an([1-9])/.exec(s))
+                this.#align = Number.parseInt(m[1]);
 
             else this.warnings.ignoredTags.set('\\' + s, 
                 (this.warnings.ignoredTags.get('\\' + s) ?? 0) + 1);
@@ -181,7 +193,8 @@ export namespace ASSString {
         warnings: ASSStringWarnings
     ): {
         result: RichText,
-        pos: Positioning
+        pos: Positioning,
+        alignment: AlignMode | null,
      } {
         const state = new ASSState(warnings);
         const result: RichTextNode[] = [];
@@ -242,6 +255,6 @@ export namespace ASSString {
         }
         submit();
 
-        return { result, pos: state.positioning };
+        return { result, pos: state.positioning, alignment: state.alignment };
     }
 }
