@@ -24,6 +24,7 @@
     "@tauri-apps/plugin-opener": "^2.5.0",
     "@tauri-apps/plugin-os": "^2.3.1",
     "@tauri-apps/plugin-window-state": "~2",
+    "@traversable/zod": "^0.0.57",
     "@types/babel-core": "^6.25.10",
     "bits-ui": "^2.14.4",
     "chardet": "^2.1.0",

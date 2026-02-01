@@ -66,7 +66,7 @@ export class TableRenderer {
         const focused = Editing.getFocusedEntry();
         const selection = new Set(Editing.getSelection());
         let i = 0;
-        for (const { entry, line, height: lh, texts, cells } of this.layout.lines) {
+        for (const { entry, line, height: lh, texts, cells } of this.layout.entries) {
             i += 1;
             if ((line + lh) * this.layout.lineHeight < sy) continue;
             if (line * this.layout.lineHeight > sy + width) break;
@@ -115,7 +115,7 @@ export class TableRenderer {
                     ctx.textAlign = col.layout!.align;
                     ctx.fillStyle = textFillStyle;
                     applyStyle(this.layout.baseStyleCSS, ctx);
-                    drawText(cell, 
+                    drawText(cell.layout, 
                         col.layout!.textX, 
                         y0 + 0.5 * this.layout.lineHeight);
                 });
@@ -139,7 +139,7 @@ export class TableRenderer {
                 ctx.fillStyle = textFillStyle;
                 applyStyle(this.layout.baseStyleCSS, ctx);
                 ctx.textBaseline = 'middle';
-                drawText(cell, 
+                drawText(cell.layout, 
                     col.layout!.textX, 
                     entryCellY + 0.5 * this.layout.lineHeight);
             });
@@ -157,9 +157,9 @@ export class TableRenderer {
             drawLine(0, baseY + h, width + sx, baseY + h);
         }
 
-        if (i == this.layout.lines.length) {
+        if (i == this.layout.entries.length) {
             // virtual entry
-            const lastLine = this.layout.lines.at(-1);
+            const lastLine = this.layout.entries.at(-1);
             const y = (lastLine 
                         ? (lastLine.line + lastLine.height) * this.layout.lineHeight 
                         : 0) + this.layout.headerHeight;

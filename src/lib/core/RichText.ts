@@ -2,6 +2,8 @@ import * as z from "zod/v4-mini";
 import { Debug } from "../Debug";
 // import { ZColor } from "./Serialization";
 
+import { zx } from '@traversable/zod';
+
 export const ZRtAttr = z.union([
     z.literal('bold'),
     z.literal('italic'),
@@ -42,7 +44,13 @@ export const ZRichText = z.union([
 
 export type RichText = z.infer<typeof ZRichText>;
 
+const eq = zx.deepEqual(ZRichText);
+
 export namespace RichText {
+    export function equals(a: RichText, b: RichText) {
+        return eq(a, b);
+    }
+
     export function toString(rt: RichText) {
         function node(n: RichTextNode) {
             if (typeof n == 'string') return n;

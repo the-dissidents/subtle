@@ -8,6 +8,7 @@ import { ChangeType, Source } from "../../frontend/Source";
 import { TableConfig } from "./Config";
 import { _ } from "svelte-i18n";
 import { applyStyle, layoutText, toCSSStyle, WrapStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
+import { RichText } from "../../core/RichText";
 
 export type Column = {
     metric: keyof typeof Metrics,
@@ -26,16 +27,21 @@ export type ChannelLayout = {
     style: SubtitleStyle,
     line: number, height: number,
     failed: SimpleMetricFilter[],
-    cells: Line[][],
+    cells: Cell[],
 };
 
-type LineLayout = {
+type Cell = {
+    text: RichText,
+    layout: Line[]
+};
+
+type EntryLayout = {
     entry: SubtitleEntry, 
     line: number, 
     height: number,
     texts: ChannelLayout[],
-    cells: Line[][],
-}
+    cells: Cell[],
+};
 
 export class TableLayout {
     readonly linePadding   = $derived(InterfaceConfig.data.fontSize * 0.35);
@@ -61,7 +67,7 @@ export class TableLayout {
     indexColumnLayout: ColumnLayout = 
         { name: '#', align: 'end', position: 0, textX: -1, width: -1 };
 
-    lines: LineLayout[] = [];
+    entries: EntryLayout[] = [];
     lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
     totalLines = 0;
 
@@ -121,46 +127,61 @@ export class TableLayout {
             };
         }
 
-        this.lines = []; this.totalLines = 0;
-        for (const entry of Source.subs.entries) {
-            let entryColumnsHeight = 1;
+        const newEntries: EntryLayout[] = [];
+        const newMap = new WeakMap<SubtitleEntry, {
+            line: number;
+            height: number;
+        }>();
 
-            let cells = this.entryColumns.map((col) => {
+        this.totalLines = 0;
+        Source.subs.entries.forEach((entry, i) => {
+            let entryColumnsHeight = 1;
+            const oldEntry = this.entries.at(i);
+
+            const cells: Cell[] = this.entryColumns.map((col, j) => {
                 const metric = Metrics[col.metric];
-                const value = metric.textValue(entry, Source.subs.defaultStyle);
-                const layout = layoutText(value, ctx, {
-                    baseStyle: metric.type.isMonospace
-                        ? this.baseStyleMonospace : this.baseStyle,
-                    warpStyle: WrapStyle.NoWrap,
-                    disableSize: true,
-                });
+                const text = metric.textValue(entry, Source.subs.defaultStyle);
+                const oldLayout = oldEntry?.cells[j];
+                const layout = (oldLayout && RichText.equals(oldLayout.text, text)) 
+                    ? oldLayout.layout 
+                    : layoutText(text, ctx, {
+                        baseStyle: metric.type.isMonospace
+                            ? this.baseStyleMonospace : this.baseStyle,
+                        warpStyle: WrapStyle.NoWrap,
+                        disableSize: true,
+                    });
                 const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
 
                 col.layout!.width = Math.max(col.layout!.width, w);
                 entryColumnsHeight = Math.max(entryColumnsHeight, layout.length);
-                return layout;
+                return { text, layout };
             });
 
             let entryHeight = 0;
             const texts: ChannelLayout[] = [];
+
+            let j = 0;
             for (const style of Source.subs.styles) {
                 const text = entry.texts.get(style);
                 if (text === undefined) continue;
 
                 let lineHeight = 1;
-                let cells = this.channelColumns.map((col) => {
-                    const value = Metrics[col.metric].textValue(entry, style);
-
-                    const layout = layoutText(value, ctx, {
-                        baseStyle: this.baseStyle,
-                        warpStyle: WrapStyle.NoWrap,
-                        disableSize: true,
-                    });
+                const oldChannel = oldEntry?.texts[j];
+                const cells: Cell[] = this.channelColumns.map((col, k) => {
+                    const text = Metrics[col.metric].textValue(entry, style);
+                    const oldLayout = oldChannel?.cells[k];
+                    const layout = (oldLayout && RichText.equals(oldLayout.text, text)) 
+                        ? oldLayout.layout 
+                        : layoutText(text, ctx, {
+                            baseStyle: this.baseStyle,
+                            warpStyle: WrapStyle.NoWrap,
+                            disableSize: true,
+                        });
                     const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
 
                     col.layout!.width = Math.max(col.layout!.width, w);
                     lineHeight = Math.max(lineHeight, layout.length);
-                    return layout;
+                    return { text, layout };
                 });
 
                 texts.push({
@@ -170,19 +191,23 @@ export class TableLayout {
                         ? [] : Filter.evaluate(style.validator, entry, style).failed
                 });
                 entryHeight += lineHeight;
+                j++;
             }
 
-            this.lines.push({entry, line: this.totalLines, height: entryHeight, texts, cells});
-            this.lineMap.set(entry, {line: this.totalLines, height: entryHeight});
+            newEntries.push({entry, line: this.totalLines, height: entryHeight, texts, cells});
+            newMap.set(entry, {line: this.totalLines, height: entryHeight});
             this.totalLines += Math.max(entryHeight, entryColumnsHeight);
-        }
+        });
+
+        this.entries = newEntries;
+        this.lineMap = newMap;
 
         applyStyle(this.baseStyleMonospaceCSS, ctx);
 
         let pos = 0;
         this.indexColumnLayout.position = 0;
         this.indexColumnLayout.width = this.cellPadding * 2 
-            + ctx.measureText(`${Math.max(this.lines.length+1, 100)}`).width;
+            + ctx.measureText(`${Math.max(this.entries.length+1, 100)}`).width;
         this.indexColumnLayout.textX = this.indexColumnLayout.width - this.cellPadding;
         pos += this.indexColumnLayout.width;
 
@@ -202,8 +227,8 @@ export class TableLayout {
             // add 1 for virtual entry
         });
         const elapsed = performance.now() - startTime;
-        if (elapsed > 50)
-            Debug.debug(`layout took ${elapsed.toFixed(1)}ms`);
+        
+        Debug.debug(`layout took ${elapsed.toFixed(1)}ms`);
     }
 
     #updateColumns() {
