@@ -369,20 +369,25 @@
   "exportdialog": {
     "combine-strategy": "合并策略",
     "copy-to-clipboard": "复制到剪贴板",
+    "file-format": "文件格式",
     "format": "格式",
-    "format-d": "注意：字幕的样式信息（例如字体、字号和位置）将会丢失",
+    "format-d": "注意：字幕的一部分样式信息（例如字体、字号和位置）将会丢失",
     "header": "导出为线性格式",
+    "inline-format": "行内格式",
     "keep-order": "保持原来的顺序",
     "keep-order-d": "直接导出。对于SRT字幕，重叠的条目和不按时间顺序排列的条目在一些播放器上可能无法正确显示。",
     "plaintext": "纯文本",
     "recombine": "重组",
     "recombine-d": "将所有时间上重叠的条目重组成无重叠的条目。这保证SRT格式在所有播放器上都能显示。需要注意，与对话并行出现的字幕卡之类重组起来往往看上去很糟糕，所以这一般只适用于简单的双语对话字幕。",
+    "remove-inline-formatting": "不包含行内样式",
     "sorted": "排序",
     "sorted-d": "排序后导出。对于SRT字幕，重叠的条目在一些播放器上可能仍然无法正确显示。",
     "srt": "SRT",
     "style": "样式",
     "tab-delimited": "Tab分隔文本（可复制进Excel）",
-    "usage": "使用量"
+    "usage": "使用量",
+    "use-ass": "ASS格式",
+    "use-html": "HTML格式"
   },
   "filter": {
     "all": "所有文件",
@@ -696,7 +701,8 @@
     "header": "导入 SRT 字幕",
     "ignored-coordinates": "忽略了坐标定位",
     "ignored-format-tags": "忽略了HTML格式标签",
-    "info": "某些播放器支持使用HTML标签修改SRT字幕文本的格式，但这是非标准的。如果选中右侧的“保留格式标签”选项，字幕块中的格式标签（如<i>）将得到保留，虽然subtle无法正确显示它们。"
+    "info": "某些播放器支持使用HTML标签修改SRT字幕文本的格式，但这是非标准的。如果选中右侧的“保留格式标签”选项，字幕块中的格式标签（如<i>）将得到保留，虽然subtle无法正确显示它们。",
+    "invalid-color": "无效的颜色名"
   },
   "style": {
     "alignment": "对齐",

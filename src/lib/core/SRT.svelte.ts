@@ -1,8 +1,11 @@
 import { Basic } from "../Basic";
+import { Debug } from "../Debug";
 import { DeserializationError } from "../Serialization";
+import { ASSString } from "./ASSString";
+import { HTMLString, type HTMLStringWarnings } from "./HTMLString";
+import { RichText } from "./RichText";
 import { SubtitleLinearFormatWriter } from "./SimpleFormats";
 import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser } from "./Subtitles.svelte";
-import { SubtitleUtil } from "./SubtitleUtil.svelte";
 
 function getTime(h: string, m: string, s: string, ms: string) {
     return Number.parseInt(h) * 3600 
@@ -14,22 +17,35 @@ function getTime(h: string, m: string, s: string, ms: string) {
 const timeRegex = /^\s*(\d+):(\d+):(\d+)[,.](\d+) --> (\d+):(\d+):(\d+)[,.](\d+)(?:\s+X1:(-?\d+) X2:(-?\d+) Y1:(-?\d+) Y2:(-?\d+))?\s*$/m;
 
 export type SRTParseMessage = {
-    type: 'ignored-format-tags',
+    type: 'ignored-format-tag',
     category: 'ignored',
-    occurrence: number
+    name: string,
+    occurrence: number,
 } | {
     type: 'ignored-coordinates',
     category: 'ignored',
     occurrence: number
-};
+} | {
+    type: 'ignored-special-character',
+    category: 'ignored',
+    name: string,
+    occurrence: number
+} | {
+    type: 'invalid-color-name',
+    category: 'ignored',
+    occurrence: number
+} | {
+    type: 'unsupported-override-tag',
+    category: 'ignored',
+    name: string,
+    occurrence: number,
+} ;
 
 export class SRTParser implements SubtitleParser {
     #subs: Subtitles;
     #messages: SRTParseMessage[] = [];
     #ignoredCoords = 0;
     #parsed = false;
-
-    preserveTags = true;
 
     constructor(private source: string) {
         this.#subs = new Subtitles();
@@ -50,11 +66,20 @@ export class SRTParser implements SubtitleParser {
         let start: number = -1, end: number = -1;
         const lines = this.source.split('\n');
 
+        const warnings: HTMLStringWarnings = {
+            ignoredTags: new Map(),
+            invalidColor: 0,
+            ignoredSpecialCharacter: new Map()
+        };
+
         const submit = () => {
             while (buffer.at(-1) == '\n')
                 buffer = buffer.substring(0, buffer.length - 1);
             if (buffer.length > 0) {
-                this.#createEntry(start, end, buffer);
+                const entry = new SubtitleEntry(start, end);
+                const parsed = HTMLString.parse(buffer, this.#subs.defaultStyle, warnings);
+                entry.texts.set(this.#subs.defaultStyle, parsed);
+                this.#subs.entries.push(entry);
                 buffer = '';
             }
         };
@@ -99,8 +124,6 @@ export class SRTParser implements SubtitleParser {
         } else {
             throw new DeserializationError('invalid or empty SRT');
         }
-
-        const ignoredTags = SubtitleUtil.processHTMLTags(this.#subs.entries, !this.preserveTags);
         
         this.#subs.migrated = 'text';
         if (this.#ignoredCoords > 0) this.#messages.push({
@@ -108,17 +131,21 @@ export class SRTParser implements SubtitleParser {
             category: 'ignored',
             occurrence: this.#ignoredCoords
         });
-        if (ignoredTags > 0) this.#messages.push({
-            type: 'ignored-format-tags',
+        if (warnings.invalidColor > 0) this.#messages.push({
+            type: 'invalid-color-name',
             category: 'ignored',
-            occurrence: ignoredTags
+            occurrence: warnings.invalidColor
         });
-    }
-
-    #createEntry(start: number, end: number, text: string) {
-        const entry = new SubtitleEntry(start, end);
-        entry.texts.set(this.#subs.defaultStyle, text);
-        this.#subs.entries.push(entry);
+        for (const [name, occurrence] of warnings.ignoredTags) this.#messages.push({
+            type: 'ignored-format-tag',
+            category: 'ignored',
+            name, occurrence
+        });
+        for (const [name, occurrence] of warnings.ignoredSpecialCharacter) this.#messages.push({
+            type: 'ignored-special-character',
+            category: 'ignored',
+            name, occurrence
+        });
     }
 
     done() {
@@ -143,6 +170,6 @@ export const SRTSubtitles = {
             .filter((x) => x.text.trim().length > 0)
             .map((ent, i) => `${i+1}\n${
                 Basic.formatTimestamp(ent.start, 3, ',')} --> ${
-                Basic.formatTimestamp(ent.end, 3, ',')}\n${ent.text.trim()}`)
+                Basic.formatTimestamp(ent.end, 3, ',')}\n${ent.text}`)
             .join('\n\n'))
 } satisfies SubtitleFormat;

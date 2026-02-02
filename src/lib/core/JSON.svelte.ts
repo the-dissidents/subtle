@@ -19,6 +19,7 @@ import { ZRichText } from "./RichText";
  *  - 000503 (minor) shadow color in style
  *  - 000700 (major) inline formatting through RichText
  *                   wrapStyle in style
+ *                   positioning and alignment in entry
  */
 export const SubtitleFormatVersion = '000700';
 export const SubtitleCompatibleVersion = '000700';

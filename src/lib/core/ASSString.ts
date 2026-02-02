@@ -39,9 +39,10 @@ class ASSState {
         return obj;
     }
 
-    static fromAttrs(attrs: RichTextAttr[], base: SubtitleStyle, from?: ASSState): ASSState {
+    static fromAttrs(attrs: RichTextAttr[], base?: SubtitleStyle, from?: ASSState): ASSState {
         const state = new ASSState(from?.warnings);
-        state.#fontsize = base.size;
+        if (base)
+            state.#fontsize = base.size;
         if (from) {
             state.#pos = from.#pos;
             state.#align = from.#align;
@@ -56,7 +57,8 @@ class ASSState {
                 default: Debug.never(x);
             } else switch (x.type) {
                 case 'size':
-                    state.#fontsize = x.value * base.size;
+                    if (base)
+                        state.#fontsize = x.value * base.size;
                     break;
                 default: Debug.never(x.type);
             }
@@ -72,17 +74,19 @@ class ASSState {
         return result.length > 0 ? `{${result}}` : '';
     }
 
-    static emitDifference(before: ASSState, after: ASSState, base: SubtitleStyle): string {
+    static emitDifference(before: ASSState, after: ASSState, base?: SubtitleStyle): string {
         let result = '';
         if (before.#italic !== after.#italic)       result += `\\i${after.#italic ? 1 : 0}`;
         if (before.#underline !== after.#underline) result += `\\u${after.#underline ? 1 : 0}`;
         if (before.#strikeout !== after.#strikeout) result += `\\s${after.#strikeout ? 1 : 0}`;
         if (before.#bold !== after.#bold)           result += `\\b${after.#bold}`;
 
-        const f0 = before.#fontsize == base.size ? undefined : before.#fontsize;
-        const f1 = after.#fontsize == base.size ? undefined : after.#fontsize;
-        if (f0 !== f1)
-            result += `\\fs${f1 ? f1.toFixed(0) : ''}`;
+        if (base) {
+            const f0 = before.#fontsize == base.size ? undefined : before.#fontsize;
+            const f1 = after.#fontsize == base.size ? undefined : after.#fontsize;
+            if (f0 !== f1)
+                result += `\\fs${f1 ? f1.toFixed(0) : ''}`;
+        }
         return result.length > 0 ? `{${result}}` : '';
     }
 
@@ -167,7 +171,7 @@ class ASSState {
 }
 
 export namespace ASSString {
-    export function serialize(rt: RichText, base: SubtitleStyle, opts?: {
+    export function serialize(rt: RichText, base?: SubtitleStyle, opts?: {
         defaultWrapStyle?: WrapStyle,
         pos?: Positioning;
     }): string {
@@ -175,7 +179,7 @@ export namespace ASSString {
         if (typeof rt === 'string') return state.formatASSString(rt);
 
         let result = '';
-        if (base.wrapStyle !== opts?.defaultWrapStyle)
+        if (base && base.wrapStyle !== opts?.defaultWrapStyle)
             result += `{\\q${base.wrapStyle}}`;
         for (const part of rt) {
             const attrs = typeof part === 'string' ? [] : part.attrs;

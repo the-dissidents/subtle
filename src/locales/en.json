@@ -366,16 +366,21 @@
   "exportdialog": {
     "combine-strategy": "combine strategy",
     "copy-to-clipboard": "copy to clipboard",
+    "file-format": "File format",
     "format": "format",
     "header": "export to a linear format",
+    "inline-format": "Inline format",
     "keep-order": "keep order",
     "plaintext": "plaintext",
     "recombine": "recombine",
+    "remove-inline-formatting": "remove inline formatting",
     "sorted": "sorted",
     "srt": "SRT",
     "style": "Style",
     "tab-delimited": "tab-delimited",
-    "usage": "Usage"
+    "usage": "Usage",
+    "use-ass": "ASS-like",
+    "use-html": "HTML-like"
   },
   "filter": {
     "all": "all files",
@@ -679,7 +684,8 @@
     "header": "import SRT",
     "ignored-coordinates": "ignored coordinates",
     "ignored-format-tags": "ignored HTML format tags",
-    "info": "Some players support HTML format tags in SRT subtitles. This is nonstandard. If the \"preserve format tags\" option is enabled, such tags will be retained, although subtle cannot display them correctly."
+    "info": "Some players support HTML format tags in SRT subtitles. This is nonstandard. If the \"preserve format tags\" option is enabled, such tags will be retained, although subtle cannot display them correctly.",
+    "invalid-color": "invalid color name"
   },
   "style": {
     "alignment": "alignment:",
