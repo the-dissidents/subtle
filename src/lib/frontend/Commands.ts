@@ -633,17 +633,14 @@ export const BasicCommands = {
             selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
-    removeHTMLTags: new UICommand(() => $_('category.tool'),
+    removeFormatting: new UICommand(() => $_('category.tool'),
         [],
     {
-        name: () => $_('action.remove-html-tags'),
+        name: () => $_('action.remove-formatting'),
         isApplicable: () => hasSelection(),
-        call() {
-            const n = SubtitleUtil.processHTMLTags(Editing.getSelection(), true);
-            Frontend.setStatus($_('msg.changed-n-entries', {values: { n }}));
-            if (n > 0)
-                Source.markChanged(ChangeType.Times, $_('action.remove-html-tags'));
-        },
+        items: () => forEachStyle(
+            (x) => Utils.removeFormatting(Editing.getSelection(), x), 
+            selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
     removeBlankChannels: new UICommand(() => $_('category.tool'),

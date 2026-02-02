@@ -204,6 +204,22 @@ export const Utils = {
             Source.markChanged(ChangeType.InPlace, $_('action.remove-newlines'));
     },
 
+    removeFormatting(entries: SubtitleEntry[], style: SubtitleStyle) {
+        let done = 0;
+        for (const ent of entries) {
+            const rt = ent.texts.get(style);
+            if (!rt) continue;
+            if (typeof rt === 'string' || rt.length == 1 && typeof rt[0] === 'string')
+                continue;
+            const string = RichText.toString(rt);
+            ent.texts.set(style, string);
+            done++;
+        }
+        Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
+        if (done)
+            Source.markChanged(ChangeType.InPlace, $_('action.remove-formatting'));
+    },
+
     mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {
         const first = selection[0];
         let start = first.start, end = first.end;

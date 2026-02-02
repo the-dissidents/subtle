@@ -59,6 +59,7 @@
     "previous-frame": "上一帧",
     "remove-channel": "删除频道",
     "remove-empty": "删除空频道",
+    "remove-formatting": "删除行内格式",
     "remove-html-tags": "删除HTML标签",
     "remove-newlines": "删除换行",
     "replace-channel": "替换频道",
