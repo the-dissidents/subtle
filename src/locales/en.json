@@ -88,6 +88,11 @@
     "up": "up"
   },
   "action-all-styles": "all styles",
+  "appmenu": {
+    "entries": "Entries",
+    "file": "File",
+    "system": "System"
+  },
   "assimport": {
     "duplicate-style-definition": "duplicate style definition",
     "header": "import ASS",
@@ -320,6 +325,7 @@
     "no-recent-files": "no recent files",
     "other-file": "other file...",
     "plain-text": "plain text",
+    "playback": "Playback",
     "srt": "SRT",
     "srt-plaintext": "SRT / plaintext / ...",
     "utilities": "utilities"

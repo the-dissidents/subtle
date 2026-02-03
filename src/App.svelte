@@ -8,7 +8,10 @@ import * as i18n from 'svelte-i18n';
 i18n.register('en', () => import('./locales/en.json'));
 i18n.register('zh-cn', () => import('./locales/zh-cn.json'));
 i18n.register('zh-tw', () => import('./locales/zh-tw.json'));
-i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
+
+(async () => {
+  await i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
+})();
 
 import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { TableConfig } from "./lib/component/subtitleTable/Config";
@@ -60,6 +63,7 @@ import { Dialog } from './lib/dialog';
 import DialogOutlet, { openDialog } from './lib/DialogOutlet.svelte';
 
 import * as z from "zod/v4-mini";
+import { initWindowMenu } from './lib/WindowMenu';
     
 Debug.init();
 
@@ -108,8 +112,9 @@ MainConfig.hook(() => InterfaceConfig.data.editorFontFamily,
 MainConfig.hook(() => InterfaceConfig.data.monospaceFontFamily, 
   (v) => document.documentElement.style.setProperty('--monospaceFontFamily', v));
 
-MainConfig.hook(() => InterfaceConfig.data.language, (lang) => {
-  locale.set(lang);
+MainConfig.hook(() => InterfaceConfig.data.language, async (lang) => {
+  await locale.set(lang);
+  await initWindowMenu();
   Debug.debug('language =', lang);
 });
 
@@ -146,6 +151,7 @@ MainConfig.hook(() => InterfaceConfig.data.theme,
 MainConfig.init();
 KeybindingManager.init();
 Fonts.init();
+
 
 getVersion().then((x) => 
   appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
@@ -289,7 +295,7 @@ observer.observe({ type: 'paint', buffered: true });
       <li>
         <Tooltip text={$_('menu.bug')} position="bottom">
           <button aria-label={$_('menu.bug')}
-                  onclick={() => openDialog(Dialog.bugs)}>
+                  onclick={() => DialogCommands.reportBugs.call()}>
             <BugIcon />
           </button>
         </Tooltip>

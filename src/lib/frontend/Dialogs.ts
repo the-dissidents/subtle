@@ -28,6 +28,13 @@ export const DialogCommands = {
         isDialog: true,
         call: () => openDialog(Dialog.keybinding)
     }),
+    reportBugs: new UICommand(() => $_('category.system'),
+        [ ],
+    {
+        name: () => $_('menu.bug'),
+        isDialog: true,
+        call: () => openDialog(Dialog.bugs)
+    }),
     combineDialog: new UICommand(() => $_('category.tool'),
         [],
     {

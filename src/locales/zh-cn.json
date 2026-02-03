@@ -88,6 +88,11 @@
     "up": "向上"
   },
   "action-all-styles": "所有样式",
+  "appmenu": {
+    "entries": "字幕块",
+    "file": "文件",
+    "system": "系统"
+  },
   "assimport": {
     "duplicate-style-definition": "重复定义样式",
     "header": "导入 ASS 字幕",
@@ -321,6 +326,7 @@
     "no-recent-files": "没有最近的文件",
     "other-file": "其他文件...",
     "plain-text": "纯文本",
+    "playback": "播放",
     "srt": "SRT",
     "srt-plaintext": "SRT / 纯文本 / ...",
     "utilities": "工具"

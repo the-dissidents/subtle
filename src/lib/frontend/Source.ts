@@ -17,9 +17,9 @@ import { basename, join } from '@tauri-apps/api/path';
 import { get, readonly, writable } from "svelte/store";
 import * as z from "zod/v4-mini";
 
-import { unwrapFunctionStore, _ } from 'svelte-i18n';
 import { TimelineHandle } from "../component/timeline/Input.svelte";
 import { MAPI } from "../API";
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 export type Snapshot = {
