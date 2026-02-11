@@ -273,6 +273,8 @@
     "show-debug-info": "show debug info",
     "show-keyframes": "show keyframes",
     "show-keyframes-d": "Color keyframes in the timeline. In many media files, keyframes can correspond to scene changes and are useful for aligning subtitles.",
+    "show-window-menu": "show window menu",
+    "show-window-menu-d": "not applicable on macOS",
     "snap-distance": "snap distance",
     "snap-distance-d": "Maximum distance between entries for snapping, in CSS pixels.",
     "snapping": "snapping",

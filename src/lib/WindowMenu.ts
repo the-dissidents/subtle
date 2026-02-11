@@ -5,6 +5,8 @@ import { InterfaceCommands } from "./frontend/Interface";
 import { BasicCommands } from "./frontend/Commands";
 import { DialogCommands } from "./frontend/Dialogs";
 import { PlaybackCommands } from "./frontend/Playback";
+import { InterfaceConfig } from "./config/Groups";
+import { platform } from "@tauri-apps/plugin-os";
 const $_ = unwrapFunctionStore(_);
 
 let appMenu: Menu;
@@ -105,6 +107,9 @@ export async function initWindowMenu() {
     appMenu = await Menu.new({
         items: [first, file, entries, channels, utilities, playback, system]
     });
-    const old = await appMenu.setAsAppMenu();
-    if (!originalMenu) originalMenu = old;
+    
+    if (InterfaceConfig.data.showWindowMenu || platform() == 'macos') {
+        const old = await appMenu.setAsAppMenu();
+        if (!originalMenu) originalMenu = old;
+    }
 }

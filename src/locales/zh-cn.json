@@ -274,6 +274,8 @@
     "show-debug-info": "显示调试信息",
     "show-keyframes": "显示关键帧",
     "show-keyframes-d": "显示关键帧标记。在许多视频文件中，关键帧常常对应于镜头切换，可以作为对齐字幕条的参考。",
+    "show-window-menu": "显示菜单栏",
+    "show-window-menu-d": "不适用于macOS",
     "snap-distance": "吸附距离",
     "snap-distance-d": "字幕块进行吸附的最大距离，以CSS像素为单位",
     "snapping": "吸附",

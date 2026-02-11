@@ -13,6 +13,7 @@
   -webkit-text-size-adjust: 100%;
 
   /* scrollbar-width: thin; */
+  color-scheme: light dark;
 }
 
 html,

@@ -3,7 +3,7 @@ import { type Positioning, SubtitleEntry, type SubtitleStyle, Subtitles } from "
 import { AlignMode } from "../../core/Labels";
 import { EventHost } from "../../details/EventHost";
 import { Typography } from "../../details/Typography";
-import { layoutText, WrapStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
+import { layoutText, type EvaluatedStyle, type Line } from "../../details/TextLayout";
 
 export type LineBox = {
     x: number, y: number,
@@ -242,8 +242,10 @@ export class SubtitleRenderer {
                 newBox.y += isTop(alignment)     ? newBox.h
                           : isCenterV(alignment) ? newBox.h * 0.5 : 0;
 
-                while (!ent.entry.positioning) {
-                    const overlapping = this.#layout.find((box) => boxIntersects(box, newBox));
+                while (true) {
+                    const overlapping = this.#layout.find(
+                        (box) => (!ent.entry.positioning || box.entry == ent.entry) 
+                            && boxIntersects(box, newBox));
                     if (!overlapping) break;
                     newBox.y = dy > 0
                         ? Math.max(newBox.y + 1, overlapping.y + overlapping.line.height + newBox.h)

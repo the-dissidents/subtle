@@ -159,9 +159,9 @@ function applyEditForm() {
   <label>
     <input type="checkbox" checked={!!editingAlign}
       onchange={(x) => {
-        if (x.currentTarget.checked)
+        if (x.currentTarget.checked && editingAlign == null)
           editingAlign = $focusedStyle?.alignment ?? AlignMode.BottomCenter;
-        else
+        if (!x.currentTarget.checked)
           editingAlign = null;
         applyEditForm();
         Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
@@ -173,6 +173,7 @@ function applyEditForm() {
         value={AlignMode[editingAlign]}
         oninput={(x) => {
           editingAlign = x.currentTarget.selectedIndex + 1;
+          applyEditForm();
           Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
         }}>
       <option value="BottomLeft">{$_('style.bottom-left')}</option>
