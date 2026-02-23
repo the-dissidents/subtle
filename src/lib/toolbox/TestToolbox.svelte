@@ -14,10 +14,12 @@ import OrderableList from '../ui/OrderableList.svelte';
 import { Typography } from '../details/Typography';
 import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy";
 import { invoke } from "@tauri-apps/api/core";
-  import FontSelect from "../FontSelect.svelte";
-  import { Fonts } from "../Fonts";
-  import { openDialog } from "../DialogOutlet.svelte";
-  import { Dialog } from "../dialog";
+
+import { Fonts } from "../Fonts";
+import { openDialog } from "../DialogOutlet.svelte";
+import { Dialog } from "../dialog";
+import RichEdit from "../component/richedit/RichEdit.svelte";
+import type { RichText } from "../core/RichText";
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -79,6 +81,12 @@ function testFuzzy(tok: Tokenizer) {
 function testAssertion() {
   Debug.assert(false);
 }
+
+let rich: RichText = $state([
+  'abc',
+  { type: 'leaf', content: 'def', attrs: ['bold'] },
+  'ghi'
+]);
 </script>
 
 <button
@@ -88,7 +96,7 @@ function testAssertion() {
   ffmpeg config
 </button>
 
-<FontSelect value=""></FontSelect>
+<RichEdit bind:text={rich}></RichEdit>
 
 <label>
   <input type='checkbox' bind:checked={hwaccel} />

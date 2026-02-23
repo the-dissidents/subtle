@@ -53,14 +53,17 @@ export const ImportFormatDialogs = {
                 };
             }
         },
-        categoryDescription() {
-            return undefined;
-        },
+        categoryDescription: () => undefined,
     }),
 
     SRT: (p: SRTParser) => show(p, true, {
         header: $_('srtimport.header'),
         formatMessage(type, group) {
+            const map = <Ty extends ASSParseMessage['type']>(
+                f: (x: Extract<ASSParseMessage, { type: Ty; }>) => string
+            ) => // @ts-expect-error -- ...
+                group.map(f);
+
             const one = <Ty extends SRTParseMessage['type']>(
                 f: (x: Extract<SRTParseMessage, { type: Ty; }>) => string
             ) => // @ts-expect-error -- ...
@@ -73,25 +76,33 @@ export const ImportFormatDialogs = {
                             $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                     description: $_('srtimport.coordinates-info')
                 };
-                case 'ignored-format-tags': return {
-                    heading: $_('srtimport.ignored-format-tags') + ' '
-                        + one<'ignored-coordinates'>((x) => 
-                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                case 'ignored-format-tag': return {
+                    heading: $_('srtimport.ignored-format-tags'),
+                    items: map<'unsupported-override-tag'>((x) => 
+                          x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                     description: $_('srtimport.info')
+                };
+                case 'unsupported-override-tag': return {
+                    heading: $_('assimport.unsupported-override-tag'),
+                    items: map<'unsupported-override-tag'>((x) => 
+                          x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                };
+                case 'ignored-special-character': return {
+                    heading: $_('assimport.ignored-special-character'),
+                    items: map<'ignored-special-character'>((x) => 
+                          x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                };
+                case 'invalid-color-name': return {
+                    heading: $_('srtimport.invalid-color') + ' '
+                        + one<'invalid-color-name'>((x) => 
+                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 default:
                     Debug.never(type);
             }
         },
         categoryDescription: () => undefined,
-        options: [
-            {
-                type: 'boolean',
-                name: $_('assimport.preserve-tags'),
-                getValue: (p) => p.preserveTags,
-                setValue: (p, v) => p.preserveTags = v
-            },
-        ]
+        options: []
     }),
 
     ASS: (p: ASSParser) => show(p, false, {
@@ -144,20 +155,19 @@ export const ImportFormatDialogs = {
                             {values: {a: w.line, b: w.field, c: w.value}}))
                 };
                 case 'ignored-special-character': return {
-                    heading: $_('assimport.ignored-special-character') + ' '
-                        + one<'ignored-special-character'>((x) => 
-                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                    heading: $_('assimport.ignored-special-character'),
+                    items: map<'ignored-special-character'>((x) => 
+                          x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-drawing-command': return {
                     heading: $_('assimport.ignored-drawing-command') + ' '
                         + one<'ignored-drawing-command'>((x) => 
                             $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
-                case 'ignored-override-tag': return {
-                    heading: $_('assimport.ignored-override-tag') + ' '
-                        + one<'ignored-override-tag'>((x) => 
-                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
-                    description: $_('assimport.info-override-tag')
+                case 'unsupported-override-tag': return {
+                    heading: $_('assimport.unsupported-override-tag'),
+                    items: map<'unsupported-override-tag'>((x) => 
+                          x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-embedded-fonts': return {
                     heading: $_('assimport.ignored-embedded-fonts'),
@@ -174,20 +184,5 @@ export const ImportFormatDialogs = {
                     return $_('assimport.info-ignored');
             }
         },
-        options: [
-            {
-                type: 'boolean',
-                name: $_('assimport.preserve-inlines'),
-                getValue: (p) => p.preserveInlines,
-                setValue: (p, v) => p.preserveInlines = v
-            },
-            {
-                type: 'boolean',
-                name: $_('assimport.transform-inline-multichannel'),
-                description: $_('assimport.transform-info'),
-                getValue: (p) => p.transformInlineMultichannel,
-                setValue: (p, v) => p.transformInlineMultichannel = v
-            }
-        ]
     })
 };

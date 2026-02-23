@@ -3,11 +3,12 @@ import { ASSSubtitles } from "./ASS.svelte";
 import { JSONSubtitles } from "./JSON.svelte";
 import { SRTSubtitles } from "./SRT.svelte";
 import { SubtitleEntry, Subtitles, type SubtitleWritableFormat, type SubtitleWriter } from "./Subtitles.svelte";
-import { LinearFormatCombineStrategy, SubtitleUtil, type LinearEntry } from "./SubtitleUtil.svelte";
+import { LinearFormatCombineStrategy, SubtitleUtil, type FormatOption, type LinearEntry } from "./SubtitleUtil.svelte";
 
 export class SubtitleLinearFormatWriter implements SubtitleWriter {
     #strategy = LinearFormatCombineStrategy.KeepOrder;
     #useEntries?: SubtitleEntry[];
+    #format: FormatOption = 'html';
 
     constructor(
         private source: Subtitles, 
@@ -15,6 +16,11 @@ export class SubtitleLinearFormatWriter implements SubtitleWriter {
 
     strategy(s: LinearFormatCombineStrategy) {
         this.#strategy = s;
+        return this;
+    }
+
+    format(f: FormatOption) {
+        this.#format = f;
         return this;
     }
 
@@ -26,7 +32,7 @@ export class SubtitleLinearFormatWriter implements SubtitleWriter {
     toString(): string {
         const linear = SubtitleUtil.combineToLinear(this.source, 
             this.#useEntries ?? this.source.entries, 
-            this.#strategy);
+            this.#strategy, this.#format);
         return this.generate(linear);
     }
 }

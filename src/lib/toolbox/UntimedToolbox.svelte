@@ -108,6 +108,7 @@ import { ChangeType, Source } from "../frontend/Source";
 import { _ } from 'svelte-i18n';
 import { Memorized } from "../config/MemorizedValue.svelte";
 import * as z from "zod/v4-mini";
+    import { RichText } from "../core/RichText";
 
 let fillAsStyle = $state(Source.subs.defaultStyle);
 let selection = $state<SubtitleEntry[]>([]);
@@ -189,7 +190,7 @@ function fuzzyMatch() {
     Frontend.setStatus($_('untimed.fuzzy.search-failed-to-find-anything'));
   };
 
-  const result = fuzzy.engine.search(current);
+  const result = fuzzy.engine.search(RichText.toString(current));
   if (!result || result.matchRatio < $threshold) {
     fail();
     return;

@@ -7,43 +7,59 @@ import { Debug } from "../../Debug";
 import { ChangeType, Source } from "../../frontend/Source";
 import { TableConfig } from "./Config";
 import { _ } from "svelte-i18n";
+import { applyStyle, layoutText, toCSSStyle, WrapStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
+import { RichText } from "../../core/RichText";
 
 export type Column = {
-  metric: keyof typeof Metrics,
-  layout?: ColumnLayout
+    metric: keyof typeof Metrics,
+    layout?: ColumnLayout
 };
 
 type ColumnLayout = {
-  name: string,
-  align: 'start' | 'center' | 'end',
-  position: number,
-  textX: number
-  width: number
+    name: string,
+    align: 'start' | 'center' | 'end',
+    position: number,
+    textX: number
+    width: number
 };
 
-export type TextLayout = {
-  style: SubtitleStyle,
-  text: string,
-  line: number, height: number,
-  failed: SimpleMetricFilter[],
+export type ChannelLayout = {
+    style: SubtitleStyle,
+    line: number, height: number,
+    failed: SimpleMetricFilter[],
+    cells: Cell[],
 };
 
-type LineLayout = {
+type Cell = {
+    text: RichText,
+    layout: Line[]
+};
+
+type EntryLayout = {
     entry: SubtitleEntry, 
     line: number, 
     height: number,
-    texts: TextLayout[]
-}
+    texts: ChannelLayout[],
+    cells: Cell[],
+};
 
 export class TableLayout {
     readonly linePadding   = $derived(InterfaceConfig.data.fontSize * 0.35);
     readonly lineHeight    = $derived(InterfaceConfig.data.fontSize + this.linePadding * 2);
     readonly headerHeight  = $derived(this.lineHeight);
     readonly cellPadding   = $derived(InterfaceConfig.data.fontSize * 0.4);
-    readonly font = $derived(
-        `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.fontFamily}`);
-    readonly monospaceFont = $derived(
-        `${InterfaceConfig.data.fontSize}px ${InterfaceConfig.data.monospaceFontFamily}`);
+
+    readonly baseStyle: EvaluatedStyle = $derived({
+        size: InterfaceConfig.data.fontSize,
+        fontFamily: InterfaceConfig.data.fontFamily
+    });
+    readonly baseStyleCSS = $derived(toCSSStyle(this.baseStyle));
+
+    readonly baseStyleMonospace: EvaluatedStyle = $derived({
+        size: InterfaceConfig.data.fontSize,
+        fontFamily: InterfaceConfig.data.monospaceFontFamily
+    });
+    readonly baseStyleMonospaceCSS = $derived(toCSSStyle(this.baseStyleMonospace));
 
     manager: CanvasManager;
     entryColumns = $state<Column[]>([{ metric: 'startTime' }, { metric: 'endTime' }]);
@@ -51,7 +67,7 @@ export class TableLayout {
     indexColumnLayout: ColumnLayout = 
         { name: '#', align: 'end', position: 0, textX: -1, width: -1 };
 
-    lines: LineLayout[] = [];
+    entries: EntryLayout[] = [];
     lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
     totalLines = 0;
 
@@ -87,15 +103,18 @@ export class TableLayout {
                 this.requestedLayout = true;
                 this.manager.requestRender();
             }
-        })
+        });
+
+        $inspect(this.baseStyleCSS);
     }
 
-    layout(cxt: CanvasRenderingContext2D) {
+    layout(ctx: CanvasRenderingContext2D) {
         this.requestedLayout = false;
         const startTime = performance.now();
-        cxt.resetTransform();
-        cxt.scale(devicePixelRatio, devicePixelRatio);
-        cxt.font = this.font;
+        ctx.resetTransform();
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+
+        applyStyle(this.baseStyleCSS, ctx);
 
         for (const col of [...this.entryColumns, ...this.channelColumns]) {
             const metric = Metrics[col.metric];
@@ -103,64 +122,92 @@ export class TableLayout {
             col.layout = {
                 name, align: 'start',
                 position: -1, 
-                width: cxt.measureText(name).width + this.cellPadding * 2, 
+                width: ctx.measureText(name).width + this.cellPadding * 2, 
                 textX: -1
             };
         }
 
-        this.lines = []; this.totalLines = 0;
-        for (const entry of Source.subs.entries) {
+        const newEntries: EntryLayout[] = [];
+        const newMap = new WeakMap<SubtitleEntry, {
+            line: number;
+            height: number;
+        }>();
+
+        this.totalLines = 0;
+        Source.subs.entries.forEach((entry, i) => {
             let entryColumnsHeight = 1;
-            for (const col of this.entryColumns) {
+            const oldEntry = this.entries.at(i);
+
+            const cells: Cell[] = this.entryColumns.map((col, j) => {
                 const metric = Metrics[col.metric];
-                const value = metric.stringValue(entry, Source.subs.defaultStyle);
-                const splitLines = value.split('\n');
+                const text = metric.textValue(entry, Source.subs.defaultStyle);
+                const oldLayout = oldEntry?.cells[j];
+                const layout = (oldLayout && RichText.equals(oldLayout.text, text)) 
+                    ? oldLayout.layout 
+                    : layoutText(text, ctx, {
+                        baseStyle: metric.type.isMonospace
+                            ? this.baseStyleMonospace : this.baseStyle,
+                        warpStyle: WrapStyle.NoWrap,
+                        disableSize: true,
+                    });
+                const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
 
-                cxt.font = metric.type.isMonospace
-                    ? this.monospaceFont
-                    : this.font;
-                const w = Math.max(...splitLines.map((x) => cxt.measureText(x).width)) 
-                    + this.cellPadding * 2;
                 col.layout!.width = Math.max(col.layout!.width, w);
-                entryColumnsHeight = Math.max(entryColumnsHeight, splitLines.length);
-            }
+                entryColumnsHeight = Math.max(entryColumnsHeight, layout.length);
+                return { text, layout };
+            });
 
-            cxt.font = this.font;
             let entryHeight = 0;
-            const texts: TextLayout[] = [];
+            const texts: ChannelLayout[] = [];
+
+            let j = 0;
             for (const style of Source.subs.styles) {
                 const text = entry.texts.get(style);
                 if (text === undefined) continue;
 
                 let lineHeight = 1;
-                for (const col of this.channelColumns) {
-                    const value = Metrics[col.metric].stringValue(entry, style);
-                    const splitLines = value.split('\n');
-                    const w = Math.max(...splitLines.map((x) => cxt.measureText(x).width)) 
-                        + this.cellPadding * 2;
+                const oldChannel = oldEntry?.texts[j];
+                const cells: Cell[] = this.channelColumns.map((col, k) => {
+                    const text = Metrics[col.metric].textValue(entry, style);
+                    const oldLayout = oldChannel?.cells[k];
+                    const layout = (oldLayout && RichText.equals(oldLayout.text, text)) 
+                        ? oldLayout.layout 
+                        : layoutText(text, ctx, {
+                            baseStyle: this.baseStyle,
+                            warpStyle: WrapStyle.NoWrap,
+                            disableSize: true,
+                        });
+                    const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
+
                     col.layout!.width = Math.max(col.layout!.width, w);
-                    lineHeight = Math.max(lineHeight, splitLines.length);
-                }
+                    lineHeight = Math.max(lineHeight, layout.length);
+                    return { text, layout };
+                });
 
                 texts.push({
-                    style, text: text,
-                    height: lineHeight,
-                    line: this.totalLines + entryHeight,
+                    style, height: lineHeight,
+                    line: this.totalLines + entryHeight, cells,
                     failed: style.validator === null 
-                    ? [] : Filter.evaluate(style.validator, entry, style).failed
+                        ? [] : Filter.evaluate(style.validator, entry, style).failed
                 });
                 entryHeight += lineHeight;
+                j++;
             }
-            this.lines.push({entry, line: this.totalLines, height: entryHeight, texts});
-            this.lineMap.set(entry, {line: this.totalLines, height: entryHeight});
-            this.totalLines += Math.max(entryHeight, entryColumnsHeight);
-        }
 
-        cxt.font = this.monospaceFont;
+            newEntries.push({entry, line: this.totalLines, height: entryHeight, texts, cells});
+            newMap.set(entry, {line: this.totalLines, height: entryHeight});
+            this.totalLines += Math.max(entryHeight, entryColumnsHeight);
+        });
+
+        this.entries = newEntries;
+        this.lineMap = newMap;
+
+        applyStyle(this.baseStyleMonospaceCSS, ctx);
+
         let pos = 0;
         this.indexColumnLayout.position = 0;
         this.indexColumnLayout.width = this.cellPadding * 2 
-            + cxt.measureText(`${Math.max(this.lines.length+1, 100)}`).width;
+            + ctx.measureText(`${Math.max(this.entries.length+1, 100)}`).width;
         this.indexColumnLayout.textX = this.indexColumnLayout.width - this.cellPadding;
         pos += this.indexColumnLayout.width;
 
@@ -180,8 +227,8 @@ export class TableLayout {
             // add 1 for virtual entry
         });
         const elapsed = performance.now() - startTime;
-        if (elapsed > 50)
-            Debug.debug(`layout took ${elapsed.toFixed(1)}ms`);
+        
+        Debug.debug(`layout took ${elapsed.toFixed(1)}ms`);
     }
 
     #updateColumns() {

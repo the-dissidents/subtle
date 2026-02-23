@@ -5,7 +5,7 @@ import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
 import { ChangeCause, Source } from "../../frontend/Source";
 
-import type { TableLayout, TextLayout } from "./Layout.svelte";
+import type { TableLayout, ChannelLayout } from "./Layout.svelte";
 import { TableConfig } from "./Config";
 
 import { _ } from 'svelte-i18n';
@@ -85,15 +85,15 @@ export class TableInput {
             const state = Source.subs.metadata.uiState;
             if (!state || !newFile) return;
             requestAnimationFrame(() => {
-                if (state.tableScrollIndex >= layout.lines.length) return;
-                const entryLayout = layout.lines[state.tableScrollIndex];
+                if (state.tableScrollIndex >= layout.entries.length) return;
+                const entryLayout = layout.entries[state.tableScrollIndex];
                 this.manager.setScroll({y: entryLayout.line * layout.lineHeight})
                 this.manager.requestRender();
             })
         });
         Source.onSubtitleWillSave.bind(this, () => {
             const i = this.#getLineFromOffset(0);
-            const result = layout.lines.findIndex((x) => x.line > i);
+            const result = layout.entries.findIndex((x) => x.line > i);
             Source.subs.metadata.uiState.tableScrollIndex = Math.max(0, result);
         });
 
@@ -111,11 +111,11 @@ export class TableInput {
     async #handleDoubleClick() {
         this.focus();
         const focused = Editing.getFocusedEntry();
-        Debug.assert(focused !== null);
+        
         if (focused == 'virtual') {
             if (TableConfig.data.doubleClickStartEdit)
             Editing.startEditingNewVirtualEntry();
-        } else {
+        } else if (focused !== null) {
             switch (TableConfig.data.doubleClickPlaybackBehavior) {
                 case 'none': break;
                 case 'seek':
@@ -139,9 +139,9 @@ export class TableInput {
     }
 
     #getTextFromLineIndex(i: number) {
-        let result: [TextLayout, SubtitleEntry] | [undefined, undefined] = [undefined, undefined];
+        let result: [ChannelLayout, SubtitleEntry] | [undefined, undefined] = [undefined, undefined];
         if (this.layout.totalLines < i) return result;
-        outer: for (const entryLayout of this.layout.lines) {
+        outer: for (const entryLayout of this.layout.entries) {
             for (const text of entryLayout.texts) {
                 if (text.line > i) break outer;
                 result = [text, entryLayout.entry];
@@ -208,7 +208,7 @@ export class TableInput {
             this.lastAnimateFrameTime = time;
 
             const line = this.#getLineFromOffset((this.autoScrollY < 0) ? 0 : this.manager.size[1]);
-            if (line != this.currentLine && this.layout.lines.length > 0) {
+            if (line != this.currentLine && this.layout.entries.length > 0) {
                 this.currentLine = line;
                 const [_, entry] = this.#getTextFromLineIndex(line);
                 if (entry) Editing.selectEntry(entry, SelectMode.Sequence);
@@ -241,7 +241,7 @@ export class TableInput {
         }
 
         const line = this.#getLineFromOffset(offsetY);
-        if (line != this.currentLine && this.layout.lines.length > 0) {
+        if (line != this.currentLine && this.layout.entries.length > 0) {
             this.currentLine = line;
             const [_, entry] = this.#getTextFromLineIndex(line);
             if (entry) Editing.selectEntry(entry, SelectMode.Sequence);

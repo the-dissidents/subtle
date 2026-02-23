@@ -59,6 +59,7 @@
     "previous-frame": "previous frame",
     "remove-channel": "remove channel",
     "remove-empty": "remove empty",
+    "remove-formatting": "remove inline formatting",
     "remove-html-tags": "remove HTML tags",
     "remove-newlines": "remove newlines",
     "replace-channel": "replace channel",
@@ -87,6 +88,11 @@
     "up": "up"
   },
   "action-all-styles": "all styles",
+  "appmenu": {
+    "entries": "Entries",
+    "file": "File",
+    "system": "System"
+  },
   "assimport": {
     "duplicate-style-definition": "duplicate style definition",
     "header": "import ASS",
@@ -111,7 +117,8 @@
     "preserve-tags": "preserve format tags",
     "transform-info": "",
     "transform-inline-multichannel": "transform \\N{\\r...} syntax",
-    "undefined-style": "undefined style"
+    "undefined-style": "undefined style",
+    "unsupported-override-tag": "unsupported override tag"
   },
   "assimportdialog": {
     "no-problems": "no problems found",
@@ -135,6 +142,7 @@
     "change-style": "change style",
     "column-view": "change column view of subtitle table",
     "combine-by-matching-time": "combine by matching time",
+    "custom-alignment": "edit custom alignment",
     "default-style": "change default style",
     "delete-channel": "delete channel",
     "delete-style": "delete style",
@@ -151,6 +159,7 @@
     "label": "edit label",
     "metadata": "edit metadata",
     "move-entries": "move entries",
+    "positioning": "edit positioning",
     "remove-unused-styles": "remove unused styles",
     "reorder-styles": "reorder styles",
     "replace": "search and replace",
@@ -170,7 +179,8 @@
     "style-shadow-color": "edit style shadow color",
     "timeline-row-view": "change row view in timeline",
     "timestamp": "edit timestamp",
-    "transform-times": "transform times"
+    "transform-times": "transform times",
+    "wrap-style": "edit warp style"
   },
   "cancel": "cancel",
   "category": {
@@ -263,6 +273,8 @@
     "show-debug-info": "show debug info",
     "show-keyframes": "show keyframes",
     "show-keyframes-d": "Color keyframes in the timeline. In many media files, keyframes can correspond to scene changes and are useful for aligning subtitles.",
+    "show-window-menu": "show window menu",
+    "show-window-menu-d": "not applicable on macOS",
     "snap-distance": "snap distance",
     "snap-distance-d": "Maximum distance between entries for snapping, in CSS pixels.",
     "snapping": "snapping",
@@ -315,6 +327,7 @@
     "no-recent-files": "no recent files",
     "other-file": "other file...",
     "plain-text": "plain text",
+    "playback": "Playback",
     "srt": "SRT",
     "srt-plaintext": "SRT / plaintext / ...",
     "utilities": "utilities"
@@ -324,6 +337,8 @@
     "anchor-end": "anchor end",
     "anchor-start": "anchor start",
     "at-virtual-entry": "double-click or press enter to append new entry",
+    "custom-alignment": "custom alignment",
+    "custom-positioning": "custom position",
     "keep-duration": "keep duration",
     "label": "Label",
     "no-selection": "select a line to start editing"
@@ -360,16 +375,21 @@
   "exportdialog": {
     "combine-strategy": "combine strategy",
     "copy-to-clipboard": "copy to clipboard",
+    "file-format": "File format",
     "format": "format",
     "header": "export to a linear format",
+    "inline-format": "Inline format",
     "keep-order": "keep order",
     "plaintext": "plaintext",
     "recombine": "recombine",
+    "remove-inline-formatting": "remove inline formatting",
     "sorted": "sorted",
     "srt": "SRT",
     "style": "Style",
     "tab-delimited": "tab-delimited",
-    "usage": "Usage"
+    "usage": "Usage",
+    "use-ass": "ASS-like",
+    "use-html": "HTML-like"
   },
   "filter": {
     "all": "all files",
@@ -481,6 +501,8 @@
     "duration": "duration",
     "end-time": "end time",
     "end-time-short": "end",
+    "has-override-alignment": "has override alignment",
+    "has-override-position": "has override position",
     "label": "label",
     "number-of-channels": "number of channels",
     "number-of-channels-short": "#channels",
@@ -612,6 +634,9 @@
     "url-d": "Anchors (e.g. #English) are not supported. To automatically navigate to a specified element, enable \"Use auto-scroll\"",
     "use-auto-scroll": "use auto-scroll"
   },
+  "richedit": {
+    "override-styles": "style override"
+  },
   "search": {
     "advanced": "advanced",
     "all": "all",
@@ -668,7 +693,8 @@
     "header": "import SRT",
     "ignored-coordinates": "ignored coordinates",
     "ignored-format-tags": "ignored HTML format tags",
-    "info": "Some players support HTML format tags in SRT subtitles. This is nonstandard. If the \"preserve format tags\" option is enabled, such tags will be retained, although subtle cannot display them correctly."
+    "info": "Some players support HTML format tags in SRT subtitles. This is nonstandard. If the \"preserve format tags\" option is enabled, such tags will be retained, although subtle cannot display them correctly.",
+    "invalid-color": "invalid color name"
   },
   "style": {
     "alignment": "alignment:",
@@ -703,7 +729,11 @@
     "top-center": "top center",
     "top-left": "top left",
     "top-right": "top right",
-    "validator": "validator"
+    "validator": "validator",
+    "wrap-balanced": "balanced",
+    "wrap-greedy": "greedy (wrap at end-of-line)",
+    "wrap-nowrap": "no word wrap",
+    "wrap-style": "wrap style"
   },
   "tab": {
     "properties": "Properties",

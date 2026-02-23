@@ -105,7 +105,7 @@ function parse() {
       </ul>
     </div>
 
-  {#if format?.options}
+  {#if format?.options?.length}
     <div class="right">
       <h5>{$_('assimportdialog.options')}</h5>
       {#each format.options as opt (opt)}

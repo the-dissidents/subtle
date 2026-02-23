@@ -1,11 +1,12 @@
 import { Debug } from "../Debug";
-import { SubtitleEntry, Subtitles, SubtitleStyle, ZMetadata, type SubtitleFormat, type SubtitleParser, ZStyleBase } from "./Subtitles.svelte";
-import { LABEL_TYPES } from "./Labels";
+import { SubtitleEntry, Subtitles, SubtitleStyle, ZMetadata, type SubtitleFormat, type SubtitleParser, ZStyleBase, ZPositioning } from "./Subtitles.svelte";
+import { AlignMode, LABEL_TYPES } from "./Labels";
 import { DeserializationError, parseObjectZ } from "../Serialization";
 import { Filter, Metrics } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
 
 import * as z from "zod/v4-mini";
+import { ZRichText } from "./RichText";
 
 /**
  * Version details:
@@ -16,9 +17,12 @@ import * as z from "zod/v4-mini";
  *  - 000501 (minor) timelineActiveChannel in view
  *  - 000502 (minor) uiState structure in metadata
  *  - 000503 (minor) shadow color in style
+ *  - 000700 (major) inline formatting through RichText
+ *                   wrapStyle in style
+ *                   positioning and alignment in entry
  */
-export const SubtitleFormatVersion = '000503';
-export const SubtitleCompatibleVersion = '000400';
+export const SubtitleFormatVersion = '000700';
+export const SubtitleCompatibleVersion = '000700';
 
 export type JSONParseMessage = {
     type: 'fixed-style',
@@ -55,7 +59,12 @@ const ZEntry = z.object({
     start: z.number(),
     end: z.number(),
     label: z.enum(LABEL_TYPES),
-    texts: z.array(z.readonly(z.tuple([z.string(), z.string()])))
+    pos: z._default(ZPositioning, null),
+    align: z.optional(z.enum(AlignMode)),
+    texts: z.array(z.readonly(z.tuple([
+        z.string(), 
+        ZRichText
+    ])))
 });
 
 function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
@@ -63,6 +72,8 @@ function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
         start: entry.start,
         end: entry.end,
         label: entry.label,
+        pos: entry.positioning,
+        align: entry.alignment ?? undefined,
         texts: [...entry.texts.entries()]
             .map(([style, text]) => [style.name, text] as const)
     }
@@ -194,6 +205,8 @@ export class JSONParser implements SubtitleParser {
     #parseEntry(obj: z.infer<typeof ZEntry>): SubtitleEntry {
         const entry = new SubtitleEntry(obj.start, obj.end);
         entry.label = obj.label;
+        entry.positioning = obj.pos;
+        entry.alignment = obj.align ?? null;
 
         for (const [styleName, text] of obj.texts) {
             let style = this.#subs.styles.find((x) => x.name == styleName);

@@ -7,25 +7,10 @@ import { AlignMode, type LabelType } from "./Labels";
 import { parseObjectZ } from "../Serialization";
 
 import * as z from "zod/v4-mini";
+import { ZColor } from "./Serialization";
 import * as Color from "colorjs.io/fn";
-
-const ZColor = z.codec(z.string(), z.custom<Color.PlainColorObject>(),
-{
-    decode: (x, _cxt) => {
-        try {
-            return Color.getColor(x);
-        } catch {
-            // cxt.issues.push({
-            //     input: x,
-            //     code: "custom",
-            //     message: `error parsing color: ${e}`,
-            //     continue: true
-            // });
-            return Color.getColor('white');
-        }
-    },
-    encode: (x) => Color.serialize(x)
-});
+import type { RichText } from "./RichText";
+import { WrapStyle } from "../details/TextLayout";
 
 export const ZStyleBase = z.object({
     name:                         z.string(),
@@ -49,6 +34,7 @@ export const ZStyleBase = z.object({
         right:         z._default(z.number(), 10),
     }),
     alignment:         z._default(z.enum(AlignMode), AlignMode.BottomCenter),
+    wrapStyle:         z._default(z.enum(WrapStyle), WrapStyle.Balanced),
     validator:         z._default(z.nullable(z.unknown()), null)
 });
 
@@ -100,11 +86,23 @@ export const SubtitleStyle = {
 
 export type SubtitleMetadata = z.infer<typeof ZMetadata>;
 
+export const ZPositioning = z._default(z.union([
+    z.null(),
+    z.object({
+        type: z.literal('absolute'),
+        x: z.number(), y: z.number(),
+    }),
+]), null);
+
+export type Positioning = z.infer<typeof ZPositioning>;
+
 export class SubtitleEntry {
     label: LabelType = $state('none');
-    texts = new SvelteMap<SubtitleStyle, string>();
+    texts = new SvelteMap<SubtitleStyle, RichText>();
     start: number = $state(0);
     end: number = $state(0);
+    positioning: Positioning = $state(null);
+    alignment: AlignMode | null = $state(null);
 
     constructor(start: number, end: number) 
     {

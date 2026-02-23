@@ -9,16 +9,18 @@ import wcwidth from "wcwidth";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { DeserializationError } from "../Serialization";
+import { RichText, ZRichText } from "./RichText";
 const $_ = unwrapFunctionStore(_);
 
 export const METRIC_CONTEXTS = ['editing', 'entry', 'style', 'channel'] as const;
 export type MetricContext = (typeof METRIC_CONTEXTS)[number];
 
-export const METRIC_TYPES = ['string', 'number', 'time', 'style', 'label', 'boolean'] as const;
+export const METRIC_TYPES = ['string', 'richtext', 'number', 'time', 'style', 'label', 'boolean'] as const;
 export type MetricType = (typeof METRIC_TYPES)[number];
 
 export type MetricValue<T> =
       T extends 'string' ? string
+    : T extends 'richtext' ? RichText
     : T extends 'number' ? number
     : T extends 'style' ? SubtitleStyle
     : T extends 'time' ? number
@@ -38,7 +40,7 @@ class MetricTypeDefinition<
         readonly schema: Serialized,
         readonly serialize: (value: MetricValue<Name>) => z.infer<Serialized>,
         readonly deserialize: (value: z.infer<Serialized>, subs: Subtitles) => MetricValue<Name>,
-        readonly toString: (value: MetricValue<Name>) => string,
+        readonly toText: (value: MetricValue<Name>) => RichText,
         opts?: {
             clone?: (value: MetricValue<Name>) => MetricValue<Name>,
             monospace?: boolean
@@ -52,6 +54,10 @@ class MetricTypeDefinition<
 export const MetricTypeDefinitions = {
     string: new MetricTypeDefinition(
         "string", z.string(),
+        (x) => x, (x) => x, (x) => x
+    ),
+    richtext: new MetricTypeDefinition(
+        "richtext", ZRichText,
         (x) => x, (x) => x, (x) => x
     ),
     number: new MetricTypeDefinition(
@@ -108,13 +114,13 @@ export class MetricDefinition<TypeName extends MetricType> {
         this.description = opts?.description;
     }
 
-    stringValue(entry: SubtitleEntry, style: SubtitleStyle) {
+    textValue(entry: SubtitleEntry, style: SubtitleStyle): RichText {
         const value = this.value(entry, style);
         // very hacky special handling of integers
         if (this.typeName == 'number' && this.integer) {
             return (value as number).toString();
         }
-        return MetricTypeDefinitions[this.typeName].toString(value as never);
+        return MetricTypeDefinitions[this.typeName].toText(value as never);
     }
 };
 
@@ -150,6 +156,14 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
         () => $_('metrics.duration'), 
         () => $_('metrics.duration'), 
         (e) => e.end - e.start),
+    hasOverridePosition: new MetricDefinition('boolean', 'entry',
+        () => $_('metrics.has-override-position'), 
+        () => $_('metrics.has-override-position'), 
+        (e) => e.positioning !== null),
+    hasOverrideAlignment: new MetricDefinition('boolean', 'entry',
+        () => $_('metrics.has-override-alignment'), 
+        () => $_('metrics.has-override-alignment'), 
+        (e) => e.alignment !== null),
     label: new MetricDefinition('label', 'entry',
         () => $_('metrics.label'), 
         () => $_('metrics.label'), 
@@ -163,14 +177,14 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
         () => $_('metrics.style'), 
         () => $_('metrics.style'), 
         (_e, s) => s),
-    content: new MetricDefinition('string', 'channel',
+    content: new MetricDefinition('richtext', 'channel',
         () => $_('metrics.content'), 
         () => $_('metrics.content'), 
         (e, s) => e.texts.get(s)!),
     lines: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-lines'), 
         () => $_('metrics.number-of-lines-short'), 
-        (e, s) => e.texts.get(s)!.split('\n').length,
+        (e, s) => RichText.toString(e.texts.get(s)!).split('\n').length,
         { integer: true }),
     chars: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-characters'), 
@@ -180,7 +194,7 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
     letters: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-readable-characters'), 
         () => $_('metrics.number-of-readable-characters-short'), 
-        (e, s) => getTextLength(e.texts.get(s)!),
+        (e, s) => getTextLength(RichText.toString(e.texts.get(s)!)),
         {
             integer: true,
             description: () => $_('metrics.readable-characters-d')
@@ -188,12 +202,14 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
     charsInLongestLine: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-characters-in-longest-line'), 
         () => $_('metrics.number-of-characters-in-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map((x) => x.length)),
+        (e, s) => Math.max(0, 
+            ...RichText.toString(e.texts.get(s)!).split('\n').map((x) => x.length)),
         { integer: true }),
     lettersInLongestLine: new MetricDefinition('number', 'channel',
         () => $_('metrics.number-of-letters-in-longest-line'), 
         () => $_('metrics.number-of-letters-in-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(getTextLength)),
+        (e, s) => Math.max(0, 
+            ...RichText.toString(e.texts.get(s)!).split('\n').map(getTextLength)),
         {
             integer: true,
             description: () => $_('metrics.readable-characters-d')
@@ -201,7 +217,8 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
     widthOfLongestLine: new MetricDefinition('number', 'channel',
         () => $_('metrics.width-of-longest-line'), 
         () => $_('metrics.width-of-longest-line-short'), 
-        (e, s) => Math.max(0, ...e.texts.get(s)!.split('\n').map(wcwidth)),
+        (e, s) => Math.max(0, 
+            ...RichText.toString(e.texts.get(s)!).split('\n').map(wcwidth)),
         {
             integer: true,
             description: () => $_('metrics.width-d')
@@ -210,7 +227,7 @@ export const Metrics: Record<string, MetricDefinition<MetricType>> = {
         () => $_('metrics.readable-characters-per-second'), 
         () => $_('metrics.readable-characters-per-second-short'), 
         (e, s) => {
-            const value = getTextLength(e.texts.get(s)!) / (e.end - e.start);
+            const value = getTextLength(RichText.toString(e.texts.get(s)!)) / (e.end - e.start);
             // TODO: is it ok to return 0 for NaN?
             return isNaN(value) ? 0 : value;
         },
@@ -239,6 +256,26 @@ export const MetricFilterMethods = {
         'string', () => $_('filter.matches-regex'),
         ['string'] as const,
         (a, b) => new RegExp(b).test(a),
+    ),
+    rtNonEmpty: new MetricFilterMethod(
+        'richtext', () => $_('filter.is-not-empty'),
+        [] as const,
+        (a) => RichText.toString(a).trim().length > 0,
+    ),
+    rtEqual: new MetricFilterMethod(
+        'richtext', () => $_('filter.equals'),
+        ['string'] as const,
+        (a, b) => a == b,
+    ),
+    rtContains: new MetricFilterMethod(
+        'richtext', () => $_('filter.contains'),
+        ['string'] as const,
+        (a, b) => RichText.toString(a).includes(b),
+    ),
+    rtMatchesRegex: new MetricFilterMethod(
+        'richtext', () => $_('filter.matches-regex'),
+        ['string'] as const,
+        (a, b) => new RegExp(b).test(RichText.toString(a)),
     ),
     numberEqual: new MetricFilterMethod(
         'number', () => $_('filter.number-equals'),
@@ -331,6 +368,7 @@ export const MetricFilterDefaultMethods:
     {[key in MetricType]: MetricFilterMethodName} = 
 {
     string: 'stringNonEmpty',
+    richtext: 'rtNonEmpty',
     number: 'numberEqual',
     time: 'timeEqual',
     style: 'styleEqual',
@@ -396,7 +434,7 @@ export const Filter = {
         const method = MetricFilterMethods[filter.method].localizedName();
         const params = (filter.parameters as unknown as never[]).map((x, i) => {
             const type = MetricFilterMethods[filter.method].parameters[i];
-            return MetricTypeDefinitions[type].toString(x);
+            return MetricTypeDefinitions[type].toText(x);
         });
         return `${not} ${name} ${method} ${params.join(' ')}`;
     },

@@ -4,7 +4,7 @@ import { Source } from '../frontend/Source';
 import DialogBase from '../DialogBase.svelte';
 
 import { _ } from 'svelte-i18n';
-import { LinearFormatCombineStrategy } from '../core/SubtitleUtil.svelte';
+import { LinearFormatCombineStrategy, type FormatOption } from '../core/SubtitleUtil.svelte';
 import { Format } from '../core/SimpleFormats';
 import { Frontend } from '../frontend/Frontend';
 import Tooltip from '../ui/Tooltip.svelte';
@@ -31,12 +31,13 @@ onMount(async () => {
   makePreview();
   let btn = await inner!.showModal!();
   if (btn !== 'ok') return close(null);
-  return close({ content: preview, ext: extensions[format] });
+  return close({ content: preview, ext: extensions[fileFormat] });
 });
 
 let styles: {style: SubtitleStyle, count: number, use: boolean}[] = $state([]);
 let combine = $state(LinearFormatCombineStrategy.Recombine);
-let format: 'srt' | 'tab' | 'txt' = $state('srt');
+let fileFormat: 'srt' | 'tab' | 'txt' = $state('srt');
+let inlineFormat: FormatOption = $state('html');
 let preview = $state('');
 
 const formatters = {
@@ -64,9 +65,10 @@ function makePreview() {
     if (entry.texts.size > 0)
       entries.push(entry);
   }
-  preview = formatters[format](Source.subs)
+  preview = formatters[fileFormat](Source.subs)
     .useEntries(entries)
     .strategy(combine)
+    .format(inlineFormat)
     .toString();
 }
 
@@ -74,6 +76,7 @@ async function copy() {
   await navigator.clipboard.writeText(preview);
   Frontend.setStatus($_('msg.copied-exported-data'));
 }
+
 </script>
 
 <DialogBase bind:this={inner} maxWidth="40em">
@@ -127,19 +130,33 @@ async function copy() {
           text={$_('exportdialog.recombine-d')}/>
       </label><br/>
 
-      <h5>{$_('exportdialog.format')}</h5>
-      <label><input type="radio" bind:group={format} value="srt"
+      <h5>{$_('exportdialog.file-format')}</h5>
+      <label><input type="radio" bind:group={fileFormat} value="srt"
             onchange={() => makePreview()} />
         {$_('exportdialog.srt')}
       </label><br/>
-      <label><input type="radio" bind:group={format} value="txt"
+      <label><input type="radio" bind:group={fileFormat} value="txt"
             onchange={() => makePreview()} />
         {$_('exportdialog.plaintext')}
       </label><br/>
-      <label><input type="radio" bind:group={format} value="tab"
+      <label><input type="radio" bind:group={fileFormat} value="tab"
             onchange={() => makePreview()} />
         {$_('exportdialog.tab-delimited')}
+      </label>
+      <h5>{$_('exportdialog.inline-format')}</h5>
+      <label><input type="radio" bind:group={inlineFormat} value="none"
+            onchange={() => makePreview()} />
+        {$_('exportdialog.remove-inline-formatting')}
       </label><br/>
+      <label><input type="radio" bind:group={inlineFormat} value="html"
+            onchange={() => makePreview()} />
+        {$_('exportdialog.use-html')}
+      </label><br/>
+      <label><input type="radio" bind:group={inlineFormat} value="ass"
+            onchange={() => makePreview()} />
+        {$_('exportdialog.use-ass')}
+      </label>
+      <hr>
       <p style="font-size: 90%; margin: 5px;">
         {$_('exportdialog.format-d')}
       </p>
@@ -161,10 +178,11 @@ async function copy() {
   }
   .rightpane {
     margin-left: 10px;
+    height: 100%;
   }
   textarea.preview {
     min-width: 300px;
-    min-height: 250px;
+    min-height: 350px;
     resize: none;
     font-size: 85%;
   }

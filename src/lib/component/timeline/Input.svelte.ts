@@ -15,6 +15,7 @@ import * as z from "zod/v4-mini";
 import { contextMenu } from "./Menu";
 import { get } from "svelte/store";
 import { _ } from "svelte-i18n";
+import { RichText } from "../../core/RichText";
 
 export const TimelineHandle = {
     lockCursor: Memorized.$('lockCursor', z.boolean(), false),
@@ -97,7 +98,7 @@ class BoxSelect extends TimelineAction {
 
     onDrag(offsetX: number, offsetY: number): void {
         const x2 = offsetX + this.layout.manager.scroll[0],
-                    y2 = offsetY + this.layout.manager.scroll[1];
+              y2 = offsetY + this.layout.manager.scroll[1];
         const b: Box = {
             x: Math.min(this.x1, x2), y: Math.min(this.y1, y2), 
             w: Math.abs(this.x1 - x2), h: Math.abs(this.y1 - y2)};
@@ -412,8 +413,8 @@ class SplitEntry extends TimelineAction {
             target.start = this.origPos;
             for (const [style, text] of target.texts) {
                 const pos = this.self.splitting!.positions.get(style)!;
-                newEntry.texts.set(style, text.substring(0, pos));
-                target.texts.set(style, text.substring(pos));
+                newEntry.texts.set(style, RichText.substring(text, 0, pos));
+                target.texts.set(style, RichText.substring(text, pos));
             }
             Source.markChanged(ChangeType.Times, get(_)('c.split-entry-timeline'));
 

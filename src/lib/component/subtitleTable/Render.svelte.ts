@@ -1,9 +1,8 @@
 import { CanvasManager } from "../../CanvasManager";
-import { Metrics } from "../../core/Filter";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { hook } from "../../details/Hook.svelte";
+import { applyStyle, toCSSStyle, type Line } from "../../details/TextLayout";
 import { Editing } from "../../frontend/Editing";
-import { Source } from "../../frontend/Source";
 import { LabelColor, theme } from "../../Theming.svelte";
 import { TableConfig } from "./Config";
 import { TableLayout } from "./Layout.svelte";
@@ -32,21 +31,33 @@ export class TableRenderer {
         hook(() => theme.isDark, () => this.manager.requestRender());
     }
 
-    render(cxt: CanvasRenderingContext2D) {
+    render(ctx: CanvasRenderingContext2D) {
         const drawLine = (x1: number, y1: number, x2: number, y2: number) => {
-            cxt.beginPath();
-            cxt.moveTo(x1, y1);
-            cxt.lineTo(x2, y2);
-            cxt.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
         };
 
-        if (this.layout.requestedLayout) {
-            this.layout.layout(cxt);
+        const drawText = (lines: Line[], x: number, y: number) => {
+            let cy = y;
+            for (const line of lines) {
+                let cx = x;
+                for (const word of line.chunks) {
+                    for (const chunk of word.chunks) {
+                        applyStyle(toCSSStyle(chunk.format), ctx);
+                        ctx.fillText(chunk.text, cx, cy);
+                        cx += chunk.width;
+                    }
+                    cx += word.spaceWidth;
+                }
+                cy += this.layout.lineHeight;
+            }
         }
 
-        cxt.font = this.layout.font;
-        cxt.textBaseline = 'top';
-        cxt.fillStyle = textColor;
+        if (this.layout.requestedLayout) {
+            this.layout.layout(ctx);
+        }
 
         const [sx, sy] = this.manager.scroll;
         const [width, height] = this.manager.size;
@@ -55,7 +66,7 @@ export class TableRenderer {
         const focused = Editing.getFocusedEntry();
         const selection = new Set(Editing.getSelection());
         let i = 0;
-        for (const { entry, line, height: lh, texts } of this.layout.lines) {
+        for (const { entry, line, height: lh, texts, cells } of this.layout.entries) {
             i += 1;
             if ((line + lh) * this.layout.lineHeight < sy) continue;
             if (line * this.layout.lineHeight > sy + width) break;
@@ -64,17 +75,17 @@ export class TableRenderer {
             const baseY = line * this.layout.lineHeight + this.layout.headerHeight;
             const h = lh * this.layout.lineHeight;
             if (entry == focused) {
-                cxt.fillStyle = focusBackground;
-                cxt.fillRect(0, baseY+1, width + sx, h-2);
+                ctx.fillStyle = focusBackground;
+                ctx.fillRect(0, baseY+1, width + sx, h-2);
             } else if (selection.has(entry)) {
-                cxt.fillStyle = selectedBackground;
-                cxt.fillRect(0, baseY+1, width + sx, h-2);
+                ctx.fillStyle = selectedBackground;
+                ctx.fillRect(0, baseY+1, width + sx, h-2);
             }
 
             // label
             if (entry.label !== 'none') {
-                cxt.fillStyle = LabelColor(entry.label);
-                cxt.fillRect(0, baseY, this.layout.indexColumnLayout.width, h);
+                ctx.fillStyle = LabelColor(entry.label);
+                ctx.fillRect(0, baseY, this.layout.indexColumnLayout.width, h);
             }
 
             // texts
@@ -82,32 +93,32 @@ export class TableRenderer {
                 (entry !== focused
                     && focused instanceof SubtitleEntry
                     && overlappingTime(focused, entry)) ? overlapColor : textColor;
-            cxt.strokeStyle = gridColor;
-            cxt.font = this.layout.font;
+
+            ctx.strokeStyle = gridColor;
 
             // channels; in the order of Source.subs.styles
             let y0 = baseY;
             let j = 0;
-            for (const { style, failed, height } of texts) {
+            for (const { failed, height, cells } of texts) {
                 const xpos = this.layout.channelColumns[0].layout!.position;
 
                 // background for failed validation
                 if (failed.length > 0) {
-                    cxt.fillStyle = errorBackground;
-                    cxt.fillRect(xpos, y0 + 1, 
+                    ctx.fillStyle = errorBackground;
+                    ctx.fillRect(xpos, y0 + 1, 
                         width + sx - xpos, height * this.layout.lineHeight - 2);
                 }
 
-                for (const col of this.layout.channelColumns) {
-                    const value = Metrics[col.metric].stringValue(entry, style);
-                    const splitLines = value.split('\n');
-                    cxt.textBaseline = 'middle';
-                    cxt.textAlign = col.layout!.align;
-                    cxt.fillStyle = textFillStyle;
-                    splitLines.forEach((x, i) => cxt.fillText(x, 
+                cells.forEach((cell, k) => {
+                    const col = this.layout.channelColumns[k];
+                    ctx.textBaseline = 'middle';
+                    ctx.textAlign = col.layout!.align;
+                    ctx.fillStyle = textFillStyle;
+                    applyStyle(this.layout.baseStyleCSS, ctx);
+                    drawText(cell.layout, 
                         col.layout!.textX, 
-                        y0 + (i + 0.5) * this.layout.lineHeight));
-                }
+                        y0 + 0.5 * this.layout.lineHeight);
+                });
 
                 // inner horizontal lines
                 y0 += height * this.layout.lineHeight;
@@ -121,75 +132,77 @@ export class TableRenderer {
                 Math.max(sy + this.layout.headerHeight, baseY), 
                 baseY + (lh - 1) * this.layout.lineHeight
             );
-            for (const col of this.layout.entryColumns) {
-                const value = Metrics[col.metric].stringValue(entry, Source.subs.defaultStyle);
-                const splitLines = value.split('\n');
-                cxt.textBaseline = 'middle';
-                cxt.textAlign = col.layout!.align;
-                cxt.fillStyle = textFillStyle;
-                cxt.font = Metrics[col.metric].type.isMonospace
-                    ? this.layout.monospaceFont : this.layout.font;
-                splitLines.forEach((line, i) =>
-                    cxt.fillText(line, col.layout!.textX, 
-                        entryCellY + (i + 0.5) * this.layout.lineHeight));
-            }
+
+            cells.forEach((cell, j) => {
+                const col = this.layout.entryColumns[j];
+                ctx.textAlign = col.layout!.align;
+                ctx.fillStyle = textFillStyle;
+                applyStyle(this.layout.baseStyleCSS, ctx);
+                ctx.textBaseline = 'middle';
+                drawText(cell.layout, 
+                    col.layout!.textX, 
+                    entryCellY + 0.5 * this.layout.lineHeight);
+            });
 
             // index
-            cxt.textAlign = 'end';
-            cxt.fillStyle = textFillStyle;
-            cxt.font = this.layout.monospaceFont;
-            cxt.fillText(i.toString(),
+            ctx.textAlign = 'end';
+            ctx.fillStyle = textFillStyle;
+            applyStyle(this.layout.baseStyleMonospaceCSS, ctx);
+            ctx.fillText(i.toString(),
                 this.layout.indexColumnLayout.width - this.layout.cellPadding,
                 entryCellY + 0.5 * this.layout.lineHeight);
 
             // outer horizontal line
-            cxt.strokeStyle = gridMajorColor;
+            ctx.strokeStyle = gridMajorColor;
             drawLine(0, baseY + h, width + sx, baseY + h);
         }
 
-        if (i == this.layout.lines.length) {
+        if (i == this.layout.entries.length) {
             // virtual entry
-            const lastLine = this.layout.lines.at(-1);
+            const lastLine = this.layout.entries.at(-1);
             const y = (lastLine 
                         ? (lastLine.line + lastLine.height) * this.layout.lineHeight 
                         : 0) + this.layout.headerHeight;
             if (focused == 'virtual') {
-                cxt.fillStyle = focusBackground;
-                cxt.fillRect(0, y, width + sx, this.layout.lineHeight);
+                ctx.fillStyle = focusBackground;
+                ctx.fillRect(0, y, width + sx, this.layout.lineHeight);
             }
-            cxt.fillStyle = textColor;
-            cxt.textBaseline = 'middle';
-            cxt.textAlign = 'end';
-            cxt.fillText(`*`,
+            ctx.fillStyle = textColor;
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'end';
+            applyStyle(this.layout.baseStyleMonospaceCSS, ctx);
+            ctx.fillText(`*`,
                 this.layout.indexColumnLayout.width - this.layout.cellPadding,
                 y + this.layout.lineHeight * 0.5);
         }
 
         // header
-        cxt.fillStyle = headerBackground;
+        ctx.fillStyle = headerBackground;
         if (this.manager.scroll[1] > 0) {
-            cxt.shadowBlur = 10;
-            cxt.shadowColor = '#333a';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#333a';
         }
-        cxt.fillRect(0, this.manager.scroll[1], sx + width, this.layout.headerHeight);
+        ctx.fillRect(0, this.manager.scroll[1], sx + width, this.layout.headerHeight);
 
-        cxt.shadowColor = 'transparent';
-        cxt.strokeStyle = gridMajorColor;
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = gridMajorColor;
         drawLine(0, this.manager.scroll[1] + this.layout.headerHeight,
             width + sx, this.manager.scroll[1] + this.layout.headerHeight);
 
-        cxt.fillStyle = textColor;
         const cols = [this.layout.indexColumnLayout,
             ...this.layout.entryColumns.map((x) => x.layout!),
             ...this.layout.channelColumns.map((x) => x.layout!)];
+
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = textColor;
+        applyStyle(this.layout.baseStyleCSS, ctx);
         for (const col of cols) {
-            cxt.textBaseline = 'middle';
-            cxt.textAlign = col.align;
-            cxt.fillText(col.name, col.textX, sy + this.layout.lineHeight * 0.5);
+            ctx.textAlign = col.align;
+            ctx.fillText(col.name, col.textX, sy + this.layout.lineHeight * 0.5);
         }
 
         // vertical lines
-        cxt.strokeStyle = gridMajorColor;
+        ctx.strokeStyle = gridMajorColor;
         const maxY = this.manager.contentRect.b;
         drawLine(this.layout.indexColumnLayout.width, sy,
             this.layout.indexColumnLayout.width,
@@ -200,12 +213,12 @@ export class TableRenderer {
         cols.slice(1).map((x) => drawLine(x.position, sy, x.position, bottom));
 
         if (TableConfig.data.showDebug) {
-            cxt.resetTransform();
-            cxt.scale(devicePixelRatio, devicePixelRatio);
-            cxt.fillStyle = this.#debugBlinker ? 'red' : 'blue';
-            cxt.beginPath();
-            cxt.arc(width - 15, height - 15, 5, 0, 2 * Math.PI);
-            cxt.fill();
+            ctx.resetTransform();
+            ctx.scale(devicePixelRatio, devicePixelRatio);
+            ctx.fillStyle = this.#debugBlinker ? 'red' : 'blue';
+            ctx.beginPath();
+            ctx.arc(width - 15, height - 15, 5, 0, 2 * Math.PI);
+            ctx.fill();
             this.#debugBlinker = !this.#debugBlinker;
         }
     }

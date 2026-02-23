@@ -1,10 +1,9 @@
 <script lang="ts" module>
-let dialogs = new Map<number, HTMLDialogElement>();
-let setChanged = new EventHost();
+const dialogs = new Map<number, HTMLDialogElement>();
+const setChanged = new EventHost();
 </script>
 
 <script lang="ts">
-import { _ } from "svelte-i18n";
 import { Debug } from "../Debug";
 import { XIcon } from "@lucide/svelte";
 import type { DialogButton } from "../DialogBase.svelte";

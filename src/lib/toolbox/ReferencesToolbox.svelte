@@ -25,12 +25,14 @@ const SearchCommands = {
       isApplicable() {
           const ctrl = Editing.focused.control;
           if (!ctrl) return false;
-          return ctrl.selectionEnd - ctrl.selectionStart > 0;
+          const [start, end] = ctrl.selection();
+          return end - start > 0;
       },
       call() {
           const ctrl = Editing.focused.control;
           if (!ctrl) return;
-          const term = ctrl.value.substring(ctrl.selectionStart, ctrl.selectionEnd);
+          const [start, end] = ctrl.selection();
+          const term = RichText.toString(ctrl.getText()).substring(start, end);
           handler.query!(term);
       },
   }),
@@ -48,6 +50,7 @@ import { Memorized } from '../config/MemorizedValue.svelte';
 import * as z from 'zod/v4-mini';
   import { openDialog } from '../DialogOutlet.svelte';
   import { Dialog } from '../dialog';
+    import { RichText } from '../core/RichText';
 
 let keyword = $state('');
 let params = new Map<string, string>();

@@ -1,13 +1,18 @@
-import { Basic } from "../../Basic";
 import type { CanvasManager } from "../../CanvasManager";
-import { SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitles.svelte";
+import { type Positioning, SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitles.svelte";
 import { AlignMode } from "../../core/Labels";
 import { EventHost } from "../../details/EventHost";
 import { Typography } from "../../details/Typography";
-import { MediaConfig } from "./Config";
-import type { EntryBox } from "./SubtitleView.svelte";
+import { layoutText, type EvaluatedStyle, type Line } from "../../details/TextLayout";
 
-import * as Color from "colorjs.io/fn";
+export type LineBox = {
+    x: number, y: number,
+    style: SubtitleStyle,
+    entry: SubtitleEntry,
+    refX: number, refY: number,
+    scale: number,
+    line: Line
+};
 
 type WrappedEntry = {
     oldIndex: number,
@@ -17,23 +22,22 @@ type WrappedEntry = {
 
 type Box = {
     x: number, y: number,
-    w: number, h: number, diffy: number
+    w: number, h: number,
 }
 
-function getBoxFromMetrics(metrics: TextMetrics, x: number, y: number): Box {
+function getBoxFromLine(line: Line, x: number, y: number): Box {
     return {
-        x: x - metrics.actualBoundingBoxLeft,
-        y: y - metrics.fontBoundingBoxDescent - metrics.fontBoundingBoxAscent,
-        w: metrics.width,
-        h: metrics.fontBoundingBoxDescent + metrics.fontBoundingBoxAscent,
-        diffy: metrics.fontBoundingBoxAscent
+        x: x ,
+        y: y - line.height,
+        w: line.width,
+        h: line.height,
     };
 }
 
-function boxIntersects(a: EntryBox, b: Box) {
+function boxIntersects(a: LineBox, b: Box) {
     // more lenient on X-axis because we only shift boxes around on Y, and we want to deal with empty lines (zero-width boxes) correctly
-    const h = a.x + a.w >= b.x && b.x + b.w >= a.x;
-    const v = a.y + a.h > b.y && b.y + b.h > a.y;
+    const h = a.x + a.line.width >= b.x && b.x + b.w >= a.x;
+    const v = a.y + a.line.height > b.y && b.y + b.h > a.y;
     return h && v;
 }
 
@@ -83,11 +87,22 @@ export class SubtitleRenderer {
     #hMargin = 0;
     #vMargin = 0;
     #scale = 1;
+
+    #layout: LineBox[] = [];
+
+    get layout() {
+        return this.#layout;
+    }
+
     get currentTime() {
         return this.#currentTime;
     }
 
-    readonly getBoxes = new EventHost<[EntryBox[]]>();
+    get scale() {
+        return this.#scale;
+    }
+
+    readonly onLayoutChanged = new EventHost<[LineBox[]]>();
 
     constructor(
         private readonly manager: CanvasManager,
@@ -147,51 +162,34 @@ export class SubtitleRenderer {
         this.#currentEntries.sort((a, b) => a.oldIndex - b.oldIndex);
     }
 
-    #basePoint(style: SubtitleStyle): [number, number, number] {
-        const [width, height] = this.manager.physicalSize;
-        let x = 0, y = 0, dy = 1;
-        if (isLeft(style.alignment))
-            x = style.margin.left * this.#scale + this.#hMargin;
-        if (isCenterH(style.alignment))
-            x = width / 2;
-        if (isRight(style.alignment))
-            x = width - (style.margin.right * this.#scale + this.#hMargin);
+    #basePoint(align: AlignMode, style: SubtitleStyle, pos: Positioning): [number, number, 1 | -1] {
+        let x = 0, y = 0, dy: 1 | -1 = 1;
+        if (pos !== null) {
+            x = pos.x * this.#scale + this.#hMargin;
+            y = pos.y * this.#scale + this.#vMargin;
+            dy = isBottom(align) ? -1 : 1;
+        } else {
+            const [width, height] = this.manager.physicalSize;
+            if (isLeft(align))
+                x = style.margin.left * this.#scale + this.#hMargin;
+            if (isCenterH(align))
+                x = width / 2;
+            if (isRight(align))
+                x = width - (style.margin.right * this.#scale + this.#hMargin);
 
-        if (isTop(style.alignment))
-            y = style.margin.top * this.#scale + this.#vMargin;
-        if (isCenterV(style.alignment))
-            y = height / 2;
-        if (isBottom(style.alignment)) {
-            y = height - (style.margin.bottom * this.#scale + this.#vMargin);
-            dy = -1;
+            if (isTop(align))
+                y = style.margin.top * this.#scale + this.#vMargin;
+            if (isCenterV(align))
+                y = height / 2;
+            if (isBottom(align)) {
+                y = height - (style.margin.bottom * this.#scale + this.#vMargin);
+                dy = -1;
+            }
         }
         return [x, y, dy];
     }
 
-    #breakWords(text: string, width: number, ctx: CanvasRenderingContext2D) {
-        const words = Basic.splitPrintingWords(text);
-        const lines: string[] = [];
-        let currentLine = '';
-        for (const word of words) {
-            if (word == '\n') {
-                lines.push(currentLine);
-                currentLine = '';
-                continue;
-            }
-            const w = ctx.measureText(currentLine + word).width;
-            if (w < width) {
-                currentLine += word;
-            } else {
-                lines.push(currentLine);
-                currentLine = word;
-            }
-        }
-        lines.push(currentLine);
-        return lines;
-    }
-
     render(ctx: CanvasRenderingContext2D) {
-        const boxes: EntryBox[] = [];
         const [width, height] = this.manager.physicalSize;
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
@@ -200,14 +198,21 @@ export class SubtitleRenderer {
             width - 2 * this.#hMargin, height - 2 * this.#vMargin);
         ctx.stroke();
 
-        const styleFonts = new Map(this.#subs.styles.map((style) => {
-            const size = style.size || 48;
-            const font = style.font || 'sans-serif';
-            const fontFamily = `"${font}", sans-serif`;
-            const cssSize = 
-                Typography.getRealDimFactor(fontFamily, ctx) * size * this.#scale;
-            return [style, `${style.styles.bold ? 'bold ' : ''} ${style.styles.italic ? 'italic ' : ''} ${cssSize}px ${fontFamily}`];
+        const styleFonts = new Map<SubtitleStyle, EvaluatedStyle>(this.#subs.styles.map((style) => {
+            const fontFamily = style.font ? `"${style.font}", sans-serif` : 'sans-serif';
+            const factor = style.font ? Typography.getRealDimFactor(style.font) : 1;
+            const cssSize = factor * style.size * this.#scale;
+            return [style, {
+                size: cssSize, fontFamily,
+                color: style.color,
+                bold: style.styles.bold,
+                italic: style.styles.italic,
+                underline: style.styles.underline,
+                strikethrough: style.styles.strikethrough
+            }];
         }));
+
+        this.#layout = [];
 
         const reverseStyles = this.#subs.styles.toReversed();
         for (const ent of this.#currentEntries)
@@ -215,61 +220,48 @@ export class SubtitleRenderer {
             const text = ent.entry.texts.get(style);
             if (!text) continue;
 
-            if (isLeft(style.alignment)) ctx.textAlign = 'left';
-            if (isCenterH(style.alignment)) ctx.textAlign = 'center';
-            if (isRight(style.alignment)) ctx.textAlign = 'right';
-    
-            ctx.font = styleFonts.get(style)!;
-            ctx.fillStyle = Color.serialize(style.color);
-
-            const textWidth = width - this.#hMargin * 2 - 
+            const lineWidth = width - this.#hMargin * 2 - 
                 (style.margin.left + style.margin.right) * this.#scale;
-            const lines = this.#breakWords(text, textWidth, ctx);
-            
-            // loop for each line, starting from the bottom
-            const [bx, by, dy] = this.#basePoint(style);
+            const lines = layoutText(text, ctx, {
+                warpStyle: style.wrapStyle, 
+                baseStyle: styleFonts.get(style)!,
+                lineWidth,
+            });
+
+            const alignment = ent.entry.alignment ?? style.alignment;
+            const [bx, by, dy] = this.#basePoint(alignment, style, ent.entry.positioning);
+
+            // start from the bottom if aligned at the bottom, or vice versa
             if (dy < 0) lines.reverse();
+
             for (const line of lines) {
-                const metrics = ctx.measureText(line);
                 const [x, y] = [bx, by];
-                const newBox = getBoxFromMetrics(metrics, x, y);
-                newBox.y += isTop(style.alignment)     ? newBox.h
-                          : isCenterV(style.alignment) ? newBox.h * 0.5 : 0;
+                const newBox = getBoxFromLine(line, x, y);
+                newBox.x += isRight(alignment)   ? -newBox.w
+                          : isCenterH(alignment) ? -newBox.w * 0.5 : 0;
+                newBox.y += isTop(alignment)     ? newBox.h
+                          : isCenterV(alignment) ? newBox.h * 0.5 : 0;
+
                 while (true) {
-                    const overlapping = boxes.find((box) => boxIntersects(box, newBox));
+                    const overlapping = this.#layout.find(
+                        (box) => (!ent.entry.positioning || box.entry == ent.entry) 
+                            && boxIntersects(box, newBox));
                     if (!overlapping) break;
                     newBox.y = dy > 0
-                        ? Math.max(newBox.y + 1, overlapping.y + overlapping.h)
-                        : Math.min(newBox.y - 1, overlapping.y - overlapping.h);
+                        ? Math.max(newBox.y + 1, overlapping.y + overlapping.line.height + newBox.h)
+                        : Math.min(newBox.y - 1, overlapping.y - newBox.h);
                 }
 
-                if (MediaConfig.data.subtitleRenderer != 'dom') {
-                    if (MediaConfig.data.showBoundingBoxes) {
-                        ctx.beginPath();
-                        ctx.rect(newBox.x, newBox.y, newBox.w, newBox.h);
-                        ctx.strokeStyle = 'white';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                    }
-                    if (style.outline) {
-                        ctx.strokeStyle = Color.serialize(style.outlineColor);
-                        ctx.lineWidth = style.outline * this.#scale;
-                        ctx.strokeText(line, x, newBox.y + newBox.diffy);
-                    }
-                    ctx.fillText(line, x, newBox.y + newBox.diffy);
-                }
-
-                boxes.push({
-                    ...newBox,
-                    scale: this.#scale,
-                    ascent: newBox.diffy,
-                    text: line, style,
-                    font: styleFonts.get(style)!
+                this.#layout.push({
+                    ...newBox, entry: ent.entry,
+                    scale: this.#scale, line, style,
+                    refX: (bx - this.#hMargin) / this.#scale,
+                    refY: (by - this.#vMargin) / this.#scale,
                 });
             }
         }
 
-        this.getBoxes.dispatch(boxes);
+        this.onLayoutChanged.dispatch(this.#layout);
     }
 
     setTime(time: number) {

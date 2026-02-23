@@ -96,7 +96,7 @@ async function parseSubtitleSourceInteractive(path: string, text: string) {
 
 export const Interface = {
     async newFile() {
-        Source.newDocument();
+        await Source.newDocument();
         if (Playback.loaded) await Playback.close();
         Frontend.setStatus($_('msg.created-new-file'));
     },
@@ -110,7 +110,7 @@ export const Interface = {
         
         const previouslyIsEmpty = Source.fileIsEmpty;
         await Debug.debug('opening document');
-        Source.openDocument(newSubs, path);
+        await Source.openDocument(newSubs, path);
         const data = Source.recentOpened.get().find((x) => x.name == path);
         if (data?.video) {
             await this.openVideo(data.video, data.audioStream);
@@ -154,7 +154,7 @@ export const Interface = {
         if (entries.length > 0) {
             Editing.setSelection(entries);
         }
-        Source.markChanged(ChangeType.General, $_('c.import-file'));
+        await Source.markChanged(ChangeType.General, $_('c.import-file'));
         Frontend.setStatus($_('msg.imported'));
     },
 

@@ -5,6 +5,8 @@ import { DeserializationError } from "../Serialization";
 import { SubtitleEntry, Subtitles, SubtitleStyle, type SubtitleFormat, type SubtitleParser, type SubtitleWriter } from "./Subtitles.svelte";
 import { AlignMode } from "./Labels";
 import { SubtitleTools } from "./SubtitleUtil.svelte";
+import { ASSString, type ASSStringWarnings } from "./ASSString";
+import { WrapStyle } from "../details/TextLayout";
 
 export const ASSSubtitles = {
     detect(source) {
@@ -45,14 +47,15 @@ export type ASSParseUnsupportedMessage = {
     field: string,
     value: string
 } | {
-    type: 'ignored-special-character',
+    type: 'unsupported-override-tag',
     name: string,
-    occurrence: number
-} | {
-    type: 'ignored-override-tag',
-    occurrence: number
+    occurrence: number,
 } | {
     type: 'ignored-drawing-command',
+    occurrence: number,
+} | {
+    type: 'ignored-special-character',
+    name: string,
     occurrence: number
 } | {
     type: 'ignored-event-field',
@@ -80,9 +83,6 @@ export class ASSParser implements SubtitleParser {
         this.#subs = new Subtitles();
         this.#parseScriptInfo();
     }
-
-    preserveInlines = true;
-    transformInlineMultichannel = true;
 
     update() {
         if (this.#parsed) {
@@ -281,6 +281,7 @@ export class ASSParser implements SubtitleParser {
         const getStyleOrCreate = (styleName: string) => {
             let style = nameToStyle.get(styleName);
             if (!style) {
+                console.log(styleName);
                 this.#invalid({ type: 'undefined-style', name: styleName });
                 const newStyle = $state(SubtitleStyle.new(styleName));
                 style = newStyle;
@@ -290,10 +291,12 @@ export class ASSParser implements SubtitleParser {
             return style;
         };
 
-        const ignoredSpecial = new Map<string, number>();
         const ignoredField = new Map<string, number>();
-        let ignoredOverride = 0;
-        let ignoredDrawing = 0;
+        const warnings: ASSStringWarnings = {
+            ignoredTags: new Map<string, number>(),
+            ignoredDrawing: 0,
+            ignoredSpecialCharacter: new Map<string, number>(),
+        };
 
         const regex = RegExp(
             String.raw`^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
@@ -325,84 +328,30 @@ export class ASSParser implements SubtitleParser {
             ignore('MarginT', '0');
             ignore('MarginB', '0');
             ignore('Marked', '0');
-            // FIXME: Layer is currently ignored, but we do export it, so we don't emit a warning
+            ignore('Layer', '0');
 
             const entry = new SubtitleEntry(start, end);
             const style = getStyleOrCreate(opts[fieldMap.get('Style')!]);
-            let currentStyle = style;
-            let parsedText = '';
+            const { result, pos, alignment } = ASSString.parse(text, style, warnings);
+            entry.texts.set(style, result);
+            entry.positioning = pos;
+            entry.alignment = alignment;
 
-            const setText = () => {
-                const oldText = entry.texts.get(currentStyle);
-                entry.texts.set(currentStyle, 
-                    oldText === undefined 
-                    ? parsedText 
-                    : oldText + '\n' + parsedText);
-            }
-
-            for (let i = 0; i < text.length; i++) {
-                // handle inline multichannel: \N{\r#}
-                if (this.transformInlineMultichannel) {
-                    const match = /^\\N{\\r(.*?)}/.exec(text.substring(i));
-                    if (match) {
-                        setText();
-                        currentStyle = match[1] ? getStyleOrCreate(match[1]) : style;
-                        parsedText = '';
-                        i += match[0].length - 1;
-                        continue;
-                    }
-                }
-                // handle special characters (escape sequences)
-                if (text[i] == '\\' && i < text.length - 1) {
-                    i += 1;
-                    switch (text[i]) {
-                        case 'n':
-                        case 'h':
-                            ignoredSpecial.set(text[i], (ignoredSpecial.get(text[i]) ?? 0) + 1);
-                            parsedText += this.preserveInlines ? ' ' : '\\' + text[i];
-                            break;
-                        case 'N':
-                            parsedText += '\n';
-                            break;
-                        default:
-                            parsedText += '\\' + text[i];
-                            break;
-                    }
-                    continue;
-                }
-                // handle override tags
-                if (text[i] == '{' && i < text.length - 1) {
-                    let insideDrawing = false;
-                    while (i < text.length) {
-                        if (this.preserveInlines)
-                            parsedText += text[i];
-                        if (insideDrawing) {
-                            if (/^{\\p0/.test(text.substring(i)))
-                                insideDrawing = false;
-                        } else {
-                            if (/^{\\p[1-9]/.test(text.substring(i))) {
-                                ignoredDrawing++;
-                                insideDrawing = true;
-                            } else if (text[i] == '}')
-                                break;
-                        }
-                        i++;
-                    }
-                    ignoredOverride++;
-                    continue;
-                }
-                parsedText += text[i];
-            }
-            setText();
             this.#subs.entries.push(entry);
         }
 
-        if (ignoredDrawing > 0)
-            this.#unsupported({ type: 'ignored-drawing-command', occurrence: ignoredDrawing });
-        if (ignoredOverride > 0)
-            this.#unsupported({ type: 'ignored-override-tag', occurrence: ignoredOverride });
-        for (const [ch, n] of ignoredSpecial)
-            this.#unsupported({ type: 'ignored-special-character', name: `\\${ch}`, occurrence: n });
+        if (warnings.ignoredDrawing > 0) this.#unsupported({
+            type: 'ignored-drawing-command',
+            occurrence: warnings.ignoredDrawing
+        });
+        warnings.ignoredTags.forEach((occurrence, name) => this.#unsupported({
+            type: 'unsupported-override-tag',
+            name, occurrence
+        }));
+        warnings.ignoredSpecialCharacter.forEach((occurrence, name) => this.#unsupported({
+            type: 'ignored-special-character',
+            name, occurrence
+        }));
     }
 
     #parseFonts() {
@@ -419,6 +368,7 @@ export type ASSAttachment = {
 export class ASSWriter implements SubtitleWriter {
     #styleNames = new Map<SubtitleStyle, string>();
     #fonts: ASSAttachment[] = [];
+    #defaultWrapStyle = WrapStyle.Balanced;
 
     constructor(private subs: Subtitles) {
         const mangle = (name: string) =>
@@ -480,8 +430,11 @@ export class ASSWriter implements SubtitleWriter {
                 if (!text) continue;
                 const styleName = this.#styleNames.get(style);
                 Debug.assert(styleName !== undefined);
-                result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${
-                    text.replaceAll('\n', '\\N')}\n`;
+
+                const assText = ASSString.serialize(text, style, {
+                    defaultWrapStyle: this.#defaultWrapStyle
+                });
+                result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${assText}\n`;
             }
         }
         return result;
@@ -503,6 +456,24 @@ export class ASSWriter implements SubtitleWriter {
         const width = subs.metadata.width / subs.metadata.scalingFactor;
         const height = subs.metadata.height / subs.metadata.scalingFactor;
 
+        const wrapStatistics: Record<WrapStyle, number> = {
+            [WrapStyle.Balanced]: 0,
+            [WrapStyle.Greedy]: 0,
+            [WrapStyle.NoWrap]: 0,
+        };
+
+        subs.entries.forEach(
+            (e) => e.texts.forEach(
+                (_, s) => wrapStatistics[s.wrapStyle]++));
+
+        const max = Math.max(...Object.values(wrapStatistics));
+        if (wrapStatistics[WrapStyle.Balanced] == max)
+            this.#defaultWrapStyle = WrapStyle.Balanced;
+        if (wrapStatistics[WrapStyle.Greedy] == max)
+            this.#defaultWrapStyle = WrapStyle.Greedy;
+        if (wrapStatistics[WrapStyle.NoWrap] == max)
+            this.#defaultWrapStyle = WrapStyle.NoWrap;
+
         let result = 
 `[Script Info]
 ; Script generated by subtle ${Basic.version}
@@ -514,6 +485,7 @@ PlayResX: ${width}
 PlayResY: ${height}
 LayoutResX: ${width}
 LayoutResY: ${height}
+WrapStyle: ${this.#defaultWrapStyle}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding

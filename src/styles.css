@@ -13,6 +13,7 @@
   -webkit-text-size-adjust: 100%;
 
   /* scrollbar-width: thin; */
+  color-scheme: light dark;
 }
 
 html,
@@ -64,8 +65,8 @@ body {
     }
   }
   input[type=number], input[type=text], 
-  select, [data-select-trigger], div.combobox,
-  textarea, ol[role='listbox'] {
+  select, [data-select-trigger], div.combobox, [data-combobox-input],
+  textarea, ol[role='listbox'], div.ProseMirror {
     border: 1px solid var(--uchu-gray-4);
     background-color: white;
     color: var(--uchu-yin);
@@ -153,8 +154,8 @@ body {
     }
   }
   input[type=number], input[type=text], 
-  select, [data-select-trigger], div.combobox,
-  textarea, ol[role='listbox'] {
+  select, [data-select-trigger], div.combobox, [data-combobox-input],
+  textarea, ol[role='listbox'], div.ProseMirror {
     border: none;
     background-color: var(--uchu-yin-8);
     color: var(--uchu-yang);
@@ -162,7 +163,7 @@ body {
       outline: 2px solid color-mix(in oklab, var(--uchu-blue-8), transparent 40%);
     }
     &:disabled {
-      background-color: var(--uchu-yin-8);
+      background-color: var(--uchu-yin-7);
       color: var(--uchu-gray-9);
     }
   }
@@ -180,7 +181,7 @@ body {
       filter: brightness(110%);
     }
     &:disabled {
-      background-color: var(--uchu-yin-8);
+      background-color: var(--uchu-yin-7);
       color: var(--uchu-gray-9);
     }
   }
@@ -272,21 +273,21 @@ label:has(input[type='checkbox'].button) {
   }
 }
 
-button.left {
+button.left, label:has(input[type='checkbox'].button.left) {
   border-radius: 3px 0 0 3px;
   margin-right: 0;
   border-right: none;
   text-align: right;
 }
 
-button.middle {
+button.middle, label:has(input[type='checkbox'].button.middle) {
   border-radius: 0;
   border-right: none;
   margin-left: 0;
   margin-right: 0;
 }
 
-button.right {
+button.right, label:has(input[type='checkbox'].button.right) {
   border-radius: 0 3px 3px 0;
   margin-left: 0;
   text-align: left;
@@ -329,13 +330,13 @@ div.combobox {
   & [data-combobox-input] {
     padding: 2px 5px 2px 5px;
     flex-grow: 1;
-    border-radius: 0;
+    border-radius: 2px 0 0 2px;
     border: none;
     outline: none;
   }
 
   & [data-combobox-trigger] {
-    border-radius: 0;
+    border-radius: 0 2px 2px 0;
     border: none;
     box-shadow: none;
     width: 15px;
@@ -388,7 +389,7 @@ div.combobox {
   }
 }
 
-textarea {
+textarea, div.ProseMirror {
   font-family: var(--fontFamily);
   font-size: 1rem;
   border-radius: 2px;

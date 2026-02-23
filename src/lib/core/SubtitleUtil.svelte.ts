@@ -1,6 +1,11 @@
 import { SvelteMap } from "svelte/reactivity";
 import { Debug } from "../Debug";
 import { SubtitleEntry, Subtitles, SubtitleStyle } from "./Subtitles.svelte";
+import { RichText } from "./RichText";
+import { ASSString } from "./ASSString";
+import { HTMLString } from "./HTMLString";
+
+export type FormatOption = 'none' | 'html' | 'ass';
 
 export type MergeStyleSelection =
     'usedOnly' | 'all' | 'onlyStyles';
@@ -55,26 +60,33 @@ export type LinearEntry = {
     start: number, end: number, text: string
 };
 
+function getText(subs: Subtitles, ent: SubtitleEntry, f: FormatOption) {
+    return subs.styles
+        .map((s) => ent.texts.get(s))
+        .filter((x) => x)
+        .map((text) => f == 'html' ? HTMLString.serialize(text!)
+                     : f == 'ass'  ? ASSString.serialize(text!)
+                     : f == 'none' ? RichText.toString(text!).trim()
+                     : Debug.never(f))
+        .join('\n') 
+}
+
 const ToLinearFormat = {
     [LinearFormatCombineStrategy.KeepOrder]: 
-        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => entries
+        (subs: Subtitles, entries: SubtitleEntry[], option: FormatOption): LinearEntry[] => entries
             .map((x) => ({ 
                 start: x.start, end: x.end, 
-                text: subs.styles
-                    .map((s) => x.texts.get(s))
-                    .filter((x) => x).join('\n') 
+                text: getText(subs, x, option)
             })),
     [LinearFormatCombineStrategy.Sorted]:
-        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => entries
+        (subs: Subtitles, entries: SubtitleEntry[], option: FormatOption): LinearEntry[] => entries
             .toSorted((x, y) => x.start - y.start)
             .map((x) => ({ 
                 start: x.start, end: x.end, 
-                text: subs.styles
-                    .map((s) => x.texts.get(s))
-                    .filter((x) => x).join('\n') 
+                text: getText(subs, x, option)
             })),
     [LinearFormatCombineStrategy.Recombine]:
-        (subs: Subtitles, entries: SubtitleEntry[]): LinearEntry[] => {
+        (subs: Subtitles, entries: SubtitleEntry[], option: FormatOption): LinearEntry[] => {
             const events: { type: 'start' | 'end', pos: number, i: number }[] = [];
             entries.forEach(({start, end}, i) => {
                 events.push({ type: 'start', pos: start, i });
@@ -91,10 +103,7 @@ const ToLinearFormat = {
                 while (events[i].pos == pos) {
                     const event = events[i];
                     if (event.type == 'start') {
-                        const entry = entries[event.i];
-                        const text = subs.styles
-                            .map((s) => entry.texts.get(s))
-                            .filter((x) => x).join('\n');
+                        const text = getText(subs, entries[event.i], option);
                         activeTexts.push({text, i: event.i});
                     } else {
                         const index = activeTexts.findIndex((x) => x.i == event.i);
@@ -152,9 +161,10 @@ export const SubtitleTools = {
 export const SubtitleUtil = {
     combineToLinear(
         subs: Subtitles, entries: SubtitleEntry[],
-        strategy: LinearFormatCombineStrategy
+        strategy: LinearFormatCombineStrategy,
+        option: FormatOption,
     ): LinearEntry[] {
-        return ToLinearFormat[strategy](subs, entries);
+        return ToLinearFormat[strategy](subs, entries, option);
     },
 
     /** Note: this method will use and modify the entries in `other` */ 
@@ -306,20 +316,4 @@ export const SubtitleUtil = {
         }
         return true;
     },
-
-    processHTMLTags(entries: SubtitleEntry[], strip: boolean) {
-        const tagRegex = /<\s*(\w+)(?:\s.+)?>(.+)<\/\1>/gs;
-        let ignoredTags = 0;
-
-        for (const entry of entries) {
-            for (const [style, text] of [...entry.texts]) {
-                const stripped = text.replaceAll(tagRegex, '$2');
-                if (stripped !== text) {
-                    ignoredTags++;
-                    if (strip) entry.texts.set(style, stripped);
-                }
-            }
-        }
-        return ignoredTags;
-    }
 }

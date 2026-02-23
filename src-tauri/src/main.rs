@@ -10,6 +10,7 @@ mod media_api;
 mod redirect_log;
 mod font;
 mod subset;
+mod history;
 
 use std::panic;
 use std::sync::{Arc, Mutex};
@@ -17,6 +18,7 @@ use tauri::AppHandle;
 use tauri::Manager;
 use tauri_plugin_log::TimezoneStrategy;
 
+#[allow(clippy::too_many_lines)]
 fn main() {
     ffmpeg::init().unwrap();
     redirect_log::init_ffmpeg_logging();
@@ -51,10 +53,7 @@ fn main() {
                 .format(move |out, message, record| {
                     out.finish(format_args!(
                         "{}[{}][{}] {}",
-                        TimezoneStrategy::UseLocal
-                            .get_now()
-                            .format(&time_format)
-                            .unwrap(),
+                        TimezoneStrategy::UseLocal.get_now().format(&time_format).unwrap(),
                         record.level(),
                         record.target(),
                         message
@@ -86,6 +85,7 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
         .manage(Arc::new(Mutex::new(media_api::PlaybackRegistry::new())))
+        .manage(Mutex::new(history::HistoryState { undo: vec![], redo: vec![] }))
         .invoke_handler(tauri::generate_handler![
             media_api::media_version,
             media_api::media_status,
@@ -113,6 +113,10 @@ fn main() {
             font::resolve_family,
             font::get_all_font_families,
             subset::subset_encode,
+            history::push_history,
+            history::clear_history,
+            history::read_undo,
+            history::read_redo,
             open_devtools,
             make_panic,
         ])

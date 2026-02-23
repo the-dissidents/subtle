@@ -63,6 +63,7 @@ const autoWidth: Action<HTMLSelectElement> = (elem) => {
 function createDefaultValue(type: MetricType) {
   return type == 'number' ? 0
        : type == 'string' ? ''
+       : type == 'richtext' ? ''
        : type == 'style' ? Source.subs.defaultStyle
        : type == 'time' ? 0
        : type == 'label' ? 'none'
@@ -130,9 +131,6 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
         bind:value={f.parameters[i] as LabelType}
         onsubmit={ () => onchange?.() }/>
     </span>
-  {:else if type == 'boolean'}
-    <!-- TODO: in case we actually need a boolean parameter?? -->
-    {Debug.assert(false)}
   {:else}
     {Debug.never(type)}
   {/if}

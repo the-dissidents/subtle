@@ -2,19 +2,23 @@
 import LabelSelect from './LabelSelect.svelte';
 import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
+import RichEdit from './component/richedit/RichEdit.svelte';
+
 import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
 
-import { SubtitleEntry, type SubtitleStyle } from './core/Subtitles.svelte';
-import { type LabelType } from "./core/Labels";
+import { SubtitleEntry, type Positioning } from './core/Subtitles.svelte';
+import { AlignMode, type LabelType } from "./core/Labels";
 import { Editing } from './frontend/Editing';
 import { ChangeType, Source } from './frontend/Source';
 import { Frontend } from './frontend/Frontend';
 
 import { Menu } from '@tauri-apps/api/menu';
 import * as dialog from "@tauri-apps/plugin-dialog";
-import { tick } from 'svelte';
 import { _ } from 'svelte-i18n';
 import { Debug } from './Debug';
+import RichEditToolbar from './component/richedit/RichEditToolbar.svelte';
+import { tick } from 'svelte';
+import NumberInput from './ui/NumberInput.svelte';
 
 let editFormUpdateCounter = $state(0);
 let editAnchor: 'start' | 'end' = $state('start');
@@ -22,6 +26,8 @@ let keepDuration = $state(false);
 let editingT0 = $state(0);
 let editingT1 = $state(0);
 let editingDt = $state(0);
+let editingPos: Positioning = $state(null);
+let editingAlign: AlignMode | null = $state(null);
 let editingLabel: LabelType = $state('none');
 let uiFocus = Frontend.uiFocus;
 let focusedStyle = Editing.focused.style;
@@ -29,7 +35,6 @@ let focusedStyle = Editing.focused.style;
 const me = {};
 
 Source.onSubtitlesChanged.bind(me, () => {
-  editFormUpdateCounter++;
   updateForm();
 });
 
@@ -38,14 +43,8 @@ Editing.onSelectionChanged.bind(me, () => {
   const focused = Editing.getFocusedEntry();
   if (focused instanceof SubtitleEntry) {
     updateForm();
-    const isEditingNow = $uiFocus == 'EditingField';
-    tick().then(() => {
-      let col = document.getElementsByClassName('contentarea');
-      for (const target of col) {
-        contentSelfAdjust(target as HTMLTextAreaElement);
-      }
-      if (isEditingNow) Editing.startEditingFocusedEntry();
-    });
+    if ($uiFocus == 'EditingField')
+      tick().then(() => Editing.startEditingFocusedEntry());
   }
 });
 
@@ -56,6 +55,8 @@ function updateForm() {
   editingT1 = focused.end;
   editingDt = editingT1 - editingT0;
   editingLabel = focused.label;
+  editingPos = focused.positioning;
+  editingAlign = focused.alignment;
 }
 
 function applyEditForm() {
@@ -65,25 +66,10 @@ function applyEditForm() {
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
   focused.label = editingLabel;
+  focused.positioning = editingPos;
+  focused.alignment = editingAlign;
 }
 
-function contentSelfAdjust(elem: HTMLTextAreaElement) {
-  elem.style.height = "auto";
-  elem.style.height = `${elem.scrollHeight + 3}px`; // grows to fit content
-}
-
-function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
-  const state = Source.subs.styles.find((x) => x.name == style.name);
-  Debug.assert(state !== undefined);
-  Editing.styleToEditor.set(state, node);
-  return {
-    update: (style: SubtitleStyle) => {
-      const state = Source.subs.styles.find((x) => x.name == style.name);
-      Debug.assert(state !== undefined);
-      Editing.styleToEditor.set(state, node);
-    }
-  };
-}
 </script>
 
 <div class="outer hlayout">
@@ -119,7 +105,8 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
     onchange={() => {
       if (editingT1 < editingT0) editingT1 = editingT0;
       applyEditForm();
-      Source.markChanged(ChangeType.Times, $_('c.timestamp'));}}/>
+      Source.markChanged(ChangeType.Times, $_('c.timestamp'));
+    }}/>
   <br>
   <TimestampInput bind:timestamp={editingDt}
     stretch={true}
@@ -147,9 +134,68 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
         Source.markChanged(ChangeType.InPlace, $_('c.label'));
       }}/>
   </label>
+  <hr>
+  <label>
+    <input type="checkbox" checked={!!editingPos}
+      onchange={(x) => {
+        if (x.currentTarget.checked)
+          editingPos = { type: 'absolute', x: 0, y: 0 };
+        else
+          editingPos = null;
+        applyEditForm();
+        Source.markChanged(ChangeType.InPlace, $_('c.positioning'));
+      }}>
+    {$_('editbox.custom-positioning')}
+  </label>
+  {#if !!editingPos}
+  <div class="hlayout">
+    <NumberInput bind:value={editingPos.x} min="0" max="10000" style="flex-grow:1"
+      onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.positioning'))} />
+    <NumberInput bind:value={editingPos.y} min="0" max="10000" style="flex-grow:1"
+      onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.positioning'))} />
+  </div>
+  {/if}
+  <hr>
+  <label>
+    <input type="checkbox" checked={!!editingAlign}
+      onchange={(x) => {
+        if (x.currentTarget.checked && editingAlign == null)
+          editingAlign = $focusedStyle?.alignment ?? AlignMode.BottomCenter;
+        if (!x.currentTarget.checked)
+          editingAlign = null;
+        applyEditForm();
+        Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
+      }}>
+    {$_('editbox.custom-alignment')}
+  </label>
+  {#if !!editingAlign}
+    <select
+        value={AlignMode[editingAlign]}
+        oninput={(x) => {
+          editingAlign = x.currentTarget.selectedIndex + 1;
+          applyEditForm();
+          Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
+        }}>
+      <option value="BottomLeft">{$_('style.bottom-left')}</option>
+      <option value="BottomCenter">{$_('style.bottom-center')}</option>
+      <option value="BottomRight">{$_('style.bottom-right')}</option>
+      <option value="CenterLeft">{$_('style.center-left')}</option>
+      <option value="Center">{$_('style.center')}</option>
+      <option value="CenterRight">{$_('style.center-right')}</option>
+      <option value="TopLeft">{$_('style.top-left')}</option>
+      <option value="TopCenter">{$_('style.top-center')}</option>
+      <option value="TopRight">{$_('style.top-right')}</option>
+    </select>
+  {/if}
 </fieldset>
 <!-- channels view -->
 <div class="channels flexgrow isolated area" class:focused={$uiFocus == 'EditingField'}>
+  {#if $focusedStyle && Editing.styleToEditor.has($focusedStyle)}
+    <RichEditToolbar
+      target={Editing.styleToEditor.get($focusedStyle)!}
+      onAction={() => Editing.submitFocusedEntry()} />
+  {/if}
+
   {#if Editing.getFocusedEntry() instanceof SubtitleEntry}
   {@const focused = Editing.getFocusedEntry() as SubtitleEntry}
   <table class='fields'>
@@ -202,24 +248,29 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
           }}><EllipsisIcon /></button>
         </td>
         <td style='width:100%'>
-          <textarea class='contentarea' tabindex=0
-            use:setupTextArea={style}
-            value={focused.texts.get(style)!}
-            onfocus={(ev) => {
+          <RichEdit text={focused.texts.get(style)!}
+            bind:this={
+              () => Editing.styleToEditor.get(style), 
+              (x) => Editing.styleToEditor.set(style, x)
+            }
+            deinit={() => Editing.styleToEditor.delete(style)}
+            onFocus={(_, ) => {
+              const self = Editing.styleToEditor.get(style);
+              Debug.assert(!!self);
               $uiFocus = 'EditingField';
               Editing.focused.style.set(style);
-              Editing.focused.control = ev.currentTarget;
+              Editing.focused.control = self;
             }}
-            onblur={() => {
+            onBlur={() => {
               if ($uiFocus === 'EditingField')
                 $uiFocus = 'Other';
               Editing.submitFocusedEntry();
             }}
-            oninput={(x) => {
+            onInput={() => {
               $uiFocus = 'EditingField';
-              contentSelfAdjust(x.currentTarget);
               Editing.editChanged = true;
-            }}></textarea>
+            }}
+          />
         </td>
       </tr>
       {/if}
@@ -260,20 +311,30 @@ function setupTextArea(node: HTMLTextAreaElement, style: SubtitleStyle) {
   height: 100%;
 }
 
+fieldset {
+  overflow-y: scroll;
+}
+
 .channels {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: scroll;
   /* box-shadow: gray 0px 0px 3px inset; */
   border: solid var(--uchu-gray-2) 1px;
   margin-left: 3px;
+
+  @media (prefers-color-scheme: dark) {
+    border-color: var(--uchu-yin-7);
+  }
 }
 
-.contentarea {
+:global(.ProseMirror.ProseMirror) {
   width: 100%;
   resize: none;
   overflow: visible;
   box-sizing: border-box;
   font-family: var(--editorFontFamily);
   font-size: var(--editorFontSize);
+  min-height: 2lh;
 }
 
 td {

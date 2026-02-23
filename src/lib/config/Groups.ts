@@ -90,6 +90,12 @@ export const InterfaceConfig = new PublicConfigGroup(
             description: () => $_('config.keep-autosave-for-d'),
             default: 30
         },
+        showWindowMenu: {
+            localizedName: () => $_('config.show-window-menu'),
+            type: 'boolean',
+            description: () => $_('config.show-window-menu-d'),
+            default: false
+        },
         statusBarTwinkle: {
             localizedName: () => $_('config.twinkle-status-bar'),
             type: 'boolean',
