@@ -88,7 +88,8 @@ const ToLinearFormat = {
     [LinearFormatCombineStrategy.Recombine]:
         (subs: Subtitles, entries: SubtitleEntry[], option: FormatOption): LinearEntry[] => {
             const events: { type: 'start' | 'end', pos: number, i: number }[] = [];
-            entries.forEach(({start, end}, i) => {
+            entries.forEach(({ start, end }, i) => {
+                if (end <= start) return;
                 events.push({ type: 'start', pos: start, i });
                 events.push({ type: 'end', pos: end, i });
             });
