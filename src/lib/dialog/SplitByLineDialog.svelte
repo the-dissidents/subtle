@@ -2,6 +2,7 @@
 import { Debug } from "../Debug";
 import { SubtitleStyle, type SubtitleEntry } from '../core/Subtitles.svelte';
 import { type LabelType } from "../core/Labels";
+import { RichText } from "../core/RichText";
 import { Editing } from '../frontend/Editing';
 import { ChangeType, Source } from "../frontend/Source";
 import NumberInput from "../ui/NumberInput.svelte";
@@ -14,8 +15,6 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import { ArrowDownToLineIcon, ArrowUpToLineIcon, Undo2Icon } from "@lucide/svelte";
 import { onMount } from "svelte";
 import { _ } from 'svelte-i18n';
-    import RichEdit from "../component/richedit/RichEdit.svelte";
-    import { RichText } from "../core/RichText";
 
 interface Props {
   args: [],
@@ -99,11 +98,7 @@ function makeData() {
     usages[i] = 0;
   
   for (const ent of selection) {
-    let lines = RichText.split([...ent.texts.values()][0], '\n');
-    if (reversed)
-      lines = lines.reverse();
-    if (removeEmptyLines)
-      lines = lines.filter((x) => RichText.length(RichText.trim(x)) > 0);
+    const lines = processEntry(ent);
     for (let i = 0; i < lines.length; i++) {
       if (i >= usages.length)
         usages[i] = 1;
@@ -269,6 +264,7 @@ let updateCounter = $state(0);
 
 function processEntry(ent: SubtitleEntry) {
   let lines = RichText.split([...ent.texts.values()][0], '\n');
+  console.log([...ent.texts.values()][0], lines);
   if (reversed)
     lines = lines.reverse();
   if (removeEmptyLines)

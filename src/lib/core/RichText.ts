@@ -53,6 +53,7 @@ function sameAttrs(x: RichTextAttr[], y: RichTextAttr[]) {
     return !x.find((a) => !y.find((b) => attrEq(a, b)));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace RichText {
     export function equals(a: RichText, b: RichText) {
         return eq(a, b);
@@ -80,42 +81,41 @@ export namespace RichText {
         if (typeof rt === 'string')
             return rt.split(pattern);
 
-        const split = RichText.toString(rt).split(pattern);
-        if (split.length <= 1) return [rt];
-
         const result: RichText[] = [];
-        let current: RichTextNode[] = [];
-        
-        let required = split.shift()!.length;
-        for (const node of rt) {
-            const content = typeof node === 'string' ? node : node.content;
-            const nodeLength = content.length;
+        let str = RichText.toString(rt);
 
-            if (required == 0) {
-                while (required == 0)
-                    required = split.shift()!.length;
-                result.push(current);
-                current = [];
+        const match = typeof pattern == 'string' 
+            ? () => {
+                const i = str.indexOf(pattern);
+                if (i < 0) return undefined;
+                return [i, pattern.length] as const;
             }
+            : () => {
+                const m = pattern.exec(str);
+                if (!m) return undefined;
+                pattern.lastIndex = 0;
+                return [m.index, m[0].length] as const;
+            };
 
-            const sliceEnd = Math.min(nodeLength, required);
-            if (sliceEnd === nodeLength) {
-                current.push(node);
-            } else {
-                const slicedContent = content.substring(0, sliceEnd);
-                current.push(typeof node === 'string'
-                    ? slicedContent
-                    : { ...node, content: slicedContent });
-            }
-            required -= sliceEnd;
+        let start = 0;
+        let m: readonly [number, number] | undefined;
+        while ((m = match()) !== undefined) {
+            const sub = RichText.substring(rt, start, start + m[0]);
+            if (RichText.length(sub) > 0)
+                result.push(sub);
+            str = str.substring(m[0] + m[1]);
+            start += m[0] + m[1];
         }
-        result.push(current);
+        const sub = RichText.substring(rt, start);
+        if (RichText.length(sub) > 0)
+            result.push(sub);
+
         return result;
     }
 
     export function substring(rt: RichText, start: number, end?: number): RichText {
         if (typeof rt === 'string')
-            return rt.substring(start, end);
+            return [rt.substring(start, end)];
 
         Debug.assert(!Number.isNaN(start) && start >= 0);
 
@@ -179,17 +179,18 @@ export namespace RichText {
 
     export function concat(...rts: RichText[]): RichText {
         const result: RichTextNode[] = [];
-        rts.flat().forEach((x, i) => {
+        rts.flat().forEach((x) => {
             if (x === "") return;
 
+            const len = result.length;
             if (typeof x === 'string') {
-                if (typeof result[i-1] === 'string')
-                    result[i-1] += x;
+                if (typeof result[len-1] === 'string')
+                    result[len-1] += x;
                 else
                     result.push(x);
             } else {
                 // leaf
-                const last = result[i-1];
+                const last = result[len-1];
                 if (typeof last === 'object' && sameAttrs(last.attrs, x.attrs))
                     last.content += x.content;
                 else

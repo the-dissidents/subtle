@@ -178,7 +178,8 @@ export const KeybindingManager = {
             hotkeyWasPressed = false;
             switch (result.type) {
                 case 'incomplete':
-                case 'disabled': break;
+                case 'disabled':
+                    break;
                 case "notFound":
                     if (result.sequence.length > 1) {
                         Frontend.setStatus($_('msg.hotkey-not-found', 
@@ -292,7 +293,6 @@ export const KeybindingManager = {
         if (Frontend.modalOpenCounter > 0)
             return { type: 'disabled' }; // TODO: more sophisticated disabling?
         const key = this.parseKey(ev);
-        const focus = Frontend.getUIFocus();
         if (!key) return { type: 'incomplete' };
         currentSequence.push(key);
 
@@ -300,6 +300,7 @@ export const KeybindingManager = {
         const seq = [...currentSequence];
         const node = map.get(key);
         if (node) {
+            const focus = Frontend.getUIFocus();
             const cmd = node.values.find(
                 (x) => !x.contexts || x.contexts.has(focus));
             if (cmd && cmd.command.isApplicable) {
