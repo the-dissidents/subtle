@@ -50,6 +50,15 @@ export async function initWindowMenu() {
             BasicCommands.connectMenu.toMenuItem(),
         ]
     });
+    const text = await Submenu.new({
+        text: $_('appmenu.text'),
+        items: [
+            { item: 'Separator' },
+            { item: 'Cut' },
+            { item: 'Copy' },
+            { item: 'Paste' },
+        ]
+    });
     const channels = await Submenu.new({
         text: $_('cxtmenu.channels'),
         items: [
@@ -99,13 +108,16 @@ export async function initWindowMenu() {
             DialogCommands.openConfiguration.toMenuItem(),
             DialogCommands.openKeybinding.toMenuItem(),
             DialogCommands.reportBugs.toMenuItem(),
+            { item: 'Separator' },
+            { item: 'Maximize' },
+            { item: 'Minimize' },
         ]
     });
 
     const first = (await (await Menu.default()).items())[0];
 
     appMenu = await Menu.new({
-        items: [first, file, entries, channels, utilities, playback, system]
+        items: [first, file, text, entries, channels, utilities, playback, system]
     });
     
     if (InterfaceConfig.data.showWindowMenu || platform() == 'macos') {

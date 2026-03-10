@@ -25,7 +25,7 @@
   const updateCounter = $derived(target?.updateCounter());
 
   function isMarkActive(m: MarkType) {
-    selStart; selEnd; updateCounter;
+    let _ = [selStart, selEnd, updateCounter];
     if (!view) return false;
     if (selStart == selEnd)
       return !!m.isInSet(view.state.doc.resolve(selStart!).marks());
@@ -48,7 +48,7 @@
   }
 
   const currentSize = $derived.by(() => {
-    selStart; selEnd; updateCounter;
+    let _ = [selStart, selEnd, updateCounter];
     if (!view) return 100;
 
     if (selStart == selEnd) {

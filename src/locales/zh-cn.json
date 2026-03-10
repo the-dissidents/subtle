@@ -91,7 +91,8 @@
   "appmenu": {
     "entries": "字幕块",
     "file": "文件",
-    "system": "系统"
+    "system": "系统",
+    "text": "文本"
   },
   "assimport": {
     "duplicate-style-definition": "重复定义样式",
