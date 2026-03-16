@@ -91,7 +91,7 @@
 
     [value0, value1, value2] = modes[mode].fromColorIo(...normalized.coords);
     alpha = c.alpha ?? 1;
-    // TODO: this isn't entirely correct, but is effective
+    
     if (Number.isNaN(value0) || value0 === null) value0 = 0;
     if (Number.isNaN(value1) || value0 === null) value1 = 0;
     if (Number.isNaN(value2) || value0 === null) value2 = 0;
@@ -334,7 +334,7 @@
   </div>
 </Popup>
 
-<style>
+<style lang='scss'>
   hr {
     margin-left: 5px;
     border-top: none;

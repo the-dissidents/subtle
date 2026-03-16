@@ -128,7 +128,7 @@ function parse() {
   </div>
 </DialogBase>
 
-<style>
+<style lang='scss'>
   .left {
     min-width: 15em;
   }

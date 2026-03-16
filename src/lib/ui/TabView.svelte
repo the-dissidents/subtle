@@ -78,7 +78,7 @@ setContext<TabAPI>(TabAPIContext, {
   {@render children()}
 </div>
 
-<style>
+<style lang='scss'>
   @media (prefers-color-scheme: light) {
     .header {
       border-bottom: 1px solid var(--uchu-blue-4);

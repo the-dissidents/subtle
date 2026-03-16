@@ -393,7 +393,7 @@ async function importJSON() {
   </div>
 </DialogBase>
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   .r {
     background-color: var(--uchu-gray-2);

@@ -87,7 +87,7 @@ function findBoundingRect(element: HTMLElement): DOMRect {
   {/if}
 </Popup>
 
-<style>
+<style lang='scss'>
   :global(.tooltip-container > span > .lucide) {
     display: inline;
     stroke-width: 1.5px; 

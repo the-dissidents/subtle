@@ -135,7 +135,7 @@ function check() {
   </div>
 </DialogBase>
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   .error {
     background-color: lightcoral;

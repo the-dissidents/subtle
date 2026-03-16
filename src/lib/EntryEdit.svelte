@@ -305,7 +305,7 @@ function applyEditForm() {
   
 </div>
 
-<style>
+<style lang='scss'>
 .outer {
   width: 100%;
   height: 100%;

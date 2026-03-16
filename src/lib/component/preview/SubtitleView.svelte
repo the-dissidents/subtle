@@ -39,11 +39,6 @@
   function updateTransform() {
     transform = `scale(${manager!.scale}) translate(${-manager!.scroll[0]}px, ${-manager!.scroll[1]}px) scale(${1/devicePixelRatio})`;
   }
-
-  function cloneEvent<E extends Event>(e: E): E {
-    // @ts-expect-error
-    return new e.constructor(e.type, e);
-  }
 </script>
 
 {#snippet line(line: Line)}
@@ -65,7 +60,6 @@
   {/each}
 {/snippet}
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="subview" style="width: {width}px; height: {height}px;"
   bind:this={element}
 >
@@ -108,7 +102,7 @@
   </div>
 </div>
 
-<style>
+<style lang='scss'>
   .subview {
     box-sizing: border-box;
     position: absolute;

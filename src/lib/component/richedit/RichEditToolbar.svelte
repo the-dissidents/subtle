@@ -190,7 +190,7 @@
   </button>
 </fieldset>
 
-<style>
+<style lang='scss'>
   b, i, u, s {
     font-family: 'Times New Roman', Times, serif;
   }

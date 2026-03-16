@@ -48,7 +48,7 @@ function ondrag(ev: MouseEvent) {
 <div class='inside'></div>
 </div>
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   .inside {
     background-color: var(--uchu-yin-1);

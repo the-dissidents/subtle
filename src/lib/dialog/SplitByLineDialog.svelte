@@ -430,7 +430,7 @@ function processEntry(ent: SubtitleEntry) {
   </div>
 </DialogBase>
 
-<style>
+<style lang='scss'>
   h4 {
     font-size: 100%;
     font-weight: bold;

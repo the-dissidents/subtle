@@ -1,6 +1,3 @@
-<!-- TODO: PropertiesToolbox
- 1. investigate the use of reactivity here; make sure the refreshes are correct 
--->
 <script lang="ts">
 import { Debug } from '../Debug';
 import { SubtitleStyle } from '../core/Subtitles.svelte';
@@ -168,7 +165,7 @@ async function manageSavedStyles() {
   </Collapsible>
 </div>
 
-<style>
+<style lang='scss'>
 .txt {
   width: 100%;
 }

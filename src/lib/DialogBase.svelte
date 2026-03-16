@@ -122,7 +122,7 @@ export async function showModal() {
 </div>
 </dialog>
 
-<style>
+<style lang='scss'>
   @media (prefers-color-scheme: light) {
     dialog {
       box-shadow: 0 0 10px gray;

@@ -141,7 +141,7 @@ let overrideMetadata = $state(false);
   </table>
 </form></DialogBase>
 
-<style>
+<style lang='scss'>
 .duplicate:not([disabled]) {
   background-color: lightcoral;
 }

@@ -26,7 +26,7 @@ let { disabled = false, stretch = false, value = $bindable(), onsubmit }: Props 
 </select>
 
 
-<style>
+<style lang='scss'>
   .stretch {
     width: 100%;
   }

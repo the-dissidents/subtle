@@ -92,7 +92,7 @@ $effect(() => {
 </form>
 </dialog>
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   dialog {
     box-shadow: 2px 4px 10px gray;

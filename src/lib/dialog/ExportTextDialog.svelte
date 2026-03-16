@@ -168,7 +168,7 @@ async function copy() {
   </div>
 </DialogBase>
 
-<style>
+<style lang='scss'>
   .stylename {
     min-width: 100px;
   }

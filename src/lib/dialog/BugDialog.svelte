@@ -39,7 +39,7 @@ onMount(async () => {
   <p></p>
 </DialogBase>
 
-<style>
+<style lang='scss'>
   @media (prefers-color-scheme: light) {
     :global(.bugs code) {
       background-color: var(--uchu-blue-1);

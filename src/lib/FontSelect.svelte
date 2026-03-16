@@ -171,7 +171,7 @@
   </Combobox.Portal>
 </Combobox.Root>
 
-<style>
+<style lang='scss'>
   b {
     font-weight: bold;
   }

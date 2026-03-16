@@ -187,7 +187,7 @@ function fromTransformed() {
   </table>
 </DialogBase>
 
-<style>
+<style lang='scss'>
   .pre {
     font-family: var(--monospaceFontFamily);
     font-size: 95%;

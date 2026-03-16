@@ -159,7 +159,7 @@ locale.subscribe(() => refresh++);
   {/key}
 </DialogBase>
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   h3.groupname {
     border-bottom: 1px solid gray;

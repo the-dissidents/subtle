@@ -51,13 +51,14 @@ pub fn read_undo(state: State<Mutex<HistoryState>>) -> Result<String, String> {
 pub fn read_redo(state: State<Mutex<HistoryState>>) -> Result<String, String> {
     let mut history = state.lock().unwrap();
     if let Some(should_move) = history.redo.pop() {
-        history.redo.push(should_move);
-
-        let data = history.undo.last().ok_or("no data".to_string())?;
-        String::from_utf8(
-            zstd::decode_all(data.as_slice())
+        let result = String::from_utf8(
+            zstd::decode_all(should_move.as_slice())
             .map_err(|e| format!("zstd decode error {e}"))?
-        ).map_err(|e| format!("bad utf8: {e}"))
+        ).map_err(|e| format!("bad utf8: {e}"));
+
+        history.undo.push(should_move);
+
+        result
     } else {
         Err("nothing to redo".to_string())
     }

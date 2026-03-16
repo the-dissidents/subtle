@@ -394,7 +394,7 @@ observer.observe({ type: 'paint', buffered: true });
 
 {/if}
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   footer {
     background-color: var(--uchu-yin-2);

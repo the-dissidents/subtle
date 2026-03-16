@@ -21,7 +21,7 @@
     }
   }} {...rest}/>
 
-<style>
+<style lang='scss'>
   input {
     font-family: var(--monospaceFontFamily);
   }

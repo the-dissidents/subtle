@@ -483,7 +483,7 @@ async function execute(type: SearchAction, option: SearchOption) {
   </Collapsible>
 </div>
 
-<style>
+<style lang='scss'>
   .form > * {
     margin-top: 2px;
   }

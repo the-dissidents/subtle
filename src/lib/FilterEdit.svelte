@@ -302,7 +302,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
   {/if}
 {/key}
 
-<style>
+<style lang='scss'>
   fieldset {
     border-radius: 2px;
     border: 1px solid gray;

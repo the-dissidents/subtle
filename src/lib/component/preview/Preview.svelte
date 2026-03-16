@@ -108,7 +108,7 @@
   </div>
 </div>
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   canvas {
     background-color: gray;

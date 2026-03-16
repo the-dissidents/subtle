@@ -230,6 +230,7 @@ export const Source = {
         const top = undoStack.pop()!;
         redoStack.push(top);
         const snap = undoStack.at(-1)!;
+        Debug.assert(!!snap);
         readSnapshot(snap, await MAPI.readUndo());
         this.onUndoBufferChanged.dispatch();
         Frontend.setStatus($_('msg.undone', {values: {op: top.description}}), 'info');
@@ -242,9 +243,8 @@ export const Source = {
             return false;
         }
         const top = redoStack.pop()!;
-        redoStack.push(top);
-        const snap = redoStack.at(-1)!;
-        readSnapshot(snap, await MAPI.readRedo());
+        undoStack.push(top);
+        readSnapshot(top, await MAPI.readRedo());
         this.onUndoBufferChanged.dispatch();
         Frontend.setStatus($_('msg.redone', {values: {op: top.description}}), 'info');
         return true;

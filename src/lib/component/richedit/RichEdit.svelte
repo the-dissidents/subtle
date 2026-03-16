@@ -146,7 +146,7 @@
 <div bind:this={container} class="editor"
   {...rest}></div>
 
-<style>
+<style lang='scss'>
   div.editor {
     width: 100%;
     min-height: 1lh;

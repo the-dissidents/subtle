@@ -379,12 +379,11 @@ class SplitEntry extends TimelineAction {
         Debug.assert(this.self.splitting !== null);
         const split = this.self.splitting;
         const target = split.target;
-        const currentPos = this.self.convertX(offsetX);
-        const x = (split.breakPosition - currentPos) / (target.end - target.start) 
-            + this.baseProportion;
         const style = this.styles[0];
-        const text = target.texts.get(style)!;
-        const pos = Math.max(1, Math.min(text.length - 1, Math.floor(x * text.length)));
+        const textLength = RichText.length(target.texts.get(style)!);
+        const x = (split.breakPosition - this.self.convertX(offsetX)) / (target.end - target.start) 
+            + this.baseProportion;
+        const pos = Math.max(1, Math.min(textLength - 1, Math.floor(x * textLength)));
         split.positions.set(style, pos);
         this.layout.manager.requestRender();
         return true;

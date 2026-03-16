@@ -166,7 +166,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
   </div>
 </Popup>
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   canvas.timeline {
     background-color: var(--uchu-gray-1);

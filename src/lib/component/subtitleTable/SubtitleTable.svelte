@@ -114,7 +114,7 @@ onMount(() => {
   </span>
 </Popup>
 
-<style>
+<style lang='scss'>
   @media (prefers-color-scheme: dark) {
     .container button {
       background-color: var(--uchu-yin-5);

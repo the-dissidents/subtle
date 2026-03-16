@@ -45,7 +45,7 @@ let {
   {@render children?.()}
 </div>
 
-<style>
+<style lang='scss'>
 @media (prefers-color-scheme: light) {
   button.collapsible {
     background-color: var(--uchu-gray-1);

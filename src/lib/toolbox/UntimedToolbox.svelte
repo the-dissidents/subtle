@@ -382,7 +382,7 @@ function clear() {
   </Collapsible>
 </div>
 
-<style>
+<style lang='scss'>
   @media (prefers-color-scheme: light) {
     textarea[readonly] {
       background-color: var(--uchu-gray-1);

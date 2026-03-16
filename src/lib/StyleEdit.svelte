@@ -360,7 +360,7 @@ async function contextMenu() {
   </div>
 </div>
 
-<style>
+<style lang='scss'>
 .duplicate {
   background-color: lightcoral;
 }

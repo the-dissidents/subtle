@@ -106,7 +106,7 @@
   {/if}
 </ol>
 
-<style>
+<style lang='scss'>
   ol {
     list-style: none;
     margin: 0;

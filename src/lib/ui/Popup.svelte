@@ -77,7 +77,7 @@ export function openState() {
 
 </script>
 
-<style>
+<style lang='scss'>
   @media (prefers-color-scheme: light) {
     .tooltip {
       background-color: var(--uchu-yin);

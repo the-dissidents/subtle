@@ -250,7 +250,7 @@ export const BasicCommands = {
                 const text = x.texts.get(style);
                 if (text) results.push(RichText.toString(text));
             });
-            // FIXME: rt
+            // FIXME: RichText
             clipboard.writeText(results.join(' '));
             Frontend.setStatus($_('msg.copied'));
         }, selectionDistinctStyles()),

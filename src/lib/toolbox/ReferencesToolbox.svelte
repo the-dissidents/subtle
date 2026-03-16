@@ -129,7 +129,7 @@ currentSourceName.subscribe((x) => {
   </iframe>
 </div>
 
-<style>
+<style lang='scss'>
   iframe {
     margin-top: 5px;
     border-radius: 4px;

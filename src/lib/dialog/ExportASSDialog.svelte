@@ -279,7 +279,7 @@ async function handleSubsetButton(setting: FontSetting) {
   </div>
 </DialogBase>
 
-<style>
+<style lang='scss'>
   .stylename {
     min-width: 100px;
   }

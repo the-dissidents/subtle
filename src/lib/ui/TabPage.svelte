@@ -21,7 +21,7 @@ const selection = tabApi.selected();
 {@render children?.()}
 </div>
 
-<style>
+<style lang='scss'>
 .page {
   padding: 2px;
   flex: 1 0;

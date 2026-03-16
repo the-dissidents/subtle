@@ -43,7 +43,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
   {/key}
 </select>
 
-<style>
+<style lang='scss'>
   .stretch {
     width: 100%;
   }

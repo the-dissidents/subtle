@@ -79,7 +79,7 @@ $effect(() => {
     onchange?.(timestamp);
   }}/>
 
-<style>
+<style lang='scss'>
   .timestamp {
     font-family: var(--monospaceFontFamily);
     text-align: center;

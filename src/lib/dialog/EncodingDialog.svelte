@@ -109,7 +109,7 @@ async function makePreview() {
   <p>{$_('encodingdialog.conclusion')}</p>
 </DialogBase>
 
-<style>
+<style lang='scss'>
   h4 {
     font-size: 100%;
     font-weight: bold;

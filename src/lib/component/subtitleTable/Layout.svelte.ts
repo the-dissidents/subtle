@@ -95,7 +95,6 @@ export class TableLayout {
         });
 
         Source.onSubtitlesChanged.bind(this, (t) => {
-            // TODO: can we optimize this by not re-layouting everything on every edit?
             if (t == ChangeType.View) {
                 // the only way columns are updated is through the subtitle table
                 // updateColumns();
@@ -104,8 +103,6 @@ export class TableLayout {
                 this.manager.requestRender();
             }
         });
-
-        $inspect(this.baseStyleCSS);
     }
 
     layout(ctx: CanvasRenderingContext2D) {
@@ -162,8 +159,7 @@ export class TableLayout {
 
             let j = 0;
             for (const style of Source.subs.styles) {
-                const text = entry.texts.get(style);
-                if (text === undefined) continue;
+                if (!entry.texts.has(style)) continue;
 
                 let lineHeight = 1;
                 const oldChannel = oldEntry?.texts[j];

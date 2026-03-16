@@ -211,7 +211,7 @@ function run(doit: boolean) {
   >{$_('combinedialog.combine')}</button>
 </DialogBase>
 
-<style>
+<style lang='scss'>
   h5 {
     font-size: 0.9rem;
   }
