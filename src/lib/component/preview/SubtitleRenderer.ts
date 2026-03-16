@@ -248,7 +248,7 @@ export class SubtitleRenderer {
                             && boxIntersects(box, newBox));
                     if (!overlapping) break;
                     newBox.y = dy > 0
-                        ? Math.max(newBox.y + 1, overlapping.y + overlapping.line.height + newBox.h)
+                        ? Math.max(newBox.y + 1, overlapping.y + overlapping.line.height)
                         : Math.min(newBox.y - 1, overlapping.y - newBox.h);
                 }
 

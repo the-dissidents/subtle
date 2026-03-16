@@ -7,6 +7,7 @@ import { DialogCommands } from "./frontend/Dialogs";
 import { PlaybackCommands } from "./frontend/Playback";
 import { InterfaceConfig } from "./config/Groups";
 import { platform } from "@tauri-apps/plugin-os";
+import { SourceCommands } from "./frontend/Source";
 const $_ = unwrapFunctionStore(_);
 
 let appMenu: Menu;
@@ -27,6 +28,9 @@ export async function initWindowMenu() {
             InterfaceCommands.save.toMenuItem(),
             InterfaceCommands.saveAs.toMenuItem(),
             InterfaceCommands.exportMenu.toMenuItem(),
+            { item: 'Separator' },
+            SourceCommands.undo.toMenuItem(),
+            SourceCommands.redo.toMenuItem(),
         ]
     });
     const entries = await Submenu.new({
@@ -57,6 +61,11 @@ export async function initWindowMenu() {
             { item: 'Cut' },
             { item: 'Copy' },
             { item: 'Paste' },
+            { item: 'Separator' },
+            { item: 'SelectAll' },
+            { item: 'Separator' },
+            { item: 'Undo' },
+            { item: 'Redo' },
         ]
     });
     const channels = await Submenu.new({
