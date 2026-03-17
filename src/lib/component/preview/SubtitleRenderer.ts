@@ -19,12 +19,12 @@ type WrappedEntry = {
     oldIndex: number,
     newIndex: number,
     entry: SubtitleEntry
-}
+};
 
 type Box = {
     x: number, y: number,
     w: number, h: number,
-}
+};
 
 function getBoxFromLine(line: Line, x: number, y: number): Box {
     return {

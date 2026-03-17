@@ -1,12 +1,13 @@
 <script lang="ts">
-  import type { SvelteHTMLElements } from "svelte/elements";
   import RichEdit from "./RichEdit.svelte";
-  import { toggleMark } from "prosemirror-commands";
-  import type { MarkType, Mark } from "prosemirror-model";
   import { Debug } from "../../Debug";
   import { RichTextSchema } from "./Schema";
 
+  import type { SvelteHTMLElements } from "svelte/elements";
   import { _ } from 'svelte-i18n';
+  
+  import { toggleMark } from "prosemirror-commands";
+  import type { MarkType, Mark } from "prosemirror-model";
   
   import { AArrowUpIcon, AArrowDownIcon, RemoveFormattingIcon } from "@lucide/svelte";
 

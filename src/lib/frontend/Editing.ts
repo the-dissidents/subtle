@@ -88,6 +88,8 @@ export const Editing = {
     isEditingVirtualEntry: writable(false),
     useUntimedForNewEntires: Memorized.$('useUntimedForNewEntires', z.boolean(), false),
 
+    // A map from style/channel to editor widgets
+    // TODO: this is a pretty bad design.
     styleToEditor: new SvelteMap<SubtitleStyle, RichEdit>(),
 
     onSelectionChanged: new EventHost<[cause: ChangeCause]>(),
@@ -115,7 +117,7 @@ export const Editing = {
     startEditingFocusedEntry() {
         const style = updateFocusedStyle();
         const editor = this.styleToEditor.get(style);
-        Debug.assert(!!editor);
+        if (!editor) return Debug.early();
         editor.focus();
         editor.scrollIntoView();
     },

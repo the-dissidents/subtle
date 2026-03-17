@@ -185,7 +185,7 @@ export class JSONParser implements SubtitleParser {
         // since parsing filters requires access to all the styles
         styles.forEach((x) => {
             if (!x.validator) return;
-            this.#subs.styles.find((x) => x.name == x.name)!.validator = 
+            this.#subs.styles.find((y) => x.name == y.name)!.validator = 
                 Filter.deserialize(x.validator, this.#subs);
         });
     }

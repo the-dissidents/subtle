@@ -6,13 +6,13 @@
   import { chainCommands, deleteSelection, joinBackward, joinForward, newlineInCode, selectAll, selectNodeBackward, selectNodeForward, toggleMark } from "prosemirror-commands";
 
   import { fromRichText, RichTextSchema, toRichText } from "./Schema";
-  import { onDestroy, onMount } from "svelte";
   import { VirtualSelection } from "./VirtualSelection";
   
   import { Debug } from "../../Debug";
   import type { RichText } from "../../core/RichText";
   import { hook } from "../../details/Hook.svelte";
 
+  import { onDestroy, onMount } from "svelte";
   import type { SvelteHTMLElements } from 'svelte/elements';
 
   type DIV = SvelteHTMLElements['div'];
