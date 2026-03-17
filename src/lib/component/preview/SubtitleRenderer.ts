@@ -9,6 +9,7 @@ export type LineBox = {
     x: number, y: number,
     style: SubtitleStyle,
     entry: SubtitleEntry,
+    // position of the reference point, i.e. used in ASS positioning
     refX: number, refY: number,
     scale: number,
     line: Line

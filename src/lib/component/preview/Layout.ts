@@ -1,4 +1,6 @@
 import { CanvasManager } from "../../CanvasManager";
+import { Debug } from "../../Debug";
+import type { Positioning, SubtitleEntry } from "../../core/Subtitles.svelte";
 import { Playback } from "../../frontend/Playback";
 import { ChangeType, Source } from "../../frontend/Source";
 import { SubtitleRenderer } from "./SubtitleRenderer";
@@ -6,8 +8,6 @@ import { MediaConfig } from "./Config";
 import { MediaPlayer } from "./MediaPlayer";
 
 import { unwrapFunctionStore, _ } from "svelte-i18n";
-import type { Positioning, SubtitleEntry } from "../../core/Subtitles.svelte";
-
 const $_ = unwrapFunctionStore(_);
 
 export class PreviewLayout {
@@ -73,7 +73,7 @@ export class PreviewLayout {
             y *= devicePixelRatio;
             const h = this.#subsRenderer.layout.find((b) => 
                 b.x <= x && b.y <= y && b.x + b.line.width >= x && b.y + b.line.height >= y);
-            if (h !== this.#hovering) {
+            if (h !== this.#hovering && this.#manager.dragType !== 'custom') {
                 if (h) {
                     this.#hovering = h.entry;
                     this.#startPos = [h.refX, h.refY];
@@ -94,10 +94,11 @@ export class PreviewLayout {
         };
 
         this.#manager.onDrag.bind(this, (ox, oy) => {
+            Debug.assert(!!this.#hovering);
             const dx = ox - this.#startMousePos[0];
             const dy = oy - this.#startMousePos[1];
             const scale = devicePixelRatio / this.#subsRenderer.scale / this.manager.scale;
-            this.#hovering!.positioning = {
+            this.#hovering.positioning = {
                 type: 'absolute',
                 x: Math.round(this.#startPos[0] + dx * scale),
                 y: Math.round(this.#startPos[1] + dy * scale),
@@ -106,11 +107,15 @@ export class PreviewLayout {
         });
 
         this.#manager.onDragEnd.bind(this, () => {
+            const pos = this.#hovering?.positioning;
+            Debug.assert(!!pos && pos.type == 'absolute');
+            this.#startPos = [pos.x, pos.y];
             Source.markChanged(ChangeType.InPlace, $_('c.positioning'));
         });
 
         this.manager.onDragInterrupted.bind(this, () => {
-            this.#hovering!.positioning = this.#originalPositioning;
+            Debug.assert(!!this.#hovering);
+            this.#hovering.positioning = this.#originalPositioning;
         });
     }
 
