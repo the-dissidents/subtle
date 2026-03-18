@@ -9,8 +9,8 @@ import { Menu } from '@tauri-apps/api/menu';
 import { UICommand } from '../frontend/CommandBase';
 import { Source, SourceCommands } from '../frontend/Source';
 
-import Tooltip, { type TooltipPosition } from '../ui/Tooltip.svelte';
-import OrderableList from '../ui/OrderableList.svelte';
+import { Tooltip, type TooltipPosition } from "@the_dissidents/svelte-ui";
+import { OrderableList } from '@the_dissidents/svelte-ui';
 import { Typography } from '../details/Typography';
 import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy";
 import { invoke } from "@tauri-apps/api/core";
@@ -39,15 +39,15 @@ let needle = $state('');
 let fontname = $state('Arial');
 
 let list = $state([
-  {text: '123'}, 
-  {text: 'abc'}, 
-  {text: '543t635'}, 
-  {text: 'aeewwwbc'}, 
+  {text: '123'},
+  {text: 'abc'},
+  {text: '543t635'},
+  {text: 'aeewwwbc'},
   {text: 'abdfcc'}
 ]);
 
 const command = new UICommand(() => '', [], {
-  name: 'name', 
+  name: 'name',
   menuName: 'primary',
   items: ['one', 'two', 'three', 'four'].map((x) => ({
     name: x,
@@ -205,7 +205,7 @@ let rich: RichText = $state([
 
 <br>
 
-<OrderableList bind:list={list}>
+<OrderableList list={list}>
   {#snippet row(item)}
     <input type="text" bind:value={item.text} />
   {/snippet}

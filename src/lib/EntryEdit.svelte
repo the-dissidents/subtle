@@ -1,10 +1,13 @@
 <script lang="ts">
+import { Debug } from './Debug';
+
 import LabelSelect from './LabelSelect.svelte';
 import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
-import RichEdit from './component/richedit/RichEdit.svelte';
+import { NumberInput } from '@the_dissidents/svelte-ui';
 
-import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
+import RichEdit from './component/richedit/RichEdit.svelte';
+import RichEditToolbar from './component/richedit/RichEditToolbar.svelte';
 
 import { SubtitleEntry, type Positioning } from './core/Subtitles.svelte';
 import { AlignMode, type LabelType } from "./core/Labels";
@@ -12,13 +15,12 @@ import { Editing } from './frontend/Editing';
 import { ChangeType, Source } from './frontend/Source';
 import { Frontend } from './frontend/Frontend';
 
-import { Menu } from '@tauri-apps/api/menu';
+import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
 import * as dialog from "@tauri-apps/plugin-dialog";
-import { _ } from 'svelte-i18n';
-import { Debug } from './Debug';
-import RichEditToolbar from './component/richedit/RichEditToolbar.svelte';
+import { Menu } from '@tauri-apps/api/menu';
 import { tick } from 'svelte';
-import NumberInput from './ui/NumberInput.svelte';
+import { _ } from 'svelte-i18n';
+
 
 let editFormUpdateCounter = $state(0);
 let editAnchor: 'start' | 'end' = $state('start');
@@ -91,8 +93,8 @@ function applyEditForm() {
       if (editAnchor == 'start' && keepDuration)
         editingT1 = editingT0 + editingDt;
       applyEditForm();
-    }} 
-    onchange={() => 
+    }}
+    onchange={() =>
       Source.markChanged(ChangeType.Times, $_('c.timestamp'))}/>
   <br>
   <TimestampInput bind:timestamp={editingT1}
@@ -101,7 +103,7 @@ function applyEditForm() {
       if (editAnchor == 'end' && keepDuration)
         editingT0 = editingT1 - editingDt;
       applyEditForm();
-    }} 
+    }}
     onchange={() => {
       if (editingT1 < editingT0) editingT1 = editingT0;
       applyEditForm();
@@ -112,21 +114,21 @@ function applyEditForm() {
     stretch={true}
     oninput={() => {
       if (editAnchor == 'start')
-        editingT1 = editingT0 + editingDt; 
+        editingT1 = editingT0 + editingDt;
       else if (editAnchor == 'end')
         editingT0 = editingT1 - editingDt;
       else
         Debug.never(editAnchor);
       applyEditForm();
     }}
-    onchange={() => 
+    onchange={() =>
       Source.markChanged(ChangeType.Times, $_('c.timestamp'))}/>
   <hr>
   <label class="hlayout center-items">
     <span style="padding-right: 5px; white-space: pre;">
       {$_('editbox.label')}
     </span>
-    <LabelSelect 
+    <LabelSelect
       bind:value={editingLabel}
       stretch={true}
       onsubmit={() => {
@@ -250,7 +252,7 @@ function applyEditForm() {
         <td style='width:100%'>
           <RichEdit text={focused.texts.get(style)!}
             bind:this={
-              () => Editing.styleToEditor.get(style), 
+              () => Editing.styleToEditor.get(style),
               (x) => Editing.styleToEditor.set(style, x)
             }
             deinit={() => Editing.styleToEditor.delete(style)}
@@ -277,7 +279,7 @@ function applyEditForm() {
       {/each}
       <tr>
         <td class="vlayout">
-          <button 
+          <button
             disabled={Source.subs.styles.find((x) => !focused.texts.has(x)) === undefined}
             onclick={async () => (await Menu.new({
                 items: Source.subs.styles
@@ -302,7 +304,7 @@ function applyEditForm() {
   {/if}
 </div>
 {/key}
-  
+
 </div>
 
 <style lang='scss'>

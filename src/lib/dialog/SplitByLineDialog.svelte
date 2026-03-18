@@ -5,11 +5,11 @@ import { type LabelType } from "../core/Labels";
 import { RichText } from "../core/RichText";
 import { Editing } from '../frontend/Editing';
 import { ChangeType, Source } from "../frontend/Source";
-import NumberInput from "../ui/NumberInput.svelte";
-import Tooltip from "../ui/Tooltip.svelte";
+
 import DialogBase from '../DialogBase.svelte';
 import LabelSelect from "../LabelSelect.svelte";
 import StyleSelect from "../StyleSelect.svelte";
+import { NumberInput, Tooltip } from '@the_dissidents/svelte-ui';
 
 import * as dialog from "@tauri-apps/plugin-dialog";
 import { ArrowDownToLineIcon, ArrowUpToLineIcon, Undo2Icon } from "@lucide/svelte";
@@ -64,7 +64,7 @@ onMount(async () => {
           style = newStyles.get(d.styleName);
           if (!style) {
             Debug.assert(Source.subs.styles.every((x) => x.name !== d.styleName));
-            
+
             style = SubtitleStyle.new(d.styleName);
             Source.subs.styles.push(style);
             style = Source.subs.styles.at(-1)!; // get reactive version
@@ -75,7 +75,7 @@ onMount(async () => {
           Debug.never(d.type);
       }
       const existing = ent.texts.get(style);
-      ent.texts.set(style, 
+      ent.texts.set(style,
         existing === undefined
           ? lines[i]
           : reversed
@@ -96,7 +96,7 @@ onMount(async () => {
 function makeData() {
   for (let i = 0; i < usages.length; i++)
     usages[i] = 0;
-  
+
   for (const ent of selection) {
     const lines = processEntry(ent);
     for (let i = 0; i < lines.length; i++) {
@@ -149,9 +149,9 @@ function check() {
   hasError = false;
 
   for (const d of data) {
-    if (d.type == 'useNew' && 
-        (!d.styleName 
-      || Source.subs.styles.some((x) => x.name == d.styleName))) 
+    if (d.type == 'useNew' &&
+        (!d.styleName
+      || Source.subs.styles.some((x) => x.name == d.styleName)))
     {
       d.ok = false;
       hasError = true;
@@ -162,11 +162,11 @@ function check() {
   for (let i = 0; i < data.length-1; i++) {
     for (let j = i+1; j < data.length; j++) {
       const a = data[i], b = data[j];
-      if ((a.type == 'use' 
-        && b.type == 'use' 
+      if ((a.type == 'use'
+        && b.type == 'use'
         && a.style == b.style)
-       || (a.type == 'useNew' 
-        && b.type == 'useNew' 
+       || (a.type == 'useNew'
+        && b.type == 'useNew'
         && a.styleName == b.styleName))
       {
           a.ok = false;
@@ -280,8 +280,8 @@ function processEntry(ent: SubtitleEntry) {
     name: 'cancel',
     localizedName: () => $_('cancel')
   }, {
-    name: 'ok', 
-    localizedName: () => $_('ok'), 
+    name: 'ok',
+    localizedName: () => $_('ok'),
     disabled: () => hasError
   }]}
 >
@@ -293,7 +293,7 @@ function processEntry(ent: SubtitleEntry) {
   <table class='data'>
     <thead>
       <tr>
-        <th>{reversed 
+        <th>{reversed
           ? $_('splitbylinedialog.line-number-reversed')
           : $_('splitbylinedialog.line-number')}</th>
         <th>{$_('splitbylinedialog.usage')}</th>
@@ -328,7 +328,7 @@ function processEntry(ent: SubtitleEntry) {
                 onchange={() => check()} />
               <StyleSelect disabled={line.type !== 'use'}
                 bind:currentStyle={
-                  () => line.style ?? Source.subs.defaultStyle, 
+                  () => line.style ?? Source.subs.defaultStyle,
                   // work around a strange problem where this can be called when the dialog is being closed, when `line` is undefined
                   (x) => line ? line.style = x : undefined
                 }
@@ -364,7 +364,7 @@ function processEntry(ent: SubtitleEntry) {
         <td class={{focused: selectedRow >= i && selectedRow < i + line.span}}
             rowspan={line.span}>
           {#if !line.ok}
-            <Tooltip text={line.type == 'use' 
+            <Tooltip text={line.type == 'use'
                 ? $_('splitbylinedialog.line-error')
                 : $_('splitbylinedialog.line-error-use-new')
             } position="right">
@@ -400,7 +400,7 @@ function processEntry(ent: SubtitleEntry) {
           bind:checked={markMoreThan.use}/>
         {$_('splitbylinedialog.with-lines-more-than')}
         <NumberInput disabled={!markMoreThan.use}
-          bind:value={markMoreThan.n} 
+          bind:value={markMoreThan.n}
           min={0} step={1} width="50px"/>
         {$_('splitbylinedialog.as')}
         <LabelSelect disabled={!markMoreThan.use}
@@ -411,7 +411,7 @@ function processEntry(ent: SubtitleEntry) {
           bind:checked={markLessThan.use}/>
         {$_('splitbylinedialog.fewer-than')}
         <NumberInput disabled={!markLessThan.use}
-          bind:value={markLessThan.n} 
+          bind:value={markLessThan.n}
           min={0} step={1} width="50px"/>
         {$_('splitbylinedialog.as')}
         <LabelSelect disabled={!markLessThan.use}

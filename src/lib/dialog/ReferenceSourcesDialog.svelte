@@ -1,15 +1,17 @@
 <script lang="ts">
+import { Debug } from '../Debug';
 import { Memorized } from '../config/MemorizedValue.svelte';
-import Tooltip from '../ui/Tooltip.svelte';
 import { guardAsync } from '../frontend/Frontend';
 import { Reference, zReferenceSource, type ReferenceSource, type ReferenceString } from '../frontend/References';
+
 import DialogBase from '../DialogBase.svelte';
-import { Debug } from '../Debug';
+import { Tooltip } from '@the_dissidents/svelte-ui';
 
 import { ArrowDownIcon, ArrowUpIcon, CopyPlusIcon, PlusIcon, SquareAsteriskIcon, SquareFunctionIcon, Trash2Icon, XIcon } from '@lucide/svelte';
 import { Menu } from '@tauri-apps/api/menu';
 import { confirm, message, open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+
 import { onMount } from 'svelte';
 import { _ } from 'svelte-i18n';
 import * as z from 'zod/v4-mini';
@@ -83,7 +85,7 @@ async function update() {
 
   if (!useSelector) activeSource[0].selector = undefined;
   else activeSource[0].selector = selector;
-  
+
   sources.markChanged();
 }
 
@@ -239,7 +241,7 @@ async function importJSON() {
               if (!$sources.find((x) => x.name == name)) break;
             }
             $sources.push({
-              ...$state.snapshot(activeSource[0]) as z.infer<typeof zReferenceSource>, 
+              ...$state.snapshot(activeSource[0]) as z.infer<typeof zReferenceSource>,
               name
             });
             sources.markChanged();
@@ -269,7 +271,7 @@ async function importJSON() {
         <button class="flexgrow right"
           disabled={activeSource.length == 0}
           onclick={async () => {
-            if (!await confirm($_('refsourcedialog.are-you-sure-to-delete-n-sources', 
+            if (!await confirm($_('refsourcedialog.are-you-sure-to-delete-n-sources',
               {values: {n: activeSource.length}}))) return;
             for (const s of activeSource) {
               $sources.splice($sources.findIndex((x) => x.name == s.name), 1);
@@ -327,7 +329,7 @@ async function importJSON() {
         </tr>
         <tr>
           <td>
-            {$_('refsourcedialog.url')}<Tooltip 
+            {$_('refsourcedialog.url')}<Tooltip
               text={$_('refsourcedialog.url-d')} />
           </td>
           <td>{@render rstring(url)}</td>
@@ -335,7 +337,7 @@ async function importJSON() {
       </tbody>
       </table>
       <h5>
-        {$_('refsourcedialog.display-options')}<Tooltip 
+        {$_('refsourcedialog.display-options')}<Tooltip
           text={$_('refsourcedialog.display-options-d')} />
       </h5>
       <label><input type='checkbox' bind:checked={useScrollTo}
@@ -352,7 +354,7 @@ async function importJSON() {
         {@render rstring(selector)}
       </div>
       {/if}
-      <h5>{$_('refsourcedialog.css-patches')}<Tooltip 
+      <h5>{$_('refsourcedialog.css-patches')}<Tooltip
         text={$_('refsourcedialog.css-patches-d')} /></h5>
       {#each patches as patch, i (patch)}
       <div class="patch">
@@ -368,7 +370,7 @@ async function importJSON() {
               <input type="text" bind:value={patch.patches[i][0]}
                 onchange={() => update()}/>
               <span>:</span>
-              <input type="text" bind:value={patch.patches[i][1]} class="flexgrow" 
+              <input type="text" bind:value={patch.patches[i][1]} class="flexgrow"
                 onchange={() => update()}/>
               <button onclick={() => patch.patches.splice(i, 1)}>
                 <Trash2Icon />

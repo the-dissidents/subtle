@@ -11,6 +11,7 @@ mod redirect_log;
 mod font;
 mod subset;
 mod history;
+mod diff;
 
 use std::panic;
 use std::sync::{Arc, Mutex};
@@ -117,6 +118,7 @@ fn main() {
             history::clear_history,
             history::read_undo,
             history::read_redo,
+            diff::diff,
             open_devtools,
             make_panic,
         ])

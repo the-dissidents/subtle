@@ -1,8 +1,9 @@
 import { Debug } from "../Debug";
-import { overlayMenu } from "../ui/OverlayMenu.svelte";
 import { Frontend } from "./Frontend";
 import type { KeyBinding, CommandBinding } from "./Keybinding";
+
 import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api/menu";
+import { overlayMenu } from "@the_dissidents/svelte-ui";
 
 export type CommandOptions<TState = unknown> = ({
     displayAccel?: string,
@@ -46,12 +47,12 @@ function commandOptionToMenu<T>(
     } : {
         text: unwrap(item.name),
         enabled,
-        items: enabled 
-            ? [...item.menuName 
-                ? [{ text: unwrap(item.menuName), enabled: false }] 
-                : [], 
+        items: enabled
+            ? [...item.menuName
+                ? [{ text: unwrap(item.menuName), enabled: false }]
+                : [],
                ...unwrap(item.items)
-                 .map((x) => commandOptionToMenu(x, cmd, [...parents, item]))] 
+                 .map((x) => commandOptionToMenu(x, cmd, [...parents, item]))]
             : []
     }
 }
@@ -65,7 +66,7 @@ export class UICommand<TState = void> {
     }
 
     public readonly defaultBindings: readonly CommandBinding[];
-    
+
     #state: { value: TState } | undefined;
 
     get activated() {
@@ -74,14 +75,14 @@ export class UICommand<TState = void> {
 
     constructor(
         public readonly category: () => string,
-        public bindings: CommandBinding[], 
+        public bindings: CommandBinding[],
         private options: CommandOptions<TState>
     ) {
         this.defaultBindings = bindings.map((x) => x.clone());
     }
 
     get type(): UICommandType {
-        return 'call' in this.options 
+        return 'call' in this.options
             ? (this.options.isDialog ? 'dialog' : 'simple')
             : 'menu' ;
     }
@@ -132,7 +133,7 @@ export class UICommand<TState = void> {
                 items.map((x) => ({
                     text: unwrap(x.name),
                     disabled: x.isApplicable ? !x.isApplicable() : false
-                })), 
+                })),
                 {
                     title: unwrap(item.name),
                     text: unwrap(item.menuName ?? ''),
@@ -158,8 +159,8 @@ export class UICommand<TState = void> {
         // @ts-expect-error -- converting to unknown
         UICommand.#activated.set(this, key);
         await this.#runCommand(this.options);
-        // end immediately when there's no onDeactivate handler. this is for reducing the 
-        // probability of accidentally leaving a command marked as activated for too long, 
+        // end immediately when there's no onDeactivate handler. this is for reducing the
+        // probability of accidentally leaving a command marked as activated for too long,
         // e.g. in the case where the key is lifted only after the window lost focus
         if (!this.options.onDeactivate)
             // @ts-expect-error -- converting to unknown

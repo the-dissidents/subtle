@@ -42,15 +42,18 @@ KeybindingManager.register(SearchCommands);
 
 <script lang="ts">
 import { PencilLineIcon } from '@lucide/svelte';
+import { Collapsible } from "@the_dissidents/svelte-ui";
+
 import { _ } from 'svelte-i18n';
-import Collapsible from '../ui/Collapsible.svelte';
+import * as z from 'zod/v4-mini';
+
+
 import { Reference, type ReferenceSource } from '../frontend/References';
 import { Frontend, guardAsync } from '../frontend/Frontend';
 import { Memorized } from '../config/MemorizedValue.svelte';
-import * as z from 'zod/v4-mini';
-  import { openDialog } from '../DialogOutlet.svelte';
-  import { Dialog } from '../dialog';
-    import { RichText } from '../core/RichText';
+import { RichText } from '../core/RichText';
+import { openDialog } from '../DialogOutlet.svelte';
+import { Dialog } from '../dialog';
 
 let keyword = $state('');
 let params = new Map<string, string>();
@@ -97,7 +100,7 @@ currentSourceName.subscribe((x) => {
     </button>
   </div>
   <div class='hlayout'>
-    <select class='flexgrow' bind:value={currentSource} 
+    <select class='flexgrow' bind:value={currentSource}
             onchange={() => currentSourceName.set(currentSource!.name)}>
       {#each $sources as source (source)}
         <option value={source}>{source.name}</option>

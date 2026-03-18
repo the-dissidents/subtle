@@ -5,10 +5,10 @@
 
   import type { SvelteHTMLElements } from "svelte/elements";
   import { _ } from 'svelte-i18n';
-  
+
   import { toggleMark } from "prosemirror-commands";
   import type { MarkType, Mark } from "prosemirror-model";
-  
+
   import { AArrowUpIcon, AArrowDownIcon, RemoveFormattingIcon } from "@lucide/svelte";
 
   type DIV = SvelteHTMLElements['div'];
@@ -160,7 +160,7 @@
     }}><s>S</s></label>
 
   <span class="separator"></span>
-    
+
   <input type="number" min="0" max="10000" value={currentSize}
     disabled={!target}
     onchange={(x) => {
@@ -200,7 +200,7 @@
     display: flex;
     flex-direction: row;
     padding: 5px;
-    margin-block: 2px;
+    margin: 2px;
     border-radius: 3px;
     border: 1px solid var(--uchu-gray-4);
     min-width: none;

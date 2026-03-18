@@ -3,9 +3,7 @@ import { Debug } from '../Debug';
 import { SubtitleStyle } from '../core/Subtitles.svelte';
 import { SubtitleTools } from '../core/SubtitleUtil.svelte';
 
-import Collapsible from '../ui/Collapsible.svelte';
-import NumberInput from '../ui/NumberInput.svelte';
-import Tooltip from '../ui/Tooltip.svelte';
+import { Collapsible, NumberInput, Tooltip } from "@the_dissidents/svelte-ui";
 import StyleEdit from '../StyleEdit.svelte';
 
 import { EventHost } from '../details/EventHost';
@@ -45,7 +43,7 @@ function newStyle() {
 function removeUnusedStyles() {
   let usedStyles = new Set<SubtitleStyle>(
     Source.subs.entries.flatMap((x) => [...x.texts.keys()]));
-  Source.subs.styles = Source.subs.styles.filter((x) => 
+  Source.subs.styles = Source.subs.styles.filter((x) =>
     usedStyles.has(x) || Source.subs.defaultStyle.name == x.name);
   Source.markChanged(ChangeType.StyleDefinitions, $_('ppty.remove-all-unused'));
   styles = Source.subs.styles;
@@ -114,7 +112,7 @@ async function manageSavedStyles() {
             min={1} max={10000}
             onchange={markMetadataChange}/>
           ×
-          <NumberInput class='res' bind:value={metadata.height} 
+          <NumberInput class='res' bind:value={metadata.height}
             min={1} max={10000}
             onchange={markMetadataChange}/>
           <button disabled={$loadState !== 'loaded'} onclick={() => {
@@ -133,7 +131,7 @@ async function manageSavedStyles() {
       <tr>
         <td>{$_('ppty.scaling')}</td>
         <td>
-          <NumberInput class='res' bind:value={metadata.scalingFactor} 
+          <NumberInput class='res' bind:value={metadata.scalingFactor}
             step='any' min={0.01}
             onchange={markMetadataChange}/>
           <Tooltip text={$_('ppty.scaling-d')} />

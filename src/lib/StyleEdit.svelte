@@ -1,23 +1,22 @@
 <script lang="ts">
-import { SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
-import { AlignMode } from "./core/Labels";
-import { SubtitleTools } from "./core/SubtitleUtil.svelte";
-
 import { ArrowDown, ArrowUp, MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
 import { Menu } from "@tauri-apps/api/menu";
 import * as dialog from "@tauri-apps/plugin-dialog";
 import { writable } from 'svelte/store';
-import { ChangeType, Source } from "./frontend/Source";
-
 import { _ } from 'svelte-i18n';
+
 import { Debug } from "./Debug";
+import { SubtitleStyle, Subtitles } from "./core/Subtitles.svelte";
+import { AlignMode } from "./core/Labels";
+import { SubtitleTools } from "./core/SubtitleUtil.svelte";
 import { Utils } from "./frontend/Utils";
+import { ChangeType, Source } from "./frontend/Source";
+import { WrapStyle } from "./details/TextLayout";
+
+import { Collapsible, NumberInput } from "@the_dissidents/svelte-ui";
 import FilterEdit from "./FilterEdit.svelte";
 import FontSelect from "./FontSelect.svelte";
-import NumberInput from "./ui/NumberInput.svelte";
-import Collapsible from "./ui/Collapsible.svelte";
 import Colorpicker from "./ui/Colorpicker.svelte";
-    import { WrapStyle } from "./details/TextLayout";
 
 interface Props {
   style: SubtitleStyle;
@@ -46,7 +45,7 @@ async function contextMenu() {
   let isDefault = $style == subtitles.defaultStyle;
   let used = subtitles.entries.filter((x) => x.texts.has($style));
   let withoutThis = subtitles.styles.filter((x) => x !== $style);
-  
+
   let menu = await Menu.new({
     items: [
     {
@@ -159,8 +158,8 @@ async function contextMenu() {
         const i = subtitles.styles.indexOf($style);
         Debug.assert(i >= 0);
         subtitles.styles = [
-          ...subtitles.styles.slice(0, i-1), 
-          $style, 
+          ...subtitles.styles.slice(0, i-1),
+          $style,
           subtitles.styles[i-1],
           ...subtitles.styles.slice(i+1)
         ];
@@ -175,9 +174,9 @@ async function contextMenu() {
         let i = subtitles.styles.indexOf($style);
         Debug.assert(i >= 0);
         subtitles.styles = [
-          ...subtitles.styles.slice(0, i), 
+          ...subtitles.styles.slice(0, i),
           subtitles.styles[i+1],
-          $style, 
+          $style,
           ...subtitles.styles.slice(i+2)
         ];
         Source.markChanged(ChangeType.StyleDefinitions, $_('c.reorder-styles'));
@@ -232,7 +231,7 @@ async function contextMenu() {
         <tr>
           <td>{$_('style.size')}</td>
           <td class="hlayout style">
-            <NumberInput width="100%" bind:value={$style.size} 
+            <NumberInput width="100%" bind:value={$style.size}
               onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-size'))}/>
             <label><input type='checkbox' bind:checked={$style.styles.bold}
               onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
@@ -252,7 +251,7 @@ async function contextMenu() {
     </table>
     <!-- validator -->
     <Collapsible header={$_('style.validator')}>
-      <FilterEdit bind:filter={$style.validator} 
+      <FilterEdit bind:filter={$style.validator}
         availableContexts={['entry', 'channel']}
         onchange={() => Source.markChanged(ChangeType.Filter, $_('c.style-filter'))} />
     </Collapsible>
@@ -263,14 +262,14 @@ async function contextMenu() {
           <tr>
             <td>{$_('style.text-color')}</td>
             <td>
-              <Colorpicker bind:color={$style.color} 
+              <Colorpicker bind:color={$style.color}
                 onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
             </td>
           </tr>
           <tr>
             <td>{$_('style.line-color')}</td>
             <td>
-              <Colorpicker bind:color={$style.outlineColor} 
+              <Colorpicker bind:color={$style.outlineColor}
                 onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
             </td>
           </tr>
@@ -283,7 +282,7 @@ async function contextMenu() {
           <tr>
             <td>{$_('style.shadow-color')}</td>
             <td>
-              <Colorpicker bind:color={$style.shadowColor} 
+              <Colorpicker bind:color={$style.shadowColor}
                 onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow-color'))}/>
             </td>
           </tr>

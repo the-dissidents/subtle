@@ -2,19 +2,20 @@ import { Debug } from "../../Debug";
 import type { CanvasManager } from "../../CanvasManager";
 import { Filter, type SimpleMetricFilter } from "../../core/Filter";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
+
 import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
 import { ChangeCause, Source } from "../../frontend/Source";
+import { Playback } from "../../frontend/Playback";
+import { Frontend } from "../../frontend/Frontend";
 
 import type { TableLayout, ChannelLayout } from "./Layout.svelte";
 import { TableConfig } from "./Config";
 
 import { _ } from 'svelte-i18n';
-
 import { get } from "svelte/store";
-import { Playback } from "../../frontend/Playback";
-import { Frontend } from "../../frontend/Frontend";
 import { contextMenu } from "./Menu";
-import type Popup from "../../ui/Popup.svelte";
+
+import { type Popup } from "@the_dissidents/svelte-ui";
 
 export const SubtitleTableHandle = {
     processDoubleClick: undefined as (undefined | (() => Promise<void>)),
@@ -67,8 +68,8 @@ export class TableInput {
                     return;
                 }
                 const sy = Math.max(
-                    (pos.line + pos.height + 1) * layout.lineHeight 
-                        - this.manager.size[1] / this.manager.scale, 
+                    (pos.line + pos.height + 1) * layout.lineHeight
+                        - this.manager.size[1] / this.manager.scale,
                     Math.min(this.manager.scroll[1], pos.line * layout.lineHeight));
                 this.manager.setScroll({y: sy})
                 this.manager.requestRender();
@@ -103,7 +104,7 @@ export class TableInput {
             contextMenu();
         });
     }
-    
+
     focus() {
         Frontend.uiFocus.set('Table');
     }
@@ -111,7 +112,7 @@ export class TableInput {
     async #handleDoubleClick() {
         this.focus();
         const focused = Editing.getFocusedEntry();
-        
+
         if (focused == 'virtual') {
             if (TableConfig.data.doubleClickStartEdit)
             Editing.startEditingNewVirtualEntry();
@@ -134,7 +135,7 @@ export class TableInput {
     }
 
     #getLineFromOffset(y: number) {
-        return (y / this.manager.scale + this.manager.scroll[1] - this.layout.headerHeight) 
+        return (y / this.manager.scale + this.manager.scroll[1] - this.layout.headerHeight)
             / this.layout.lineHeight;
     }
 
@@ -152,11 +153,11 @@ export class TableInput {
 
     #onMouseMove(ev: MouseEvent) {
         if (ev.offsetY < this.layout.headerHeight / this.manager.scale) return;
-        
+
         const [cx, _cy] = this.manager.convertPosition('offset', 'canvas', ev.offsetX, ev.offsetY);
         const channelColumnStart = this.layout.channelColumns[0].layout?.position ?? Infinity;
         const currentLine = this.#getLineFromOffset(ev.offsetY);
-        const currentText = cx > channelColumnStart 
+        const currentText = cx > channelColumnStart
             ? this.#getTextFromLineIndex(currentLine)?.[0]
             : undefined;
 
@@ -166,14 +167,14 @@ export class TableInput {
                 this.validationMessagePopup.close!();
             if (this.currentFails.length > 0) {
                 Debug.assert(currentText !== undefined);
-                this.popupMessage = 
+                this.popupMessage =
                     get(_)('table.requirement-not-met', {values: {n: this.currentFails.length}})
                     + '\n'
                     + this.currentFails.map((x) => Filter.describe(x)).join('\n');
-                const [left, top] = this.manager.convertPosition('canvas', 'client', 
-                    channelColumnStart, 
+                const [left, top] = this.manager.convertPosition('canvas', 'client',
+                    channelColumnStart,
                     currentText.line * this.layout.lineHeight + this.layout.headerHeight);
-                this.validationMessagePopup.open!({left, top, width: 0, 
+                this.validationMessagePopup.open!({left, top, width: 0,
                     height: currentText.height * 0.5 * this.layout.lineHeight / this.manager.scale});
             }
         }
@@ -203,7 +204,7 @@ export class TableInput {
                 return;
             }
             const time = performance.now();
-            this.manager.setScroll({ y: this.manager.scroll[1] 
+            this.manager.setScroll({ y: this.manager.scroll[1]
                 + this.autoScrollY * (time - this.lastAnimateFrameTime) * 0.001 });
             this.lastAnimateFrameTime = time;
 

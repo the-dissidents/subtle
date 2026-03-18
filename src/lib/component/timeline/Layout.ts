@@ -288,7 +288,7 @@ export class TimelineLayout {
     if (exclude.size == subs.styles.length)
       exclude.clear();
     // styleRefreshCounter++;
-    
+
     this.#shownStyles = subs.styles.filter((x) => !exclude.has(x));
     this.entryHeight = TimelineConfig.data.fontSize + 15;
     this.#stylesMap = new Map(this.#shownStyles.map((x, i) => [x, i]));

@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "packages": {
+    "@the_dissidents/svelte-ui": {
+      "signature": "6b1daa6a1014bcb70cdc6a15066b5489",
+      "pure": true
+    }
+  }
+}

@@ -14,3 +14,7 @@ vite.config.ts.timestamp-*
 .aider*
 stats*.html
 target/
+.yalc/
+
+AGENTS.md
+TECHNICAL.md

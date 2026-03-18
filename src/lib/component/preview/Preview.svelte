@@ -1,17 +1,21 @@
 <script lang="ts">
-  import { PauseIcon, PlayIcon, Volume2Icon } from "@lucide/svelte";
+  import { Debug } from "../../Debug";
+
+  import { Memorized } from "../../config/MemorizedValue.svelte";
   import { Playback } from "../../frontend/Playback";
-  import TimestampInput from "../../TimestampInput.svelte";
+  import { Frontend } from "../../frontend/Frontend";
+
   import { PreviewLayout } from "./Layout";
   import { MediaPlayerInterface } from "./MediaPlayer";
-  import SubtitleView from "./SubtitleView.svelte";
-  import Popup from "../../ui/Popup.svelte";
-  import { Memorized } from "../../config/MemorizedValue.svelte";
-  import { z } from "zod/v4-mini";
-  import { Frontend } from "../../frontend/Frontend";
   import type { LineBox } from "./SubtitleRenderer";
-    import { onMount } from "svelte";
-    import { Debug } from "../../Debug";
+
+  import SubtitleView from "./SubtitleView.svelte";
+  import TimestampInput from "../../TimestampInput.svelte";
+  import { Popup } from "@the_dissidents/svelte-ui";
+
+  import { PauseIcon, PlayIcon, Volume2Icon } from "@lucide/svelte";
+  import { z } from "zod/v4-mini";
+  import { onMount } from "svelte";
 
   let volume = Memorized.$('playbackVolume', z.number().check(z.gt(0)).check(z.lt(1)), 0.8);
   volume.subscribe((x) => Playback.player?.setVolume(x));

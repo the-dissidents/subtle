@@ -35,4 +35,7 @@ export const Dialog = {
     get transformTimes() {
         return (async () => (await import('./TimeTransformDialog.svelte')).default)();
     },
+    get compare() {
+        return (async () => (await import('./CompareDialog.svelte')).default)();
+    },
 }

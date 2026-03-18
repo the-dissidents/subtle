@@ -5,7 +5,7 @@
   import type { HTMLButtonAttributes } from "svelte/elements";
   import { hook } from "./details/Hook.svelte";
 
-  import Tooltip from "./ui/Tooltip.svelte";
+  import { Tooltip } from "@the_dissidents/svelte-ui";
   import { InfoIcon, LoaderIcon } from "@lucide/svelte";
 
   interface Props extends HTMLButtonAttributes {
@@ -21,29 +21,29 @@
   hook(() => value, (v) => {
     isValid = Fonts.families.has(v);
   });
- 
+
   const filteredList = $derived.by(() => {
     if (searchValue === "") return list;
     const lower = searchValue.toLowerCase();
     const filtered = list.filter((item) =>
       item.name.toLowerCase().includes(lower));
-    return filtered.sort((a, b) => 
-        (a.name.toLowerCase().startsWith(lower) ? 0 : 1) 
+    return filtered.sort((a, b) =>
+        (a.name.toLowerCase().startsWith(lower) ? 0 : 1)
       - (b.name.toLowerCase().startsWith(lower) ? 0 : 1));
   });
- 
+
   function handleInput(e: Event & { currentTarget: HTMLInputElement }) {
     searchValue = e.currentTarget.value;
     requestAnimationFrame(() => updateVisibility());
   }
- 
+
   function handleOpenChange(v: boolean) {
     if (!v) searchValue = "";
     if (v) requestAnimationFrame(() => updateVisibility());
   }
-  
+
   let anchor = $state<HTMLElement>(null!);
-  
+
   type Entry = {
     name: string,
     ctrl?: HTMLElement,
@@ -71,13 +71,13 @@
     const m = Fonts.macosAvailability(v);
 
     return (w.status
-      ? (w.supplement 
-        ? $_('exportassdialog.available-on-windows-through-supplement', {values: {s: w.supplement}}) 
+      ? (w.supplement
+        ? $_('exportassdialog.available-on-windows-through-supplement', {values: {s: w.supplement}})
         : $_('exportassdialog.built-in-on-windows'))
       : $_('exportassdialog.not-directly-available-on-windows')) + '\n'
         + (m.status
-      ? (m.supplement 
-        ? $_('exportassdialog.downloadable-on-macos-but-not-necessarily-built-in') 
+      ? (m.supplement
+        ? $_('exportassdialog.downloadable-on-macos-but-not-necessarily-built-in')
         : $_('exportassdialog.built-in-on-macos'))
       : $_('exportassdialog.not-directly-available-on-macos'));
   }
@@ -109,13 +109,13 @@
         {@const w = Fonts.windowsAvailability(value)}
         {@const m = Fonts.macosAvailability(value)}
         {w.status
-          ? (w.supplement 
-            ? $_('exportassdialog.available-on-windows-through-supplement', {values: {s: w.supplement}}) 
+          ? (w.supplement
+            ? $_('exportassdialog.available-on-windows-through-supplement', {values: {s: w.supplement}})
             : $_('exportassdialog.built-in-on-windows'))
           : $_('exportassdialog.not-directly-available-on-windows')}
         <br/>{m.status
-          ? (m.supplement 
-            ? $_('exportassdialog.downloadable-on-macos-but-not-necessarily-built-in') 
+          ? (m.supplement
+            ? $_('exportassdialog.downloadable-on-macos-but-not-necessarily-built-in')
             : $_('exportassdialog.built-in-on-macos'))
           : $_('exportassdialog.not-directly-available-on-macos')}
       {/snippet}
@@ -143,7 +143,7 @@
             {#if entry.visible}
               {#await Fonts.getFamily(entry.name)}
                 <LoaderIcon />
-              {:then family} 
+              {:then family}
                 {#if family === null || family.length == 0}
                   <span class="preview">
                     {$_('fontselect.failed-to-load-data-for-this-font')}

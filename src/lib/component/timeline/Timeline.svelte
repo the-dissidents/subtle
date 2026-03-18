@@ -2,15 +2,17 @@
 import { _ } from 'svelte-i18n';
 
 import { ChangeType, Source } from "../../frontend/Source";
-import Popup from '../../ui/Popup.svelte';
+import { Frontend } from '../../frontend/Frontend';
+import { Playback } from '../../frontend/Playback';
+import { hook } from '../../details/Hook.svelte';
+
 import { TimelineLayout } from "./Layout";
 import { TimelineInput, TimelineHandle } from "./Input.svelte";
 import { TimelineRenderer } from "./Render.svelte";
-import Tooltip from '../../ui/Tooltip.svelte';
-import { Playback } from '../../frontend/Playback';
-import { hook } from '../../details/Hook.svelte';
+
 import { AlignCenterVerticalIcon, FrameIcon, MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
-import { Frontend } from '../../frontend/Frontend';
+
+import { Popup, Tooltip } from '@the_dissidents/svelte-ui';
 
 let currentMode = TimelineHandle.currentMode;
 let useSnap = TimelineHandle.useSnap;
@@ -52,13 +54,13 @@ function setup(canvas: HTMLCanvasElement) {
       TimelineHandle.useSnap.override = undefined;
   });
 
-  hook(() => Playback.playArea.setting, 
+  hook(() => Playback.playArea.setting,
        () => layout!.manager.requestRender());
 }
 
 function updateSnapOverride(ev: KeyboardEvent) {
   if ($uiFocus !== 'Timeline') return;
-  TimelineHandle.useSnap.override = 
+  TimelineHandle.useSnap.override =
     ev.altKey ? !TimelineHandle.useSnap.setting : undefined;
 }
 </script>

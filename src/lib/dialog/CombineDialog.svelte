@@ -3,9 +3,10 @@ import { SubtitleEntry } from '../core/Subtitles.svelte';
 import { type LabelType } from "../core/Labels";
 import { Editing } from '../frontend/Editing';
 import { ChangeType, Source } from '../frontend/Source';
+
 import DialogBase from '../DialogBase.svelte';
 import LabelSelect from '../LabelSelect.svelte';
-import NumberInput from '../ui/NumberInput.svelte';
+import { NumberInput } from '@the_dissidents/svelte-ui';
 
 import { _ } from 'svelte-i18n';
 import { onMount } from 'svelte';
@@ -25,7 +26,7 @@ let start = $state(0),
 let markStart = $state(0.05),
     markEnd = $state(0.05);
 let number = $state([0, 0, 0] as [number, number, number]);
-let selectionOnly = $state(true), 
+let selectionOnly = $state(true),
     doMark = $state(true),
     markLabel = $state('red' as LabelType),
     hasbeen = $state(false);
@@ -76,7 +77,7 @@ function run(doit: boolean) {
         continue;
       }
 
-      if (Math.abs(entry0.start - entry1.start) <= markStart 
+      if (Math.abs(entry0.start - entry1.start) <= markStart
        && Math.abs(entry0.end - entry1.end) <= markEnd && doMark)
       {
         marked.add(entry0);
@@ -125,7 +126,7 @@ function run(doit: boolean) {
       </tr>
       <tr>
         <td>{$_('combinedialog.start-time-threshold')}</td>
-        <td><NumberInput min='0' step="0.001" 
+        <td><NumberInput min='0' step="0.001"
           bind:value={start}
           onchange={() => run(false)} /></td>
       </tr>
@@ -137,14 +138,14 @@ function run(doit: boolean) {
       </tr>
       <tr>
         <td colspan="2"><h5>
-          <input type='checkbox' bind:checked={doMark} 
+          <input type='checkbox' bind:checked={doMark}
             onchange={() => run(false)} />
           {$_('combinedialog.label-possibly-problematic-entries')}
         </h5></td>
       </tr>
       <tr>
         <td>{$_('combinedialog.start-time-threshold')}</td>
-        <td><NumberInput min='0' step="0.001" 
+        <td><NumberInput min='0' step="0.001"
           disabled={!doMark}
           bind:value={markStart}
           onchange={() => run(false)} /></td>
@@ -180,8 +181,8 @@ function run(doit: boolean) {
       <tr>
         <td>{number[0]}</td>
         <td>
-          {hasbeen 
-            ? $_('combinedialog.have-been-combined-in', {values: {n: number[0]}}) 
+          {hasbeen
+            ? $_('combinedialog.have-been-combined-in', {values: {n: number[0]}})
             : $_('combinedialog.will-be-combined-in', {values: {n: number[0]}})}
         </td>
       </tr>
@@ -192,10 +193,10 @@ function run(doit: boolean) {
       <tr>
         <td>{number[2]}</td>
         <td>
-          {hasbeen 
+          {hasbeen
             ? $_('combinedialog.have-been-labeled', {values: {
               n: number[0], color: $_(`label.${markLabel}`)
-            }}) 
+            }})
             : $_('combinedialog.will-be-labeled', {values: {
               n: number[0], color: $_(`label.${markLabel}`)
             }})}
@@ -206,7 +207,7 @@ function run(doit: boolean) {
   <p>
     {$_('combinedialog.explanation')}
   </p>
-  <button style="width: 100%;" 
+  <button style="width: 100%;"
     onclick={() => run(true)}
   >{$_('combinedialog.combine')}</button>
 </DialogBase>

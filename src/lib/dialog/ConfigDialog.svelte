@@ -1,12 +1,13 @@
 <script lang="ts">
-import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { MainConfig } from "../config/Groups";
 import type { PublicConfigGroup, PublicConfigGroupDefinition } from '../config/PublicConfig.svelte';
 import { Interface } from '../frontend/Interface';
-import NumberInput from '../ui/NumberInput.svelte';
 import { Debug } from "../Debug";
-import DialogBase from '../DialogBase.svelte';
 
+import DialogBase from '../DialogBase.svelte';
+import { NumberInput } from '@the_dissidents/svelte-ui';
+
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { appLocalDataDir, appLogDir } from "@tauri-apps/api/path";
 import { RefreshCcwIcon } from '@lucide/svelte';
 import { onMount } from 'svelte';
@@ -58,7 +59,7 @@ locale.subscribe(() => refresh++);
       }}>{$_('configdialog.show-autosave-path')}</button>
     </div>
   </div>
-  
+
   {#key refresh}
   {#each groups as [gkey, group] (gkey)}
   {@const items = Object.entries(group.definition)}
@@ -111,8 +112,8 @@ locale.subscribe(() => refresh++);
                  onchange={async () => await MainConfig.save()}/>
 
           {:else if item.type == 'number' || item.type == 'integer'}
-            {#if item.bounds !== undefined 
-              && item.bounds[0] !== null 
+            {#if item.bounds !== undefined
+              && item.bounds[0] !== null
               && item.bounds[1] !== null}
               <div class="hlayout stretch">
                 <NumberInput bind:value={group.data[key] as number}
@@ -122,12 +123,12 @@ locale.subscribe(() => refresh++);
                 <input type="range" class="flexgrow"
                   min={item.bounds[0]} max={item.bounds[1]}
                   step={item.type == 'integer' ? 1 : 'any'}
-                  bind:value={group.data[key]} 
+                  bind:value={group.data[key]}
                   onchange={async () => await MainConfig.save()}/>
               </div>
             {:else}
               <NumberInput bind:value={group.data[key] as number}
-                class="stretch" 
+                class="stretch"
                 min={item.bounds?.[0]} max={item.bounds?.[1]}
                 step={item.type == 'integer' ? 1 : 'any'} />
             {/if}

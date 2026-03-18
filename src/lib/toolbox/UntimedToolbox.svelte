@@ -28,43 +28,43 @@ function offset(from: number, dir: 'left' | 'right') {
     return from + (dir == 'right' ? 1 : -1);
 
   const prefix = fuzzy.engine.prefixLengthList();
-  let result = dir == 'right' 
-    ? prefix.find((x) => x > from) 
+  let result = dir == 'right'
+    ? prefix.find((x) => x > from)
     : prefix.findLast((x) => x < from);
   Debug.assert(result !== undefined);
   return result;
 }
 
 const UntimedCommands = {
-  shiftStartPointLeft: new UICommand(() => get(_)('category.fuzzy'), 
+  shiftStartPointLeft: new UICommand(() => get(_)('category.fuzzy'),
     [ CommandBinding.from(['Z'], ['Table', 'Other']) ],
   {
     name: () => get(_)('untimed.fuzzy.action-start-left'),
     isApplicable: () => fuzzy.enabled,
     call: () => textarea.selectionStart = offset(textarea.selectionStart, 'left')
   }),
-  shiftStartPointRight: new UICommand(() => get(_)('category.fuzzy'), 
+  shiftStartPointRight: new UICommand(() => get(_)('category.fuzzy'),
     [ CommandBinding.from(['X'], ['Table', 'Other']) ],
   {
     name: () => get(_)('untimed.fuzzy.action-start-right'),
     isApplicable: () => fuzzy.enabled,
     call: () => textarea.selectionStart = offset(textarea.selectionStart, 'right')
   }),
-  shiftEndPointLeft: new UICommand(() => get(_)('category.fuzzy'), 
+  shiftEndPointLeft: new UICommand(() => get(_)('category.fuzzy'),
     [ CommandBinding.from(['C'], ['Table', 'Other']) ],
   {
     name: () => get(_)('untimed.fuzzy.action-end-left'),
     isApplicable: () => fuzzy.enabled,
     call: () => textarea.selectionEnd = offset(textarea.selectionEnd, 'left')
   }),
-  shiftEndPointRight: new UICommand(() => get(_)('category.fuzzy'), 
+  shiftEndPointRight: new UICommand(() => get(_)('category.fuzzy'),
     [ CommandBinding.from(['V'], ['Table', 'Other']) ],
   {
     name: () => get(_)('untimed.fuzzy.action-end-right'),
     isApplicable: () => fuzzy.enabled,
     call: () => textarea.selectionEnd = offset(textarea.selectionEnd, 'right')
   }),
-  applyMatch: new UICommand(() => get(_)('category.fuzzy'), 
+  applyMatch: new UICommand(() => get(_)('category.fuzzy'),
     [ CommandBinding.from(['A'], ['Table', 'Other']) ],
   {
     name: () => get(_)('untimed.fuzzy.action-apply-match'),
@@ -90,25 +90,25 @@ KeybindingManager.register(UntimedCommands);
 <script lang="ts">
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import * as dialog from "@tauri-apps/plugin-dialog";
+import { Collapsible, NumberInput } from "@the_dissidents/svelte-ui";
+import StyleSelect from "../StyleSelect.svelte";
+
 import { onDestroy } from "svelte";
+import { _ } from 'svelte-i18n';
+import * as z from "zod/v4-mini";
+
+import { Debug } from "../Debug";
 
 import { SubtitleEntry } from "../core/Subtitles.svelte";
-import { Debug } from "../Debug";
+import { RichText } from "../core/RichText";
 import * as fuzzyAlgorithm from "../details/Fuzzy";
 import { EventHost } from "../details/EventHost";
-
-import StyleSelect from "../StyleSelect.svelte";
-import Collapsible from "../ui/Collapsible.svelte";
-import NumberInput from "../ui/NumberInput.svelte";
 
 import { Editing, SelectMode } from "../frontend/Editing";
 import { Frontend } from "../frontend/Frontend";
 import { ChangeType, Source } from "../frontend/Source";
 
-import { _ } from 'svelte-i18n';
 import { Memorized } from "../config/MemorizedValue.svelte";
-import * as z from "zod/v4-mini";
-    import { RichText } from "../core/RichText";
 
 let fillAsStyle = $state(Source.subs.defaultStyle);
 let selection = $state<SubtitleEntry[]>([]);
@@ -119,13 +119,13 @@ async function fillIn(range: SubtitleEntry[]) {
   const lines = Source.subs.metadata.special.untimedText.split(separator);
 
   if (lines.length < range.length) {
-    if (!await dialog.confirm($_('untimed.fill-in.too-long-msg', 
+    if (!await dialog.confirm($_('untimed.fill-in.too-long-msg',
       {values: { a: range.length, b: lines.length }}))) return false;
     range = range.slice(0, lines.length);
   }
   const already = range.filter((x) => x.texts.has(fillAsStyle));
   if (already.length > 0
-   && !await dialog.confirm($_('untimed.fill-in.already-has-style-msg', 
+   && !await dialog.confirm($_('untimed.fill-in.already-has-style-msg',
     {values: { a: already.length, b: fillAsStyle.name }}))) return false;
 
   range.forEach((x) => Editing.fillWithFirstLineOfUntimed(x, fillAsStyle, separator));
@@ -181,7 +181,7 @@ function fuzzyMatch() {
   }
 
   // create engine if necessary
-  if (fuzzy.engine === null) fuzzy.engine = 
+  if (fuzzy.engine === null) fuzzy.engine =
     new fuzzyAlgorithm.Searcher(haystack, tokenizers[fuzzy.tokenizer]);
 
   // perform search
@@ -204,16 +204,16 @@ function fuzzyMatch() {
       end = result.end;      // not inclusive
   // snap to whole words
   if ($snapToWord) {
-    while (start > 0 
-        && latinOrNumber.test(haystack[start-1]) 
+    while (start > 0
+        && latinOrNumber.test(haystack[start-1])
         && latinOrNumber.test(haystack[start])) start--;
     while (end < haystack.length
-        && latinOrNumber.test(haystack[end-1]) 
+        && latinOrNumber.test(haystack[end-1])
         && latinOrNumber.test(haystack[end])) end++;
   }
   // snap to punctuation
   if ($snapToPunct && end < haystack.length
-    && !punctuation.test(haystack[end-1]) 
+    && !punctuation.test(haystack[end-1])
     &&  punctuation.test(haystack[end])) end++;
   // trim whitespaces
   while (end > 0 && whitespace.test(haystack[end-1])) end--;
@@ -244,7 +244,7 @@ function setSelectionAndScroll(selectionStart: number, selectionEnd: number) {
   }
   textarea.scrollTop = scrollTop;
 
-  // Since you must focus on the textarea in order to setSelectionRange, but doing 
+  // Since you must focus on the textarea in order to setSelectionRange, but doing
   // so changes the UIFocus, we must change it back afterwards.
   const focus = Frontend.getUIFocus();
   textarea.focus();
@@ -255,7 +255,7 @@ function setSelectionAndScroll(selectionStart: number, selectionEnd: number) {
 async function paste() {
   let text = await clipboard.readText();
   if (text.length > 500000 && !await dialog.confirm(
-    'The text in your clipboard is very long. Proceed to import?', 
+    'The text in your clipboard is very long. Proceed to import?',
     {kind: 'warning'})) return;
   Source.subs.metadata.special.untimedText = text;
   markChanged();
@@ -388,7 +388,7 @@ function clear() {
       background-color: var(--uchu-gray-1);
     }
   }
-  
+
   @media (prefers-color-scheme: dark) {
     textarea[readonly] {
       background-color: var(--uchu-yin-6);

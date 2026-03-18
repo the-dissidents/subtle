@@ -58,10 +58,11 @@ import { RichText } from '../core/RichText';
 
 import { Editing, SelectMode } from '../frontend/Editing';
 import { ChangeCause, ChangeType, Source } from '../frontend/Source';
-import Collapsible from '../ui/Collapsible.svelte';
-import Tooltip from '../ui/Tooltip.svelte';
+
 import FilterEdit from '../FilterEdit.svelte';
 import StyleSelect from '../StyleSelect.svelte';
+
+import { Collapsible, Tooltip } from "@the_dissidents/svelte-ui";
 
 import { _ } from 'svelte-i18n';
 import * as z from "zod/v4-mini";
@@ -85,7 +86,7 @@ let term            = Memorized.$('search-term', z.string(), ''),
 
 // condition (simple)
 let selectionOnly   = Memorized.$('search-selectionOnly', z.boolean(), false),
-    useStyle        = $state(false), 
+    useStyle        = $state(false),
     useReplaceStyle = $state(false),
     useLabel        = $state(false);
 
@@ -122,10 +123,10 @@ function* iterate(
   let first = true;
   for (let i = startIndex;
     i < entries.length && i >= 0;
-    i += backwards ? -1 : 1) 
+    i += backwards ? -1 : 1)
   {
     const entry = entries[i];
-    for (let j = i == startIndex ? startStyleIndex : 0; 
+    for (let j = i == startIndex ? startStyleIndex : 0;
       j < Source.subs.styles.length; j++)
     {
       const style = Source.subs.styles[j];
@@ -159,7 +160,7 @@ function processReplacement(original: string, match: RegExpExecArray, repl: stri
         break;
       }
       const char2 = repl[i];
-      result += (char2 in replEscapedSequences) 
+      result += (char2 in replEscapedSequences)
         ? replEscapedSequences[char2 as keyof typeof replEscapedSequences] : char2;
     } else if (char == '$') {
       i++;
@@ -203,7 +204,7 @@ async function execute(type: SearchAction, option: SearchOption) {
 
   const focusedEntry = Editing.getFocusedEntry();
   let focus = focusedEntry instanceof SubtitleEntry ? focusedEntry : entries[0];
-  if ($selectionOnly) 
+  if ($selectionOnly)
     focus = Source.subs.entries.find((x) => Editing.inSelection(x)) ?? focus;
 
   if (resumeFrom)
@@ -219,7 +220,7 @@ async function execute(type: SearchAction, option: SearchOption) {
   if ($term !== '') {
     // construct regex from search term
     try {
-      expr = new RegExp($useRegex ? $term : Basic.escapeRegexp($term), 
+      expr = new RegExp($useRegex ? $term : Basic.escapeRegexp($term),
         `ug${$caseSensitive ? '' : 'i'}`);
     } catch (e) {
       Debug.assert(e instanceof Error);
@@ -241,7 +242,7 @@ async function execute(type: SearchAction, option: SearchOption) {
   }
 
   const repl = type == "replace" ? $replaceTerm : '';
-  const startIndex = option == "all" 
+  const startIndex = option == "all"
     ? 0 : Math.max(entries.indexOf(focus), 0);
   const styleIndex = resumeFrom ? Source.subs.styles.indexOf(resumeFrom.style) : 0;
 
@@ -327,7 +328,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     if (type == 'replace') {
       entry.texts.set(newStyle, newRich);
     }
-    
+
     res = gen.next(false);
   }
 
@@ -378,7 +379,7 @@ async function execute(type: SearchAction, option: SearchOption) {
       {
         text: $_('search.pattern.newline'),
         action() {
-            
+
         },
       }
     ]}).then((x) => x.popup());

@@ -1,11 +1,12 @@
 <script lang="ts">
+import { Basic } from '../Basic';
 import { SubtitleEntry } from '../core/Subtitles.svelte';
 import { type TimeShiftOptions } from "../core/SubtitleUtil.svelte";
 import { Editing } from '../frontend/Editing';
-import NumberInput from '../ui/NumberInput.svelte';
+
 import DialogBase from '../DialogBase.svelte';
 import TimestampInput from '../TimestampInput.svelte';
-import { Basic } from '../Basic';
+import { NumberInput } from '@the_dissidents/svelte-ui';
 
 import { onMount } from 'svelte';
 import { _ } from 'svelte-i18n';
@@ -20,7 +21,7 @@ let { args: _args, close }: Props = $props();
 // constants
 let selectionStart = $state(0),
     selectionEnd   = $state(0);
-  
+
 // variables
 let offset       = $state(0),
     fpsBefore    = $state(1),

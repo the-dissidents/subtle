@@ -5,11 +5,13 @@ import { type SubtitleStyle } from '../core/Subtitles.svelte';
 import { ASSWriter } from '../core/ASS.svelte';
 import { Source } from '../frontend/Source';
 import { Interface } from '../frontend/Interface';
-import Tooltip from '../ui/Tooltip.svelte';
-import DialogBase from '../DialogBase.svelte';
+
 import { Fonts } from '../Fonts';
 import { MAPI } from '../API';
 import { Debug } from '../Debug';
+
+import DialogBase from '../DialogBase.svelte';
+import { Tooltip } from '@the_dissidents/svelte-ui';
 
 import { CircleAlertIcon, CircleCheckIcon, CircleHelpIcon, CircleXIcon, InfoIcon, MessageSquareMoreIcon,  } from '@lucide/svelte';
 import { onMount } from 'svelte';
@@ -32,7 +34,7 @@ onMount(async () => {
       map.set(style.name, (map.get(style.name) ?? 0) + 1);
   styles = subs.styles.map(
     (x) => ({style: x, count: map.get(x.name) ?? 0, use: true}));
-  
+
   fonts.clear();
   for (const s of styles)
     if (s.style.font) {
@@ -51,7 +53,7 @@ onMount(async () => {
       }
     }
   update();
-  
+
   const btn = await inner!.showModal!();
   if (btn !== 'ok')
     return close();
@@ -63,7 +65,7 @@ onMount(async () => {
         name, setting.subset.result.extension,
         setting.subset.result.encoded
       );
-  
+
   await Interface.askExportFile('ass', () => writer.toString());
   close();
 });
@@ -112,7 +114,7 @@ async function handleSubsetButton(setting: FontSetting) {
         for (const channel of entry.texts)
           if (setting.styles.has(channel[0].name))
             text += channel[1];
-      
+
       try {
         const result = await MAPI.subsetEncode(setting.face.url, setting.face.index, text);
         setting.subset = { type: 'ok', result };
@@ -150,7 +152,7 @@ async function handleSubsetButton(setting: FontSetting) {
         <tbody>
         {#each styles as entry (entry)}
         <tr>
-          <td><input type="checkbox" 
+          <td><input type="checkbox"
             disabled={entry.count == 0}
             bind:checked={entry.use}
             onchange={() => update()}/></td>
@@ -182,7 +184,7 @@ async function handleSubsetButton(setting: FontSetting) {
                 checked={setting.subset.type == 'ok'}
                 onchange={() => handleSubsetButton(setting)}/>
 
-              {setting.face 
+              {setting.face
                 ? (setting.subset.type == 'ok' ? $_('exportassdialog.remove-embedding')
                  : setting.subset.type == 'working' ? $_('exportassdialog.working')
                  : setting.subset.type == 'error' ? $_('exportassdialog.error')
@@ -203,14 +205,14 @@ async function handleSubsetButton(setting: FontSetting) {
               </li>
               <li class="ok">
                 <InfoIcon />
-                {$_('exportassdialog.embed-info', { values: 
+                {$_('exportassdialog.embed-info', { values:
                   { a: result.nGlyphs, b: result.encoded.length } })}
               </li>
               {#if result.missing.length > 0}
                 <li class="warn">
                   <CircleHelpIcon />
                   {$_('exportassdialog.glyphs-not-found', {values: { n: result.missing.length }})}
-                  <Tooltip text={result.missing.length > 100 
+                  <Tooltip text={result.missing.length > 100
                     ? result.missing.slice(0, 100) + ' [...]'
                     : result.missing
                   }>
@@ -245,7 +247,7 @@ async function handleSubsetButton(setting: FontSetting) {
                   {$_('exportassdialog.not-directly-available-on-windows')}
                 </li>
               {/if}
-              
+
               {#if m.status}
                 {#if m.supplement}
                   <li class="warn">

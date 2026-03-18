@@ -1,18 +1,20 @@
 <script lang="ts">
-import { newMetricFilter, MetricFilterMethods, Metrics, type SimpleMetricFilter, type MetricFilter, MetricFilterDefaultMethods, type MetricContext, METRIC_CONTEXTS, type MetricFilterMethodName, type MetricType } from "./core/Filter";
-import { _, locale } from 'svelte-i18n';
 import { Debug } from "./Debug";
-import type { Action } from "svelte/action";
-import { tick } from "svelte";
-import { Menu } from "@tauri-apps/api/menu";
-import StyleSelect from "./StyleSelect.svelte";
+import { newMetricFilter, MetricFilterMethods, Metrics, type SimpleMetricFilter, type MetricFilter, MetricFilterDefaultMethods, type MetricContext, METRIC_CONTEXTS, type MetricFilterMethodName, type MetricType } from "./core/Filter";
 import { type SubtitleStyle } from "./core/Subtitles.svelte";
 import { type LabelType } from "./core/Labels";
-import TimestampInput from "./TimestampInput.svelte";
 import { Source } from "./frontend/Source";
+
+import StyleSelect from "./StyleSelect.svelte";
+import TimestampInput from "./TimestampInput.svelte";
 import LabelSelect from "./LabelSelect.svelte";
-import Tooltip from "./ui/Tooltip.svelte";
+import { Tooltip } from "@the_dissidents/svelte-ui";
+
+import { Menu } from "@tauri-apps/api/menu";
 import { MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
+import { tick } from "svelte";
+import { _, locale } from 'svelte-i18n';
+import type { Action } from "svelte/action";
 
 interface Props {
   filter: MetricFilter | null;
@@ -198,9 +200,9 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
             replace(createDefaultFilter(name));
         }}
       >
-        <!-- eslint-disable-next-line svelte/require-each-key --> 
+        <!-- eslint-disable-next-line svelte/require-each-key -->
         {#each groupedMetrics as [_, ms]}
-          <!-- eslint-disable-next-line svelte/require-each-key --> 
+          <!-- eslint-disable-next-line svelte/require-each-key -->
           {#each ms as [name, metric]}
             <option value={name}>{metric.localizedName()}</option>
           {/each}
@@ -228,7 +230,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
           onchange?.();
         }}
       >
-        <!-- eslint-disable-next-line svelte/require-each-key --> 
+        <!-- eslint-disable-next-line svelte/require-each-key -->
         {#each methods as [name, method]}
           {#if method.subject == Metrics[f.metric].typeName}
             <option value={name}>{method.localizedName()}</option>
@@ -254,7 +256,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
           { item: 'Separator' },
           {
             text: $_('filteredit.new-and-clause'),
-            action: () => parentType == 'and' 
+            action: () => parentType == 'and'
               ? replace(f, createDefaultFilter())
               : replace({
                   type: 'and',
@@ -263,7 +265,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
           },
           {
             text: $_('filteredit.new-or-clause'),
-            action: () => parentType == 'or' 
+            action: () => parentType == 'or'
               ? replace(f, createDefaultFilter())
               : replace({
                   type: 'or',
@@ -295,8 +297,8 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
       {$_('filteredit.add-condition')}
     </button>
   {:else}
-    {@render makeFilter(filter, null, 
-      (to) => { filter = to; onchange?.(); }, 
+    {@render makeFilter(filter, null,
+      (to) => { filter = to; onchange?.(); },
       () => { filter = null; onchange?.(); }
     )}
   {/if}
@@ -309,7 +311,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
     margin: 3px;
     padding: 3px;
   }
-  
+
   .line {
     /* margin: 0;
     padding: 0; */

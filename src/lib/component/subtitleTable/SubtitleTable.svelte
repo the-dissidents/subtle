@@ -1,21 +1,19 @@
 <script lang="ts">
-import { onDestroy, onMount } from "svelte";
-import { _, locale } from 'svelte-i18n';
 import { Debug } from "../../Debug";
-
 import { EventHost } from "../../details/EventHost";
-
 import { Metrics, type MetricContext } from "../../core/Filter";
-import Popup from "../../ui/Popup.svelte";
-import OrderableList from "../../ui/OrderableList.svelte";
-
-import { Menu } from "@tauri-apps/api/menu";
-import { DeleteIcon, PenLineIcon, PlusIcon } from "@lucide/svelte";
+import { Frontend } from "../../frontend/Frontend";
 
 import { TableLayout, type Column } from "./Layout.svelte";
 import { TableRenderer } from "./Render.svelte";
 import { TableInput } from "./Input.svelte";
-import { Frontend } from "../../frontend/Frontend";
+
+import { Popup, OrderableList } from "@the_dissidents/svelte-ui";
+
+import { Menu } from "@tauri-apps/api/menu";
+import { DeleteIcon, PenLineIcon, PlusIcon } from "@lucide/svelte";
+import { onDestroy, onMount } from "svelte";
+import { _, locale } from 'svelte-i18n';
 
 let canvas = $state<HTMLCanvasElement>();
 let uiFocus = Frontend.uiFocus;

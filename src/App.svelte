@@ -28,11 +28,7 @@ import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
 import Timeline from './lib/component/timeline/Timeline.svelte';
 import Preview from './lib/component/preview/Preview.svelte';
 
-import Resizer from './lib/ui/Resizer.svelte';
-import TabPage from './lib/ui/TabPage.svelte';
-import TabView from './lib/ui/TabView.svelte';
-import Tooltip from './lib/ui/Tooltip.svelte';
-import Banner from './lib/ui/Banner.svelte';
+import { Resizer, TabPage, TabView, Tooltip, Banner } from '@the_dissidents/svelte-ui';
 
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
@@ -64,7 +60,7 @@ import DialogOutlet, { openDialog } from './lib/DialogOutlet.svelte';
 
 import * as z from "zod/v4-mini";
 import { initWindowMenu } from './lib/WindowMenu';
-    
+
 Debug.init();
 
 const appWindow = getCurrentWebviewWindow();
@@ -80,8 +76,8 @@ let status = Frontend.status;
 let uiFocus = Frontend.uiFocus;
 let toolboxFocus = Frontend.toolboxFocus;
 let loadState = Playback.loadState;
-let filenameDisplay = 
-  derived([Source.currentFile, Source.fileChanged, _], 
+let filenameDisplay =
+  derived([Source.currentFile, Source.fileChanged, _],
     ([x, y]) => `${x ? Basic.getFilename(x) : $_('untitled')}${y ? '*' : ''}`);
 
 const me = {};
@@ -91,25 +87,25 @@ Source.onUndoBufferChanged.bind(me, () => {
   undoRedoUpdateCounter++;
 });
 
-status.subscribe(() => { 
+status.subscribe(() => {
   // twinkle status bar
   if (InterfaceConfig.data.statusBarTwinkle)
     statusTwinkling = true;
 });
 
-MainConfig.hook(() => InterfaceConfig.data.fontSize, 
+MainConfig.hook(() => InterfaceConfig.data.fontSize,
   (v) => document.documentElement.style.setProperty('--fontSize', `${v}px`));
 
-MainConfig.hook(() => InterfaceConfig.data.fontFamily, 
+MainConfig.hook(() => InterfaceConfig.data.fontFamily,
   (v) => document.documentElement.style.setProperty('--fontFamily', v));
 
-MainConfig.hook(() => InterfaceConfig.data.editorFontSize, 
+MainConfig.hook(() => InterfaceConfig.data.editorFontSize,
   (v) => document.documentElement.style.setProperty('--editorFontSize', `${v}px`));
 
-MainConfig.hook(() => InterfaceConfig.data.editorFontFamily, 
+MainConfig.hook(() => InterfaceConfig.data.editorFontFamily,
   (v) => document.documentElement.style.setProperty('--editorFontFamily', v));
 
-MainConfig.hook(() => InterfaceConfig.data.monospaceFontFamily, 
+MainConfig.hook(() => InterfaceConfig.data.monospaceFontFamily,
   (v) => document.documentElement.style.setProperty('--monospaceFontFamily', v));
 
 MainConfig.hook(() => InterfaceConfig.data.language, async (lang) => {
@@ -133,11 +129,11 @@ MainConfig.hook(() => DebugConfig.data.logLevel, (v) => {
   Debug.debug('webview filter level =', v);
 });
 
-MainConfig.hook(() => DebugConfig.data.persistentLogLevel, (v) => 
+MainConfig.hook(() => DebugConfig.data.persistentLogLevel, (v) =>
   Debug.setPersistentFilterLevel(GetLevelFilter[v as keyof typeof GetLevelFilter]));
 
 let settingTheme = false;
-MainConfig.hook(() => InterfaceConfig.data.theme, 
+MainConfig.hook(() => InterfaceConfig.data.theme,
   async (theme) => {
     if (settingTheme) return;
     settingTheme = true;
@@ -153,7 +149,7 @@ KeybindingManager.init();
 Fonts.init();
 
 
-getVersion().then((x) => 
+getVersion().then((x) =>
   appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
 
 appWindow.onCloseRequested(async (ev) => {
@@ -272,7 +268,7 @@ observer.observe({ type: 'paint', buffered: true });
       <li class='separator'></li>
       {#key undoRedoUpdateCounter}
       <li><button
-        onclick={() => SourceCommands.undo.call()} 
+        onclick={() => SourceCommands.undo.call()}
         disabled={!Source.canUndo()}>{$_('menu.undo')}</button></li>
       <li><button
         onclick={() => SourceCommands.redo.call()}
@@ -282,7 +278,7 @@ observer.observe({ type: 'paint', buffered: true });
       <li><button onclick={() => InterfaceCommands.openVideo.call()}>
         <FilmIcon />&nbsp;{$_('menu.open-video')}
       </button></li>
-      <li><button disabled={$loadState !== 'loaded'} 
+      <li><button disabled={$loadState !== 'loaded'}
           onclick={() => PlaybackCommands.selectAudioStream.call()}>
         {$_('menu.select-audio-stream')}
       </button></li>
@@ -328,7 +324,7 @@ observer.observe({ type: 'paint', buffered: true });
       </div>
       <!-- resizer -->
       <div>
-        <Resizer control={videoCanvasContainer} minValue={100} />
+        <Resizer first={videoCanvasContainer} minValue={100} />
       </div>
       <!-- toolbox -->
       <div class="flexgrow fixminheight">
@@ -361,7 +357,7 @@ observer.observe({ type: 'paint', buffered: true });
       </div>
     </div>
     <div style="width: 10px;">
-      <Resizer vertical={true} minValue={200} control={leftPane} />
+      <Resizer vertical={true} minValue={200} first={leftPane} />
     </div>
     <div class="flexgrow fixminheight vlayout isolated">
       <!-- edit box -->
@@ -369,7 +365,7 @@ observer.observe({ type: 'paint', buffered: true });
         <EntryEdit />
       </div>
       <!-- resizer -->
-      <div><Resizer control={editTable} minValue={125} /></div>
+      <div><Resizer first={editTable} minValue={125} /></div>
       <!-- table view -->
       <div class='flexgrow isolated' style="padding-bottom: 6px">
         <SubtitleTable />
@@ -378,7 +374,7 @@ observer.observe({ type: 'paint', buffered: true });
   </div>
   <!-- resizer -->
   <div>
-    <Resizer control={timelineCanvasContainer!} reverse={true} />
+    <Resizer first={timelineCanvasContainer!} reverse={true} />
   </div>
   <!-- timeline -->
   <div bind:this={timelineCanvasContainer}>

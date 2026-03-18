@@ -1,5 +1,5 @@
 import "./ochu.css";
-import "./styles.css";
+import "./styles.scss";
 import "./prosemirror.css";
 import App from "./App.svelte";
 import { mount } from "svelte";

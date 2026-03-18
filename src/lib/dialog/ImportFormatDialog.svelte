@@ -23,15 +23,16 @@ export type ImportFormat<P extends SubtitleParser> = {
 </script>
 
 <script lang="ts" generics="P extends SubtitleParser">
-import DialogBase from '../DialogBase.svelte';
+import { Debug } from '../Debug';
 import type { SubtitleParseMessage, SubtitleParser } from '../core/Subtitles.svelte';
 import { groupBy, type GroupedBy, type OneGroup } from '../details/GroupBy';
-import { CircleAlertIcon, CircleCheckIcon } from '@lucide/svelte';
-import { Debug } from '../Debug';
 
+import { CircleAlertIcon, CircleCheckIcon } from '@lucide/svelte';
 import { _ } from 'svelte-i18n';
-import Tooltip from '../ui/Tooltip.svelte';
-  import { onMount } from 'svelte';
+import { onMount } from 'svelte';
+
+import DialogBase from '../DialogBase.svelte';
+import { Tooltip } from '@the_dissidents/svelte-ui';
 
 interface Props {
   args: [P, ImportFormat<P>];

@@ -1,14 +1,16 @@
 <script lang="ts">
 import { SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
-import { Source } from '../frontend/Source';
-import DialogBase from '../DialogBase.svelte';
-
-import { _ } from 'svelte-i18n';
 import { LinearFormatCombineStrategy, type FormatOption } from '../core/SubtitleUtil.svelte';
 import { Format } from '../core/SimpleFormats';
+
+import { Source } from '../frontend/Source';
 import { Frontend } from '../frontend/Frontend';
-import Tooltip from '../ui/Tooltip.svelte';
-  import { onMount } from 'svelte';
+
+import { _ } from 'svelte-i18n';
+import { onMount } from 'svelte';
+
+import DialogBase from '../DialogBase.svelte';
+import { Tooltip } from '@the_dissidents/svelte-ui';
 
 interface Props {
   args: [],
@@ -96,8 +98,8 @@ async function copy() {
         <tbody>
         {#each styles as entry (entry)}
         <tr>
-          <td><input type="checkbox" 
-            bind:checked={entry.use} 
+          <td><input type="checkbox"
+            bind:checked={entry.use}
             disabled={entry.count == 0}
             onchange={() => makePreview()} /></td>
           <td>{entry.style.name}</td>
