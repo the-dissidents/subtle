@@ -15,7 +15,7 @@ let fuzzy = $state({
   enabled: false,
   tokenizer: 'character' as keyof typeof tokenizers,
   useStyle: Source.subs.defaultStyle,
-  engine: null as fuzzyAlgorithm.Searcher | null,
+  engine: null as fuzzyAlgorithm.Searcher<string, string> | null,
   currentEntry: null as SubtitleEntry | null
 });
 

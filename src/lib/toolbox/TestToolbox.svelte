@@ -61,14 +61,20 @@ const command = new UICommand(() => '', [], {
   }))
 });
 
-function testFuzzy(tok: Tokenizer) {
+function testFuzzy(tok: Tokenizer<string, string>) {
   const [tks, _] = tok.tokenize(needle);
   let text = tks.join('|') + '\n';
 
   const engine = new Searcher(haystack, tok);
   const res = engine.search(needle);
   if (res) {
-    text += `${res.visualization} (${res.matchRatio.toFixed(3)})`;
+    text += `${res.merged.map((x) =>
+        x.type == 'match' ? x.first.join('')
+      : x.type == 'delete' ? '[' + x.first.join('') + ']'
+      : x.type == 'insert' ? '<' + x.second.join('') + '>'
+      : x.type == 'subtitute' ? '{' + x.first.join('') + '|' + x.second.join('') + '}'
+      : Debug.never(x.type)
+    ).join('')} (${res.matchRatio.toFixed(3)})`;
     textarea!.focus();
     textarea!.setSelectionRange(res.start, res.end);
     Debug.info(res);

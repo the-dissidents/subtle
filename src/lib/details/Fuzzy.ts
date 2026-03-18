@@ -6,104 +6,119 @@ const DELETE = 1;
 const INSERT = 2;
 const SUBSITUTE = 3;
 
-type SolutionToken = {
-    op: Operation,
+export type MatchType = 'match' | 'subtitute' | 'delete' | 'insert';
+
+export type SolutionToken = {
+    type: MatchType,
     i: number, j: number
 };
 
-export type FuzzyMatchOptions = {
-    insertionPenalty?: number,
-    deletionPenalty?: number,
-    substitutionPenalty?: number,
+export type FuzzyMatchOptions<T> = {
+    insertionPenalty?: (value: T, i: number, j: number) => number,
+    deletionPenalty?: (value: T, i: number, j: number) => number,
+    substitutionPenalty?: (a: T, b: T, i: number, j: number) => number,
+    wholeSequence?: boolean
 };
 
-export type FuzzyMatchResult = {
-    visualization: string,
-    start: number,
-    end: number,
-    score: number,
-    matchRatio: number
-};
-
-function match(A: number[], Z: number[], opt: FuzzyMatchOptions) {
+function match<T>(A: T[], Z: T[], opt: FuzzyMatchOptions<T>) {
     const m = A.length;
     const n = Z.length;
 
     const DPOp: Operation[][] = new Array(m+1).fill(null)
-        .map(() => new Array(n+1).fill(0));
+        .map(() => new Array(n+1).fill(MATCH));
     const DPScore: number[][] = new Array(m+1).fill(null)
         .map(() => new Array(n+1).fill(Infinity));
-    for (let i = 0; i <= m; i++) {
+    DPScore[0][0] = 0;
+
+    for (let i = 1; i <= m; i++) {
         DPOp[i][0] = DELETE;
-        DPScore[i][0] = i;
+        DPScore[i][0] = DPScore[i-1][0] + (opt.deletionPenalty?.(A[i-1], i, 0) ?? 1);
     }
-    for (let j = 0; j <= n; j++){
-        DPOp[0][j] = MATCH;
-        DPScore[0][j] = 0;
+
+    for (let j = 1; j <= n; j++){
+        if (opt.wholeSequence) {
+            DPOp[0][j] = INSERT;
+            DPScore[0][j] = DPScore[0][j-1] + (opt.insertionPenalty?.(Z[j-1], 0, j) ?? 1);
+        } else {
+            DPOp[0][j] = MATCH;
+            DPScore[0][j] = 0;
+        }
     }
 
     for (let i = 1; i <= m; i++)
     for (let j = 1; j <= n; j++) {
         const Ai = A[i-1]; // A and Z are zero-based
-        const Zi = Z[j-1];
-        if (Ai == Zi) {
+        const Zj = Z[j-1];
+        if (Ai == Zj) {
             DPOp[i][j] = MATCH;
             DPScore[i][j] = DPScore[i-1][j-1];
         } else {
-            const [si, sd, ss] = [ 
-                DPScore[i][j-1]   + (opt.insertionPenalty ?? 1), 
-                DPScore[i-1][j]   + (opt.deletionPenalty ?? 1),
-                DPScore[i-1][j-1] + (opt.substitutionPenalty ?? 1)];
+            const [si, sd, ss] = [
+                DPScore[i][j-1]   + (opt.insertionPenalty?.(Zj, i, j) ?? 1),
+                DPScore[i-1][j]   + (opt.deletionPenalty?.(Ai, i, j) ?? 1),
+                DPScore[i-1][j-1] + (opt.substitutionPenalty?.(Ai, Zj, i, j) ?? 1)];
             const minimum = Math.min(si, sd, ss);
-            let op: Operation = 0;
-            if (minimum == si) op = INSERT; 
-            else if (minimum == sd) op = DELETE; 
-            else op = SUBSITUTE; 
-            DPOp[i][j] = op;
+            DPOp[i][j] = minimum == si ? INSERT
+                       : minimum == sd ? DELETE
+                       :                 SUBSITUTE;
             DPScore[i][j] = minimum;
         }
     }
 
     // backtrack
+    let current_i = m;
     let current_j = 0;
     let bestScore = Infinity;
-    for (let j = 0; j <= n; j++)
-        if (DPScore[m][j] < bestScore) {
-            current_j = j;
-            bestScore = DPScore[m][j];
+
+    if (opt.wholeSequence) {
+        bestScore = DPScore[m][n];
+    } else {
+        for (let j = 0; j <= n; j++) {
+            if (DPScore[m][j] < bestScore) {
+                current_j = j;
+                bestScore = DPScore[m][j];
+            }
         }
-    if (current_j == 0) return null;
+        if (current_j === 0) return null;
+    }
 
     const tokens: SolutionToken[] = [];
-    let current_i = m;
     while (current_i > 0 && current_j > 0) {
         const op = DPOp[current_i][current_j];
-        tokens.push({ op, i: current_i-1, j: current_j-1 });
+        const [i, j] = [current_i-1, current_j-1];
+        let type: MatchType;
         switch (op) {
             case SUBSITUTE:
+                type = 'subtitute';
+                current_i -= 1;
+                current_j -= 1;
+                break;
             case MATCH:
+                type = 'match';
                 current_i -= 1;
                 current_j -= 1;
                 break;
             case INSERT:
+                type = 'insert';
                 current_j -= 1;
                 break;
             case DELETE:
+                type = 'delete';
                 current_i -= 1;
                 break;
             default:
                 Debug.never(op);
         }
+        tokens.push({ type, i, j });
     }
-    return {score: bestScore, tokens: tokens.reverse()};
+    return { score: bestScore, tokens: tokens.reverse() };
 }
 
-
-export interface Tokenizer {
-    tokenize(str: string): [tokens: string[], prefixLen: number[]]
+export interface Tokenizer<Orig, T> {
+    tokenize(input: Orig): [tokens: T[], prefixLen: number[]]
 }
 
-export class RegexTokenizer implements Tokenizer {
+export class RegexTokenizer implements Tokenizer<string, string> {
     constructor(private passes: RegExp[]) {}
 
     tokenize(str: string): [tokens: string[], prefixLen: number[]] {
@@ -128,27 +143,27 @@ export const SyllableTokenizer = new RegexTokenizer(
     [/(?<![\p{L}\d])|(?![\p{L}\d])|(?<=[\u4E00-\u9FFF])|(?=[\u4E00-\u9FFF])/u,
     /(?<!^[bcdfghjklmnpqrstvwxzßñç])(?=[bcdfghjklmnpqrstvwxzßñç][^bcdfghjklmnpqrstvwxzßñç])/]);
 
-function preprocess(w: string[], x: string[]) {
-    const dict = new Map<string, number>();
-    x.forEach((word, i) => {
-        if (dict.get(word) === undefined)
-            dict.set(word, i);
-    });
+export type MergedDiffPart<T> = {
+    type: MatchType,
+    first: T[], second: T[]
+};
 
-    const A = x.map((word) => dict.get(word)!);
-    const Z = w.map((word) => dict.get(word) ?? -1);
-    return [A, Z, dict] as const;
-}
+export type SearchResult<T> = {
+    merged: MergedDiffPart<T>[],
+    start: number,
+    end: number,
+    matchRatio: number
+};
 
-export class Searcher {
-    #tokens: string[];
+export class Searcher<Orig, T> {
+    #tokens: T[];
     #prefix: number[];
 
-    constructor(private text: string, private tokenizer: Tokenizer) {
+    constructor(text: Orig, private tokenizer: Tokenizer<Orig, T>) {
         [this.#tokens, this.#prefix] = tokenizer.tokenize(text);
     }
 
-    tokenList(): ReadonlyArray<string> {
+    tokenList(): ReadonlyArray<T> {
         return this.#tokens;
     }
 
@@ -156,38 +171,31 @@ export class Searcher {
         return this.#prefix;
     }
 
-    search(term: string, opts: FuzzyMatchOptions = {}): FuzzyMatchResult | null {
-        const [tTerm, termPrefix] = this.tokenizer.tokenize(term);
-        const [A, Z, _] = preprocess(this.#tokens, tTerm);
+    search(term: Orig, opts: FuzzyMatchOptions<T> = {}): SearchResult<T> | null {
+        const [tTerm, _] = this.tokenizer.tokenize(term);
 
-        const getTextToken = (x: SolutionToken) => 
-            this.text.slice(this.#prefix[x.j], this.#prefix[x.j+1]);
-        const getTermToken = (x: SolutionToken) => 
-            term.slice(termPrefix[x.i], termPrefix[x.i+1]);
-
-        const result = match(A, Z, opts);
+        const result = match(tTerm, this.#tokens, opts);
         if (result === null || result.tokens.length == 0) return null;
 
+        const merged: MergedDiffPart<T>[] = [];
         let nMatched = 0;
-        const visualization = result.tokens.map((x) => {
-            switch (x.op) {
-                case MATCH:
-                    nMatched += 1;
-                    return getTermToken(x);
-                case DELETE:
-                    return `<${getTermToken(x)}>`;
-                case INSERT:
-                    return `[${getTextToken(x)}]`;
-                case SUBSITUTE:
-                    return `{${getTermToken(x)}|${getTextToken(x)}}`;
-                default:
-                    Debug.never(x.op);
-            }
-        }).join('').replaceAll(/\]\[|></g, '');
+
+        result.tokens.forEach((x) => {
+            if (x.type == 'match') nMatched++;
+
+            const last = merged.at(-1);
+            if (last?.type == x.type) {
+                last.first.push(tTerm[x.i]);
+                last.second.push(this.#tokens[x.j]);
+            } else merged.push({
+                type: x.type,
+                first: [tTerm[x.i]],
+                second: [this.#tokens[x.j]]
+            });
+        });
 
         return {
-            visualization,
-            score: result.score,
+            merged,
             start: this.#prefix[result.tokens[0].j],
             end: this.#prefix[result.tokens.at(-1)!.j + 1],
             matchRatio: nMatched / result.tokens.length
