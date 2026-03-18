@@ -1,0 +1,16 @@
+# based on vite and svelte's configs
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# default to 4 spaces
+indent_style = space
+indent_size = 4
+
+# 2 spaces for files with a LOT of indentations
+[*.{html,svelte,css,scss,sass}]
+indent_size = 2

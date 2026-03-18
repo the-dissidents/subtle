@@ -47,10 +47,10 @@ export default function debugInfoSvelte(): Plugin {
             if (node.callee.property.name == 'early') {
               if (node.arguments.length != 0) return;
 
-              const pos = (node as unknown as svc.AST.BaseNode).end - 1;
+              const pos = (node as unknown as svc.AST.BaseNode).end;
               if (pos === undefined) return;
 
-              ms.appendRight(pos, `"${state.funcNames.at(-1) ?? '?'}", "${id ?? 'cannot get filename'}", ${node.loc.start.line.toString() ?? '"cannot get line"'}`);
+              ms.appendRight(pos - 1, `"${state.funcNames.at(-1) ?? '?'}", "${id ?? 'cannot get filename'}", ${node.loc.start.line.toString() ?? '"cannot get line"'}`);
             }
           },
         });

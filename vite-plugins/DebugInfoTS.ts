@@ -2,7 +2,6 @@ import { transformAsync } from '@babel/core';
 import { Plugin } from 'vite';
 import { declare } from '@babel/helper-plugin-utils';
 import * as t from '@babel/types';
-import * as svc from 'svelte/compiler';
 
 const plugin = declare(() => {
   return {
@@ -29,13 +28,8 @@ const plugin = declare(() => {
         if (node.callee.property.name == 'early') {
           if (node.arguments.length != 0) return;
 
+          let funcName: string = '?';
           const func = path.getFunctionParent();
-          if (!func) return;
-
-          const pos = (node as unknown as svc.AST.BaseNode).end - 1;
-          if (pos === undefined) return;
-
-          let funcName: string;
           if ('key' in func.node) {
             if (func.node.key.type == 'PrivateName') {
               funcName = `#${func.node.key.id.name}`;

@@ -157,13 +157,13 @@ export class JSONParser implements SubtitleParser {
 
         const styleMap = new Map(this.#subs.styles.map((x) => [x.name, x]));
         if (sv.timelineExcludeStyles.some((x) => !styleMap.has(x)))
-            throw new DeserializationError('invalid item in timelineExcludeStyles');
+            Debug.warn('invalid item(s) in timelineExcludeStyles');
         this.#subs.view.timelineExcludeStyles = 
-            new SvelteSet(sv.timelineExcludeStyles.map((x) => styleMap.get(x)!));
+            new SvelteSet(sv.timelineExcludeStyles.flatMap((x) => styleMap.get(x) ?? []));
         
         if (sv.timelineActiveChannel) {
             if (!styleMap.has(sv.timelineActiveChannel))
-                throw new DeserializationError('invalid timelineActiveChannel');
+                Debug.warn('invalid timelineActiveChannel');
             this.#subs.view.timelineActiveChannel = styleMap.get(sv.timelineActiveChannel)!;
         }
     }

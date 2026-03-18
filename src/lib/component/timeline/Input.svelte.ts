@@ -342,26 +342,35 @@ class CreateEntry extends TimelineAction {
 }
 
 class SplitEntry extends TimelineAction {
-    styles: SubtitleStyle[];
-    baseProportion: number;
-
-    constructor(
+    static create(
         self: TimelineInput, layout: TimelineLayout, 
         e0: MouseEvent, target: SubtitleEntry
     ) {
-        super(self, layout, e0);
-
-        const pos = self.alignmentLine?.pos ?? this.origPos;
         Debug.assert(target.end > target.start);
-        this.baseProportion = (pos - target.start) / (target.end - target.start);
-        Debug.assert(this.baseProportion > 0 && this.baseProportion < 1);
-        this.styles = Source.subs.styles.filter((x) => target.texts.has(x));
+
+        if (!self.alignmentLine) return null;
+        const pos = self.alignmentLine.pos;
+        if (pos <= target.start || pos >= target.end) return null;
+        
+        const baseProportion = (pos - target.start) / (target.end - target.start);
+        const styles = Source.subs.styles.filter((x) => target.texts.has(x));
         self.splitting = {
             target, 
             breakPosition: pos,
             positions: new Map(),
-            current: this.styles[0]
+            current: styles[0]
         };
+
+        return new SplitEntry(self, layout, e0, baseProportion, styles);
+    }
+
+    private constructor(
+        self: TimelineInput, layout: TimelineLayout, 
+        e0: MouseEvent,
+        private baseProportion: number,
+        private styles: SubtitleStyle[],
+    ) {
+        super(self, layout, e0);
         this.onDrag(e0.offsetX);
     }
 
@@ -861,7 +870,9 @@ export class TimelineInput {
                     this.manager.requestRender();
 
                     if (TimelineHandle.currentMode.get() == 'split') {
-                        this.currentAction = new SplitEntry(this, this.layout, e0, selected);
+                        const split = SplitEntry.create(this, this.layout, e0, selected);
+                        if (!split) return false;
+                        this.currentAction = split;
                         return true;
                     }
                     return this.#initializeDrag(e0, afterEnd, underMouse);
