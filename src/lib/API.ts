@@ -6,6 +6,9 @@ import type { StreamDescription } from './bindings/StreamDescription';
 import type { ResolvedFontFamily } from './bindings/ResolvedFontFamily';
 import type { SubsetResult } from './bindings/SubsetResult';
 import type { BufferHandle, SlabBuffer } from './details/SlabBuffer';
+import type { DiffEntry } from './bindings/DiffEntry';
+import type { EntryScorer } from './bindings/EntryScorer';
+import type { MatchResult } from './bindings/MatchResult';
 
 export class MediaError extends Error {
     constructor(msg: string, public readonly from: string) {
@@ -23,12 +26,12 @@ export type AudioStatus = MediaEventData['audioStatus'];
 export type SampleResult = MediaEventData['sampleDone'];
 
 function createChannel(
-    from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>}, 
+    from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>},
     reject: (e: unknown) => void, timeout = 2000
 ) {
     if (timeout > 0) setTimeout(
         () => reject(new MediaError(`timed out [${timeout}ms]`, from)), timeout);
-    
+
     const channel = new Channel<MediaEvent>;
     channel.onmessage = (msg) => {
         const h = handler[msg.event];
@@ -120,7 +123,7 @@ export class MMedia {
     }
 
     #readFrames(
-        data: ArrayBuffer, 
+        data: ArrayBuffer,
         pool: SlabBuffer<ImageDataArray>
     ): DecodeResult {
         const view = new BinaryReader(data);
@@ -147,7 +150,7 @@ export class MMedia {
     }
 
     #readVideoFrame(
-        view: BinaryReader<ArrayBuffer>, 
+        view: BinaryReader<ArrayBuffer>,
         pool: SlabBuffer<ImageDataArray>
     ): VideoFrameData {
         const time = view.readF64();
@@ -287,8 +290,8 @@ export class MMedia {
         try {
             const result = await new Promise<ArrayBuffer>((resolve, reject) => {
                 channel = createChannel('decodeAutomatic', {}, reject);
-                invoke<ArrayBuffer>('get_frames_automatic', { 
-                    id: this.id, targetWorkingTimeMs, channel 
+                invoke<ArrayBuffer>('get_frames_automatic', {
+                    id: this.id, targetWorkingTimeMs, channel
                 }).then(resolve);
             });
             const frames = this.#readFrames(result, pool);
@@ -374,8 +377,8 @@ export class MMedia {
         try {
             return await new Promise<DecodeResult>((resolve, reject) => {
                 channel = createChannel('skipUntil', {}, reject);
-                invoke<ArrayBuffer>('skip_until', { 
-                    id: this.id, time, channel 
+                invoke<ArrayBuffer>('skip_until', {
+                    id: this.id, time, channel
                 }).then((x) => {
                     if (x.byteLength > 0)
                         resolve(this.#readFrames(x, pool));
@@ -442,8 +445,8 @@ export const MAPI = {
     },
 
     async detectOrDecodeFile(path: string) {
-        const result = await invoke<{ 
-            type: 'normal' | 'error', data: string 
+        const result = await invoke<{
+            type: 'normal' | 'error', data: string
         } | { type: 'strange' }>(
             'decode_or_detect_file', { path });
         if (result.type == 'error') throw new Error(`decode_or_detect_file: ${result.data}`);
@@ -481,5 +484,12 @@ export const MAPI = {
 
     async subsetEncode(path: string, index: number, text: string) {
         return await invoke<SubsetResult>('subset_encode', { path, index, text });
+    },
+
+    async matchEntries(
+        a: DiffEntry[], b: DiffEntry[],
+        scorer: EntryScorer
+    ) {
+        return await invoke<MatchResult | null>('diff_entries', { a, b, scorer });
     }
 };

@@ -14,13 +14,18 @@ export type SolutionToken = {
 };
 
 export type FuzzyMatchOptions<T> = {
+    equality?: (a: T, b: T, i: number, j: number) => boolean,
     insertionPenalty?: (value: T, i: number, j: number) => number,
     deletionPenalty?: (value: T, i: number, j: number) => number,
     substitutionPenalty?: (a: T, b: T, i: number, j: number) => number,
-    wholeSequence?: boolean
+    wholeSequence?: boolean,
+    reportProgress?: (progress: number) => void,
 };
 
-function match<T>(A: T[], Z: T[], opt: FuzzyMatchOptions<T>) {
+/**
+ * Matches sequence `A` against sequence `Z` using an edit-distance algorithm. If `wholeSequence` is not set to `true` in `opt`, `A` is treated as the needle and `Z` the haystack. Returns the score (lower is better) and the computed operations of the match.
+ */
+export function match<T>(A: T[], Z: T[], opt: FuzzyMatchOptions<T>) {
     const m = A.length;
     const n = Z.length;
 
@@ -49,14 +54,14 @@ function match<T>(A: T[], Z: T[], opt: FuzzyMatchOptions<T>) {
     for (let j = 1; j <= n; j++) {
         const Ai = A[i-1]; // A and Z are zero-based
         const Zj = Z[j-1];
-        if (Ai == Zj) {
+        if (opt.equality?.(Ai, Zj, i-1, j-1) ?? (Ai === Zj)) {
             DPOp[i][j] = MATCH;
             DPScore[i][j] = DPScore[i-1][j-1];
         } else {
             const [si, sd, ss] = [
-                DPScore[i][j-1]   + (opt.insertionPenalty?.(Zj, i, j) ?? 1),
-                DPScore[i-1][j]   + (opt.deletionPenalty?.(Ai, i, j) ?? 1),
-                DPScore[i-1][j-1] + (opt.substitutionPenalty?.(Ai, Zj, i, j) ?? 1)];
+                DPScore[i][j-1]   + (opt.insertionPenalty?.(Zj, i-1, j-1) ?? 1),
+                DPScore[i-1][j]   + (opt.deletionPenalty?.(Ai, i-1, j-1) ?? 1),
+                DPScore[i-1][j-1] + (opt.substitutionPenalty?.(Ai, Zj, i-1, j-1) ?? 1)];
             const minimum = Math.min(si, sd, ss);
             DPOp[i][j] = minimum == si ? INSERT
                        : minimum == sd ? DELETE
@@ -67,7 +72,7 @@ function match<T>(A: T[], Z: T[], opt: FuzzyMatchOptions<T>) {
 
     // backtrack
     let current_i = m;
-    let current_j = 0;
+    let current_j = n;
     let bestScore = Infinity;
 
     if (opt.wholeSequence) {
@@ -83,7 +88,7 @@ function match<T>(A: T[], Z: T[], opt: FuzzyMatchOptions<T>) {
     }
 
     const tokens: SolutionToken[] = [];
-    while (current_i > 0 && current_j > 0) {
+    while (current_i > 0 || (opt.wholeSequence && current_j > 0)) {
         const op = DPOp[current_i][current_j];
         const [i, j] = [current_i-1, current_j-1];
         let type: MatchType;
@@ -119,10 +124,14 @@ export interface Tokenizer<Orig, T> {
 }
 
 export class RegexTokenizer implements Tokenizer<string, string> {
-    constructor(private passes: RegExp[]) {}
+    constructor(private passes: RegExp[], private isCaseSensitive: boolean = false) {}
+
+    caseSensitive(v: boolean) {
+        return new RegexTokenizer(this.passes, v);
+    }
 
     tokenize(str: string): [tokens: string[], prefixLen: number[]] {
-        let tokens = [str.toLowerCase()];
+        let tokens = [this.isCaseSensitive ? str : str.toLowerCase()];
         for (const regex of this.passes) {
             tokens = tokens.flatMap((x) => x.split(regex));
         }

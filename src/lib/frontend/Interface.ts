@@ -39,7 +39,7 @@ const IMPORT_FILTERS = () => [
     { name: $_('filter.subtle-archive'), extensions: ['json'] }
 ];
 
-export const MEDIA_EXTENSIONS = 
+export const MEDIA_EXTENSIONS =
     ['avi', 'mp4', 'm4v', 'mpg', 'mpv', 'ts', 'mts', 'm2ts', 'flv', 'webm', 'mkv', 'mov', 'rmvb'];
 
 async function readTextFile(path: string) {
@@ -47,13 +47,13 @@ async function readTextFile(path: string) {
         const stats = await fs.stat(path);
         if (!stats.isFile) {
             Frontend.setStatus($_('msg.not-a-file', {values: {path}}), 'error');
-            return;
+            return null;
         }
         if (stats.size > 1024*1024*5 && !await dialog.ask(
             $_('msg.very-large-file-warning'), {kind: 'warning'})) return null;
     } catch {
         Frontend.setStatus($_('msg.does-not-exist', {values: {path}}), 'error');
-        return;
+        return null;
     }
     return guardAsync(async () => {
         const file = await fs.readFile(path);
@@ -70,31 +70,34 @@ async function readTextFile(path: string) {
     }, $_('msg.unable-to-read-file-path', {values: {path}}), null);
 }
 
-async function parseSubtitleSourceInteractive(path: string, text: string) {
-    return guardAsync(async () => {
-        if (JSONSubtitles.detect(text)) {
-            const parser = JSONSubtitles.parse(text);
-            if (!await ImportFormatDialogs.JSON(parser))
-                return null;
-            return parser.done();
-        }
-        if (ASSSubtitles.detect(text)) {
-            const parser = ASSSubtitles.parse(text);
-            if (!await ImportFormatDialogs.ASS(parser))
-                return null;
-            return parser.done();
-        }
-        if (SRTSubtitles.detect(text) !== false) {
-            const parser = SRTSubtitles.parse(text);
-            if (!await ImportFormatDialogs.SRT(parser))
-                return null;
-            return parser.done();
-        }
-        throw undefined;
-    }, $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), undefined);
-}
-
 export const Interface = {
+    async parseSubtitleSourceInteractive(path: string) {
+        const text = await readTextFile(path);
+        if (!text) return null;
+
+        return guardAsync(async () => {
+            if (JSONSubtitles.detect(text)) {
+                const parser = JSONSubtitles.parse(text);
+                if (!await ImportFormatDialogs.JSON(parser))
+                    return null;
+                return parser.done();
+            }
+            if (ASSSubtitles.detect(text)) {
+                const parser = ASSSubtitles.parse(text);
+                if (!await ImportFormatDialogs.ASS(parser))
+                    return null;
+                return parser.done();
+            }
+            if (SRTSubtitles.detect(text) !== false) {
+                const parser = SRTSubtitles.parse(text);
+                if (!await ImportFormatDialogs.SRT(parser))
+                    return null;
+                return parser.done();
+            }
+            throw undefined;
+        }, $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), null);
+    },
+
     async newFile() {
         await Source.newDocument();
         if (Playback.loaded) await Playback.close();
@@ -103,11 +106,9 @@ export const Interface = {
 
     async openFile(path: string) {
         await Debug.debug('parsing file', path);
-        const text = await readTextFile(path);
-        if (!text) return;
-        const newSubs = await parseSubtitleSourceInteractive(path, text);
+        const newSubs = await this.parseSubtitleSourceInteractive(path);
         if (!newSubs) return;
-        
+
         const previouslyIsEmpty = Source.fileIsEmpty;
         await Debug.debug('opening document');
         await Source.openDocument(newSubs, path);
@@ -122,10 +123,10 @@ export const Interface = {
     async openVideo(path: string, audio?: number) {
         if (Playback.loaded)
             await Playback.close();
-        await guardAsync(() => Playback.load(path, audio ?? -1), 
+        await guardAsync(() => Playback.load(path, audio ?? -1),
             $_('msg.error-opening-video-path', {values: {path}}));
         if (!Playback.loaded) return;
-        
+
         const source = get(Source.currentFile);
         if (source != '')
             await this.saveFileData();
@@ -135,12 +136,8 @@ export const Interface = {
         return !get(Source.fileChanged) || await dialog.confirm($_('msg.proceed-without-saving'));
     },
 
-    async askImportFile() {
-        const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
-        if (typeof path != 'string') return;
-        const text = await readTextFile(path);
-        if (!text) return;
-        const newSubs = await parseSubtitleSourceInteractive(path, text);
+    async importFile(path: string) {
+        const newSubs = await this.parseSubtitleSourceInteractive(path);
         if (!newSubs) {
             Frontend.setStatus(
                 $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), 'error');
@@ -164,16 +161,15 @@ export const Interface = {
         if (typeof selected != 'string') return;
         await Source.exportTo(selected, func(Source.subs));
     },
-  
+
     async askOpenFile() {
         const path = await dialog.open({multiple: false, filters: IMPORT_FILTERS()});
-        if (typeof path != 'string') return;
-        await this.openFile(path);
-        Source.startAutoSave();
+        if (typeof path != 'string') return null;
+        return path;
     },
 
     async askOpenVideo() {
-        const selected = await dialog.open({multiple: false, 
+        const selected = await dialog.open({multiple: false,
             filters: [
                 { name: $_('filter.video-file'), extensions: MEDIA_EXTENSIONS },
                 { name: $_('filter.all'), extensions: ['*'] }
@@ -181,7 +177,7 @@ export const Interface = {
         if (typeof selected != 'string') return;
         await this.openVideo(selected);
     },
-  
+
     async askSaveFile(saveAs = false) {
         let file = get(Source.currentFile);
         if (file == '' || saveAs || Source.subs.migrated != 'none') {
@@ -233,7 +229,7 @@ export const InterfaceCommands = {
         [ CommandBinding.from(['CmdOrCtrl+N']) ],
     {
         name: () => $_('menu.new-file'),
-        call: async () => { 
+        call: async () => {
             if (await Interface.warnIfNotSaved())
                 Interface.newFile();
         }
@@ -249,8 +245,12 @@ export const InterfaceCommands = {
                     name: () => $_('cxtmenu.other-file'),
                     isDialog: true,
                     async call() {
-                        if (await Interface.warnIfNotSaved())
-                            Interface.askOpenFile();
+                        if (await Interface.warnIfNotSaved()) {
+                            const path = await Interface.askOpenFile();
+                            if (!path) return;
+                            await Interface.openFile(path);
+                            Source.startAutoSave();
+                        }
                     },
                 },
                 ...(paths.length == 0 ? [
@@ -290,7 +290,11 @@ export const InterfaceCommands = {
     {
         name: () => $_('menu.import'),
         isDialog: true,
-        call: () => Interface.askImportFile()
+        call: async () => {
+            const path = await Interface.askOpenFile();
+            if (!path) return;
+            Interface.importFile(path);
+        }
     }),
     exportASS: new UICommand(() => $_('category.document'),
         [ ],

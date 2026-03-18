@@ -118,7 +118,7 @@ fn main() {
             history::clear_history,
             history::read_undo,
             history::read_redo,
-            diff::diff,
+            diff::diff_entries,
             open_devtools,
             make_panic,
         ])

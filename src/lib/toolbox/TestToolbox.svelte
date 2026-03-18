@@ -95,6 +95,10 @@ let rich: RichText = $state([
 ]);
 </script>
 
+<button onclick={async () => {
+  await openDialog(Dialog.compare);
+}}>compare</button>
+
 <button
   onclick={async () => {
     Debug.info(await MAPI.config());
