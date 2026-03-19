@@ -100,17 +100,17 @@ export async function showModal() {
   <header onmousedown={(ev) => startDrag(ev)}>
     {@render header?.()}
   </header>
-  <div class='body' bind:this={dialogBody} 
+  <div class='body' bind:this={dialogBody}
      onscroll={() => checkScroll()}
   >
     {@render children?.()}
   </div>
   <footer class={{shadow}}>
     {#each buttons as btn (btn)}
-      <button 
+      <button
         class='submit'
-        disabled={typeof btn.disabled == 'function' 
-          ? btn.disabled() 
+        disabled={typeof btn.disabled == 'function'
+          ? btn.disabled()
           : (btn.disabled ?? false)}
         onclick={() => {
           Debug.assert(resolve !== undefined);
@@ -189,6 +189,9 @@ export async function showModal() {
     padding: 0 1.5em 1em;
     box-sizing: border-box;
     overflow-y: auto;
+
+    display: flex;
+    flex-direction: column;
   }
   footer {
     padding: 1em 1.5em 1em;

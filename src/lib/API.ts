@@ -488,8 +488,9 @@ export const MAPI = {
 
     async matchEntries(
         a: DiffEntry[], b: DiffEntry[],
-        scorer: EntryScorer
+        scorer: EntryScorer, report: (p: number, total: number) => void
     ) {
-        return await invoke<MatchResult | null>('diff_entries', { a, b, scorer });
+        const channel = new Channel<[number, number]>(([p, t]) => report(p, t));
+        return await invoke<MatchResult | null>('diff_entries', { a, b, scorer, channel });
     }
 };

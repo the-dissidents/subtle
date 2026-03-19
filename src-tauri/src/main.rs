@@ -132,7 +132,6 @@ fn open_devtools(app: AppHandle) {
     app.get_webview_window("main").unwrap().open_devtools();
 }
 
-
 #[tauri::command]
 fn make_panic() {
     panic!("`make_panic` called");

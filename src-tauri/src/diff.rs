@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
+use tauri::ipc::Channel;
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
@@ -32,24 +33,22 @@ pub struct MatchResult {
     pub tokens: Vec<SolutionToken>,
 }
 
-pub trait Scorer<T> {
+pub trait FuzzyConfig<T> {
     fn insert(&self, _val: &T, _i: usize, _j: usize) -> f32 { 1.0 }
     fn delete(&self, _val: &T, _i: usize, _j: usize) -> f32 { 1.0 }
     fn substitute(&self, _a: &T, _b: &T, _i: usize, _j: usize) -> f32 { 1.0 }
+    fn report(&self, _progress: usize, _total: usize) {}
 }
-
-pub struct DefaultScorer;
-impl<T> Scorer<T> for DefaultScorer {}
 
 pub fn fuzzy_match<T, S>(
     a: &[T],
     z: &[T],
-    scorer: &S,
+    config: &S,
     whole_sequence: bool,
 ) -> Option<MatchResult>
 where
     T: PartialEq,
-    S: Scorer<T> + ?Sized,
+    S: FuzzyConfig<T> + ?Sized,
 {
     let m = a.len();
     let n = z.len();
@@ -68,14 +67,14 @@ where
     for i in 1..=m {
         dp_op[idx(i, 0)] = MatchType::Delete;
         dp_score[idx(i, 0)] =
-            dp_score[idx(i - 1, 0)] + scorer.delete(&a[i - 1], i, 0);
+            dp_score[idx(i - 1, 0)] + config.delete(&a[i - 1], i, 0);
     }
 
     for j in 1..=n {
         if whole_sequence {
             dp_op[idx(0, j)] = MatchType::Insert;
             dp_score[idx(0, j)] =
-                dp_score[idx(0, j - 1)] + scorer.insert(&z[j - 1], 0, j);
+                dp_score[idx(0, j - 1)] + config.insert(&z[j - 1], 0, j);
         } else {
             dp_op[idx(0, j)] = MatchType::Match;
             dp_score[idx(0, j)] = 0.0;
@@ -93,9 +92,9 @@ where
                 dp_op[idx(i, j)] = MatchType::Match;
                 dp_score[idx(i, j)] = dp_score[idx(i - 1, j - 1)];
             } else {
-                let si = dp_score[idx(i, j-1)] + scorer.insert(zj, i, j);
-                let sd = dp_score[idx(i-1, j)] + scorer.delete(ai, i, j);
-                let ss = dp_score[idx(i-1, j-1)] + scorer.substitute(ai, zj, i, j);
+                let si = dp_score[idx(i, j-1)] + config.insert(zj, i, j);
+                let sd = dp_score[idx(i-1, j)] + config.delete(ai, i, j);
+                let ss = dp_score[idx(i-1, j-1)] + config.substitute(ai, zj, i, j);
 
                 let minimum = si.min(sd).min(ss);
                 dp_score[idx(i, j)] = minimum;
@@ -109,8 +108,8 @@ where
                 };
             }
         }
-        if start.elapsed() > Duration::from_secs(1) {
-            log::warn!("fuzzy_match: {i} / {m}");
+        if start.elapsed() > Duration::from_millis(100) {
+            config.report(i, m);
             start = Instant::now();
         }
     }
@@ -196,24 +195,34 @@ pub struct EntryScorer {
     use_levenshtein: bool
 }
 
-impl Scorer<DiffEntry> for EntryScorer {
+struct DiffConfig {
+    channel: Channel<(usize, usize)>,
+    scorer: EntryScorer
+}
+
+impl FuzzyConfig<DiffEntry> for DiffConfig {
     fn substitute(&self, a: &DiffEntry, b: &DiffEntry, _i: usize, _j: usize) -> f32 {
         let time = if (a.start - b.start).abs() < 0.0001 && (a.end - b.end).abs() < 0.0001
-            { 0.0 } else { self.time_weight };
-        let text = if a.text == b.text || self.text_weight == 0.0 { 0.0 }
-            else if self.use_levenshtein {
+            { 0.0 } else { self.scorer.time_weight };
+        let text = if a.text == b.text || self.scorer.text_weight == 0.0 { 0.0 }
+            else if self.scorer.use_levenshtein {
                 rapidfuzz::distance::levenshtein::normalized_distance(
-                    a.text.chars(), b.text.chars()).to_f32().unwrap() * self.text_weight
-            } else { self.text_weight };
+                    a.text.chars(), b.text.chars()).to_f32().unwrap() * self.scorer.text_weight
+            } else { self.scorer.text_weight };
         time + text
+    }
+
+    fn report(&self, progress: usize, total: usize) {
+        self.channel.send((progress, total)).unwrap();
     }
 }
 
 #[tauri::command(async)]
 pub fn diff_entries(
-    a: Vec<DiffEntry>, b: Vec<DiffEntry>, scorer: EntryScorer
+    channel: Channel<(usize, usize)>,
+    a: Vec<DiffEntry>, b: Vec<DiffEntry>, scorer: EntryScorer,
 ) -> Option<MatchResult> {
-    fuzzy_match(&a, &b, &scorer, true)
+    fuzzy_match(&a, &b, &DiffConfig { channel, scorer }, true)
 }
 
 #[cfg(test)]
@@ -224,6 +233,9 @@ mod tests {
     fn to_chars(s: &str) -> Vec<char> {
         s.chars().collect()
     }
+
+    pub struct DefaultScorer;
+    impl<T> FuzzyConfig<T> for DefaultScorer {}
 
     #[test]
     fn test_exact_match() {
@@ -274,7 +286,7 @@ mod tests {
 
     // Custom Scorer that heavily penalizes substitutions
     struct AsymmetricScorer;
-    impl Scorer<char> for AsymmetricScorer {
+    impl FuzzyConfig<char> for AsymmetricScorer {
         fn substitute(&self, _a: &char, _b: &char, _i: usize, _j: usize) -> f32 {
             10.0
         }
