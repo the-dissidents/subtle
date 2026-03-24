@@ -3,7 +3,7 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import { _ } from 'svelte-i18n';
 import { onMount } from 'svelte';
 
-import { ListView, showProgress } from '@the_dissidents/svelte-ui';
+import { ListView, overlayMenu, showProgress } from '@the_dissidents/svelte-ui';
 import DialogBase from '../DialogBase.svelte';
 
 import type { DiffEntry } from '../bindings/DiffEntry';
@@ -20,18 +20,15 @@ import { Interface } from '../frontend/Interface';
 import { Source } from '../frontend/Source';
 
 interface Props {
-  args: [/*...*/],
+  args: [style: SubtitleStyle],
   close: (ret: void /*...*/) => void
 }
 
-let {
-  args: _args, close
+const {
+  args, close
 }: Props = $props();
 
 let inner: DialogBase;
-
-let styleA: SubtitleStyle;
-let styleB: SubtitleStyle;
 
 function toEntries(s: Subtitles, style: SubtitleStyle) {
   return s.entries.flatMap((x, i) =>
@@ -41,17 +38,35 @@ function toEntries(s: Subtitles, style: SubtitleStyle) {
     } : []);
 }
 
+async function chooseStyle(subs: Subtitles, prompt: string) {
+  if (subs.styles.length == 1)
+    return subs.defaultStyle;
+  const choice = await overlayMenu(
+    subs.styles.map((x) => ({ text:
+      `${x.name} （使用量：${subs.entries.filter((e) => e.texts.has(x)).length}）`
+    })),
+    {
+      text: prompt,
+      rememberedItem: subs.defaultStyle.name
+    });
+  if (choice < 0) return undefined;
+  return subs.styles[choice];
+}
+
 onMount(async () => {
   const path = await Interface.askOpenFile();
   if (!path) return close();
 
-  const subs = await Interface.parseSubtitleSourceInteractive(path);
+  const subs = await Interface.parseSubtitleSourceInteractive(path, true);
   if (!subs) return close();
 
-  styleA = Source.subs.defaultStyle;
-  styleB = subs.defaultStyle;
+  // const styleA = await chooseStyle(Source.subs, $_('comparedialog.choose-style-original'));
+  // if (!styleA) return;
 
-  const A = toEntries(Source.subs, styleA);
+  const styleB = await chooseStyle(subs, $_('comparedialog.choose-style-new'));
+  if (!styleB) return;
+
+  const A = toEntries(Source.subs, args[0]);
   const B = toEntries(subs, styleB);
 
   const result = await showProgress<MatchResult | null>(
@@ -62,7 +77,7 @@ onMount(async () => {
   );
 
   if (!result) {
-    // TODO: freak out
+    await dialog.message($_('comparedialog.no-match'), { kind: 'error' });
     return close();
   }
 
@@ -88,7 +103,7 @@ onMount(async () => {
 
   await inner.showModal!();
 
-  close(/*...*/);
+  close();
 });
 
 type DataEntry = {
@@ -130,59 +145,77 @@ async function exportFile() {
 
 <DialogBase bind:this={inner} maxWidth="70em">
   {#snippet header()}
-    <h3>比较字幕文件</h3>
+    <h3>{$_('comparedialog.header')}</h3>
   {/snippet}
 
   <table class="config">
   <tbody>
     <tr>
-      <td>匹配的字幕条</td>
-      <td>
-        <button class="left" disabled>时间轴</button>
+      <td>{$_('comparedialog.matched-entries')}</td>
+      <td class="hlayout">
+        <button class="left" disabled>{$_('comparedialog.times')}</button>
         <button class="middle"
           onclick={() => data.forEach((x) => x.first && x.second && (x.useFirstTime = true))}
-        >全部使用左侧</button>
-        <button class="right"
+        >{$_('comparedialog.use-left')}</button>
+        <button class="middle"
           onclick={() => data.forEach((x) => x.first && x.second && (x.useFirstTime = false))}
-        >全部使用右侧</button>
+        >{$_('comparedialog.use-right')}</button>
 
-        <button class="left" disabled>文本</button>
+        <button class="middle"
+          onclick={() => data.forEach((x) =>
+            x.useFirstTime === true && (x.useFirstTime = undefined))}
+        >{$_('comparedialog.clear-left')}</button>
+        <button class="right"
+          onclick={() => data.forEach((x) =>
+            x.useFirstTime === false && (x.useFirstTime = undefined))}
+        >{$_('comparedialog.clear-right')}</button>
+
+        <button class="left" disabled>{$_('comparedialog.texts')}</button>
         <button class="middle"
           onclick={() => data.forEach((x) => x.first && x.second && (x.useFirstText = true))}
-        >全部使用左侧</button>
-        <button class="right"
+        >{$_('comparedialog.use-left')}</button>
+        <button class="middle"
           onclick={() => data.forEach((x) => x.first && x.second && (x.useFirstText = false))}
-        >全部使用右侧</button>
+        >{$_('comparedialog.use-right')}</button>
+
+        <button class="middle"
+          onclick={() => data.forEach((x) =>
+            x.useFirstText === true && (x.useFirstText = undefined))}
+        >{$_('comparedialog.clear-left')}</button>
+        <button class="right"
+          onclick={() => data.forEach((x) =>
+            x.useFirstText === false && (x.useFirstText = undefined))}
+        >{$_('comparedialog.clear-right')}</button>
       </td>
     </tr>
     <tr>
-      <td>无法匹配的字幕条</td>
-      <td>
-        <button class="left" disabled>左侧</button>
+      <td>{$_('comparedialog.unmatched-entries')}</td>
+      <td class="hlayout">
+        <button class="left" disabled>{$_('comparedialog.left-side')}</button>
         <button class="middle"
           onclick={() => data.forEach((x) => x.first && !x.second
             && (x.useFirstTime = true, x.useFirstText = true))}
-        >保留</button>
+        >{$_('comparedialog.retain')}</button>
         <button class="right"
           onclick={() => data.forEach((x) => x.first && !x.second
             && (x.useFirstTime = undefined, x.useFirstText = undefined))}
-        >不保留</button>
+        >{$_('comparedialog.remove')}</button>
 
-        <button class="left" disabled>右侧</button>
+        <button class="left" disabled>{$_('comparedialog.right-side')}</button>
         <button class="middle"
           onclick={() => data.forEach((x) => !x.first && x.second
             && (x.useFirstTime = false, x.useFirstText = false))}
-        >保留</button>
+        >{$_('comparedialog.retain')}</button>
         <button class="right"
           onclick={() => data.forEach((x) => !x.first && x.second
             && (x.useFirstTime = undefined, x.useFirstText = undefined))}
-        >不保留</button>
+        >{$_('comparedialog.remove')}</button>
       </td>
     </tr>
     <tr>
       <td></td>
       <td>
-        <button onclick={() => exportFile()}>导出</button>
+        <button onclick={() => exportFile()}>{$_('comparedialog.export')}</button>
       </td>
     </tr>
   </tbody>
@@ -191,17 +224,17 @@ async function exportFile() {
   <ListView columns={[
     ['i1',    { header: '#',     width: 'max-content', align: 'end' }],
     ['useTime1', { header: '' }],
-    ['s1',    { header: 'start', width: 'max-content' }],
-    ['e1',    { header: 'end',   width: 'max-content' }],
+    ['s1',    { header: $_('metrics.start-time-short'), width: 'max-content' }],
+    ['e1',    { header: $_('metrics.end-time-short'),   width: 'max-content' }],
     ['useText1', { header: '' }],
-    ['text1', { header: 'text',  width: '1fr' }],
+    ['text1', { header: $_('metrics.content'),  width: '1fr' }],
 
     ['i2',    { header: '#',     width: 'max-content', align: 'end' }],
     ['useTime2', { header: '' }],
-    ['s2',    { header: 'start', width: 'max-content' }],
-    ['e2',    { header: 'end',   width: 'max-content' }],
+    ['s2',    { header: $_('metrics.start-time-short'), width: 'max-content' }],
+    ['e2',    { header: $_('metrics.end-time-short'),   width: 'max-content' }],
     ['useText2', { header: '' }],
-    ['text2', { header: 'text',  width: '1fr' }],
+    ['text2', { header: $_('metrics.content'),  width: '1fr' }],
   ]} items={data}>
     {#snippet i1({ first: a })}
       {a?.idx ?? ''}
@@ -213,12 +246,12 @@ async function exportFile() {
       {/if}
     {/snippet}
     {#snippet s1({ first: a, second: b })}
-      <span class:diff={!b || b.start !== a?.start}>
+      <span class:diff={!b || !a || !Basic.approx(b.start, a.start, 0.01)}>
         {a ? Basic.formatTimestamp(a.start) : ''}
       </span>
     {/snippet}
     {#snippet e1({ first: a, second: b })}
-      <span class:diff={!b || b.end !== a?.end}>
+      <span class:diff={!b || !a || !Basic.approx(b.end, a.end, 0.01)}>
         {a ? Basic.formatTimestamp(a.end) : ''}
       </span>
     {/snippet}
@@ -255,12 +288,12 @@ async function exportFile() {
       {/if}
     {/snippet}
     {#snippet s2({ first: b, second: a })}
-      <span class:diff={!b || b.start !== a?.start}>
+      <span class:diff={!b || !a || !Basic.approx(b.start, a.start, 0.01)}>
         {a ? Basic.formatTimestamp(a.start) : ''}
       </span>
     {/snippet}
     {#snippet e2({ first: b, second: a })}
-      <span class:diff={!b || b.end !== a?.end}>
+      <span class:diff={!b || !a || !Basic.approx(b.end, a.end, 0.01)}>
         {a ? Basic.formatTimestamp(a.end) : ''}
       </span>
     {/snippet}
@@ -301,5 +334,9 @@ async function exportFile() {
 
   .changed {
     color: blue;
+  }
+
+  button.right {
+    margin-right: 5px;
   }
 </style>

@@ -213,6 +213,10 @@
     "will-be-combined-in": "{n,plural,one{entries} other{entry}} will be combined in",
     "will-be-labeled": "{n,plural,one{entries} other{entry}} will be labeled {color}"
   },
+  "comparedialog": {
+    "header": "compare subtitle files",
+    "matched-entries": "matched entries"
+  },
   "config": {
     "arrow-navigation-type": "arrow navigation preference",
     "arrow-navigation-type-d": "The preferred position of the newly selected entry when navigating the subtitle table with Up/Down arrow keys.",

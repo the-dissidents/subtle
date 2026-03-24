@@ -21,7 +21,7 @@ async function show<P extends SubtitleParser>(
 }
 
 export const ImportFormatDialogs = {
-    JSON: (p: JSONParser) => show(p, true, {
+    JSON: (p: JSONParser, skippable = true) => show(p, skippable, {
         header: $_('jsonimport.header'),
         formatMessage(type, group) {
             const map = <Ty extends JSONParseMessage['type']>(
@@ -38,16 +38,16 @@ export const ImportFormatDialogs = {
                 case 'fixed-style': return {
                     heading: $_('jsonimport.fixed-style'),
                     description: $_('jsonimport.fixed-style-d'),
-                    items: map<'fixed-style'>((x) => 
+                    items: map<'fixed-style'>((x) =>
                         $_('jsonimport.fixed-style-item', {values: {a: x.name, b: x.occurrence}}))
                 };
                 case 'migrated-newer': return {
-                    heading: $_('jsonimport.migrated-newer-from', 
+                    heading: $_('jsonimport.migrated-newer-from',
                         {values: {from: one<'migrated-newer'>((x) => x.from)}}),
                     description: $_('jsonimport.migrated-newer-from-d')
                 };
                 case 'migrated-older': return {
-                    heading: $_('jsonimport.migrated-older', 
+                    heading: $_('jsonimport.migrated-older',
                         {values: {from: one<'migrated-older'>((x) => x.from)}}),
                     description: $_('jsonimport.migrated-older-d')
                 };
@@ -56,7 +56,7 @@ export const ImportFormatDialogs = {
         categoryDescription: () => undefined,
     }),
 
-    SRT: (p: SRTParser) => show(p, true, {
+    SRT: (p: SRTParser, skippable = false) => show(p, skippable, {
         header: $_('srtimport.header'),
         formatMessage(type, group) {
             const map = <Ty extends ASSParseMessage['type']>(
@@ -72,29 +72,29 @@ export const ImportFormatDialogs = {
             switch (type) {
                 case 'ignored-coordinates': return {
                     heading: $_('srtimport.ignored-coordinates') + ' '
-                        + one<'ignored-coordinates'>((x) => 
+                        + one<'ignored-coordinates'>((x) =>
                             $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                     description: $_('srtimport.coordinates-info')
                 };
                 case 'ignored-format-tag': return {
                     heading: $_('srtimport.ignored-format-tags'),
-                    items: map<'unsupported-override-tag'>((x) => 
+                    items: map<'unsupported-override-tag'>((x) =>
                           x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                     description: $_('srtimport.info')
                 };
                 case 'unsupported-override-tag': return {
                     heading: $_('assimport.unsupported-override-tag'),
-                    items: map<'unsupported-override-tag'>((x) => 
+                    items: map<'unsupported-override-tag'>((x) =>
                           x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-special-character': return {
                     heading: $_('assimport.ignored-special-character'),
-                    items: map<'ignored-special-character'>((x) => 
+                    items: map<'ignored-special-character'>((x) =>
                           x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'invalid-color-name': return {
                     heading: $_('srtimport.invalid-color') + ' '
-                        + one<'invalid-color-name'>((x) => 
+                        + one<'invalid-color-name'>((x) =>
                             $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 default:
@@ -105,14 +105,14 @@ export const ImportFormatDialogs = {
         options: []
     }),
 
-    ASS: (p: ASSParser) => show(p, false, {
+    ASS: (p: ASSParser, skippable = false) => show(p, skippable, {
         header: $_('assimport.header'),
         formatMessage(type, group) {
             const map = <Ty extends ASSParseMessage['type']>(
                 f: (x: Extract<ASSParseMessage, { type: Ty; }>) => string
             ) => // @ts-expect-error -- ...
                 group.map(f);
-            
+
             const one = <Ty extends ASSParseMessage['type']>(
                 f: (x: Extract<ASSParseMessage, { type: Ty; }>) => string
             ) => // @ts-expect-error -- ...
@@ -132,41 +132,41 @@ export const ImportFormatDialogs = {
                 };
                 case 'invalid-style-field': return {
                     heading: $_('assimport.invalid-style-field'),
-                    items: map<'invalid-style-field'>((w) => $_('assimport.in-a-b-equals-c', 
+                    items: map<'invalid-style-field'>((w) => $_('assimport.in-a-b-equals-c',
                         {values: {a: w.name, b: w.field, c: w.value}}))
                 };
                 case 'invalid-event-field': return {
                     heading: $_('assimport.invalid-event-field'),
-                    items: map<'invalid-event-field'>((w) => 
-                        $_('assimport.in-line-a-b-equals-c', 
+                    items: map<'invalid-event-field'>((w) =>
+                        $_('assimport.in-line-a-b-equals-c',
                             {values: {a: w.line, b: w.field, c: w.value}}))
                 };
-                
+
                 case 'ignored-style-field': return {
                     heading: $_('assimport.ignored-style-field'),
-                    items: map<'invalid-style-field'>((w) => 
-                        $_('assimport.in-a-b-equals-c', 
+                    items: map<'invalid-style-field'>((w) =>
+                        $_('assimport.in-a-b-equals-c',
                             {values: {a: w.name, b: w.field, c: w.value}}))
                 };
                 case 'ignored-event-field': return {
                     heading: $_('assimport.ignored-event-field'),
-                    items: map<'invalid-event-field'>((w) => 
-                        $_('assimport.in-line-a-b-equals-c', 
+                    items: map<'invalid-event-field'>((w) =>
+                        $_('assimport.in-line-a-b-equals-c',
                             {values: {a: w.line, b: w.field, c: w.value}}))
                 };
                 case 'ignored-special-character': return {
                     heading: $_('assimport.ignored-special-character'),
-                    items: map<'ignored-special-character'>((x) => 
+                    items: map<'ignored-special-character'>((x) =>
                           x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-drawing-command': return {
                     heading: $_('assimport.ignored-drawing-command') + ' '
-                        + one<'ignored-drawing-command'>((x) => 
+                        + one<'ignored-drawing-command'>((x) =>
                             $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'unsupported-override-tag': return {
                     heading: $_('assimport.unsupported-override-tag'),
-                    items: map<'unsupported-override-tag'>((x) => 
+                    items: map<'unsupported-override-tag'>((x) =>
                           x.name + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
                 case 'ignored-embedded-fonts': return {

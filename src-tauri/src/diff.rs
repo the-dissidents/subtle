@@ -202,7 +202,7 @@ struct DiffConfig {
 
 impl FuzzyConfig<DiffEntry> for DiffConfig {
     fn substitute(&self, a: &DiffEntry, b: &DiffEntry, _i: usize, _j: usize) -> f32 {
-        let time = if (a.start - b.start).abs() < 0.0001 && (a.end - b.end).abs() < 0.0001
+        let time = if (a.start - b.start).abs() < 0.01 && (a.end - b.end).abs() < 0.01
             { 0.0 } else { self.scorer.time_weight };
         let text = if a.text == b.text || self.scorer.text_weight == 0.0 { 0.0 }
             else if self.scorer.use_levenshtein {

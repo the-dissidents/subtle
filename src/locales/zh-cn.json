@@ -213,6 +213,25 @@
     "will-be-combined-in": "条目将被合并为",
     "will-be-labeled": "条目将被标记为 {color}"
   },
+  "comparedialog": {
+    "choose-style-new": "选择新字幕中要比较的样式",
+    "choose-style-original": "选择原字幕中要比较的样式",
+    "clear-left": "清除左侧",
+    "clear-right": "清除右侧",
+    "export": "导出",
+    "header": "比较字幕文件",
+    "left-side": "左侧",
+    "matched-entries": "匹配的字幕条",
+    "no-match": "未发现任何匹配之处",
+    "remove": "不保留",
+    "retain": "保留",
+    "right-side": "右侧",
+    "texts": "文本",
+    "times": "时间轴",
+    "unmatched-entries": "无法匹配的字幕条",
+    "use-left": "全部使用左侧",
+    "use-right": "全部使用右侧"
+  },
   "config": {
     "arrow-navigation-type": "上下方向键选择设置",
     "arrow-navigation-type-d": "指定按上下方向键选择时，新选中的字幕条应该滚动到什么位置",

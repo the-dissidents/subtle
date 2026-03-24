@@ -71,26 +71,26 @@ async function readTextFile(path: string) {
 }
 
 export const Interface = {
-    async parseSubtitleSourceInteractive(path: string) {
+    async parseSubtitleSourceInteractive(path: string, skippable?: boolean) {
         const text = await readTextFile(path);
         if (!text) return null;
 
         return guardAsync(async () => {
             if (JSONSubtitles.detect(text)) {
                 const parser = JSONSubtitles.parse(text);
-                if (!await ImportFormatDialogs.JSON(parser))
+                if (!await ImportFormatDialogs.JSON(parser, skippable))
                     return null;
                 return parser.done();
             }
             if (ASSSubtitles.detect(text)) {
                 const parser = ASSSubtitles.parse(text);
-                if (!await ImportFormatDialogs.ASS(parser))
+                if (!await ImportFormatDialogs.ASS(parser, skippable))
                     return null;
                 return parser.done();
             }
             if (SRTSubtitles.detect(text) !== false) {
                 const parser = SRTSubtitles.parse(text);
-                if (!await ImportFormatDialogs.SRT(parser))
+                if (!await ImportFormatDialogs.SRT(parser, skippable))
                     return null;
                 return parser.done();
             }
