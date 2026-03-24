@@ -24,7 +24,7 @@
     "@tauri-apps/plugin-opener": "^2.5.0",
     "@tauri-apps/plugin-os": "^2.3.1",
     "@tauri-apps/plugin-window-state": "~2",
-    "@the_dissidents/svelte-ui": "file:.yalc/@the_dissidents/svelte-ui",
+    "@the_dissidents/svelte-ui": "0.0.2",
     "@traversable/zod": "^0.0.57",
     "@types/babel-core": "^6.25.10",
     "bits-ui": "^2.14.4",

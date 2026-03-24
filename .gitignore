@@ -16,5 +16,6 @@ stats*.html
 target/
 .yalc/
 
+yalc.lock
 AGENTS.md
 TECHNICAL.md
