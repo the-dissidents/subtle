@@ -70,7 +70,6 @@ export const Playback = {
 
     onLoad: new AsyncEventHost<[rawurl: string, id: number]>(),
     onClose: new AsyncEventHost<[]>(),
-    
     onLoaded: new EventHost<[]>(),
     onSetAudioStream: new EventHost<[id: number]>(),
     onPositionChanged: new EventHost<[pos: number]>(),
@@ -112,7 +111,7 @@ export const Playback = {
     async close(force = false) {
         if (!force && get(loadState) != 'loaded')
             return Debug.early();
-        
+
         try {
             await this.onClose.dispatchAndAwaitAll()
             await this.forceSetPosition(0);
@@ -174,19 +173,19 @@ export const PlaybackCommands = {
     {
         name: () => $_('menu.select-audio-stream'),
         isApplicable: () => get(Playback.loadState) == 'loaded',
-        items: () => Playback.player!.streams
+        items: () => Playback.player?.streams
             .map((x) => ({
                 name: `[${x.index}] ${x.type}: ${x.codecId ?? ''} ${x.languageCode}` + (
-                    x.index == Playback.player?.currentAudioStream 
+                    x.index == Playback.player?.currentAudioStream
                     ? ' ' + $_('menu.audio-stream-current') : ''),
-                isApplicable: () => x.type == 'audio' 
+                isApplicable: () => x.type == 'audio'
                                  && x.index != Playback.player?.currentAudioStream,
                 async call() {
                     if (Playback.player) await guardAsync(
                         () => Playback.setAudioStream(x.index),
                         $_('msg.failed-to-set-audio-stream'))
                 }
-            })),
+            })) ?? [],
         emptyText: () => $_('msg.no-available-item')
     }),
     togglePlay: new UICommand(() => $_('category.media'),
@@ -207,8 +206,8 @@ export const PlaybackCommands = {
         call() {
             const pos = Playback.position;
             const area = Playback.playArea.setting;
-            Playback.playArea.setting.start = 
-                (area.start == pos || (area.end !== undefined && area.end <= pos)) 
+            Playback.playArea.setting.start =
+                (area.start == pos || (area.end !== undefined && area.end <= pos))
                 ? undefined : pos;
         }
     }),
@@ -221,7 +220,7 @@ export const PlaybackCommands = {
             const pos = Playback.position;
             const area = Playback.playArea.setting;
             Playback.playArea.setting.end =
-                (area.end == pos || (area.start !== undefined && area.start >= pos)) 
+                (area.end == pos || (area.start !== undefined && area.start >= pos))
                 ? undefined : pos;
         }
     }),

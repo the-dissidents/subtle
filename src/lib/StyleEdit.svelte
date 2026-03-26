@@ -50,16 +50,25 @@ async function contextMenu() {
     items: [
     {
       text: $_('style.delete'),
-      enabled: used.length == 0,
-      action() {
+      async action() {
         if (isDefault) {
-          dialog.message($_('msg.you-cant-delete-a-default-style'));
+          await dialog.message($_('msg.you-cant-delete-a-default-style'));
           return;
         }
+
+        if (used.length > 0 && !await dialog.confirm(
+          $_('msg.proceed-delete-n-occurrences', { values: { n: used.length } })))
+            return;
+
+        used.forEach((ent) => ent.texts.size == 1
+          ? subtitles.entries.splice(subtitles.entries.indexOf(ent), 1)
+          : ent.texts.delete($style));
+
         let i = subtitles.styles.indexOf($style);
         if (i < 0) return Debug.early();
         subtitles.styles.splice(i, 1);
-        Source.markChanged(ChangeType.StyleDefinitions, $_('c.delete-style'));
+        Source.markChanged(
+          used.length > 0 ? ChangeType.General : ChangeType.StyleDefinitions, $_('c.delete-style'));
         onsubmit?.();
       }
     },
@@ -79,9 +88,7 @@ async function contextMenu() {
       enabled: Source.subs.styles.length > 1 && used.length > 0,
       items: withoutThis.map((x) => ({
         text: x.name,
-        action() {
-          Utils.replaceStyle(subtitles.entries, $style, x);
-        }
+        action: () => Utils.replaceStyle(subtitles.entries, $style, x)
       }))
     },
     {
@@ -89,9 +96,7 @@ async function contextMenu() {
       enabled: Source.subs.styles.length > 1 && used.length > 0,
       items: withoutThis.map((x) => ({
         text: x.name,
-        action() {
-          Utils.exchangeStyle(subtitles.entries, $style, x);
-        }
+        action: () => Utils.exchangeStyle(subtitles.entries, $style, x)
       }))
     },
     {
@@ -256,7 +261,7 @@ async function contextMenu() {
         onchange={() => Source.markChanged(ChangeType.Filter, $_('c.style-filter'))} />
     </Collapsible>
     <!-- advanced -->
-    <Collapsible header={$_('style.more')}>
+    <Collapsible header={$_('style.more-styling')}>
       <table class="stretch">
         <tbody>
           <tr>

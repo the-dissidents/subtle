@@ -17,41 +17,41 @@ export async function initWindowMenu() {
     const file = await Submenu.new({
         text: $_('appmenu.file'),
         items: [
-            InterfaceCommands.newFile.toMenuItem(),
+            InterfaceCommands.newFile.toGlobalMenuItem(),
             { item: 'Separator' },
-            InterfaceCommands.openMenu.toMenuItem(),
-            InterfaceCommands.import.toMenuItem(),
+            InterfaceCommands.openMenu.toGlobalMenuItem(),
+            InterfaceCommands.import.toGlobalMenuItem(),
             { item: 'Separator' },
-            InterfaceCommands.openVideo.toMenuItem(),
-            InterfaceCommands.closeVideo.toMenuItem(),
+            InterfaceCommands.openVideo.toGlobalMenuItem(),
+            InterfaceCommands.closeVideo.toGlobalMenuItem(),
             { item: 'Separator' },
-            InterfaceCommands.save.toMenuItem(),
-            InterfaceCommands.saveAs.toMenuItem(),
-            InterfaceCommands.exportMenu.toMenuItem(),
+            InterfaceCommands.save.toGlobalMenuItem(),
+            InterfaceCommands.saveAs.toGlobalMenuItem(),
+            InterfaceCommands.exportMenu.toGlobalMenuItem(),
             { item: 'Separator' },
-            SourceCommands.undo.toMenuItem(),
-            SourceCommands.redo.toMenuItem(),
+            SourceCommands.undo.toGlobalMenuItem(),
+            SourceCommands.redo.toGlobalMenuItem(),
         ]
     });
     const entries = await Submenu.new({
         text: $_('appmenu.entries'),
         items: [
-            BasicCommands.copyMenu.toMenuItem(),
-            BasicCommands.copyChannelText.toMenuItem(),
-            BasicCommands.cut.toMenuItem(),
-            BasicCommands.paste.toMenuItem(),
+            BasicCommands.copyMenu.toGlobalMenuItem(),
+            BasicCommands.copyChannelText.toGlobalMenuItem(),
+            BasicCommands.cut.toGlobalMenuItem(),
+            BasicCommands.paste.toGlobalMenuItem(),
             { item: 'Separator' },
-            BasicCommands.deleteSelection.toMenuItem(),
+            BasicCommands.deleteSelection.toGlobalMenuItem(),
             { item: 'Separator' },
-            BasicCommands.selectAll.toMenuItem(),
-            BasicCommands.selectByChannel.toMenuItem(),
-            BasicCommands.invertSelection.toMenuItem(),
+            BasicCommands.selectAll.toGlobalMenuItem(),
+            BasicCommands.selectByChannel.toGlobalMenuItem(),
+            BasicCommands.invertSelection.toGlobalMenuItem(),
             { item: 'Separator' },
-            BasicCommands.insertBeforeFocus.toMenuItem(),
-            BasicCommands.insertAfterFocus.toMenuItem(),
-            BasicCommands.moveMenu.toMenuItem(),
+            BasicCommands.insertBeforeFocus.toGlobalMenuItem(),
+            BasicCommands.insertAfterFocus.toGlobalMenuItem(),
+            BasicCommands.moveMenu.toGlobalMenuItem(),
             { item: 'Separator' },
-            BasicCommands.connectMenu.toMenuItem(),
+            BasicCommands.connectMenu.toGlobalMenuItem(),
         ]
     });
     const text = await Submenu.new({
@@ -71,52 +71,52 @@ export async function initWindowMenu() {
     const channels = await Submenu.new({
         text: $_('cxtmenu.channels'),
         items: [
-            BasicCommands.combineIntoOneEntry.toMenuItem(),
-            BasicCommands.splitChannels.toMenuItem(),
+            BasicCommands.combineIntoOneEntry.toGlobalMenuItem(),
+            BasicCommands.splitChannels.toGlobalMenuItem(),
             { item: 'Separator' },
-            BasicCommands.createChannel.toMenuItem(),
-            BasicCommands.replaceChannel.toMenuItem(),
-            BasicCommands.exchangeChannel.toMenuItem(),
-            BasicCommands.mergeChannel.toMenuItem(),
-            BasicCommands.removeChannel.toMenuItem(),
-            BasicCommands.removeNewlines.toMenuItem(),
-            BasicCommands.removeFormatting.toMenuItem(),
-            BasicCommands.removeBlankChannels.toMenuItem(),
+            BasicCommands.createChannel.toGlobalMenuItem(),
+            BasicCommands.replaceChannel.toGlobalMenuItem(),
+            BasicCommands.exchangeChannel.toGlobalMenuItem(),
+            BasicCommands.mergeChannel.toGlobalMenuItem(),
+            BasicCommands.removeChannel.toGlobalMenuItem(),
+            BasicCommands.removeNewlines.toGlobalMenuItem(),
+            BasicCommands.removeFormatting.toGlobalMenuItem(),
+            BasicCommands.removeBlankChannels.toGlobalMenuItem(),
         ]
     });
     const utilities = await Submenu.new({
         text: $_('cxtmenu.utilities'),
         items: [
-            BasicCommands.transformTimes.toMenuItem(),
+            BasicCommands.transformTimes.toGlobalMenuItem(),
             { item: 'Separator' },
-            BasicCommands.sortSelectionByTime.toMenuItem(),
-            BasicCommands.sortSelectionByLabel.toMenuItem(),
+            BasicCommands.sortSelectionByTime.toGlobalMenuItem(),
+            BasicCommands.sortSelectionByLabel.toGlobalMenuItem(),
             { item: 'Separator' },
-            BasicCommands.mergeDuplicates.toMenuItem(),
-            DialogCommands.combineDialog.toMenuItem(),
-            DialogCommands.splitDialog.toMenuItem(),
-            BasicCommands.fixOverlap.toMenuItem(),
+            BasicCommands.mergeDuplicates.toGlobalMenuItem(),
+            DialogCommands.combineDialog.toGlobalMenuItem(),
+            DialogCommands.splitDialog.toGlobalMenuItem(),
+            BasicCommands.fixOverlap.toGlobalMenuItem(),
         ]
     });
     const playback = await Submenu.new({
         text: $_('cxtmenu.playback'),
         items: [
-            PlaybackCommands.togglePlay.toMenuItem(),
+            PlaybackCommands.togglePlay.toGlobalMenuItem(),
             { item: 'Separator' },
-            PlaybackCommands.nextFrame.toMenuItem(),
-            PlaybackCommands.previousFrame.toMenuItem(),
-            PlaybackCommands.jumpBackward.toMenuItem(),
-            PlaybackCommands.jumpForward.toMenuItem(),
+            PlaybackCommands.nextFrame.toGlobalMenuItem(),
+            PlaybackCommands.previousFrame.toGlobalMenuItem(),
+            PlaybackCommands.jumpBackward.toGlobalMenuItem(),
+            PlaybackCommands.jumpForward.toGlobalMenuItem(),
             { item: 'Separator' },
-            PlaybackCommands.selectAudioStream.toMenuItem(),
+            PlaybackCommands.selectAudioStream.toGlobalMenuItem(),
         ]
     });
     const system = await Submenu.new({
         text: $_('appmenu.system'),
         items: [
-            DialogCommands.openConfiguration.toMenuItem(),
-            DialogCommands.openKeybinding.toMenuItem(),
-            DialogCommands.reportBugs.toMenuItem(),
+            DialogCommands.openConfiguration.toGlobalMenuItem(),
+            DialogCommands.openKeybinding.toGlobalMenuItem(),
+            DialogCommands.reportBugs.toGlobalMenuItem(),
             { item: 'Separator' },
             { item: 'Maximize' },
             { item: 'Minimize' },
@@ -128,7 +128,7 @@ export async function initWindowMenu() {
     appMenu = await Menu.new({
         items: [first, file, text, entries, channels, utilities, playback, system]
     });
-    
+
     if (InterfaceConfig.data.showWindowMenu || platform() == 'macos') {
         const old = await appMenu.setAsAppMenu();
         if (!originalMenu) originalMenu = old;

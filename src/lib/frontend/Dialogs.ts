@@ -7,6 +7,7 @@ import { Editing } from "./Editing";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { openDialog } from "../DialogOutlet.svelte";
 import { Dialog } from "../dialog";
+import { Source } from "./Source";
 const $_ = unwrapFunctionStore(_);
 
 export class DialogHandler<TInput = void, TOutput = string> {
@@ -51,5 +52,18 @@ export const DialogCommands = {
         isApplicable: () => Editing.getSelection().length > 0,
         call: () => openDialog(Dialog.splitByLine)
     }),
+    compareDialog: new UICommand(() => $_('category.tool'),
+        [],
+    {
+        name: () => $_('action.compare-documents'),
+        menuName: () => $_('cxtmenu.channel-to-compare'),
+        items: () => [
+            ...Source.subs.styles.map((s) => ({
+                name: s.name,
+                isDialog: true,
+                call: () => openDialog(Dialog.compare, s)
+            }))
+        ]
+    })
 }
 KeybindingManager.register(DialogCommands);

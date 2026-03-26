@@ -8,13 +8,12 @@ import DialogBase from '../DialogBase.svelte';
 import { _ } from 'svelte-i18n';
 import { CommandBinding, KeyBinding, KeybindingManager } from '../frontend/Keybinding';
 import { UIFocusList, type UIFocus } from '../frontend/Frontend';
-import type { UICommand } from '../frontend/CommandBase';
+import type { AnyUICommand } from '../frontend/CommandBase';
 
 import { onMount } from 'svelte';
 
 interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args: [cmd: UICommand<any>, bindings: CommandBinding | null],
+  args: [cmd: AnyUICommand, bindings: CommandBinding | null],
   close: (ret: CommandBinding | null) => void
 }
 
@@ -61,10 +60,10 @@ function check() {
   if (conflicts.length == 0)
     error = '';
   else {
-    error = $_('keyinput.conflicts', 
+    error = $_('keyinput.conflicts',
       {values: {list: conflicts.map(
         ([cmd, list]) => `${cmd.name} – ${
-          list.length == 0 
+          list.length == 0
             ? $_('keyinput.any')
             : list.map((x) => $_(`context.${x}`)).join(' | ')
         }`).join('\n')}});
@@ -86,7 +85,7 @@ function check() {
   <div class='vlayout'>
     <input type='text'
       class={{keybinding: true, flexgrow: true, error}}
-      placeholder={$_('keyinput.press-a-key')} 
+      placeholder={$_('keyinput.press-a-key')}
       value={key?.toString() ?? ''}
       onkeydown={(ev) => {
         ev.preventDefault();

@@ -6,9 +6,8 @@ import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api
 import { overlayMenu } from "@the_dissidents/svelte-ui";
 
 export type CommandOptions<TState = unknown> = ({
-    displayAccel?: string,
     isDialog?: boolean,
-    call: (self: UICommand<TState>) => (TState | Promise<TState>)
+    call: () => (TState | Promise<TState>)
 } | {
     menuName?: string | (() => string),
     emptyText?: string | (() => string),
@@ -16,6 +15,7 @@ export type CommandOptions<TState = unknown> = ({
     rememberedItem?: string,
 }) & {
     name: string | (() => string),
+    linkedCommand?: AnyUICommand | (() => AnyUICommand),
     isApplicable?: () => boolean,
     onDeactivate?: (state: TState) => (void | Promise<void>)
 };
@@ -27,16 +27,19 @@ function unwrap<T>(fv: T | (() => T)): T {
 }
 
 function commandOptionToMenu<T>(
-    item: CommandOptions<T>, cmd: UICommand<T>,
-    parents: CommandOptions<T>[]
+    item: CommandOptions<T>, cmd: UICommand<T> | undefined,
+    parents: CommandOptions<T>[], global: boolean,
 ): MenuItemOptions | SubmenuOptions {
-    const enabled = item.isApplicable ? item.isApplicable() : true;
+    const enabled = (!global && item.isApplicable) ? item.isApplicable() : true;
+    const accelerator = (cmd ?? unwrap(item.linkedCommand))?.getDisplayAccel() ?? undefined;
     return 'call' in item ? {
         text: unwrap(item.name),
-        enabled,
-        accelerator: item.displayAccel,
+        enabled, accelerator,
         action: () => {
-            item.call(cmd);
+            if (global && item.isApplicable && !item.isApplicable())
+                return;
+
+            item.call();
             let name = unwrap(item.name);
             for (const p of parents.toReversed()) {
                 Debug.assert('items' in p);
@@ -46,18 +49,21 @@ function commandOptionToMenu<T>(
         }
     } : {
         text: unwrap(item.name),
-        enabled,
+        enabled, accelerator,
         items: enabled
             ? [...item.menuName
                 ? [{ text: unwrap(item.menuName), enabled: false }]
                 : [],
                ...unwrap(item.items)
-                 .map((x) => commandOptionToMenu(x, cmd, [...parents, item]))]
+                 .map((x) => commandOptionToMenu(x, undefined, [...parents, item], global))]
             : []
     }
 }
 
 export type UICommandType = 'simple' | 'menu' | 'dialog';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyUICommand = UICommand<any>;
 
 export class UICommand<TState = void> {
     static #activated = new Map<UICommand<unknown>, KeyBinding | null>();
@@ -95,23 +101,36 @@ export class UICommand<TState = void> {
         return this.options.isApplicable?.() ?? true;
     }
 
+    getDisplayAccel() {
+        const focus = Frontend.getUIFocus();
+        const b = this.bindings.find((x) => !x.contexts || x.contexts.has(focus));
+        if (b && b.sequence.length == 1)
+            return b.sequence[0].toString();
+        return null;
+    }
+
     // FIXME: using command as menu item does not update its `activated` state
     toMenuItem(): SubmenuOptions {
-        if ('call' in this.options) {
-            const focus = Frontend.getUIFocus();
-            const b = this.bindings.find((x) => !x.contexts || x.contexts.has(focus));
-            if (b && b.sequence.length == 1)
-                this.options.displayAccel = b.sequence[0].toString();
-            // chord display is not supported
-        }
-        return commandOptionToMenu(this.options, this, []);
+        return commandOptionToMenu(this.options, this, [], false);
+    }
+
+    toGlobalMenuItem(): SubmenuOptions {
+        return commandOptionToMenu(this.options, this, [], true);
+    }
+
+    wrap(name: string | (() => string)): CommandOptions<TState> {
+        return {
+            ...this.options,
+            linkedCommand: this,
+            name
+        };
     }
 
     async menu() {
         if (!this.isApplicable)
             return Debug.early();
 
-        const opt = commandOptionToMenu(this.options, this, []);
+        const opt = commandOptionToMenu(this.options, this, [], false);
         if ('items' in opt) {
             await (await Menu.new(opt)).popup();
         } else {
@@ -145,7 +164,7 @@ export class UICommand<TState = void> {
             item.rememberedItem = unwrap(items[n].name);
             await this.#runCommand(items[n]);
         } else {
-            this.#state = { value: await item.call(this) };
+            this.#state = { value: await item.call() };
         }
     }
 

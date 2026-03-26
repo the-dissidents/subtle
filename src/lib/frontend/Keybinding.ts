@@ -4,7 +4,7 @@ import { HashMap } from "../details/HashMap";
 import { KeyCodeMap, type KeyCode } from "../details/KeyCodeMap";
 
 import { Frontend, guardAsync, UIFocusList, type UIFocus } from "./Frontend";
-import { UICommand } from "./CommandBase";
+import { UICommand, type AnyUICommand } from "./CommandBase";
 
 import * as fs from "@tauri-apps/plugin-fs";
 
@@ -27,7 +27,7 @@ export class KeyBinding {
 
     toString(): string {
         return [
-            ...ModifierKeys.filter((x) => this.modifiers.has(x)), 
+            ...ModifierKeys.filter((x) => this.modifiers.has(x)),
             this.key[0].toUpperCase() + this.key.slice(1)
         ].join('+')
          .replace('Meta', 'Cmd')
@@ -78,7 +78,7 @@ export class CommandBinding {
     }
 };
 
-export const ModifierKeys = 
+export const ModifierKeys =
     ['CapsLock', 'Control', 'Alt', 'Shift', 'Meta'] as const;
 
 export type ModifierKey = (typeof ModifierKeys)[number];
@@ -160,11 +160,13 @@ export const KeybindingManager = {
         return commands;
     },
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    register(cmds: Record<string, UICommand<any>>) {
-        Debug.assert(!initialized);
+    register(cmds: Record<string, AnyUICommand>) {
         const entries = Object.entries(cmds);
+        commands.clear();
         entries.forEach(([a, b]) => commands.set(a, b));
+        if (initialized) {
+            this.update();
+        }
     },
 
     async init() {
@@ -182,8 +184,8 @@ export const KeybindingManager = {
                     break;
                 case "notFound":
                     if (result.sequence.length > 1) {
-                        Frontend.setStatus($_('msg.hotkey-not-found', 
-                            { values: { key: 
+                        Frontend.setStatus($_('msg.hotkey-not-found',
+                            { values: { key:
                                 result.sequence.map((x) => x.toString()).join(' ')
                             } }), 'error');
                     }
@@ -196,8 +198,8 @@ export const KeybindingManager = {
                 case "waitNext":
                     ev.preventDefault();
                     hotkeyWasPressed = true;
-                    Frontend.setStatus($_('msg.waiting-for-chord-after-pressing', 
-                        { values: { key: 
+                    Frontend.setStatus($_('msg.waiting-for-chord-after-pressing',
+                        { values: { key:
                             result.currentSequence.map((x) => x.toString()).join(' ')
                         } }));
                     break;
@@ -272,8 +274,8 @@ export const KeybindingManager = {
             serializable[name] = cmd.bindings.map((x) => x.toSerializable());
 
         await guardAsync(async () => {
-            await fs.writeTextFile(ConfigFile, 
-                JSON.stringify(serializable, null, 2), {baseDir: fs.BaseDirectory.AppConfig}); 
+            await fs.writeTextFile(ConfigFile,
+                JSON.stringify(serializable, null, 2), {baseDir: fs.BaseDirectory.AppConfig});
             await Debug.info('saved keybinding')
         }, $_('msg.error-saving-keybinding'));
     },
@@ -284,7 +286,7 @@ export const KeybindingManager = {
             return null;
         const key = fromDOM(ev.code);
         if (!key) return null;
-        return new KeyBinding(key, 
+        return new KeyBinding(key,
             new Set(ModifierKeys.filter((x) => ev.getModifierState(x))));
     },
 
@@ -310,7 +312,7 @@ export const KeybindingManager = {
                     key, command: cmd.command
                 };
             }
-            if (node.children.size > 0 
+            if (node.children.size > 0
             && (!node.allContexts || node.allContexts.has(focus)))
             {
                 return {
@@ -372,7 +374,7 @@ export const KeybindingManager = {
                 command: cmd
             });
         }
-    
+
         bindingTree = new KeyTree();
         for (const [_, cmd] of KeybindingManager.commands)
             for (const binding of cmd.bindings)
@@ -390,7 +392,7 @@ export const KeybindingManager = {
             if (!node) break;
             for (const other of node.values) {
                 const any = !other.contexts && !key.contexts;
-                const overlap = any ? [] 
+                const overlap = any ? []
                     : !other.contexts ? [...key.contexts!]
                     : !key.contexts ? [...other.contexts!]
                     : [...other.contexts!].filter((x) => key.contexts!.has(x));

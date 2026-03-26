@@ -1,4 +1,4 @@
-import { UICommand } from "./CommandBase";
+import { UICommand, type AnyUICommand } from "./CommandBase";
 
 import { Debug } from "../Debug";
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
@@ -21,17 +21,17 @@ import { Dialog } from "../dialog";
 import { RichText } from "../core/RichText";
 const $_ = unwrapFunctionStore(_);
 
-const toJSON = (entries: SubtitleEntry[]) => 
+const toJSON = (entries: SubtitleEntry[]) =>
     Format.JSON.write(Source.subs).useEntries(entries).toString();
-const toASS = (entries: SubtitleEntry[]) => 
+const toASS = (entries: SubtitleEntry[]) =>
     Format.ASS.write(Source.subs).headerless().useEntries(entries).toString();
 
-const toSRT = (entries: SubtitleEntry[]) => 
+const toSRT = (entries: SubtitleEntry[]) =>
     Format.SRT.write(Source.subs)
         .useEntries(entries)
         .strategy(LinearFormatCombineStrategy.Recombine)
         .toString();
-const toPlaintext = (entries: SubtitleEntry[]) => 
+const toPlaintext = (entries: SubtitleEntry[]) =>
     Format.plaintext.write(Source.subs)
         .useEntries(entries)
         .strategy(LinearFormatCombineStrategy.KeepOrder)
@@ -97,7 +97,7 @@ function doubleForEachStyle(
     }));
 }
 
-export const BasicCommands = {
+export const BasicCommands: Record<string, AnyUICommand> = {
     editThisEntry: new UICommand(() => $_('category.editing'),
         [ CommandBinding.from(['Enter'], ['Table', 'Timeline']), ],
     {
@@ -124,9 +124,9 @@ export const BasicCommands = {
             if (i == Source.subs.entries.length)
                 Editing.startEditingNewVirtualEntry();
             else
-                Editing.offsetFocus(1, SelectMode.Single, 
-                    InputConfig.data.enterNavigationType == 'keepPosition' 
-                    ? KeepInViewMode.SamePosition 
+                Editing.offsetFocus(1, SelectMode.Single,
+                    InputConfig.data.enterNavigationType == 'keepPosition'
+                    ? KeepInViewMode.SamePosition
                     : KeepInViewMode.KeepInSight);
         }
     }),
@@ -141,9 +141,9 @@ export const BasicCommands = {
             Editing.submitFocusedEntry();
             const next = Utils.getAdjecentEntryWithThisStyle('next');
             if (!next) return;
-            Editing.selectEntry(next, SelectMode.Single, ChangeCause.UIList, 
-                InputConfig.data.enterNavigationType == 'keepPosition' 
-                ? KeepInViewMode.SamePosition 
+            Editing.selectEntry(next, SelectMode.Single, ChangeCause.UIList,
+                InputConfig.data.enterNavigationType == 'keepPosition'
+                ? KeepInViewMode.SamePosition
                 : KeepInViewMode.KeepInSight);
         }
     }),
@@ -158,7 +158,7 @@ export const BasicCommands = {
             }
         }
     }),
-    
+
     playEntry: new UICommand(() => $_('category.media'),
         [ CommandBinding.from(['P'], ['Table', 'Timeline']),
           CommandBinding.from(['Alt+P']), ],
@@ -221,20 +221,11 @@ export const BasicCommands = {
     {
         name: () => $_('action.copy'),
         isApplicable: hasSelection,
-        items: [
-            {
-                name: () => $_('cxtmenu.json-internal'),
-                call: () => copySelection(toJSON)
-            }, {
-                name: () => $_('cxtmenu.srt'),
-                call: () => copySelection(toSRT)
-            }, {
-                name: () => $_('cxtmenu.ass-fragment'),
-                call: () => copySelection(toASS)
-            }, {
-                name: () => $_('cxtmenu.plain-text'),
-                call: () => copySelection(toPlaintext)
-            }
+        items: () => [
+            BasicCommands.copyJSON.wrap($_('cxtmenu.json-internal')),
+            BasicCommands.copySRT.wrap($_('cxtmenu.srt')),
+            BasicCommands.copyASS.wrap($_('cxtmenu.ass-fragment')),
+            BasicCommands.copyPlaintext.wrap($_('cxtmenu.plain-text')),
         ]
     }),
     copyChannelText: new UICommand(() => $_('category.editing'),
@@ -281,18 +272,18 @@ export const BasicCommands = {
             let position: number;
             if (Editing.selection.submitted.size > 0 || Editing.selection.focused) {
                 position = Source.subs.entries.findIndex(
-                    (x) => Editing.selection.submitted.has(x) 
+                    (x) => Editing.selection.submitted.has(x)
                         || Editing.selection.currentGroup.has(x));
                 Editing.clearSelection();
             } else position = Source.subs.entries.length;
 
             const entries = SubtitleUtil.merge(Source.subs, portion, {
                 position: { type: 'custom', customPosition: position },
-                style: portion.migrated == 'text' 
-                    ? { 
+                style: portion.migrated == 'text'
+                    ? {
                         type: 'override',
                         overrideStyle: Source.subs.defaultStyle
-                    } : { 
+                    } : {
                         type: 'keepDifferent'
                     },
                 selection: 'all'
@@ -456,24 +447,11 @@ export const BasicCommands = {
         [],
     {
         name: () => $_('action.move'),
-        items: [
-            {
-                name: () => $_('action.up'),
-                isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
-                call: () => Utils.moveSelectionContinuous(-1),
-            }, {
-                name: () => $_('action.down'),
-                isApplicable: () => hasSelection() && !Utils.isSelectionDisjunct(),
-                call: () => Utils.moveSelectionContinuous(1),
-            }, {
-                name: () => $_('action.to-the-beginning'),
-                isApplicable: () => hasSelection(),
-                call: () => Utils.moveSelectionTo('beginning'),
-            }, {
-                name: () => $_('action.to-the-end'),
-                isApplicable: () => hasSelection(),
-                call: () => Utils.moveSelectionTo('end'),
-            }
+        items: () => [
+            BasicCommands.moveUp.wrap($_('action.up')),
+            BasicCommands.moveDown.wrap($_('action.down')),
+            BasicCommands.moveToBeginning.wrap($_('action.to-the-beginning')),
+            BasicCommands.moveToEnd.wrap($_('action.to-the-end')),
         ]
     }),
     combineIntoOneEntry: new UICommand(() => $_('category.editing'),
@@ -544,16 +522,9 @@ export const BasicCommands = {
         [],
     {
         name: () => $_('action.merge-entries'),
-        items: [
-            {
-                name: () => $_('action.connect-all'),
-                isApplicable: () => hasSelection(1),
-                call: () => Utils.mergeEntries(Editing.getSelection(), true),
-            }, {
-                name: () => $_('action.keep-first-only'),
-                isApplicable: () => hasSelection(1),
-                call: () => Utils.mergeEntries(Editing.getSelection(), false),
-            }
+        items: () => [
+            BasicCommands.connectAll.wrap($_('action.connect-all')),
+            BasicCommands.connectAll.wrap($_('action.keep-first-only')),
         ]
     }),
     label: new UICommand(() => $_('category.editing'),
@@ -619,7 +590,7 @@ export const BasicCommands = {
         name: () => $_('action.remove-channel'),
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
-            (x) => Utils.removeStyle(Editing.getSelection(), x), 
+            (x) => Utils.removeStyle(Editing.getSelection(), x),
             selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -629,7 +600,7 @@ export const BasicCommands = {
         name: () => $_('action.remove-newlines'),
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
-            (x) => Utils.removeNewlines(Editing.getSelection(), x), 
+            (x) => Utils.removeNewlines(Editing.getSelection(), x),
             selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -639,7 +610,7 @@ export const BasicCommands = {
         name: () => $_('action.remove-formatting'),
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
-            (x) => Utils.removeFormatting(Editing.getSelection(), x), 
+            (x) => Utils.removeFormatting(Editing.getSelection(), x),
             selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
