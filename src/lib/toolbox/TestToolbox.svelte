@@ -96,7 +96,7 @@ let rich: RichText = $state([
 </script>
 
 <button onclick={async () => {
-  await openDialog(Dialog.compare);
+  await openDialog(Dialog.compare, Source.subs.defaultStyle);
 }}>compare</button>
 
 <button
