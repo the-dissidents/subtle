@@ -1,24 +1,28 @@
 import { UICommand, type AnyUICommand } from "./CommandBase";
 
 import { Debug } from "../Debug";
-import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
-import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
 import { Editing, KeepInViewMode, SelectMode } from "./Editing";
 import { Frontend, parseSubtitleSource } from "./Frontend";
 import { Source, ChangeType, ChangeCause } from "./Source";
-import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
-import { LABEL_TYPES } from "../core/Labels";
+import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { Playback } from "./Playback";
 import { Utils } from "./Utils";
-import { InputConfig } from "../config/Groups";
-import { Format } from "../core/SimpleFormats";
-import { CommandBinding, KeybindingManager } from "./Keybinding";
 
-import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { TableCommands } from "../component/subtitleTable/Config";
-import { openDialog } from "../DialogOutlet.svelte";
-import { Dialog } from "../dialog";
+import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
+import { Format } from "../core/SimpleFormats";
+import { LABEL_TYPES } from "../core/Labels";
 import { RichText } from "../core/RichText";
+
+import { Dialog } from "../dialog";
+import { openDialog } from "../DialogOutlet.svelte";
+
+import { InputConfig } from "../config/Groups";
+import { TableCommands } from "../component/subtitleTable/Config";
+
+import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
+import * as dialog from "@tauri-apps/plugin-dialog";
+import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 const toJSON = (entries: SubtitleEntry[]) =>
@@ -257,6 +261,42 @@ export const BasicCommands: Record<string, AnyUICommand> = {
             Editing.deleteSelection();
         }
     }),
+    pasteText: new UICommand(() => $_('category.editing'),
+        [ ],
+    {
+        name: () => $_('action.paste-text-into-selection'),
+        isApplicable: hasSelection,
+        menuName: () => $_('cxtmenu.as-style'),
+        items: () => forEachStyle(async (style) => {
+            const source = await clipboard.readText();
+            if (!source) return;
+            const portion = parseSubtitleSource(source);
+            if (!portion) {
+                Frontend.setStatus($_('msg.failed-to-parse-clipboard-data-as-subtitles'), 'error');
+                return;
+            }
+            if (portion.entries.find((x) => x.texts.size !== 1)) {
+                await dialog.message($_('msg.cannot-paste-multichannel'));
+                return;
+            }
+
+            const selection = Editing.getSelection();
+            if (selection.length !== portion.entries.length
+            && !await dialog.confirm($_('msg.paste-text-entry-count-mismatch',
+                    {values: { n1: selection.length, n2: portion.entries.length }}))
+            ) return;
+
+            selection.forEach((x, i) => {
+                if (i < portion.entries.length) {
+                    const [_, text] = [...portion.entries[i].texts.entries()][0];
+                    x.texts.set(style, text);
+                }
+            });
+
+            await Source.markChanged(ChangeType.InPlace, $_('action.paste-text-into-selection'));
+            Frontend.setStatus($_('msg.pasted'));
+        }),
+    }),
     paste: new UICommand(() => $_('category.editing'),
         [ CommandBinding.from(['CmdOrCtrl+V'], ['Table']) ],
     {
@@ -289,8 +329,8 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 selection: 'all'
             });
             if (entries.length > 0) {
+                await Source.markChanged(ChangeType.General, $_('action.paste'));
                 Editing.setSelection(entries);
-                Source.markChanged(ChangeType.General, $_('action.paste'));
                 Frontend.setStatus($_('msg.pasted'));
             } else {
                 Frontend.setStatus($_('msg.nothing-to-paste'), 'error');

@@ -53,6 +53,7 @@
     "open-select-tool": "switch to select tool",
     "open-split-tool": "switch to split tool",
     "paste": "paste",
+    "paste-text-into-selection": "paste text into selection",
     "play-entry": "play this entry",
     "previous-entry-sequence": "previous entry (sequence select)",
     "previous-entry-single": "previous entry (single select)",
@@ -326,6 +327,7 @@
   },
   "cxtmenu": {
     "and": "and:",
+    "as-style": "as style:",
     "ass-fragment": "ASS fragment",
     "by": "by:",
     "channel-to-compare": "channel to compare:",
@@ -537,6 +539,7 @@
   "msg": {
     "autosave-complete": "autosave complete at {time}",
     "autosave-failed": "autosave failed",
+    "cannot-paste-multichannel": "the content to be pasted contains entries with multiple channels",
     "changed-n-entries": "{n,plural,=0 {changed nothing} one {changed {n} entry} other {changed {n} entries}}",
     "color-out-of-srgb-gamut": "The sRGB color space cannot display this color accurately. Your monitor might be using the nearest representable color instead.",
     "combined-n-entries": "{n, plural,\n  one {combined {n, number} entry}\n  other {combined {n, number} entries}\n}",
@@ -574,6 +577,7 @@
     "opened-path": "opened: {path}",
     "overwrite-preset-with-same-name": "Are you sure to overwrite the existing preset with this name?",
     "overwrite-style": "Overwrite existing text of style {style}?",
+    "paste-text-entry-count-mismatch": "Your selection contains {n1} entries, while the clipboard content has {n2}. Proceed to paste in the selection?",
     "pasted": "pasted",
     "proceed-delete-n-occurrences": "Proceed to delete {n} occurrence{n,plural,one{} other{s}}?",
     "proceed-without-saving": "Proceed without saving?",

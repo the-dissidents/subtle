@@ -162,7 +162,6 @@ export const KeybindingManager = {
 
     register(cmds: Record<string, AnyUICommand>) {
         const entries = Object.entries(cmds);
-        commands.clear();
         entries.forEach(([a, b]) => commands.set(a, b));
         if (initialized) {
             this.update();

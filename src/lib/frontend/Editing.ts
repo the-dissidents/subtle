@@ -47,8 +47,8 @@ export function getSelectMode(ev: MouseEvent | KeyboardEvent) {
 }
 
 Metrics['selected'] = new MetricDefinition('boolean', 'editing',
-    () => $_('metrics.selected'), 
-    () => $_('metrics.selected'), 
+    () => $_('metrics.selected'),
+    () => $_('metrics.selected'),
     (e) => Editing.inSelection(e));
 
 function updateFocusedStyle() {
@@ -59,7 +59,7 @@ function updateFocusedStyle() {
         || !Editing.styleToEditor.has(style)
         || !focused.texts.has(style)
     ) {
-        const first = focused.texts.has(Source.subs.defaultStyle) 
+        const first = focused.texts.has(Source.subs.defaultStyle)
             ? Source.subs.defaultStyle
             : Source.subs.styles.find((x) => focused.texts.has(x));
         Debug.assert(first !== undefined);
@@ -76,7 +76,7 @@ export const Editing = {
         currentGroup: new Set(),
         focused: null
     } as SelectionState,
-    
+
     // TODO: make it more private to prevent direct editing
     focused: {
         entry: writable(null),
@@ -110,7 +110,7 @@ export const Editing = {
      */
     getSelection() {
         return Source.subs.entries.filter(
-            (x) => this.selection.submitted.has(x) || 
+            (x) => this.selection.submitted.has(x) ||
                 this.selection.currentGroup.has(x));
     },
 
@@ -135,7 +135,7 @@ export const Editing = {
     },
 
     insertEntry(
-        styles: Iterable<SubtitleStyle> | undefined, 
+        styles: Iterable<SubtitleStyle> | undefined,
         start: number, end: number, index: number
     ) {
         const entry = new SubtitleEntry(start, end);
@@ -152,20 +152,20 @@ export const Editing = {
         const untimed = Source.subs.metadata.special.untimedText;
         const firstNewline = untimed.indexOf(separator);
         const line = firstNewline < 0 ? untimed : untimed.substring(0, firstNewline);
-        if (line.length > 0 && (line.length < 500 
+        if (line.length > 0 && (line.length < 500
             || await ask($_('msg.untimed-first-line-very-long'))))
         {
             entry.texts.set(style, line);
-            Source.subs.metadata.special.untimedText = 
+            Source.subs.metadata.special.untimedText =
                 firstNewline < 0 ? '' : untimed.substring(firstNewline + separator.length);
         }
     },
 
-    startEditingNewVirtualEntry() {
+    async startEditingNewVirtualEntry() {
         Frontend.setStatus($_('msg.new-entry-appended'));
         const last = Source.subs.entries.at(-1);
-        const entry = last 
-            ? new SubtitleEntry(last.end, last.end + 2) 
+        const entry = last
+            ? new SubtitleEntry(last.end, last.end + 2)
             : new SubtitleEntry(0, 2);
         if (last) {
             for (const [style, _] of last.texts)
@@ -174,7 +174,7 @@ export const Editing = {
             entry.texts.set(Source.subs.defaultStyle, '');
         }
         Source.subs.entries.push(entry);
-        Source.markChanged(ChangeType.Times, $_('action.insert-after'));
+        await Source.markChanged(ChangeType.Times, $_('action.insert-after'));
 
         // focus on the new entry
         this.clearSelection();
@@ -187,27 +187,27 @@ export const Editing = {
         this.isEditingVirtualEntry.set(true);
     },
 
-    insertChannel(style: SubtitleStyle) {
+    async insertChannel(style: SubtitleStyle) {
         const focused = this.getFocusedEntry();
         Debug.assert(focused instanceof SubtitleEntry);
         if (focused.texts.has(style)) return;
         focused.texts.set(style, '');
         this.focused.style.set(style);
-        Source.markChanged(ChangeType.InPlace, $_('c.insert-channel'));
+        await Source.markChanged(ChangeType.InPlace, $_('c.insert-channel'));
         this.startEditingFocusedEntry();
     },
 
-    deleteChannel(style: SubtitleStyle) {
+    async deleteChannel(style: SubtitleStyle) {
         const focused = this.getFocusedEntry();
         Debug.assert(focused instanceof SubtitleEntry);
         if (!focused.texts.has(style)) return Debug.early();
         Debug.assert(focused.texts.size > 1);
         focused.texts.delete(style);
         updateFocusedStyle();
-        Source.markChanged(ChangeType.InPlace, $_('c.delete-channel'));
+        await Source.markChanged(ChangeType.InPlace, $_('c.delete-channel'));
     },
 
-    submitFocusedEntry() {
+    async submitFocusedEntry() {
         const focused = this.getFocusedEntry();
         Debug.assert(focused instanceof SubtitleEntry);
         if (!this.editChanged) return;
@@ -217,7 +217,7 @@ export const Editing = {
         Debug.assert(style !== null);
         Debug.assert(control !== null);
         focused.texts.set(style, control.getText());
-        Source.markChanged(ChangeType.InPlace, $_('c.edit-entry'));
+        await Source.markChanged(ChangeType.InPlace, $_('c.edit-entry'));
     },
 
     clearFocus(trySubmit = true) {
@@ -247,18 +247,18 @@ export const Editing = {
         this.onSelectionChanged.dispatch(cause);
     },
 
-    deleteSelection(cause = ChangeCause.UIList) {
+    async deleteSelection(cause = ChangeCause.UIList) {
         const selection = this.getSelection();
         if (selection.length == 0) return;
         const next = Source.subs.entries.at(Source.subs.entries.indexOf(selection.at(-1)!) + 1);
-        const newEntries = 
+        const newEntries =
             Source.subs.entries.filter((x) => !selection.includes(x));
         Source.subs.entries = newEntries;
         this.clearSelection();
         if (next) this.selectEntry(next, SelectMode.Single);
         else this.selectVirtualEntry();
 
-        Source.markChanged(ChangeType.Times, $_('action.delete'));
+        await Source.markChanged(ChangeType.Times, $_('action.delete'));
         this.onSelectionChanged.dispatch(cause);
     },
 
@@ -310,9 +310,9 @@ export const Editing = {
         this.focused.entry.set("virtual");
         this.onKeepEntryInView.dispatch("virtual");
     },
-  
+
     selectEntry(
-        ent: SubtitleEntry, mode: SelectMode, 
+        ent: SubtitleEntry, mode: SelectMode,
         cause = ChangeCause.UIList, keepType = KeepInViewMode.KeepInSight
     ) {
         switch (mode) {

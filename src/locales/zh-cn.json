@@ -53,6 +53,7 @@
     "open-select-tool": "切换到选择工具",
     "open-split-tool": "切换到切割工具",
     "paste": "粘贴",
+    "paste-text-into-selection": "粘贴文本到选区",
     "play-entry": "播放这个条目",
     "previous-entry-sequence": "上一个条目（连选）",
     "previous-entry-single": "上一个条目（单选）",
@@ -342,6 +343,7 @@
   },
   "cxtmenu": {
     "and": "和：",
+    "as-style": "作为以下样式：",
     "ass-fragment": "ASS片段",
     "by": "为：",
     "channel-to-compare": "选择要比较的频道：",
@@ -568,6 +570,7 @@
   "msg": {
     "autosave-complete": "自动保存完成 {time}",
     "autosave-failed": "自动保存失败",
+    "cannot-paste-multichannel": "剪贴板内容包含多个频道，无法仅粘贴文本",
     "changed-n-entries": "{n,plural,=0 {没有可修改的东西} one {修改了 {n} 项} other {修改了 {n} 项}}",
     "color-out-of-srgb-gamut": "此颜色处于sRGB空间所能表达的范围之外，你的屏幕很可能会使用距离最近的可表达颜色替代它。",
     "combined-n-entries": "合并了 {n} 项",
@@ -605,6 +608,7 @@
     "opened-path": "已打开：{path}",
     "overwrite-preset-with-same-name": "确认覆盖同名的预设样式？",
     "overwrite-style": "确认要覆盖样式 {style} 的已有内容？",
+    "paste-text-entry-count-mismatch": "选区有 {n1} 个字幕块，而剪贴板内容包含 {n2} 个。确定要将文本填入选区？",
     "pasted": "已粘贴",
     "proceed-delete-n-occurrences": "确定要删除 {n} 处使用该样式的文本？",
     "proceed-without-saving": "文件还没有保存，确认继续？",

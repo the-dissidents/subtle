@@ -15,6 +15,8 @@ export async function contextMenu() {
         BasicCommands.cut.toMenuItem(),
         BasicCommands.paste.toMenuItem(),
         { item: 'Separator' },
+        BasicCommands.pasteText.toMenuItem(),
+        { item: 'Separator' },
         BasicCommands.deleteSelection.toMenuItem(),
         { item: 'Separator' },
         BasicCommands.selectAll.toMenuItem(),
