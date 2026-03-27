@@ -1,25 +1,26 @@
 <script lang="ts">
 import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
+import { Menu } from '@tauri-apps/api/menu';
 
 import { MAPI } from "../API";
 import { Debug } from '../Debug';
-import { Menu } from '@tauri-apps/api/menu';
 
 import { UICommand } from '../frontend/CommandBase';
 import { Source, SourceCommands } from '../frontend/Source';
+import { DialogCommands } from "../frontend/Dialogs";
+import { Typography } from '../details/Typography';
+import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy";
+import type { RichText } from "../core/RichText";
 
 import { Tooltip, type TooltipPosition } from "@the_dissidents/svelte-ui";
 import { OrderableList } from '@the_dissidents/svelte-ui';
-import { Typography } from '../details/Typography';
-import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy";
-import { invoke } from "@tauri-apps/api/core";
-
-import { Fonts } from "../Fonts";
-import { openDialog } from "../DialogOutlet.svelte";
-import { Dialog } from "../dialog";
 import RichEdit from "../component/richedit/RichEdit.svelte";
-import type { RichText } from "../core/RichText";
+import { Fonts } from "../Fonts";
+import { Dialog } from "../dialog";
+import { openDialog } from "../DialogOutlet.svelte";
+
 
 let result = $state("");
 MAPI.version().then((x) => {
@@ -96,7 +97,7 @@ let rich: RichText = $state([
 </script>
 
 <button onclick={async () => {
-  await openDialog(Dialog.compare, Source.subs.defaultStyle);
+  DialogCommands.compareDialog.call();
 }}>compare</button>
 
 <button

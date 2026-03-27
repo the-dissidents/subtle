@@ -18,9 +18,10 @@ export async function initWindowMenu() {
         text: $_('appmenu.file'),
         items: [
             InterfaceCommands.newFile.toGlobalMenuItem(),
-            { item: 'Separator' },
             InterfaceCommands.openMenu.toGlobalMenuItem(),
+            { item: 'Separator' },
             InterfaceCommands.import.toGlobalMenuItem(),
+            DialogCommands.compareDialog.toGlobalMenuItem(),
             { item: 'Separator' },
             InterfaceCommands.openVideo.toGlobalMenuItem(),
             InterfaceCommands.closeVideo.toGlobalMenuItem(),

@@ -15,7 +15,7 @@ function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
 const textColor           = $derived(theme.isDark ? '#fff'          : '#000');
 const gridColor           = $derived(theme.isDark ? '#444'          : '#ddd');
 const gridMajorColor      = $derived(theme.isDark ? '#666'          : '#bbb');
-const headerBackground    = $derived(theme.isDark ? '#555'          : '#ddd');
+const headerBackground    = $derived(theme.isDark ? '#333'          : '#ddd');
 const overlapColor        = $derived(theme.isDark ? 'lightpink'       : 'crimson');
 const focusBackground     = $derived(theme.isDark ? 'darkslategray'   : 'lightblue');
 const selectedBackground  = $derived(theme.isDark ? '#444'          : '#e8e8e8');
@@ -105,7 +105,7 @@ export class TableRenderer {
                 // background for failed validation
                 if (failed.length > 0) {
                     ctx.fillStyle = errorBackground;
-                    ctx.fillRect(xpos, y0 + 1, 
+                    ctx.fillRect(xpos, y0 + 1,
                         width + sx - xpos, height * this.layout.lineHeight - 2);
                 }
 
@@ -115,8 +115,8 @@ export class TableRenderer {
                     ctx.textAlign = col.layout!.align;
                     ctx.fillStyle = textFillStyle;
                     applyStyle(this.layout.baseStyleCSS, ctx);
-                    drawText(cell.layout, 
-                        col.layout!.textX, 
+                    drawText(cell.layout,
+                        col.layout!.textX,
                         y0 + 0.5 * this.layout.lineHeight);
                 });
 
@@ -129,7 +129,7 @@ export class TableRenderer {
 
             // entry cells
             const entryCellY = Math.min(
-                Math.max(sy + this.layout.headerHeight, baseY), 
+                Math.max(sy + this.layout.headerHeight, baseY),
                 baseY + (lh - 1) * this.layout.lineHeight
             );
 
@@ -139,8 +139,8 @@ export class TableRenderer {
                 ctx.fillStyle = textFillStyle;
                 applyStyle(this.layout.baseStyleCSS, ctx);
                 ctx.textBaseline = 'middle';
-                drawText(cell.layout, 
-                    col.layout!.textX, 
+                drawText(cell.layout,
+                    col.layout!.textX,
                     entryCellY + 0.5 * this.layout.lineHeight);
             });
 
@@ -160,8 +160,8 @@ export class TableRenderer {
         if (i == this.layout.entries.length) {
             // virtual entry
             const lastLine = this.layout.entries.at(-1);
-            const y = (lastLine 
-                        ? (lastLine.line + lastLine.height) * this.layout.lineHeight 
+            const y = (lastLine
+                        ? (lastLine.line + lastLine.height) * this.layout.lineHeight
                         : 0) + this.layout.headerHeight;
             if (focused == 'virtual') {
                 ctx.fillStyle = focusBackground;

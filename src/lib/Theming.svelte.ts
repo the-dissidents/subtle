@@ -4,17 +4,18 @@ export const theme = $state({
     isDark: false
 });
 
-window
-  .matchMedia('(prefers-color-scheme: dark)')
-  .addEventListener('change', event => theme.isDark = event.matches);
+const mql = window
+  .matchMedia('(prefers-color-scheme: dark)');
+theme.isDark = mql.matches;
+mql.addEventListener('change', event => theme.isDark = event.matches);
 
 export const LabelColorOklch = {
-    'none':     ['',                    ''], 
-    'red':      ['78.78% 0.109 4.54',   '41.17% 0.157 16.58'], 
-    'orange':   ['88.37% 0.073 55.8',   '52.49% 0.113 51.98'], 
+    'none':     ['',                    ''],
+    'red':      ['78.78% 0.109 4.54',   '41.17% 0.157 16.58'],
+    'orange':   ['88.37% 0.073 55.8',   '52.49% 0.113 51.98'],
     'yellow':   ['95% 0.07 92.39',      '75.84% 0.122 92.21'],
-    'green':    ['88.77% 0.096 147.71', '52.77% 0.138 145.41'], 
-    'blue':     ['80.17% 0.091 258.88', '39.53% 0.15 259.87'], 
+    'green':    ['88.77% 0.096 147.71', '52.77% 0.138 145.41'],
+    'blue':     ['80.17% 0.091 258.88', '39.53% 0.15 259.87'],
     'purple':   ['78.68% 0.091 305',    '36.01% 0.145 298.35']
 } satisfies {[k in LabelType]: [string, string]};
 

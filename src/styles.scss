@@ -11,28 +11,26 @@
   // $page-background-medium:  uchu.$yin-2,
   // $page-background-dark:    uchu.$yin-9,
 
-  // $text-light:      uchu.$yin,
-  // $text-dark:       uchu.$yang,
   // $h5-text-light:   uchu.$yin-6,
   // $h5-text-dark:    uchu.$yin-3,
 
   // $disabled-text-light:   uchu.$gray-9,
   // $disabled-text-dark:    uchu.$gray-9,
-  // $disabled-back-light:   uchu.$gray-1,
-  // $disabled-back-dark:    uchu.$yin-7,
+  $disabled-back-light:   uchu.$gray-1,
+  $disabled-back-dark:    uchu.$yin-9,
 
   // $box-border-light:      uchu.$gray-4,
-  // $box-border-dark:       uchu.$yin-8,
-  // $box-back-light:        white,
-  // $box-back-dark:         uchu.$yin-8,
+  $box-border-dark:       #333,
+  $box-back-light:        white,
+  $box-back-dark:         #1a1a1a,
 
   // $small-border-light:    uchu.$gray-4,
-  // $small-border-dark:     uchu.$yin-7,
+  $small-border-dark:     #444,
 
   // $button-back-light:     white,
   // $button-back-dark:      uchu.$yin-7,
-  // $button-disabled-light: uchu.$gray-1,
-  // $button-disabled-dark:  uchu.$yin-7,
+  $button-disabled-light: uchu.$gray-1,
+  $button-disabled-dark:  uchu.$yin-8,
 
   // $accent1-back-light:    uchu.$red-1,
   // $accent1-back-dark:     Teal,
