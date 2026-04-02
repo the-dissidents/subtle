@@ -274,10 +274,9 @@ export const Editing = {
         if (!(focused instanceof SubtitleEntry)) return;
         const i = Source.subs.entries.indexOf(focused) + n;
         if (i >= Source.subs.entries.length) {
-            if (mode == SelectMode.Single) {
+            if (mode == SelectMode.Single)
                 this.selectVirtualEntry();
-                return;
-            }
+            return;
         }
         if (i < 0) return;
         this.selectEntry(Source.subs.entries[i], mode, ChangeCause.UIList, keepType);
@@ -324,6 +323,7 @@ export const Editing = {
                 } else {
                     const a = Source.subs.entries.indexOf(this.selection.focused);
                     const b = Source.subs.entries.indexOf(ent);
+                    console.log(a, b, ent);
                     Debug.assert(a >= 0 && b >= 0);
                     this.selection.currentGroup = new Set(
                         Source.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1));
