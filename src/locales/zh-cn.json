@@ -262,6 +262,8 @@
     "editor-font-size": "编辑框字号",
     "enter-navigation-type": "回车选择设置",
     "enter-navigation-type-d": "指定在编辑框里按回车前往下一条字幕时，这条字幕应该滚动到什么位置",
+    "epsilon": "最小有效时间差",
+    "epsilon-d": "小于这个时长的时间点差异将被忽略",
     "font-size": "字号",
     "input": "输入",
     "interface": "界面",

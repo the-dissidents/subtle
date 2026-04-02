@@ -28,11 +28,11 @@ export const Basic = {
     get pathSeparator() { return pathSeparator; },
     get ctrlKey() { return ctrlKey; },
 
-    approx(a: number, b: number, d = 0.0001) {
+    approx(a: number, b: number, d: number) {
         return Math.abs(a - b) < d;
     },
 
-    getFilename(p: string) { 
+    getFilename(p: string) {
         return p.split(Basic.pathSeparator).at(-1);
     },
 
@@ -47,7 +47,7 @@ export const Basic = {
     },
 
     timeout<T>(t: number, p: Promise<T>): Promise<T> {
-        return Promise.race([p, 
+        return Promise.race([p,
             new Promise<T>((_, reject) => setTimeout(() => reject('timeout'), t))]);
     },
 
@@ -77,7 +77,7 @@ export const Basic = {
         const ms = (t % 1).toFixed(n).slice(2);
         return `${h}:${m}:${s}${char}${ms}`;
     },
-    
+
     normalizeNewlines: (s: string) => {
         return s.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     },

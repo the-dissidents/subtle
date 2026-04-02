@@ -247,6 +247,8 @@
     "editor-font-size": "editor font size",
     "enter-navigation-type": "enter navigation preference",
     "enter-navigation-type-d": "The preferred position of the newly selected entry when moving to it by pressing Enter in the input boxes.",
+    "epsilon": "time epsilon",
+    "epsilon-d": "Time differences smaller than this will be treated as if there is no difference.",
     "font-size": "font size",
     "input": "input",
     "interface": "interface",

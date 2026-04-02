@@ -113,8 +113,15 @@ MainConfig.addGroup('interface', InterfaceConfig);
 
 export const InputConfig = new PublicConfigGroup(
     () => $_('config.input'),
-    null, 2,
+    null, 1,
     {
+        epsilon: {
+            localizedName: () => $_('config.epsilon'),
+            type: 'number',
+            description: () => $_('config.epsilon-d'),
+            bounds: [0, 0.05],
+            default: 0.001
+        },
         skipDuration: {
             localizedName: () => $_('config.arrow-skip-amount'),
             type: 'number',

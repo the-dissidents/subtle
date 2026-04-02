@@ -4,6 +4,7 @@ import { SubtitleEntry, Subtitles, SubtitleStyle } from "./Subtitles.svelte";
 import { RichText } from "./RichText";
 import { ASSString } from "./ASSString";
 import { HTMLString } from "./HTMLString";
+import { InputConfig } from "../config/Groups";
 
 export type FormatOption = 'none' | 'html' | 'ass';
 
@@ -68,21 +69,21 @@ function getText(subs: Subtitles, ent: SubtitleEntry, f: FormatOption) {
                      : f == 'ass'  ? ASSString.serialize(text!)
                      : f == 'none' ? RichText.toString(text!).trim()
                      : Debug.never(f))
-        .join('\n') 
+        .join('\n')
 }
 
 const ToLinearFormat = {
-    [LinearFormatCombineStrategy.KeepOrder]: 
+    [LinearFormatCombineStrategy.KeepOrder]:
         (subs: Subtitles, entries: SubtitleEntry[], option: FormatOption): LinearEntry[] => entries
-            .map((x) => ({ 
-                start: x.start, end: x.end, 
+            .map((x) => ({
+                start: x.start, end: x.end,
                 text: getText(subs, x, option)
             })),
     [LinearFormatCombineStrategy.Sorted]:
         (subs: Subtitles, entries: SubtitleEntry[], option: FormatOption): LinearEntry[] => entries
             .toSorted((x, y) => x.start - y.start)
-            .map((x) => ({ 
-                start: x.start, end: x.end, 
+            .map((x) => ({
+                start: x.start, end: x.end,
                 text: getText(subs, x, option)
             })),
     [LinearFormatCombineStrategy.Recombine]:
@@ -101,7 +102,7 @@ const ToLinearFormat = {
             let i = 0;
             outer: while (true) {
                 const pos = events[i].pos;
-                while (events[i].pos == pos) {
+                while (events[i].pos <= pos + InputConfig.data.epsilon) {
                     const event = events[i];
                     if (event.type == 'start') {
                         const text = getText(subs, entries[event.i], option);
@@ -116,7 +117,7 @@ const ToLinearFormat = {
                 }
                 const pos2 = events[i].pos;
                 if (activeTexts.length > 0) result.push({
-                    start: pos, end: pos2, 
+                    start: pos, end: pos2,
                     text: activeTexts.map((x) => x.text).join('\n')
                 });
             }
@@ -168,13 +169,13 @@ export const SubtitleUtil = {
         return ToLinearFormat[strategy](subs, entries, option);
     },
 
-    /** Note: this method will use and modify the entries in `other` */ 
+    /** Note: this method will use and modify the entries in `other` */
     merge(original: Subtitles, other: Subtitles, options: MergeOptions): SubtitleEntry[] {
         if (options.overrideMetadata) {
             // TODO: properly clone it
             other.metadata = JSON.parse(JSON.stringify(original.metadata));
         }
-        
+
         let overrideStyle: SubtitleStyle;
         if (options.style.type == 'createNewOverride') {
             const name = SubtitleTools.getUniqueStyleName(original, options.style.name);
@@ -182,13 +183,13 @@ export const SubtitleUtil = {
             original.styles.push(state);
             overrideStyle = state;
         } else {
-            overrideStyle = options.style.type == 'override' 
+            overrideStyle = options.style.type == 'override'
                 ? options.style.overrideStyle : original.defaultStyle;
             Debug.assert(original.styles.includes(overrideStyle));
         }
 
         const styleMap = new Map<SubtitleStyle, SubtitleStyle>();
-        
+
         const orginalStyleSerialized = original.styles
             .map((x) => JSON.stringify(SubtitleStyle.serialize(x)));
         const processStyle = (s: SubtitleStyle) => {

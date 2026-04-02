@@ -11,11 +11,10 @@ import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Frontend } from "./Frontend";
 import { get } from "svelte/store";
 import { RichText } from "../core/RichText";
+import { InputConfig } from "../config/Groups";
 const $_ = unwrapFunctionStore(_);
 
 export const Utils = {
-    timeEpsilon: 0.01,
-
     isSelectionDisjunct() {
         let state = 0;
         for (let i = 0; i < Source.subs.entries.length; i++) {
@@ -63,7 +62,7 @@ export const Utils = {
     },
 
     // TODO: make this a dialog
-    fixOverlap(selection: SubtitleEntry[], epsilon = 0.05) {
+    fixOverlap(selection: SubtitleEntry[], epsilon = InputConfig.data.epsilon) {
         let count = 0;
         for (let i = 0; i < selection.length - 1; i++) {
             const entry = selection[i];
@@ -90,7 +89,7 @@ export const Utils = {
         for (let i = 0; i < selection.length; i++) {
             const entry = selection[i];
             if (deletion.has(entry)) continue;
-            
+
             search: for (let j = 0; j < selection.length; j++) {
                 if (i == j) continue;
                 const other = selection[j];
@@ -99,8 +98,8 @@ export const Utils = {
                     if (entry.texts.get(style) !== text) continue search;
                 }
 
-                if (Math.abs(other.start - entry.end) < this.timeEpsilon 
-                 || Math.abs(other.end - entry.start) < this.timeEpsilon) 
+                if (Math.abs(other.start - entry.end) < InputConfig.data.epsilon
+                 || Math.abs(other.end - entry.start) < InputConfig.data.epsilon)
                 {
                     entry.start = Math.min(entry.start, other.start);
                     entry.end = Math.max(entry.end, other.end);
@@ -236,7 +235,7 @@ export const Utils = {
         }
         first.start = start;
         first.end = end;
-        
+
         Editing.selectEntry(first, SelectMode.Single);
         Source.markChanged(ChangeType.Times, $_('action.merge-entries'));
     },
@@ -248,7 +247,7 @@ export const Utils = {
         if (!style) return null;
         const thisIndex = Source.subs.entries.indexOf(focusedEntry);
         Debug.assert(thisIndex >= 0);
-        return (dir == 'next' 
+        return (dir == 'next'
             ? Source.subs.entries.find((ent, i) => i > thisIndex && ent.texts.has(style))
             : Source.subs.entries.findLast((ent, i) => i < thisIndex && ent.texts.has(style))
         ) ?? null;

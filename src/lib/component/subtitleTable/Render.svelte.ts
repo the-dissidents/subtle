@@ -1,15 +1,19 @@
-import { CanvasManager } from "../../CanvasManager";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { hook } from "../../details/Hook.svelte";
 import { applyStyle, toCSSStyle, type Line } from "../../details/TextLayout";
+import { InputConfig } from "../../config/Groups";
 import { Editing } from "../../frontend/Editing";
+
 import { LabelColor, theme } from "../../Theming.svelte";
+import { CanvasManager } from "../../CanvasManager";
+
 import { TableConfig } from "./Config";
 import { TableLayout } from "./Layout.svelte";
 
 function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
-    const EPSILON = 0.002;
-    return e1 && e2 && e1.start < e2.end - EPSILON && e1.end > e2.start + EPSILON;
+    return e1 && e2
+        && e1.start < e2.end - InputConfig.data.epsilon
+        && e1.end > e2.start + InputConfig.data.epsilon;
 }
 
 const textColor           = $derived(theme.isDark ? '#fff'          : '#000');

@@ -18,6 +18,7 @@ import { Format } from "../core/SimpleFormats";
 import { LinearFormatCombineStrategy } from "../core/SubtitleUtil.svelte";
 import { Interface } from '../frontend/Interface';
 import { Source } from '../frontend/Source';
+  import { InputConfig } from "../config/Groups";
 
 interface Props {
   args: [style: SubtitleStyle],
@@ -246,12 +247,12 @@ async function exportFile() {
       {/if}
     {/snippet}
     {#snippet s1({ first: a, second: b })}
-      <span class:diff={!b || !a || !Basic.approx(b.start, a.start, 0.01)}>
+      <span class:diff={!b || !a || !Basic.approx(b.start, a.start, InputConfig.data.epsilon)}>
         {a ? Basic.formatTimestamp(a.start) : ''}
       </span>
     {/snippet}
     {#snippet e1({ first: a, second: b })}
-      <span class:diff={!b || !a || !Basic.approx(b.end, a.end, 0.01)}>
+      <span class:diff={!b || !a || !Basic.approx(b.end, a.end, InputConfig.data.epsilon)}>
         {a ? Basic.formatTimestamp(a.end) : ''}
       </span>
     {/snippet}
@@ -288,12 +289,12 @@ async function exportFile() {
       {/if}
     {/snippet}
     {#snippet s2({ first: b, second: a })}
-      <span class:diff={!b || !a || !Basic.approx(b.start, a.start, 0.01)}>
+      <span class:diff={!b || !a || !Basic.approx(b.start, a.start, InputConfig.data.epsilon)}>
         {a ? Basic.formatTimestamp(a.start) : ''}
       </span>
     {/snippet}
     {#snippet e2({ first: b, second: a })}
-      <span class:diff={!b || !a || !Basic.approx(b.end, a.end, 0.01)}>
+      <span class:diff={!b || !a || !Basic.approx(b.end, a.end, InputConfig.data.epsilon)}>
         {a ? Basic.formatTimestamp(a.end) : ''}
       </span>
     {/snippet}

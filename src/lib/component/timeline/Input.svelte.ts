@@ -1,27 +1,32 @@
-import { SvelteSet } from "svelte/reactivity";
 import type { CanvasManager } from "../../CanvasManager";
-import { Editing, SelectMode } from "../../frontend/Editing";
-import { Source, ChangeType, ChangeCause } from "../../frontend/Source";
-import { TimelineLayout, type Box } from "./Layout";
-import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
 import { Basic } from "../../Basic";
 import { Debug } from "../../Debug";
-import { Playback } from "../../frontend/Playback";
+
+import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
+import { RichText } from "../../core/RichText";
+import { InputConfig } from "../../config/Groups";
+
 import type { TranslatedWheelEvent } from "../../frontend/Frontend";
-import { TimelineConfig } from "./Config";
+import { Source, ChangeType, ChangeCause } from "../../frontend/Source";
+import { Playback } from "../../frontend/Playback";
+import { Editing, SelectMode } from "../../frontend/Editing";
 import { Memorized } from "../../config/MemorizedValue.svelte";
+
 import { SubtitleTableHandle } from "../subtitleTable/Input.svelte";
-import * as z from "zod/v4-mini";
+import { TimelineConfig } from "./Config";
 import { contextMenu } from "./Menu";
+import { TimelineLayout, type Box } from "./Layout";
+
+import { SvelteSet } from "svelte/reactivity";
 import { get } from "svelte/store";
 import { _ } from "svelte-i18n";
-import { RichText } from "../../core/RichText";
+import * as z from "zod/v4-mini";
 
 export const TimelineHandle = {
     lockCursor: Memorized.$('lockCursor', z.boolean(), false),
     snapToFrame: Memorized.$('snapToFrame', z.boolean(), false),
     useSnap: Memorized.$overridable('useSnap', z.boolean(), true),
-    currentMode: Memorized.$('currentMode', 
+    currentMode: Memorized.$('currentMode',
         z.union([z.literal('select'), z.literal('create'), z.literal('split')]), 'select'),
     isDuringAction: () => false,
     interruptAction: () => {},
@@ -29,7 +34,7 @@ export const TimelineHandle = {
 
 abstract class TimelineAction {
     readonly origPos: number;
-    
+
     constructor(public self: TimelineInput, public layout: TimelineLayout, public e0: MouseEvent) {
         this.origPos = this.self.convertX(e0.offsetX);
     }
@@ -62,7 +67,7 @@ class Scale extends TimelineAction {
     }
 
     onDrag(_offsetX: number, _offsetY: number, ev: MouseEvent): void {
-        this.layout.setScale(this.origScale / 
+        this.layout.setScale(this.origScale /
             Math.pow(1.03, (this.e0.clientX - ev.clientX)));
         this.layout.setOffset(this.origPos - this.e0.offsetX / this.layout.scale);
     }
@@ -74,7 +79,7 @@ class MoveCursor extends TimelineAction {
     }
 
     onDrag(offsetX: number): void {
-        let curPos = 
+        let curPos =
             (offsetX - this.layout.leftColumnWidth) / this.layout.scale + this.layout.offset;
         // always snap to frame, it's only valid that way with video loaded
         curPos = Playback.snapPositionToFrame(curPos, 'round');
@@ -100,7 +105,7 @@ class BoxSelect extends TimelineAction {
         const x2 = offsetX + this.layout.manager.scroll[0],
               y2 = offsetY + this.layout.manager.scroll[1];
         const b: Box = {
-            x: Math.min(this.x1, x2), y: Math.min(this.y1, y2), 
+            x: Math.min(this.x1, x2), y: Math.min(this.y1, y2),
             w: Math.abs(this.x1 - x2), h: Math.abs(this.y1 - y2)};
         this.self.selectBox = b;
 
@@ -134,7 +139,7 @@ abstract class MoveResizeBase extends TimelineAction {
     changed = false;
 
     constructor(
-        self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, 
+        self: TimelineInput, layout: TimelineLayout, e0: MouseEvent,
         protected origPositions: Map<SubtitleEntry, { start: number; end: number; }>,
         private afterEnd: () => void
     ) {
@@ -182,14 +187,14 @@ class DragMove extends MoveResizeBase {
                         prev.set(style.name, [start, end]);
                 };
                 return prev;
-            }, 
+            },
             new Map<string, [number, number]>());
         const points = [...map.values()].flat();
         return [...new Set(points)]
     }
 
     constructor(
-        self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, 
+        self: TimelineInput, layout: TimelineLayout, e0: MouseEvent,
         origPositions: Map<SubtitleEntry, { start: number; end: number; }>,
         afterEnd: () => void,
         underMouse: SubtitleEntry[]
@@ -198,13 +203,13 @@ class DragMove extends MoveResizeBase {
         const [first, last] = this.self.selectionFirstLast();
         const ref = TimelineConfig.data.multiselectDragReference;
         const one = underMouse.find((x) => this.self.selection.has(x))!;
-        this.points = 
-                ref == 'eachStyleofWhole' 
+        this.points =
+                ref == 'eachStyleofWhole'
                     ? this.getReferencePoints([...this.self.selection])
-            : ref == 'whole' 
+            : ref == 'whole'
                     ? [first.start, last.end]
             : ref == 'one'
-                    ? [one.start, one.end] 
+                    ? [one.start, one.end]
             : Debug.never(ref as never);
         this.start = first.start;
     }
@@ -214,7 +219,8 @@ class DragMove extends MoveResizeBase {
         let newDval = dval;
         if (TimelineHandle.useSnap.get())
             newDval = this.self.snapVisible(this.points, this.start + dval) - this.start;
-        if (Basic.approx(newDval, dval) && TimelineHandle.snapToFrame.get())
+        if (Basic.approx(newDval, dval, InputConfig.data.epsilon)
+         && TimelineHandle.snapToFrame.get())
             newDval = Playback.snapPositionToFrame(this.start + dval, 'round') - this.start;
         this.changed = newDval != 0;
         for (const [ent, pos] of this.origPositions.entries()) {
@@ -236,7 +242,7 @@ class DragSeam extends MoveResizeBase {
             [first, {start: first.start, end: first.end}],
             [second, {start: second.start, end: second.end}]
         ]), afterEnd);
-        Debug.assert(Basic.approx(first.end, second.start));
+        Debug.assert(Basic.approx(first.end, second.start, InputConfig.data.epsilon));
         this.origVal = first.end;
     }
 
@@ -245,7 +251,7 @@ class DragSeam extends MoveResizeBase {
         let newVal = val;
         if (TimelineHandle.useSnap.get())
             newVal = this.self.snapVisible([val]);
-        if (Basic.approx(newVal, val) && TimelineHandle.snapToFrame.get())
+        if (Basic.approx(newVal, val, InputConfig.data.epsilon) && TimelineHandle.snapToFrame.get())
             newVal = Playback.snapPositionToFrame(val, 'round');
         newVal = Math.max(this.first.start, Math.min(this.second.end, newVal));
         this.first.end = newVal;
@@ -279,7 +285,7 @@ class DragResize extends MoveResizeBase {
         let newVal = val;
         if (TimelineHandle.useSnap.get())
             newVal = this.self.snapVisible([val]);
-        if (Basic.approx(newVal, val) && TimelineHandle.snapToFrame.get())
+        if (Basic.approx(newVal, val, InputConfig.data.epsilon) && TimelineHandle.snapToFrame.get())
             newVal = Playback.snapPositionToFrame(val, 'round');
 
         let newStart: number, newEnd: number;
@@ -343,7 +349,7 @@ class CreateEntry extends TimelineAction {
 
 class SplitEntry extends TimelineAction {
     static create(
-        self: TimelineInput, layout: TimelineLayout, 
+        self: TimelineInput, layout: TimelineLayout,
         e0: MouseEvent, target: SubtitleEntry
     ) {
         Debug.assert(target.end > target.start);
@@ -351,11 +357,11 @@ class SplitEntry extends TimelineAction {
         if (!self.alignmentLine) return null;
         const pos = self.alignmentLine.pos;
         if (pos <= target.start || pos >= target.end) return null;
-        
+
         const baseProportion = (pos - target.start) / (target.end - target.start);
         const styles = Source.subs.styles.filter((x) => target.texts.has(x));
         self.splitting = {
-            target, 
+            target,
             breakPosition: pos,
             positions: new Map(),
             current: styles[0]
@@ -365,7 +371,7 @@ class SplitEntry extends TimelineAction {
     }
 
     private constructor(
-        self: TimelineInput, layout: TimelineLayout, 
+        self: TimelineInput, layout: TimelineLayout,
         e0: MouseEvent,
         private baseProportion: number,
         private styles: SubtitleStyle[],
@@ -383,14 +389,14 @@ class SplitEntry extends TimelineAction {
         this.onDrag(e0.offsetX);
         return true;
     }
-    
+
     override onDrag(offsetX: number) {
         Debug.assert(this.self.splitting !== null);
         const split = this.self.splitting;
         const target = split.target;
         const style = this.styles[0];
         const textLength = RichText.length(target.texts.get(style)!);
-        const x = (split.breakPosition - this.self.convertX(offsetX)) / (target.end - target.start) 
+        const x = (split.breakPosition - this.self.convertX(offsetX)) / (target.end - target.start)
             + this.baseProportion;
         const pos = Math.max(1, Math.min(textLength - 1, Math.floor(x * textLength)));
         split.positions.set(style, pos);
@@ -442,11 +448,11 @@ export class TimelineInput {
     selectBox: Box | null = null;
     selection = new SvelteSet<SubtitleEntry>;
     alignmentLine: { pos: number, rows: Set<number> } | null = null;
-    splitting: null | { 
-        target: SubtitleEntry, 
+    splitting: null | {
+        target: SubtitleEntry,
         breakPosition: number,
-        positions: Map<SubtitleStyle, number>, 
-        current: SubtitleStyle 
+        positions: Map<SubtitleStyle, number>,
+        current: SubtitleStyle
     } = null;
     currentAction: TimelineAction | undefined;
 
@@ -492,14 +498,14 @@ export class TimelineInput {
     }
 
     /**
-     * Suppose there is a ruler on the number axis, which has a set of `points` on it and can be 
+     * Suppose there is a ruler on the number axis, which has a set of `points` on it and can be
      * moved around by dragging a point at the `reference` location. The goal is to move the reference
-     * point slightly (no further than `minDist`) so that one of the `points` aligns with the 
+     * point slightly (no further than `minDist`) so that one of the `points` aligns with the
      * `target`. If this can't be done, keep the reference point at its original location. Returns the
      * modified reference point and the minimal distance required to move it.
      */
     trySnap(
-        data: {minDist: number, reference: number, oldReference?: number}, 
+        data: {minDist: number, reference: number, oldReference?: number},
         points: number[], target: number
     ) {
         const old = data.oldReference ?? data.reference;
@@ -572,7 +578,7 @@ export class TimelineInput {
         return sels.reduce<[SubtitleEntry, SubtitleEntry]>(
             ([pf, pl], current) => [
                 current.start < pf.start ? current : pf,
-                current.end > pl.end ? current : pf], 
+                current.end > pl.end ? current : pf],
             [sels[0], sels[0]]);
     }
 
@@ -583,7 +589,7 @@ export class TimelineInput {
             this.layout.setOffset(
                 origPos - (e.offsetX - this.layout.leftColumnWidth) / this.layout.scale);
         } else {
-            const amount = 
+            const amount =
                 tr.isTrackpad ? tr.amountX :
                 tr.amountX == 0 ? tr.amountY : tr.amountX;
             this.layout.setOffset(this.layout.offset + amount * 0.5 / this.layout.scale);
@@ -596,7 +602,7 @@ export class TimelineInput {
             if (style) {
                 if (Source.subs.view.timelineActiveChannel == style)
                     Source.subs.view.timelineActiveChannel = null;
-                else 
+                else
                     Source.subs.view.timelineActiveChannel = style;
                 this.manager.requestRender();
             }
@@ -627,9 +633,9 @@ export class TimelineInput {
         let newPos = pos;
         if (snap)
             newPos = this.snapVisible([pos], pos, includeSelection);
-        if (Basic.approx(newPos, pos) && TimelineHandle.snapToFrame.get())
+        if (Basic.approx(newPos, pos, InputConfig.data.epsilon) && TimelineHandle.snapToFrame.get())
             newPos = Playback.snapPositionToFrame(newPos, 'round');
-        
+
         if (!snap || (always && this.alignmentLine === null))
             this.alignmentLine = { pos: newPos, rows: new Set() };
         if (this.alignmentLine?.pos !== old)
@@ -651,7 +657,7 @@ export class TimelineInput {
             canvas.style.cursor = 'col-resize';
             return;
         }
-    
+
         const under = this.layout.findEntriesByPosition(
             e.offsetX + this.manager.scroll[0], e.offsetY + this.manager.scroll[1]);
 
@@ -672,7 +678,7 @@ export class TimelineInput {
         if (under.length == 0)
             return;
         canvas.style.cursor = 'move';
-    
+
         const multiselecting = Basic.ctrlKey == 'Meta' ? e.metaKey : e.ctrlKey;
         const resizeArea = TimelineConfig.data.dragResizeArea;
         const seamArea = TimelineConfig.data.dragSeamArea;
@@ -680,7 +686,7 @@ export class TimelineInput {
         const ent = under.find((x) => this.selection.has(x)) ?? under[0];
         if ((ent.end - ent.start) * this.layout.scale < resizeArea * 2)
             return; // use move when entry is too small
-        
+
         let distL: number, distR: number;
         if ((this.selection.size > 1 || multiselecting)
          && under.some((x) => this.selection.has(x)))
@@ -721,9 +727,9 @@ export class TimelineInput {
         if (!channel) return undefined;
         for (const ent of Source.subs.entries) {
             if (ent == current || !ent.texts.has(channel)) continue;
-            if (pos == 'start' && Basic.approx(ent.end, current.start))
+            if (pos == 'start' && Basic.approx(ent.end, current.start, InputConfig.data.epsilon))
                 return [ent, current] as const;
-            else if (pos == 'end' && Basic.approx(ent.start, current.end))
+            else if (pos == 'end' && Basic.approx(ent.start, current.end, InputConfig.data.epsilon))
                 return [current, ent] as const;
         }
         return undefined;
@@ -742,16 +748,16 @@ export class TimelineInput {
         const ent = underMouse.find((x) => this.selection.has(x)) ?? underMouse[0];
         if ((ent.end - ent.start) * this.layout.scale < TimelineConfig.data.dragResizeArea * 2) {
             // use move when entry is too small
-            this.currentAction = new DragMove(this, this.layout, e0, 
+            this.currentAction = new DragMove(this, this.layout, e0,
                 origPositions, afterEnd, underMouse);
             return true;
         }
 
         // drag seam
         if (sels.length <= 2 || !this.selection.has(ent)) {
-            const distL = (origPos - ent.start) * this.layout.scale, 
+            const distL = (origPos - ent.start) * this.layout.scale,
                   distR = (ent.end - origPos) * this.layout.scale;
-            const seams = 
+            const seams =
                   distL <= TimelineConfig.data.dragSeamArea ? this.#getConnected(e0, ent, 'start')
                 : distR <= TimelineConfig.data.dragSeamArea ? this.#getConnected(e0, ent, 'end')
                 : undefined;
@@ -763,18 +769,18 @@ export class TimelineInput {
             }
         }
 
-        const distL = (origPos - first.start) * this.layout.scale, 
+        const distL = (origPos - first.start) * this.layout.scale,
                     distR = (last.end - origPos) * this.layout.scale;
-        if (distL > TimelineConfig.data.dragResizeArea 
+        if (distL > TimelineConfig.data.dragResizeArea
             && distR > TimelineConfig.data.dragResizeArea)
         {
             // drag-move
-            this.currentAction = new DragMove(this, this.layout, e0, 
+            this.currentAction = new DragMove(this, this.layout, e0,
                 origPositions, afterEnd, underMouse);
             return true;
         } else {
             // drag-resize
-            this.currentAction = new DragResize(this, this.layout, e0, 
+            this.currentAction = new DragResize(this, this.layout, e0,
                 origPositions, afterEnd,
                 distL <= TimelineConfig.data.dragResizeArea ? 'start' : 'end');
             return true;
@@ -806,7 +812,7 @@ export class TimelineInput {
                 // clear selection and re-select only if it's not selected
                 if (!underMouse.some((x) => this.selection.has(x))) {
                     Editing.clearSelection(ChangeCause.Timeline);
-                    Editing.selectEntry(underMouse[0], 
+                    Editing.selectEntry(underMouse[0],
                         SelectMode.Single, ChangeCause.Action);
                 }
                 // TODO: context menu?
@@ -831,7 +837,7 @@ export class TimelineInput {
                     }
                     return true;
                 }
-                
+
                 let afterEnd = () => {};
                 // left-clicked on something
                 // renew selection
@@ -855,7 +861,7 @@ export class TimelineInput {
                         afterEnd = () => {
                             this.selection.clear();
                             this.selection.add(selected);
-                            Editing.selectEntry(selected, 
+                            Editing.selectEntry(selected,
                                 SelectMode.Single, ChangeCause.Timeline);
                         };
                     } else {
@@ -864,7 +870,7 @@ export class TimelineInput {
                         selected = underMouse[(underMouse.indexOf(one) + 1) % underMouse.length];
                         this.selection.clear();
                         this.selection.add(selected);
-                        Editing.selectEntry(selected, 
+                        Editing.selectEntry(selected,
                             SelectMode.Single, ChangeCause.Timeline);
                     }
                     this.manager.requestRender();
@@ -882,7 +888,7 @@ export class TimelineInput {
 
         Debug.assert(false);
     }
-    
+
     #onDrag(offsetX: number, offsetY: number, ev: MouseEvent) {
         if (!this.currentAction) return;
         this.currentAction.onDrag(offsetX, offsetY, ev);
