@@ -483,7 +483,7 @@ export class TimelineInput {
         });
 
         this.layout.onLayout.bind(this, () => {
-            const active = Source.subs.view.timelineActiveChannel;
+            const active = Source.subs.view.timelineActiveChannel?.deref();
             if (active && !this.layout.shownStyles.includes(active))
                 Source.subs.view.timelineActiveChannel = null;
         });
@@ -600,10 +600,10 @@ export class TimelineInput {
         if (e.offsetX < this.layout.leftColumnWidth) {
             const style = this.layout.getChannelFromOffsetY(e.offsetY);
             if (style) {
-                if (Source.subs.view.timelineActiveChannel == style)
+                if (Source.subs.view.timelineActiveChannel?.deref() === style)
                     Source.subs.view.timelineActiveChannel = null;
                 else
-                    Source.subs.view.timelineActiveChannel = style;
+                    Source.subs.view.timelineActiveChannel = new WeakRef(style);
                 this.manager.requestRender();
             }
             return;

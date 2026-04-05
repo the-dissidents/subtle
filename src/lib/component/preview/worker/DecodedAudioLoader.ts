@@ -1,6 +1,3 @@
-// @ts-check
-/// <reference types="./AudioWorklet.d.ts" />
-
 import type { AudioFrameData } from "../../../API";
 
 export type AudioInputData = {
@@ -30,7 +27,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     #currentPosition = 0;
     #volume = 1;
     #playing: boolean = false;
-    
+
     constructor(options?: AudioWorkletNodeOptions | undefined) {
         super(options);
         this.port.onmessage = (e: MessageEvent<AudioInputData>) => {
@@ -86,7 +83,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     }
 
     process(
-        _inputs: Float32Array[][], 
+        _inputs: Float32Array[][],
         outputs: Float32Array[][]
     ) {
         if (!this.#playing) return true;
@@ -134,5 +131,5 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
         return true;
     }
   }
-  
+
   registerProcessor("decoded-audio-loader", DecodedAudioLoader);

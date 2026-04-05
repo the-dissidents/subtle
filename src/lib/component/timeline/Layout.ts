@@ -47,7 +47,7 @@ export class TimelineLayout {
   async #makeSampler(audio: number) {
     Debug.assert(this.#samplerMedia !== undefined);
     const sampler = await MediaSampler.open(
-      this.#samplerMedia, audio, 
+      this.#samplerMedia, audio,
       TimelineConfig.data.waveformResolution);
     sampler.onProgress = () => this.manager.requestRender();
     this.requestedSampler = true;
@@ -57,13 +57,13 @@ export class TimelineLayout {
 
   constructor(public readonly canvas: HTMLCanvasElement) {
     this.manager = new CanvasManager(canvas);
-    this.manager.onDisplaySizeChanged.bind(this, 
+    this.manager.onDisplaySizeChanged.bind(this,
       (w, h) => this.#processDisplaySizeChanged(w, h));
 
     Playback.onLoad.bind(this, async (rawurl, audio) => {
       Debug.assert(this.#samplerMedia === undefined || this.#samplerMedia.isClosed)
       if (DebugConfig.data.disableWaveform) return;
-    
+
       this.#samplerMedia = await MMedia.open(rawurl);
       try {
         Playback.sampler = await this.#makeSampler(audio);
@@ -174,7 +174,7 @@ export class TimelineLayout {
   get scale() {
     return this.#scale;
   }
-  
+
   get offset() {
     return this.manager.scroll[0] / this.scale;
   }
@@ -223,7 +223,7 @@ export class TimelineLayout {
     return [...ent.texts.entries()].flatMap(([style, text]) => {
       if (Source.subs.view.timelineExcludeStyles.has(style)) return [];
       const i = this.#stylesMap.get(style) ?? 0;
-      const y = this.entryHeight * i 
+      const y = this.entryHeight * i
         + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
       return [{x: x, y: y, w: w, h: this.entryHeight, text: RichText.toString(text), style}];
     });
@@ -231,14 +231,14 @@ export class TimelineLayout {
 
   getChannelFromOffsetY(y: number, clamp = false): SubtitleStyle | undefined {
     const i = Math.floor(
-      (y + this.manager.scroll[1] - TimelineLayout.HEADER_HEIGHT - TimelineLayout.TRACKS_PADDING) 
+      (y + this.manager.scroll[1] - TimelineLayout.HEADER_HEIGHT - TimelineLayout.TRACKS_PADDING)
       / this.entryHeight);
     if (clamp) return this.#shownStyles[Math.min(Math.max(i, this.shownStyles.length - 1), 0)];
     return this.#shownStyles.at(i);
   }
 
   findEntriesByPosition(
-    x: number, y: number, w = 0, h = 0): SubtitleEntry[] 
+    x: number, y: number, w = 0, h = 0): SubtitleEntry[]
   {
     const result = [];
     const start = (x - this.leftColumnWidth) / this.scale;
@@ -246,7 +246,7 @@ export class TimelineLayout {
     for (const ent of Source.subs.entries) {
       if (ent.end < start || ent.start > end) continue;
       if (this.getEntryPositions(ent)
-        .some((b) => b.x <= x + w && b.x + b.w >= x 
+        .some((b) => b.x <= x + w && b.x + b.w >= x
                   && b.y <= y + h && b.y + b.h >= y)) result.push(ent);
     }
     return result;
@@ -265,7 +265,7 @@ export class TimelineLayout {
 
   keepPosInSafeArea(pos: number) {
     const left = Math.max(0, this.offset + CURSOR_SAFE_AREA_RIGHT_MARGIN / this.#scale),
-         right = this.offset + (this.width 
+         right = this.offset + (this.width
             - CURSOR_SAFE_AREA_RIGHT_MARGIN - this.leftColumnWidth) / this.#scale;
     if (pos < left) {
       this.setOffset(this.offset + pos - left);
@@ -282,13 +282,6 @@ export class TimelineLayout {
     this.requestedLayout = false;
     const subs = Source.subs;
     const exclude = subs.view.timelineExcludeStyles;
-    for (const s of [...exclude])
-      if (!subs.styles.includes(s))
-        exclude.delete(s);
-    if (exclude.size == subs.styles.length)
-      exclude.clear();
-    // styleRefreshCounter++;
-
     this.#shownStyles = subs.styles.filter((x) => !exclude.has(x));
     this.entryHeight = TimelineConfig.data.fontSize + 15;
     this.#stylesMap = new Map(this.#shownStyles.map((x, i) => [x, i]));
@@ -304,11 +297,11 @@ export class TimelineLayout {
   }
 
   #updateContentArea() {
-    this.manager.setContentRect({ 
+    this.manager.setContentRect({
       l: this.minPosition * this.scale,
       r: this.maxPosition * this.scale,
-      b: this.entryHeight * this.#shownStyles.length 
-          + TimelineLayout.TRACKS_PADDING * 2 
+      b: this.entryHeight * this.#shownStyles.length
+          + TimelineLayout.TRACKS_PADDING * 2
           + TimelineLayout.HEADER_HEIGHT
     });
   }
@@ -336,12 +329,12 @@ export class TimelineLayout {
         s.changeSamplingEnd(Math.min(s.sampleEnd, right + preload))
       return;
     }
-  
+
     const resolution = s.intensityResolution;
     const i = Math.max(0, Math.floor((left - s.startTime) * resolution)),
           i_end = Math.ceil((right - s.startTime) * resolution);
     const subarray = s.intensityData(1, i, i_end);
-    const gapStart = subarray.findIndex((x, i) => 
+    const gapStart = subarray.findIndex((x, i) =>
       i < subarray.length - 1 && isNaN(x) && isNaN(subarray[i+1]));
 
     if (!Playback.isPlaying || gapStart >= 0)
@@ -364,7 +357,7 @@ export class TimelineLayout {
       Debug.debug(start, '>', end);
       return;
     }
-  
+
     s.startSampling(start, end);
     this.manager.requestRender();
   }

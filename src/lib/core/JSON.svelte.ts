@@ -46,12 +46,15 @@ const ZView = z.object({
     timelineActiveChannel: z._default(z.nullable(z.string()), null)
 });
 
-function serializeView(view: Subtitles['view']) {
+function serializeView(sub: Subtitles) {
     return {
-        perEntryColumns: view.perEntryColumns,
-        perChannelColumns: view.perChannelColumns,
-        timelineExcludeStyles: [...view.timelineExcludeStyles].map((x) => x.name),
-        timelineActiveChannel: view.timelineActiveChannel?.name ?? null
+        perEntryColumns: sub.view.perEntryColumns,
+        perChannelColumns: sub.view.perChannelColumns,
+        timelineExcludeStyles: sub.styles
+            .filter((x) => sub.view.timelineExcludeStyles.has(x))
+            .map((x) => x.name),
+        timelineActiveChannel:
+            sub.view.timelineActiveChannel?.deref()?.name ?? null
     };
 }
 
@@ -62,7 +65,7 @@ const ZEntry = z.object({
     pos: z._default(ZPositioning, null),
     align: z.optional(z.enum(AlignMode)),
     texts: z.array(z.readonly(z.tuple([
-        z.string(), 
+        z.string(),
         ZRichText
     ])))
 });
@@ -94,7 +97,7 @@ export class JSONParser implements SubtitleParser {
     #subs: Subtitles;
 
     #duplicatedStyles = new Map<SubtitleStyle, SubtitleStyle[]>();
-    
+
     get messages() {
         return this.#messages;
     }
@@ -119,7 +122,7 @@ export class JSONParser implements SubtitleParser {
                 from: this.#obj.version
             });
         }
-        
+
         this.#subs.metadata = this.#obj.metadata;
         this.#parseStyles();
         this.#parseView();
@@ -152,26 +155,27 @@ export class JSONParser implements SubtitleParser {
         this.#subs.view.perEntryColumns = sv.perEntryColumns.filter(
             (x) => x in Metrics && Metrics[x].context == 'entry');
         this.#subs.view.perChannelColumns = sv.perChannelColumns.filter(
-            (x) => x in Metrics && 
+            (x) => x in Metrics &&
                 (Metrics[x].context == 'channel' || Metrics[x].context == 'style'));
 
         const styleMap = new Map(this.#subs.styles.map((x) => [x.name, x]));
         if (sv.timelineExcludeStyles.some((x) => !styleMap.has(x)))
             Debug.warn('invalid item(s) in timelineExcludeStyles');
-        this.#subs.view.timelineExcludeStyles = 
+        this.#subs.view.timelineExcludeStyles =
             new SvelteSet(sv.timelineExcludeStyles.flatMap((x) => styleMap.get(x) ?? []));
-        
+
         if (sv.timelineActiveChannel) {
             if (!styleMap.has(sv.timelineActiveChannel))
                 Debug.warn('invalid timelineActiveChannel');
-            this.#subs.view.timelineActiveChannel = styleMap.get(sv.timelineActiveChannel)!;
+            this.#subs.view.timelineActiveChannel =
+                new WeakRef(styleMap.get(sv.timelineActiveChannel)!);
         }
     }
 
     #parseStyles() {
         const styles = this.#obj.styles;
         const defaultStyle = this.#obj.defaultStyle;
-        
+
         this.#subs.styles = styles.map((x) => {
             const style = $state({...x, validator: null});
             return style;
@@ -181,11 +185,11 @@ export class JSONParser implements SubtitleParser {
             throw new DeserializationError('invalid default style name');
         this.#subs.defaultStyle = def;
 
-        // now go back and add validators 
+        // now go back and add validators
         // since parsing filters requires access to all the styles
         styles.forEach((x) => {
             if (!x.validator) return;
-            this.#subs.styles.find((y) => x.name == y.name)!.validator = 
+            this.#subs.styles.find((y) => x.name == y.name)!.validator =
                 Filter.deserialize(x.validator, this.#subs);
         });
     }
@@ -263,7 +267,7 @@ export const JSONSubtitles = {
                 metadata: subs.metadata,
                 defaultStyle: subs.defaultStyle.name,
                 styles: subs.styles.map((x) => SubtitleStyle.serialize(x)),
-                view: serializeView(subs.view),
+                view: serializeView(subs),
                 entries: (options.useEntries ?? subs.entries)
                     .map((x) => serializeEntry(x)),
             }, undefined, 2)

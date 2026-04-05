@@ -152,7 +152,6 @@ function updateSnapOverride(ev: KeyboardEvent) {
       <label>
         <input type="checkbox"
           checked={!exclude.has(style)}
-          disabled={!exclude.has(style) && exclude.size >= Source.subs.styles.length - 1}
           onchange={(ev) => {
             if (ev.currentTarget.checked)
               exclude.delete(style);

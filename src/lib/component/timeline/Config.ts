@@ -76,14 +76,14 @@ export const TimelineConfig = new PublicConfigGroup(
     },
 });
 
-async function make<T>(other: UICommand<T>) {
+async function makeHoldToCreate<T>(other: UICommand<T>) {
     if (other.activated)
         await other.end();
-    const style = Source.subs.view.timelineActiveChannel;
-    Debug.assert(style !== null);
+    const style = Source.subs.view.timelineActiveChannel?.deref();
+    Debug.assert(!!style);
     const pos = Playback.position;
     const entry = Editing.insertAtTime(pos, pos, style);
-    MediaPlayerInterface.onPlayback.bind(entry, 
+    MediaPlayerInterface.onPlayback.bind(entry,
         (newpos) => { entry.end = Math.max(entry.end, newpos) });
     return [entry, style] as const;
 }
@@ -93,10 +93,10 @@ export const TimelineCommands = {
         [ CommandBinding.from(['J'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-1'),
-        isApplicable: () => Playback.isPlaying 
-            && Source.subs.view.timelineActiveChannel !== null,
-        call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> => 
-            make(TimelineCommands.holdToCreateEntry2),
+        isApplicable: () => Playback.isPlaying
+            && !!Source.subs.view.timelineActiveChannel?.deref(),
+        call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> =>
+            makeHoldToCreate(TimelineCommands.holdToCreateEntry2),
         onDeactivate: ([entry, style]) => {
             EventHost.unbind(entry);
             if (get(Editing.useUntimedForNewEntires))
@@ -108,10 +108,10 @@ export const TimelineCommands = {
         [ CommandBinding.from(['K'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-2'),
-        isApplicable: () => Playback.isPlaying 
-            && Source.subs.view.timelineActiveChannel !== null,
-        call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> => 
-            make(TimelineCommands.holdToCreateEntry1),
+        isApplicable: () => Playback.isPlaying
+            && !!Source.subs.view.timelineActiveChannel?.deref(),
+        call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> =>
+            makeHoldToCreate(TimelineCommands.holdToCreateEntry1),
         onDeactivate: ([entry, style]) => {
             EventHost.unbind(entry);
             if (get(Editing.useUntimedForNewEntires))

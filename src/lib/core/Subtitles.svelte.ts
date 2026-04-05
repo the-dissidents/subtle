@@ -1,7 +1,7 @@
 console.info('core/Subtitles loading');
 
 import { Debug } from "../Debug";
-import { SvelteMap, SvelteSet } from "svelte/reactivity";
+import { SvelteMap } from "svelte/reactivity";
 import { Filter, type MetricFilter } from "./Filter";
 import { AlignMode, type LabelType } from "./Labels";
 import { parseObjectZ } from "../Serialization";
@@ -104,7 +104,7 @@ export class SubtitleEntry {
     positioning: Positioning = $state(null);
     alignment: AlignMode | null = $state(null);
 
-    constructor(start: number, end: number) 
+    constructor(start: number, end: number)
     {
         this.start = start;
         this.end = end;
@@ -125,8 +125,8 @@ export class Subtitles {
     view = $state({
         perEntryColumns: ['startTime', 'endTime'],
         perChannelColumns: ['style', 'content'],
-        timelineExcludeStyles: new SvelteSet<SubtitleStyle>(),
-        timelineActiveChannel: null as SubtitleStyle | null
+        timelineExcludeStyles: new WeakSet<SubtitleStyle>(),
+        timelineActiveChannel: null as WeakRef<SubtitleStyle> | null
     });
 
     static #createMetadata(): SubtitleMetadata {
@@ -153,10 +153,10 @@ export class Subtitles {
             const randField = crypto.randomUUID();
             const obj = {};
             suspect[randField] = obj;
-            
+
             const result = suspect[randField] !== obj;
             delete suspect[randField];
-    
+
             return result;
         }
 
