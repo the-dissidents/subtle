@@ -95,6 +95,7 @@ export const Frontend = {
     uiFocus: writable<UIFocus>('Other'),
     // FIXME: this immediately gets overwritten by App.svelte
     toolboxFocus: writable<ToolboxPage>(),
+    aiPanelOpen: writable(false),
 
     get status() {
         return readonly(status);
@@ -107,6 +108,10 @@ export const Frontend = {
 
     getUIFocus(): UIFocus {
         return get(this.uiFocus);
+    },
+
+    toggleAiPanel() {
+        this.aiPanelOpen.update((x) => !x);
     },
 }
 export async function guardAsync(x: () => Promise<void>, msg: string): Promise<void>;

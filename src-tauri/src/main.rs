@@ -4,6 +4,7 @@
 #![allow(clippy::used_underscore_binding)]
 
 extern crate ffmpeg_next as ffmpeg;
+mod ai_api;
 mod encoding;
 mod media;
 mod media_api;
@@ -119,6 +120,9 @@ fn main() {
             history::read_undo,
             history::read_redo,
             diff::diff_entries,
+            ai_api::store_api_key,
+            ai_api::load_api_key,
+            ai_api::translate_chunk,
             open_devtools,
             make_panic,
         ])

@@ -27,6 +27,7 @@ import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
 import Timeline from './lib/component/timeline/Timeline.svelte';
 import Preview from './lib/component/preview/Preview.svelte';
+import AIPanel from './lib/component/ai/AIPanel.svelte';
 
 import { Resizer, TabPage, TabView, Tooltip, Banner } from '@the_dissidents/svelte-ui';
 
@@ -51,7 +52,7 @@ import { Source, SourceCommands } from './lib/frontend/Source';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 import { Frontend } from './lib/frontend/Frontend';
 
-import { BugIcon, CommandIcon, FilmIcon, SettingsIcon, TriangleAlertIcon } from '@lucide/svelte';
+import { BugIcon, CommandIcon, FilmIcon, LanguagesIcon, SettingsIcon, TriangleAlertIcon } from '@lucide/svelte';
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { MAPI } from './lib/API';
 import { Fonts } from './lib/Fonts';
@@ -75,6 +76,7 @@ let statusTwinkling = $state(false);
 let status = Frontend.status;
 let uiFocus = Frontend.uiFocus;
 let toolboxFocus = Frontend.toolboxFocus;
+let aiPanelOpen = Frontend.aiPanelOpen;
 let loadState = Playback.loadState;
 let filenameDisplay =
   derived([Source.currentFile, Source.fileChanged, _],
@@ -305,6 +307,15 @@ observer.observe({ type: 'paint', buffered: true });
         </Tooltip>
       </li>
       <li>
+        <Tooltip text={$_('menu.ai-translation')} position="bottom">
+          <button aria-label={$_('menu.ai-translation')}
+                  class:active={$aiPanelOpen}
+                  onclick={() => InterfaceCommands.toggleAiPanel.call()}>
+            <LanguagesIcon />
+          </button>
+        </Tooltip>
+      </li>
+      <li>
         <Tooltip text={$_('menu.configuration')} position="bottom">
           <button aria-label={$_('menu.configuration')}
                   onclick={() => DialogCommands.openConfiguration.call()}>
@@ -359,7 +370,7 @@ observer.observe({ type: 'paint', buffered: true });
     <div style="width: 10px;">
       <Resizer vertical={true} minValue={200} first={leftPane} />
     </div>
-    <div class="flexgrow fixminheight vlayout isolated">
+    <div class={["flexgrow fixminheight vlayout isolated editor-pane", $aiPanelOpen && "editor-pane--with-ai"]}>
       <!-- edit box -->
       <div bind:this={editTable} style="height: 125px; padding-top: 3px">
         <EntryEdit />
@@ -370,6 +381,7 @@ observer.observe({ type: 'paint', buffered: true });
       <div class='flexgrow isolated' style="padding-bottom: 6px">
         <SubtitleTable />
       </div>
+      <AIPanel open={$aiPanelOpen} onClose={() => Frontend.aiPanelOpen.set(false)} />
     </div>
   </div>
   <!-- resizer -->
@@ -545,5 +557,19 @@ ul.menu .separator {
   min-height: 30px;
   display: block;
   margin: 0 10px;
+}
+
+ul.menu button.active {
+  background-color: var(--uchu-yin-6) !important;
+}
+
+.editor-pane {
+  position: relative;
+  --ai-panel-width: min(28rem, 48vw);
+  transition: padding-right 0.22s ease-out;
+}
+
+.editor-pane--with-ai {
+  padding-right: var(--ai-panel-width);
 }
 </style>

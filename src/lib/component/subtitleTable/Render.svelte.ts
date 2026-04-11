@@ -4,6 +4,7 @@ import { hook } from "../../details/Hook.svelte";
 import { applyStyle, toCSSStyle, type Line } from "../../details/TextLayout";
 import { Editing } from "../../frontend/Editing";
 import { LabelColor, theme } from "../../Theming.svelte";
+import { TranslationStatusMap } from "../../ai/TranslationPipeline";
 import { TableConfig } from "./Config";
 import { TableLayout } from "./Layout.svelte";
 
@@ -20,6 +21,9 @@ const overlapColor        = $derived(theme.isDark ? 'lightpink'       : 'crimson
 const focusBackground     = $derived(theme.isDark ? 'darkslategray'   : 'lightblue');
 const selectedBackground  = $derived(theme.isDark ? '#444'          : '#e8e8e8');
 const errorBackground     = $derived(theme.isDark ? '#aa335599'     : '#eedd0099');
+const aiSuccessBar        = $derived(theme.isDark ? '#22c55e'       : '#16a34a');
+const aiWarningBar        = $derived(theme.isDark ? '#f97316'       : '#ea580c');
+const aiFailedBar         = $derived(theme.isDark ? '#ef4444'       : '#dc2626');
 
 export class TableRenderer {
     private manager: CanvasManager;
@@ -29,6 +33,9 @@ export class TableRenderer {
         this.manager = layout.manager;
         this.manager.renderer = (ctx) => this.render(ctx);
         hook(() => theme.isDark, () => this.manager.requestRender());
+        TranslationStatusMap.onChanged.bind(this, () => {
+            this.manager.requestRender();
+        });
     }
 
     render(ctx: CanvasRenderingContext2D) {
@@ -66,7 +73,7 @@ export class TableRenderer {
         const focused = Editing.getFocusedEntry();
         const selection = new Set(Editing.getSelection());
         let i = 0;
-        for (const { entry, line, height: lh, texts, cells } of this.layout.entries) {
+        for (const { entry, entryIndex, line, height: lh, texts, cells } of this.layout.entries) {
             i += 1;
             if ((line + lh) * this.layout.lineHeight < sy) continue;
             if (line * this.layout.lineHeight > sy + width) break;
@@ -80,6 +87,15 @@ export class TableRenderer {
             } else if (selection.has(entry)) {
                 ctx.fillStyle = selectedBackground;
                 ctx.fillRect(0, baseY+1, width + sx, h-2);
+            }
+
+            const aiStatus = TranslationStatusMap.get(entryIndex)?.status;
+            if (aiStatus) {
+                ctx.fillStyle =
+                    aiStatus === "success" ? aiSuccessBar
+                    : aiStatus === "warning" ? aiWarningBar
+                    : aiFailedBar;
+                ctx.fillRect(0, baseY + 2, 4, h - 4);
             }
 
             // label

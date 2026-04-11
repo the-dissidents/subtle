@@ -342,5 +342,11 @@ export const InterfaceCommands = {
         isDialog: true,
         call: () => Interface.askSaveFile(true)
     }),
+    toggleAiPanel: new UICommand(() => $_('category.tool'),
+        [ CommandBinding.from(['CmdOrCtrl+Shift+L']) ],
+    {
+        name: () => $_('menu.ai-translation'),
+        call: () => Frontend.toggleAiPanel(),
+    }),
 }
 KeybindingManager.register(InterfaceCommands);

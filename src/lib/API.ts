@@ -1,4 +1,10 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
+
+/** Matches `TranslationEvent` from `ai_api.rs` (serde tag/content, camelCase fields). */
+export type TranslationEvent =
+    | { event: 'chunk'; data: { text: string } }
+    | { event: 'done'; data: { text: string } }
+    | { event: 'error'; data: { message: string } };
 import { Debug } from './Debug';
 import { BinaryReader } from './details/BinaryReader';
 import type { MediaEvent } from './bindings/MediaEvent';
@@ -492,5 +498,44 @@ export const MAPI = {
     ) {
         const channel = new Channel<[number, number]>(([p, t]) => report(p, t));
         return await invoke<MatchResult | null>('diff_entries', { a, b, scorer, channel });
-    }
+    },
+
+    /**
+     * Calls `translate_chunk` in Rust: streams SSE chunks, resolves with full assistant text from `done`.
+     */
+    async translateChunk(prompt: string, endpoint: string, model: string): Promise<string> {
+        return await new Promise((resolve, reject) => {
+            const channel = new Channel<TranslationEvent>();
+            let settled = false;
+            const finish = (fn: () => void) => {
+                if (settled) return;
+                settled = true;
+                fn();
+            };
+
+            channel.onmessage = (msg) => {
+                switch (msg.event) {
+                    case 'error':
+                        finish(() => reject(new Error(msg.data.message)));
+                        break;
+                    case 'done':
+                        finish(() => resolve(msg.data.text));
+                        break;
+                    case 'chunk':
+                        break;
+                    default:
+                        break;
+                }
+            };
+
+            invoke<void>('translate_chunk', { prompt, endpoint, model, channel })
+                .then(() => {
+                    if (!settled) {
+                        finish(() =>
+                            reject(new Error('translate_chunk finished without a done event')));
+                    }
+                })
+                .catch((e: unknown) => finish(() => reject(e)));
+        });
+    },
 };

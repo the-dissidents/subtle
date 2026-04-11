@@ -27,7 +27,10 @@ export type FocusState = {
     entry: Writable<SubtitleEntry | null | 'virtual'>,
     control: RichEdit | null,
     style: Writable<SubtitleStyle | null>
-}
+};
+
+/** Row highlight after AI translation (subtitle table). */
+export type AiTranslationRowStatus = "success" | "warning" | "failed";
 
 export enum SelectMode {
     Single,
@@ -95,6 +98,33 @@ export const Editing = {
     onSelectionChanged: new EventHost<[cause: ChangeCause]>(),
     onKeepEntryInView: new EventHost<[entry: SubtitleEntry | 'virtual']>(),
     onKeepEntryAtPosition: new EventHost<[entry: SubtitleEntry, previous: SubtitleEntry]>(),
+    /** Fired when {@link aiTranslationByEntryIndex} changes (table should repaint). */
+    onAiTranslationHighlightChanged: new EventHost<[]>(),
+
+    /** Entry index → AI result highlight for canvas table (cleared when starting a new run). */
+    aiTranslationByEntryIndex: new Map<number, AiTranslationRowStatus>(),
+
+    clearAiTranslationHighlights(): void {
+        if (this.aiTranslationByEntryIndex.size === 0) return;
+        this.aiTranslationByEntryIndex.clear();
+        this.onAiTranslationHighlightChanged.dispatch();
+    },
+
+    setAiTranslationHighlight(index: number, status: AiTranslationRowStatus): void {
+        this.aiTranslationByEntryIndex.set(index, status);
+        this.onAiTranslationHighlightChanged.dispatch();
+    },
+
+    getAiTranslationHighlight(index: number): AiTranslationRowStatus | undefined {
+        return this.aiTranslationByEntryIndex.get(index);
+    },
+
+    /** Scroll the table to this entry and select it (e.g. from AI results list). */
+    focusEntryForAiReview(index: number): void {
+        const ent = Source.subs.entries[index];
+        if (!ent) return;
+        this.selectEntry(ent, SelectMode.Single, ChangeCause.Action, KeepInViewMode.KeepInSight);
+    },
 
     getFocusedEntry() {
         return get(this.focused.entry);

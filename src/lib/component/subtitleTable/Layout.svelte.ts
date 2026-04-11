@@ -36,8 +36,10 @@ type Cell = {
 };
 
 type EntryLayout = {
-    entry: SubtitleEntry, 
-    line: number, 
+    entry: SubtitleEntry,
+    /** Index in `Source.subs.entries` (stable row id for overlays). */
+    entryIndex: number,
+    line: number,
     height: number,
     texts: ChannelLayout[],
     cells: Cell[],
@@ -190,7 +192,7 @@ export class TableLayout {
                 j++;
             }
 
-            newEntries.push({entry, line: this.totalLines, height: entryHeight, texts, cells});
+            newEntries.push({ entry, entryIndex: i, line: this.totalLines, height: entryHeight, texts, cells });
             newMap.set(entry, {line: this.totalLines, height: entryHeight});
             this.totalLines += Math.max(entryHeight, entryColumnsHeight);
         });

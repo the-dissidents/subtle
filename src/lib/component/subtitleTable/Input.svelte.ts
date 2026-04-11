@@ -14,6 +14,7 @@ import { TableConfig } from "./Config";
 import { _ } from 'svelte-i18n';
 import { get } from "svelte/store";
 import { contextMenu } from "./Menu";
+import { TranslationStatusMap } from "../../ai/TranslationPipeline";
 
 import { type Popup } from "@the_dissidents/svelte-ui";
 
@@ -151,6 +152,16 @@ export class TableInput {
         return result;
     }
 
+    #getEntryFromLineIndex(i: number) {
+        if (this.layout.totalLines < i) return undefined;
+        for (const entryLayout of this.layout.entries) {
+            if (i >= entryLayout.line && i < entryLayout.line + entryLayout.height) {
+                return entryLayout;
+            }
+        }
+        return undefined;
+    }
+
     #onMouseMove(ev: MouseEvent) {
         if (ev.offsetY < this.layout.headerHeight / this.manager.scale) return;
 
@@ -160,22 +171,39 @@ export class TableInput {
         const currentText = cx > channelColumnStart
             ? this.#getTextFromLineIndex(currentLine)?.[0]
             : undefined;
+        const currentEntry = this.#getEntryFromLineIndex(currentLine);
+        const rowStatus = currentEntry
+            ? TranslationStatusMap.get(currentEntry.entryIndex)
+            : undefined;
+        const statusMessage =
+            rowStatus && rowStatus.status !== 'success' && rowStatus.message
+                ? rowStatus.message
+                : null;
+        const statusPopupText = statusMessage
+            ? `${rowStatus?.status === 'warning' ? 'AI warning' : 'AI failure'}: ${statusMessage}`
+            : "";
+        const validationPopupText = this.currentFails.length > 0
+            ? get(_)('table.requirement-not-met', {values: {n: this.currentFails.length}})
+                + '\n'
+                + this.currentFails.map((x) => Filter.describe(x)).join('\n')
+            : "";
+        const nextPopupText = [statusPopupText, validationPopupText].filter((x) => x.length > 0).join('\n\n');
 
-        if (currentText?.failed !== this.currentFails) {
+        if (currentText?.failed !== this.currentFails || this.popupMessage !== nextPopupText) {
             this.currentFails = currentText?.failed ?? [];
             if (this.validationMessagePopup.openState())
                 this.validationMessagePopup.close!();
-            if (this.currentFails.length > 0) {
-                Debug.assert(currentText !== undefined);
-                this.popupMessage =
-                    get(_)('table.requirement-not-met', {values: {n: this.currentFails.length}})
-                    + '\n'
-                    + this.currentFails.map((x) => Filter.describe(x)).join('\n');
-                const [left, top] = this.manager.convertPosition('canvas', 'client',
-                    channelColumnStart,
-                    currentText.line * this.layout.lineHeight + this.layout.headerHeight);
-                this.validationMessagePopup.open!({left, top, width: 0,
-                    height: currentText.height * 0.5 * this.layout.lineHeight / this.manager.scale});
+            if (nextPopupText.length > 0) {
+                this.popupMessage = nextPopupText;
+                const popupLine = currentText?.line ?? currentEntry?.line;
+                const popupHeight = currentText?.height ?? currentEntry?.height ?? 1;
+                if (popupLine !== undefined) {
+                    const [left, top] = this.manager.convertPosition('canvas', 'client',
+                        channelColumnStart,
+                        popupLine * this.layout.lineHeight + this.layout.headerHeight);
+                    this.validationMessagePopup.open!({left, top, width: 0,
+                        height: popupHeight * 0.5 * this.layout.lineHeight / this.manager.scale});
+                }
             }
         }
     }
