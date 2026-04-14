@@ -3,6 +3,7 @@ import { Basic } from './Basic';
 
 interface Props {
   timestamp?: number;
+  tight?: boolean;
   stretch?: boolean;
   disabled?: boolean;
   oninput?: (t: number) => void;
@@ -10,11 +11,12 @@ interface Props {
   onchange?: (t: number) => void;
 }
 
-let { 
-  timestamp = $bindable(0), 
-  stretch = false, 
-  disabled = false, 
-  onchange, oninput 
+let {
+  timestamp = $bindable(0),
+  stretch = false,
+  tight = false,
+  disabled = false,
+  onchange, oninput
 }: Props = $props();
 
 let value = $state('00:00:00.000');
@@ -36,7 +38,7 @@ $effect(() => {
 });
 </script>
 
-<input class={{timestamp: true, stretch}}
+<input class={{timestamp: true, stretch, tight}}
   type="text" {disabled}
   bind:value={value}
   onbeforeinput={(ev) => {
@@ -49,21 +51,21 @@ $effect(() => {
     ev.preventDefault();
     if (pos < text.length && data.match(/^\d$/)) {
       if (text[pos] == ':' || text[pos] == '.') pos++;
-      ev.currentTarget.value = 
+      ev.currentTarget.value =
         text.slice(0, pos) + data + text.slice(pos+1);
       ev.currentTarget.selectionStart = pos+1;
       ev.currentTarget.selectionEnd = pos+1;
       timestamp = Basic.parseTimestamp(ev.currentTarget.value) ?? 0;
       changed = true;
       oninput?.(timestamp);
-    } 
+    }
   }}
   onkeydown={(ev) => {
     let text = ev.currentTarget.value;
     let pos = ev.currentTarget.selectionStart ?? 0;
     if (ev.key == 'Backspace' && pos > 0) {
       if (text[pos-1] == ':' || text[pos-1] == '.') pos--;
-      ev.currentTarget.value = 
+      ev.currentTarget.value =
         text.slice(0, pos-1) + '0' + text.slice(pos);
       ev.currentTarget.selectionStart = pos-1;
       ev.currentTarget.selectionEnd = pos-1;
@@ -84,7 +86,9 @@ $effect(() => {
     font-family: var(--monospaceFontFamily);
     text-align: center;
     box-sizing: border-box;
-    width: 110px;
+  }
+  .tight {
+    width: 14ch;
   }
   .stretch {
     width: 100%;

@@ -78,7 +78,8 @@ function applyEditForm() {
 
 <!-- timestamp fields -->
 {#key `${editFormUpdateCounter}`}
-<fieldset disabled={!(Editing.getFocusedEntry() instanceof SubtitleEntry)}>
+<fieldset class="vlayout"
+    disabled={!(Editing.getFocusedEntry() instanceof SubtitleEntry)}>
   <span class="hlayout center-items">
     <select bind:value={editAnchor}>
       <option value="start">{$_('editbox.anchor-start')}</option>
@@ -88,7 +89,6 @@ function applyEditForm() {
     <label for='keepd'>{$_('editbox.keep-duration')}</label>
   </span>
   <TimestampInput bind:timestamp={editingT0}
-    stretch={true}
     oninput={() => {
       if (editAnchor == 'start' && keepDuration)
         editingT1 = editingT0 + editingDt;
@@ -96,9 +96,7 @@ function applyEditForm() {
     }}
     onchange={() =>
       Source.markChanged(ChangeType.Times, $_('c.timestamp'))}/>
-  <br>
   <TimestampInput bind:timestamp={editingT1}
-    stretch={true}
     oninput={() => {
       if (editAnchor == 'end' && keepDuration)
         editingT0 = editingT1 - editingDt;
@@ -109,9 +107,7 @@ function applyEditForm() {
       applyEditForm();
       Source.markChanged(ChangeType.Times, $_('c.timestamp'));
     }}/>
-  <br>
   <TimestampInput bind:timestamp={editingDt}
-    stretch={true}
     oninput={() => {
       if (editAnchor == 'start')
         editingT1 = editingT0 + editingDt;

@@ -10,6 +10,7 @@
   import type { MarkType, Mark } from "prosemirror-model";
 
   import { AArrowUpIcon, AArrowDownIcon, RemoveFormattingIcon } from "@lucide/svelte";
+  import { TextSelection } from "prosemirror-state";
 
   type DIV = SvelteHTMLElements['div'];
 
@@ -125,11 +126,30 @@
     view.dispatch(tr);
     onAction?.();
   }
+
+  function insert(bracket: string) {
+    Debug.assert(!!view && selStart !== undefined && selEnd !== undefined);
+
+    const tr = view.state.tr;
+    let start: number, end: number;
+    if (selStart !== selEnd) {
+      start = selStart;
+      end = selEnd;
+    } else {
+      start = 0;
+      end = tr.doc.textContent.length;
+    }
+    tr.insertText(' ' + bracket, end);
+    tr.insertText(bracket + ' ', start);
+    tr.setSelection(TextSelection.create(tr.doc,
+      start + bracket.length + 1, end + bracket.length + 1));
+    view.dispatch(tr);
+    view.focus();
+    onAction?.();
+  }
 </script>
 
 <fieldset class="toolbar" disabled={!target}>
-  <span class="legend">{$_('richedit.override-styles')}</span>
-
   <label><input type="checkbox" class="button left"
     checked={isMarkActive(RichTextSchema.marks.bold)}
     onchange={(e) => {
@@ -188,6 +208,13 @@
   <button disabled={selStart == selEnd}
     onclick={() => cleanFormatting()}>
     <RemoveFormattingIcon/>
+  </button>
+
+  <span class="separator"></span>
+
+  <button disabled={selStart === undefined}
+    onclick={() => insert('♪')}>
+    ♪
   </button>
 </fieldset>
 

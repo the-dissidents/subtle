@@ -107,6 +107,7 @@
       <Volume2Icon />
     </button>
     <TimestampInput bind:timestamp={playPosInput}
+      tight={true}
       disabled={$loadState !== 'loaded'}
       onchange={() => Playback.setPosition(playPosInput)}/>
   </div>
