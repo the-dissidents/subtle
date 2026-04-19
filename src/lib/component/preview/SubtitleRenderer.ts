@@ -80,7 +80,7 @@ function isBottom(alignment: AlignMode) {
 
 export class SubtitleRenderer {
     #subs: Subtitles;
-    
+
     #currentEntries: WrappedEntry[] = [];
     #sortedEntries: WrappedEntry[] = [];
 
@@ -107,7 +107,7 @@ export class SubtitleRenderer {
 
     constructor(
         private readonly manager: CanvasManager,
-        subtitles: Subtitles) 
+        subtitles: Subtitles)
     {
         this.#subs = subtitles;
         manager.onDisplaySizeChanged.bind(this, () => {
@@ -195,7 +195,7 @@ export class SubtitleRenderer {
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.rect(this.#hMargin, this.#vMargin, 
+        ctx.rect(this.#hMargin, this.#vMargin,
             width - 2 * this.#hMargin, height - 2 * this.#vMargin);
         ctx.stroke();
 
@@ -216,15 +216,15 @@ export class SubtitleRenderer {
         this.#layout = [];
 
         const reverseStyles = this.#subs.styles.toReversed();
-        for (const ent of this.#currentEntries)
-        for (const style of reverseStyles) {
+        for (const style of reverseStyles)
+        for (const ent of this.#currentEntries) {
             const text = ent.entry.texts.get(style);
             if (!text) continue;
 
-            const lineWidth = width - this.#hMargin * 2 - 
+            const lineWidth = width - this.#hMargin * 2 -
                 (style.margin.left + style.margin.right) * this.#scale;
             const lines = layoutText(text, ctx, {
-                warpStyle: style.wrapStyle, 
+                warpStyle: style.wrapStyle,
                 baseStyle: styleFonts.get(style)!,
                 lineWidth,
             });
@@ -245,7 +245,7 @@ export class SubtitleRenderer {
 
                 while (true) {
                     const overlapping = this.#layout.find(
-                        (box) => (!ent.entry.positioning || box.entry == ent.entry) 
+                        (box) => (!ent.entry.positioning || box.entry == ent.entry)
                             && boxIntersects(box, newBox));
                     if (!overlapping) break;
                     newBox.y = dy > 0

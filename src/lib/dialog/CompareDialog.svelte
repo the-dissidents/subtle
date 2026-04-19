@@ -223,19 +223,19 @@ async function exportFile() {
   </table>
 
   <ListView columns={[
-    ['i1',    { header: '#',     width: 'max-content', align: 'end' }],
+    ['i1',       { header: '#',     width: 'max-content', align: 'end' }],
     ['useTime1', { header: '' }],
-    ['s1',    { header: $_('metrics.start-time-short'), width: 'max-content' }],
-    ['e1',    { header: $_('metrics.end-time-short'),   width: 'max-content' }],
+    ['s1',       { header: $_('metrics.start-time-short'), width: 'max-content' }],
+    ['e1',       { header: $_('metrics.end-time-short'), width: 'max-content' }],
     ['useText1', { header: '' }],
-    ['text1', { header: $_('metrics.content'),  width: '1fr' }],
+    ['text1',    { header: $_('metrics.content'), width: '1fr' }],
 
-    ['i2',    { header: '#',     width: 'max-content', align: 'end' }],
+    ['i2',       { header: '#',      width: 'max-content', align: 'end' }],
     ['useTime2', { header: '' }],
-    ['s2',    { header: $_('metrics.start-time-short'), width: 'max-content' }],
-    ['e2',    { header: $_('metrics.end-time-short'),   width: 'max-content' }],
+    ['s2',       { header: $_('metrics.start-time-short'),  width: 'max-content' }],
+    ['e2',       { header: $_('metrics.end-time-short'),  width: 'max-content' }],
     ['useText2', { header: '' }],
-    ['text2', { header: $_('metrics.content'),  width: '1fr' }],
+    ['text2',    { header: $_('metrics.content'),  width: '1fr' }],
   ]} items={data}>
     {#snippet i1({ first: a })}
       {a?.idx ?? ''}

@@ -194,12 +194,12 @@ export class Searcher<Orig, T> {
 
             const last = merged.at(-1);
             if (last?.type == x.type) {
-                last.first.push(tTerm[x.i]);
-                last.second.push(this.#tokens[x.j]);
+                last.first.push(this.#tokens[x.j]);
+                last.second.push(tTerm[x.i]);
             } else merged.push({
                 type: x.type,
-                first: [tTerm[x.i]],
-                second: [this.#tokens[x.j]]
+                first: [this.#tokens[x.j]],
+                second: [tTerm[x.i]],
             });
         });
 

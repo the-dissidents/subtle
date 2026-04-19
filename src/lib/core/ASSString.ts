@@ -115,7 +115,9 @@ class ASSState {
     formatASSString(s: string): string {
         // FIXME: there seems to be no way in ASS to escape '\n', '\N' or '\H', should warn about that
         // but '{' can be escaped
-        return s.replaceAll('{', '\\{');
+        return s
+            .replaceAll('{', '\\{')
+            .replaceAll('\n', '\\N');
     }
 
     processElement(elem: string) {
@@ -127,22 +129,22 @@ class ASSState {
             if (s.length == 0) return;
 
             let m: RegExpExecArray | null;
-                 if (m = /^i\s*(1|0)?$/.exec(s))  this.#italic = m[1] == '1';
-            else if (m = /^u\s*(1|0)?$/.exec(s))  this.#underline = m[1] == '1';
-            else if (m = /^s\s*(1|0)?$/.exec(s))  this.#strikeout = m[1] == '1';
-            else if (m = /^b\s*(\d+)?$/.exec(s))  this.#bold = Number.parseInt(m[1] ?? '0');
-            else if (m = /^fs\s*(\d+)?$/.exec(s))
+                 if ((m = /^i\s*(1|0)?$/.exec(s)))  this.#italic = m[1] == '1';
+            else if ((m = /^u\s*(1|0)?$/.exec(s)))  this.#underline = m[1] == '1';
+            else if ((m = /^s\s*(1|0)?$/.exec(s)))  this.#strikeout = m[1] == '1';
+            else if ((m = /^b\s*(\d+)?$/.exec(s)))  this.#bold = Number.parseInt(m[1] ?? '0');
+            else if ((m = /^fs\s*(\d+)?$/.exec(s)))
                 this.#fontsize = m[1] ? Number.parseInt(m[1]) : undefined;
-            else if (m = /pos\((\d+),(\d+)\)/.exec(s))
+            else if ((m = /pos\((\d+),(\d+)\)/.exec(s)))
                 this.#pos = {
                     type: 'absolute',
-                    x: Number.parseInt(m[1]), 
+                    x: Number.parseInt(m[1]),
                     y: Number.parseInt(m[2])
                 };
-            else if (m = /an([1-9])/.exec(s))
+            else if ((m = /an([1-9])/.exec(s)))
                 this.#align = Number.parseInt(m[1]);
 
-            else this.warnings.ignoredTags.set('\\' + s, 
+            else this.warnings.ignoredTags.set('\\' + s,
                 (this.warnings.ignoredTags.get('\\' + s) ?? 0) + 1);
         });
     }
@@ -150,13 +152,13 @@ class ASSState {
     processSpecialCharacter(n: string) {
         switch (n) {
             case '\\n':
-                this.warnings.ignoredTags.set(n, 
+                this.warnings.ignoredTags.set(n,
                     (this.warnings.ignoredTags.get(n) ?? 0) + 1);
                 return '\n';
             case '\\N':
                 return '\n';
             case '\\h':
-                this.warnings.ignoredTags.set(n, 
+                this.warnings.ignoredTags.set(n,
                     (this.warnings.ignoredTags.get(n) ?? 0) + 1);
                 return ' ';
             case '\\{':
@@ -193,7 +195,7 @@ export namespace ASSString {
     }
 
     export function parse(
-        source: string, base: SubtitleStyle, 
+        source: string, base: SubtitleStyle,
         warnings: ASSStringWarnings
     ): {
         result: RichText,

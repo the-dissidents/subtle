@@ -7,7 +7,7 @@
 
   import { fromRichText, RichTextSchema, toRichText } from "./Schema";
   import { VirtualSelection } from "./VirtualSelection";
-  
+
   import { Debug } from "../../Debug";
   import type { RichText } from "../../core/RichText";
   import { hook } from "../../details/Hook.svelte";
@@ -80,10 +80,14 @@
     }));
   });
 
-  onMount(() => {
-    const backspace = chainCommands(deleteSelection, joinBackward, selectNodeBackward);
-    const del = chainCommands(deleteSelection, joinForward, selectNodeForward);
+  const backspace = chainCommands(deleteSelection, joinBackward, selectNodeBackward);
+  const del = chainCommands(deleteSelection, joinForward, selectNodeForward);
 
+  const bold = toggleMark(RichTextSchema.marks.bold);
+  const italic = toggleMark(RichTextSchema.marks.italic);
+  const underline = toggleMark(RichTextSchema.marks.underline);
+
+  onMount(() => {
     let state = EditorState.create({
       schema: RichTextSchema,
       doc: fromRichText(text),
@@ -98,7 +102,7 @@
           "Mod-Delete": del,
           "Mod-a": selectAll,
 
-          "Mod-z": undo, 
+          "Mod-z": undo,
           "Mod-y": redo,
           "Mod-b": bold,
           "Mod-i": italic,
@@ -137,10 +141,6 @@
   onDestroy(() => {
     deinit?.();
   });
-
-  const bold = toggleMark(RichTextSchema.marks.bold);
-  const italic = toggleMark(RichTextSchema.marks.italic);
-  const underline = toggleMark(RichTextSchema.marks.underline);
 </script>
 
 <div bind:this={container} class="editor"
