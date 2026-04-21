@@ -88,8 +88,9 @@ onMount(async () => {
       case 'substitute': {
         const t1 = A[l.i!].text;
         const t2 = B[l.j!].text;
-        const result = new Searcher(t1, DefaultTokenizer.caseSensitive(true))
-          .search(t2, { wholeSequence: true });
+        // this is the correct order (search for A in B)
+        const result = new Searcher(t2, DefaultTokenizer.caseSensitive(true))
+          .search(t1, { wholeSequence: true });
         data.push({ first: A[l.i!], second: B[l.j!], merged: result?.merged });
         break;
       }
@@ -144,7 +145,9 @@ async function exportFile() {
 }
 </script>
 
-<DialogBase bind:this={inner} maxWidth="70em">
+<DialogBase bind:this={inner} maxWidth="70em" buttons={[{
+  name: 'close', localizedName: () => $_('comparedialog.close')
+}]}>
   {#snippet header()}
     <h3>{$_('comparedialog.header')}</h3>
   {/snippet}

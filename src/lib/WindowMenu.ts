@@ -7,7 +7,7 @@ import { DialogCommands } from "./frontend/Dialogs";
 import { PlaybackCommands } from "./frontend/Playback";
 import { InterfaceConfig } from "./config/Groups";
 import { platform } from "@tauri-apps/plugin-os";
-import { SourceCommands } from "./frontend/Source";
+import { ChangeType, Source, SourceCommands } from "./frontend/Source";
 const $_ = unwrapFunctionStore(_);
 
 let appMenu: Menu;
@@ -135,3 +135,10 @@ export async function initWindowMenu() {
         if (!originalMenu) originalMenu = old;
     }
 }
+
+const me = {};
+
+Source.onSubtitlesChanged.bind(me, (type) => {
+    if (type == ChangeType.General || type == ChangeType.StyleDefinitions)
+        initWindowMenu();
+});

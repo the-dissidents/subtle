@@ -495,7 +495,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         ]
     }),
     combineIntoOneEntry: new UICommand(() => $_('category.editing'),
-        [],
+        [ CommandBinding.from(['CmdOrCtrl+M'], ['Table', 'Timeline']) ],
     {
         name: () => $_('action.combine'),
         isApplicable: () => hasSelection(1) && selectionCanCombine(),

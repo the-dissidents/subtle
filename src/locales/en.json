@@ -216,6 +216,7 @@
     "will-be-labeled": "{n,plural,one{entries} other{entry}} will be labeled {color}"
   },
   "comparedialog": {
+    "close": "close",
     "header": "compare subtitle files",
     "matched-entries": "matched entries"
   },
