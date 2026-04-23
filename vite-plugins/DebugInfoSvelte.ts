@@ -16,9 +16,9 @@ export default function debugInfoSvelte(): Plugin {
 
       const ast = svc.parse(code, { filename: id, modern: true });
       const ms = new MagicString(code, { filename: id });
-      
+
       function walkNode(n: svc.AST.SvelteNode) {
-        walk(n, {funcNames: []}, {
+        walk(n, {funcNames: [] as string[]}, {
           _(_node, { state, next }) {
             next({ ...state });
           },
@@ -55,7 +55,7 @@ export default function debugInfoSvelte(): Plugin {
           },
         });
       }
-      
+
       if (ast.instance)
         walkNode(ast.instance.content);
 

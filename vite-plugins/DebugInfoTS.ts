@@ -9,7 +9,7 @@ const plugin = declare(() => {
     visitor: {
       CallExpression(path, state) {
         const node = path.node;
-        
+
         if (node.callee.type !== "MemberExpression"
          || node.callee.object.type !== "Identifier"
          || node.callee.object.name !== "Debug"
@@ -18,7 +18,7 @@ const plugin = declare(() => {
         if (node.callee.property.name == 'assert') {
           if (node.arguments.length != 1) return;
           if (!node.loc) return;
-          
+
           node.arguments.push(
               t.stringLiteral(state.filename ?? 'cannot get filename'),
               t.stringLiteral(node.loc.start.line.toString() ?? 'cannot get line')
@@ -26,10 +26,12 @@ const plugin = declare(() => {
         }
 
         if (node.callee.property.name == 'early') {
-          if (node.arguments.length != 0) return;
+          if (node.arguments.length != 0 || !node.loc) return;
+
+          const func = path.getFunctionParent();
+          if (!func) return;
 
           let funcName: string = '?';
-          const func = path.getFunctionParent();
           if ('key' in func.node) {
             if (func.node.key.type == 'PrivateName') {
               funcName = `#${func.node.key.id.name}`;
@@ -67,7 +69,7 @@ export default function debugInfoTS(): Plugin {
         filename: id,
         configFile: false, // Don't look for babel.config.js
         babelrc: false,    // Don't look for .babelrc
-        
+
         parserOpts: {
           plugins: ['typescript'], // Add 'jsx' if you use .tsx
         },
@@ -79,9 +81,9 @@ export default function debugInfoTS(): Plugin {
       if (!result) {
         return null;
       }
-      
+
       return {
-        code: result.code,
+        code: result.code ?? undefined,
         map: result.map,
       };
     },

@@ -1,5 +1,6 @@
 console.info('Basic loading');
 
+import { Debug } from "./Debug";
 import { path } from "@tauri-apps/api";
 import * as os from "@tauri-apps/plugin-os";
 import * as fs from "@tauri-apps/plugin-fs";
@@ -71,11 +72,18 @@ export const Basic = {
     },
 
     formatTimestamp: (t: number, n: number = 3, char = '.') => {
-        const h = Math.floor(t / 3600).toString().padStart(2, '0');
-        const m = Math.floor((t % 3600) / 60).toString().padStart(2, '0');
-        const s = Math.floor(t % 60).toString().padStart(2, '0');
-        const ms = (t % 1).toFixed(n).slice(2);
-        return `${h}:${m}:${s}${char}${ms}`;
+        if (t < 0) Debug.warn('timestamp < 0:', t);
+
+        const fixedStr = Math.max(0, t).toFixed(n);
+        const [intStr, fracStr = ''] = fixedStr.split('.');
+
+        const totalSeconds = parseInt(intStr, 10);
+        const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (totalSeconds % 60).toString().padStart(2, '0');
+
+        const frac = n > 0 ? `${char}${fracStr.padStart(n, '0')}` : ``;
+        return `${h}:${m}:${s}${frac}`;
     },
 
     normalizeNewlines: (s: string) => {
