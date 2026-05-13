@@ -42,8 +42,8 @@ importers:
         specifier: ~2
         version: 2.4.0
       '@the_dissidents/svelte-ui':
-        specifier: 0.0.4
-        version: 0.0.4(svelte@5.38.6)
+        specifier: ^0.0.10
+        version: 0.0.10(svelte@5.38.6)
       '@traversable/zod':
         specifier: ^0.0.57
         version: 0.0.57(zod@4.1.5)
@@ -662,8 +662,8 @@ packages:
     peerDependencies:
       svelte: ^5
 
-  '@lucide/svelte@0.563.1':
-    resolution: {integrity: sha512-Kt+MbnE5D9RsuI/csmf7M+HWxALe57x3A0DhQ8pPnnUpneh7zuldrYjlT+veWtk+tVnp5doQtaAAxLujzIlhBw==}
+  '@lucide/svelte@1.14.0':
+    resolution: {integrity: sha512-MVuP5VRCBQa2OaIpaRbuEV4k5OV2dy9MyxA6Tf4Sz/IN0v3zzUU72ObHc9r2Zn/wSMXDg6lLrHrczqI7w7gCzQ==}
     peerDependencies:
       svelte: ^5
 
@@ -988,8 +988,8 @@ packages:
   '@tauri-apps/plugin-window-state@2.4.0':
     resolution: {integrity: sha512-hRSzPNi2NG0lPFthfVY0V5C1MyWN/gGaQtQYw7i9zZhLzrhZveHZ2omHG1rIiIsjfTGbO7fhjydSoeTTK9GqLw==}
 
-  '@the_dissidents/svelte-ui@0.0.4':
-    resolution: {integrity: sha512-hT6NnB8wagKaF1moDZUCkaLf2fqMS99/pyK3IyrBkVUEvhB3tqE1hRVi2QtzKPxbejXpxdS/8IGlpOd72pEqfA==}
+  '@the_dissidents/svelte-ui@0.0.10':
+    resolution: {integrity: sha512-xl11flmVASVDgBlv77xv4Gz34S2WJJS0MaYABekdO8FG/Hl3r37QglaVlsNCY3SlIOU5FVO9HZlslHqn7oceMw==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -2780,7 +2780,7 @@ snapshots:
     dependencies:
       svelte: 5.38.6
 
-  '@lucide/svelte@0.563.1(svelte@5.38.6)':
+  '@lucide/svelte@1.14.0(svelte@5.38.6)':
     dependencies:
       svelte: 5.38.6
 
@@ -3032,9 +3032,9 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.8.0
 
-  '@the_dissidents/svelte-ui@0.0.4(svelte@5.38.6)':
+  '@the_dissidents/svelte-ui@0.0.10(svelte@5.38.6)':
     dependencies:
-      '@lucide/svelte': 0.563.1(svelte@5.38.6)
+      '@lucide/svelte': 1.14.0(svelte@5.38.6)
       colorjs.io: 0.6.1
       svelte: 5.38.6
 

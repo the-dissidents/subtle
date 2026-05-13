@@ -3,7 +3,7 @@ import { Debug } from '../Debug';
 import { SubtitleStyle } from '../core/Subtitles.svelte';
 import { SubtitleTools } from '../core/SubtitleUtil.svelte';
 
-import { Collapsible, NumberInput, Tooltip } from "@the_dissidents/svelte-ui";
+import { ConfigRow, ConfigTable, NumberInput, Tooltip } from "@the_dissidents/svelte-ui";
 import StyleEdit from '../StyleEdit.svelte';
 
 import { EventHost } from '../details/EventHost';
@@ -89,78 +89,65 @@ async function manageSavedStyles() {
 </script>
 
 <div class="vlayout">
-  <table class="config">
-    <tbody>
-      <tr>
-        <td>{$_('ppty.title')}</td>
-        <td>
-          <input type="text" class='txt' bind:value={metadata.title}
-            onchange={markMetadataChange} />
-        </td>
-      </tr>
-      <tr>
-        <td>{$_('ppty.language')}</td>
-        <td>
-          <input type="text" class='txt' bind:value={metadata.language}
-            onchange={markMetadataChange} />
-        </td>
-      </tr>
-      <tr>
-        <td>{$_('ppty.resolution')}</td>
-        <td>
-          <NumberInput class='res' bind:value={metadata.width}
-            min={1} max={10000}
-            onchange={markMetadataChange}/>
-          ×
-          <NumberInput class='res' bind:value={metadata.height}
-            min={1} max={10000}
-            onchange={markMetadataChange}/>
-          <button disabled={$loadState !== 'loaded'} onclick={() => {
-            Debug.assert(Playback.player?.videoSize !== undefined);
-            Debug.assert(Playback.player?.sampleAspectRatio !== undefined);
-            const [w, h] = Playback.player.videoSize;
-            const sar = Playback.player.sampleAspectRatio;
-            metadata.width = Math.round(w * sar);
-            metadata.height = Math.round(h);
-            markMetadataChange();
-          }}>
-            {$_('ppty.match-video-resolution')}
-          </button>
-        </td>
-      </tr>
-      <tr>
-        <td>{$_('ppty.scaling')}</td>
-        <td>
-          <NumberInput class='res' bind:value={metadata.scalingFactor}
-            step='any' min={0.01}
-            onchange={markMetadataChange}/>
-          <Tooltip text={$_('ppty.scaling-d')} />
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <Collapsible header={$_('ppty.styles')} active={true}>
-    {#key updateCounter}
-      {#each styles as style (style)}
-        <div animate:flip={{duration: 200}}>
-          <StyleEdit style={style} {subtitles}
-            onsubmit={() => styles = Source.subs.styles}/>
-          <hr>
-        </div>
-      {/each}
-    {/key}
-    <div class='hlayout'>
-      <button onclick={newStyle}>
-        <PlusIcon/>
+  <ConfigTable>
+    <ConfigRow name={$_('ppty.title')}>
+      <input type="text" class='txt' bind:value={metadata.title}
+        onchange={markMetadataChange} />
+    </ConfigRow>
+    <ConfigRow name={$_('ppty.language')}>
+      <input type="text" class='txt' bind:value={metadata.language}
+        onchange={markMetadataChange} />
+    </ConfigRow>
+    <ConfigRow name={$_('ppty.resolution')}>
+      <NumberInput class='res' bind:value={metadata.width}
+        min={1} max={10000}
+        onchange={markMetadataChange}/>
+      ×
+      <NumberInput class='res' bind:value={metadata.height}
+        min={1} max={10000}
+        onchange={markMetadataChange}/>
+      <button disabled={$loadState !== 'loaded'} onclick={() => {
+        Debug.assert(Playback.player?.videoSize !== undefined);
+        Debug.assert(Playback.player?.sampleAspectRatio !== undefined);
+        const [w, h] = Playback.player.videoSize;
+        const sar = Playback.player.sampleAspectRatio;
+        metadata.width = Math.round(w * sar);
+        metadata.height = Math.round(h);
+        markMetadataChange();
+      }}>
+        {$_('ppty.match-video-resolution')}
       </button>
-      <button onclick={manageSavedStyles}>
-        <PackageOpenIcon/>
-      </button>
-      <button onclick={removeUnusedStyles}>
-        {$_('ppty.remove-all-unused')}
-      </button>
-    </div>
-  </Collapsible>
+    </ConfigRow>
+
+    <ConfigRow name={$_('ppty.scaling')}>
+      <NumberInput class='res' bind:value={metadata.scalingFactor}
+        step='any' min={0.01}
+        onchange={markMetadataChange}/>
+      <Tooltip text={$_('ppty.scaling-d')} />
+    </ConfigRow>
+  </ConfigTable>
+
+  <h5>{$_('ppty.styles')}</h5>
+  {#key updateCounter}
+    {#each styles as style (style)}
+      <div animate:flip={{duration: 200}}>
+        <StyleEdit style={style} {subtitles}
+          onsubmit={() => styles = Source.subs.styles}/>
+        <hr>
+      </div>
+    {/each}
+  {/key}
+  <div class='hlayout'>
+    <button onclick={newStyle}>
+      <PlusIcon/>
+    </button>
+    <button onclick={manageSavedStyles}>
+      <PackageOpenIcon/>
+    </button>
+    <button onclick={removeUnusedStyles}>
+      {$_('ppty.remove-all-unused')}
+    </button>
+  </div>
 </div>
 
 <style lang='scss'>
