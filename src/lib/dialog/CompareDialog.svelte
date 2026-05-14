@@ -3,7 +3,7 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import { _ } from 'svelte-i18n';
 import { onMount } from 'svelte';
 
-import { ListView, overlayMenu, showProgress } from '@the_dissidents/svelte-ui';
+import { ConfigRow, ConfigTable, ListView, overlayMenu, showProgress } from '@the_dissidents/svelte-ui';
 import DialogBase from '../DialogBase.svelte';
 
 import type { DiffEntry } from '../bindings/DiffEntry';
@@ -152,11 +152,9 @@ async function exportFile() {
     <h3>{$_('comparedialog.header')}</h3>
   {/snippet}
 
-  <table class="config">
-  <tbody>
-    <tr>
-      <td>{$_('comparedialog.matched-entries')}</td>
-      <td class="hlayout">
+  <ConfigTable>
+    <ConfigRow name={$_('comparedialog.matched-entries')}>
+      <div class="hlayout">
         <button class="left" disabled>{$_('comparedialog.times')}</button>
         <button class="middle"
           onclick={() => data.forEach((x) => x.first && x.second && (x.useFirstTime = true))}
@@ -190,11 +188,10 @@ async function exportFile() {
           onclick={() => data.forEach((x) =>
             x.useFirstText === false && (x.useFirstText = undefined))}
         >{$_('comparedialog.clear-right')}</button>
-      </td>
-    </tr>
-    <tr>
-      <td>{$_('comparedialog.unmatched-entries')}</td>
-      <td class="hlayout">
+      </div>
+    </ConfigRow>
+    <ConfigRow name={$_('comparedialog.unmatched-entries')}>
+      <div class="hlayout">
         <button class="left" disabled>{$_('comparedialog.left-side')}</button>
         <button class="middle"
           onclick={() => data.forEach((x) => x.first && !x.second
@@ -214,16 +211,12 @@ async function exportFile() {
           onclick={() => data.forEach((x) => !x.first && x.second
             && (x.useFirstTime = undefined, x.useFirstText = undefined))}
         >{$_('comparedialog.remove')}</button>
-      </td>
-    </tr>
-    <tr>
-      <td></td>
-      <td>
-        <button onclick={() => exportFile()}>{$_('comparedialog.export')}</button>
-      </td>
-    </tr>
-  </tbody>
-  </table>
+      </div>
+    </ConfigRow>
+    <ConfigRow name="">
+      <button onclick={() => exportFile()}>{$_('comparedialog.export')}</button>
+    </ConfigRow>
+  </ConfigTable>
 
   <ListView columns={[
     ['i1',       { header: '#',     width: 'max-content', align: 'end' }],

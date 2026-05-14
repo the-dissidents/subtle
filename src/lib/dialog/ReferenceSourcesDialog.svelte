@@ -5,7 +5,7 @@ import { guardAsync } from '../frontend/Frontend';
 import { Reference, zReferenceSource, type ReferenceSource, type ReferenceString } from '../frontend/References';
 
 import DialogBase from '../DialogBase.svelte';
-import { Tooltip } from '@the_dissidents/svelte-ui';
+import { ConfigRow, ConfigTable, Tooltip } from '@the_dissidents/svelte-ui';
 
 import { ArrowDownIcon, ArrowUpIcon, CopyPlusIcon, PlusIcon, SquareAsteriskIcon, SquareFunctionIcon, Trash2Icon, XIcon } from '@lucide/svelte';
 import { Menu } from '@tauri-apps/api/menu';
@@ -310,32 +310,27 @@ async function importJSON() {
 
     <div class="vlayout flexgrow settings">
     {#if activeSource.length == 1}
-      <table class="config">
-      <tbody>
-        <tr>
-          <td>{$_('refsourcedialog.name')}</td>
-          <td><input type="text" bind:value={name}
+      <ConfigTable>
+        <ConfigRow name={$_('refsourcedialog.name')}>
+          <input type="text" bind:value={name}
             class={{invalid: !isNameUnique()}}
-            onchange={() => update()}/></td>
-        </tr>
-        <tr>
-          <td>{$_('refsourcedialog.parameters')}</td>
-          <td class="grid">
+            onchange={() => update()}/>
+        </ConfigRow>
+        <ConfigRow name={$_('refsourcedialog.parameters')}>
+          <div class="grid">
             {#each vars as v, i (v)}
               {@render param(i)}
             {/each}
             {@render param()}
-          </td>
-        </tr>
-        <tr>
-          <td>
-            {$_('refsourcedialog.url')}<Tooltip
-              text={$_('refsourcedialog.url-d')} />
-          </td>
-          <td>{@render rstring(url)}</td>
-        </tr>
-      </tbody>
-      </table>
+          </div>
+        </ConfigRow>
+        <ConfigRow name={$_('refsourcedialog.url')}>
+          <div>
+            <Tooltip text={$_('refsourcedialog.url-d')} />
+            {@render rstring(url)}
+          </div>
+        </ConfigRow>
+      </ConfigTable>
       <h5>
         {$_('refsourcedialog.display-options')}<Tooltip
           text={$_('refsourcedialog.display-options-d')} />
@@ -414,9 +409,6 @@ async function importJSON() {
   }
 }
 
-tr {
-  padding: 3px 0;
-}
 .settings {
   width: 30em;
   margin-left: 10px;

@@ -90,7 +90,7 @@ KeybindingManager.register(UntimedCommands);
 <script lang="ts">
 import * as clipboard from "@tauri-apps/plugin-clipboard-manager";
 import * as dialog from "@tauri-apps/plugin-dialog";
-import { Collapsible, NumberInput } from "@the_dissidents/svelte-ui";
+import { Collapsible, ConfigRow, ConfigTable, NumberInput } from "@the_dissidents/svelte-ui";
 import StyleSelect from "../StyleSelect.svelte";
 
 import { onDestroy } from "svelte";
@@ -287,18 +287,14 @@ function clear() {
     bind:value={subs.metadata.special.untimedText}
     bind:this={textarea}></textarea>
   <Collapsible header={$_('untimed.display')}>
-    <table class="config">
-      <tbody>
-        <tr>
-          <td>{$_('untimed.text-size')}</td>
-          <td><input id='size' type='number' bind:value={$textsize}/></td>
-        </tr>
-        <tr>
-          <td>{$_('untimed.justify')}</td>
-          <td><input id='just' type='checkbox' bind:checked={$justify}/></td>
-        </tr>
-      </tbody>
-    </table>
+    <ConfigTable>
+      <ConfigRow name={$_('untimed.text-size')}>
+        <input id='size' type='number' bind:value={$textsize}/>
+      </ConfigRow>
+      <ConfigRow name={$_('untimed.justify')}>
+        <input id='just' type='checkbox' bind:checked={$justify}/>
+      </ConfigRow>
+    </ConfigTable>
   </Collapsible>
   <Collapsible header={$_('untimed.fill-in.header')}>
     <label>
@@ -336,47 +332,34 @@ function clear() {
     helpText={$_('untimed.fuzzy.help')}
   >
     <fieldset disabled={!fuzzy.enabled}>
-      <table class="config">
-        <tbody>
-          <tr>
-            <td>{$_('untimed.fuzzy.channel')}</td>
-            <td><StyleSelect bind:currentStyle={fuzzy.useStyle} /></td>
-          </tr>
-          <tr>
-            <td>{$_('untimed.fuzzy.tokenizer')}</td>
-            <td>
-              <select name="tokenizer" onchange={(x) => {
-                if (x.currentTarget.value != fuzzy.tokenizer) {
-                  fuzzy.tokenizer = x.currentTarget.value as keyof typeof tokenizers;
-                  fuzzy.engine = null;
-                  fuzzyMatch();
-                }
-              }} >
-                <option value="character">{$_('untimed.fuzzy.each-character')}</option>
-                <option value="default">{$_('untimed.fuzzy.word-cjk-character')}</option>
-                <option value="syllable">{$_('untimed.fuzzy.syllable-cjk-character')}</option>
-              </select>
-            </td>
-          </tr>
-          <tr>
-            <td>{$_('untimed.fuzzy.threshold')}</td>
-            <td><NumberInput bind:value={$threshold} onchange={() => fuzzyMatch()}
-              min='0' max='1' step='0.1'/></td>
-          </tr>
-          <tr>
-            <td>{$_('untimed.fuzzy.snap-to-whole-words')}</td>
-            <td>
-              <input type='checkbox' bind:checked={$snapToWord} onchange={() => fuzzyMatch()}/>
-            </td>
-          </tr>
-          <tr>
-            <td>{$_('untimed.fuzzy.snap-to-following-punctuation')}</td>
-            <td>
-              <input type='checkbox' bind:checked={$snapToPunct} onchange={() => fuzzyMatch()}/>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <ConfigTable>
+        <ConfigRow name={$_('untimed.fuzzy.channel')}>
+          <StyleSelect bind:currentStyle={fuzzy.useStyle} />
+        </ConfigRow>
+        <ConfigRow name={$_('untimed.fuzzy.tokenizer')}>
+          <select name="tokenizer" onchange={(x) => {
+            if (x.currentTarget.value != fuzzy.tokenizer) {
+              fuzzy.tokenizer = x.currentTarget.value as keyof typeof tokenizers;
+              fuzzy.engine = null;
+              fuzzyMatch();
+            }
+          }} >
+            <option value="character">{$_('untimed.fuzzy.each-character')}</option>
+            <option value="default">{$_('untimed.fuzzy.word-cjk-character')}</option>
+            <option value="syllable">{$_('untimed.fuzzy.syllable-cjk-character')}</option>
+          </select>
+        </ConfigRow>
+        <ConfigRow name={$_('untimed.fuzzy.threshold')}>
+          <NumberInput bind:value={$threshold} onchange={() => fuzzyMatch()}
+            min='0' max='1' step='0.1'/>
+        </ConfigRow>
+        <ConfigRow name={$_('untimed.fuzzy.snap-to-whole-words')}>
+          <input type='checkbox' bind:checked={$snapToWord} onchange={() => fuzzyMatch()}/>
+        </ConfigRow>
+        <ConfigRow name={$_('untimed.fuzzy.snap-to-following-punctuation')}>
+          <input type='checkbox' bind:checked={$snapToPunct} onchange={() => fuzzyMatch()}/>
+        </ConfigRow>
+      </ConfigTable>
     </fieldset>
     <!-- <i></i> -->
   </Collapsible>
