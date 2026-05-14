@@ -776,6 +776,7 @@
     "top-center": "顶部居中",
     "top-left": "左上",
     "top-right": "右上",
+    "usage-msg": "（{n}）",
     "validator": "验证条件",
     "wrap-balanced": "平衡",
     "wrap-greedy": "贪心（总是在最后换行）",

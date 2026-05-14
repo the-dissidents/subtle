@@ -133,7 +133,6 @@ async function manageSavedStyles() {
       <div animate:flip={{duration: 200}}>
         <StyleEdit style={style} {subtitles}
           onsubmit={() => styles = Source.subs.styles}/>
-        <hr>
       </div>
     {/each}
   {/key}

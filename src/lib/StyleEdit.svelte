@@ -139,7 +139,23 @@ async function contextMenu() {
   ]});
   menu.popup();
 }
+
+let update = $state(0);
+const me = {};
+Source.onSubtitlesChanged.bind(me, (t) => {
+  if (t == ChangeType.General || t == ChangeType.Times)
+    update++;
+})
 </script>
+
+<Collapsible active={true}>
+
+{#snippet header()}
+  {#key update}
+  {@const n = subtitles.entries.filter((x) => x.texts.has($style)).length}
+    {$style.name} <span class="usage">{$_('style.usage-msg', {values: { n }})}</span>
+  {/key}
+{/snippet}
 
 <div class='hlayout'>
   <!-- toolbar -->
@@ -338,6 +354,8 @@ async function contextMenu() {
   </div>
 </div>
 
+</Collapsible>
+
 <style lang='scss'>
 .duplicate {
   background-color: lightcoral;
@@ -358,6 +376,10 @@ async function contextMenu() {
   white-space: nowrap;
   padding-right: 5px;
   font-family: 'Times New Roman', Times, serif;
+}
+
+.usage {
+  color: gray
 }
 
 button {

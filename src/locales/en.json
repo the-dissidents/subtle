@@ -744,6 +744,7 @@
     "top-center": "top center",
     "top-left": "top left",
     "top-right": "top right",
+    "usage-msg": "({n} {n,plural,one{entry} other{entries}})",
     "validator": "validator",
     "wrap-balanced": "balanced",
     "wrap-greedy": "greedy (wrap at end-of-line)",

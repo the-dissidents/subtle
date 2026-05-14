@@ -5,7 +5,7 @@ import { guardAsync } from '../frontend/Frontend';
 import { Reference, zReferenceSource, type ReferenceSource, type ReferenceString } from '../frontend/References';
 
 import DialogBase from '../DialogBase.svelte';
-import { ConfigRow, ConfigTable, Tooltip } from '@the_dissidents/svelte-ui';
+import { ButtonStrip, ConfigRow, ConfigTable, StripItem, Tooltip } from '@the_dissidents/svelte-ui';
 
 import { ArrowDownIcon, ArrowUpIcon, CopyPlusIcon, PlusIcon, SquareAsteriskIcon, SquareFunctionIcon, Trash2Icon, XIcon } from '@lucide/svelte';
 import { Menu } from '@tauri-apps/api/menu';
@@ -281,22 +281,22 @@ async function importJSON() {
           <Trash2Icon />
         </button>
       </div>
-      <div class="hlayout">
-        <button class="flexgrow left"
+      <ButtonStrip>
+        <StripItem
           onclick={async () => {
             if (!await confirm($_('refsourcedialog.confirm-reset'))) return;
             $sources = structuredClone(Reference.defaultSources);
             activeSource = [];
           }}>
           {$_('refsourcedialog.reset-all')}
-        </button>
-        <button class="flexgrow middle" onclick={() => importJSON()}>
+        </StripItem>
+        <StripItem onclick={() => importJSON()}>
           {$_('refsourcedialog.import')}
-        </button>
-        <button class="flexgrow right" onclick={() => exportJSON()}>
+        </StripItem>
+        <StripItem onclick={() => exportJSON()}>
           {$_('refsourcedialog.export')}
-        </button>
-      </div>
+        </StripItem>
+      </ButtonStrip>
 
       <select multiple style="width: 15em; min-height: 15em" class="flexgrow"
         bind:value={activeSource}
@@ -426,6 +426,10 @@ async function importJSON() {
 label {
   /* font-size: 100%; */
   margin: 5px;
+}
+select[multiple] {
+  margin-top: 5px;
+  font-size: var(--input-font-size);
 }
 .target {
   padding-left: 3em;
