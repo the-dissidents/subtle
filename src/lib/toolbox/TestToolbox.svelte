@@ -97,6 +97,12 @@ let rich: RichText = $state([
 </script>
 
 <button onclick={async () => {
+  await dialog.save({
+    filters: [{name: 'HTML', extensions: ['html']}],
+  });
+}}>test save dialog</button>
+
+<button onclick={async () => {
   DialogCommands.compareDialog.call();
 }}>compare</button>
 

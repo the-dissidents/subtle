@@ -3,10 +3,10 @@ import type { SubtitleParser } from "../core/Subtitles.svelte";
 import { ASSParser, type ASSParseMessage } from "../core/ASS.svelte";
 import { Debug } from "../Debug";
 
-import { _, unwrapFunctionStore } from 'svelte-i18n';
 import type { SRTParseMessage, SRTParser } from "../core/SRT.svelte";
 import type { JSONParseMessage, JSONParser } from "../core/JSON.svelte";
 import { openDialog } from "../DialogOutlet.svelte";
+import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 async function show<P extends SubtitleParser>(
