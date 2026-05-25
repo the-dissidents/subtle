@@ -66,7 +66,7 @@ function format(
                 Debug.never(x.type);
         }
     });
-    
+
     return style;
 }
 
@@ -136,9 +136,9 @@ function lineBreakKnuthPlass(chunks: LayoutChunk[], lineWidth: number): Line[] {
         Debug.assert(lastBreak[i] !== i);
     }
 
-    let lastLine = emptyLine(),
-        lines: Line[] = [];
-    
+    let lastLine = emptyLine();
+    const lines: Line[] = [];
+
     chunks.forEach((c, i) => {
         if (breaks.at(0) == i) {
             breaks.shift();
@@ -157,9 +157,9 @@ function lineBreakKnuthPlass(chunks: LayoutChunk[], lineWidth: number): Line[] {
 }
 
 function lineBreakGreedy(chunks: LayoutChunk[], lineWidth: number): Line[] {
-    let lastLine = emptyLine(),
-        lines: Line[] = [];
-    
+    let lastLine = emptyLine();
+    const lines: Line[] = [];
+
     chunks.forEach((c, i) => {
         let delta = c.width + (lastLine.chunks.at(-1)?.spaceWidth ?? 0);
         if (lastLine.width + delta > lineWidth && i > 0) {
@@ -181,7 +181,7 @@ function lineBreakGreedy(chunks: LayoutChunk[], lineWidth: number): Line[] {
 function lineBreakNone(chunks: LayoutChunk[], _lineWidth: number): Line[] {
     return [{
         chunks,
-        width: chunks.reduce((p, x, i) => p + x.width 
+        width: chunks.reduce((p, x, i) => p + x.width
             + (i == chunks.length - 1 ? 0 : x.spaceWidth), 0),
         height: chunks.reduce((p, x) => Math.max(p, x.height), 0),
         maxAscent: chunks.reduce((p, x) => Math.max(p, x.maxAscent), 0),
@@ -265,7 +265,7 @@ export function layoutText(
             Debug.assert(lastChunk.spaceWidth == 0);
             const spaceWidth = ctx.measureText(spaces).width;
             lastChunk.spaceWidth = spaceWidth;
-            
+
             submitWord();
         }
 
@@ -304,7 +304,7 @@ export function layoutText(
             processNode(part);
     } else
         processNode(text);
-    
+
     newLine();
 
     const warpStyle = opts?.warpStyle ?? WrapStyle.Balanced;

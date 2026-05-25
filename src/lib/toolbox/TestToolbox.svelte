@@ -12,14 +12,15 @@ import { Source, SourceCommands } from '../frontend/Source';
 import { DialogCommands } from "../frontend/Dialogs";
 import { Typography } from '../details/Typography';
 import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy";
-import type { RichText } from "../core/RichText";
 
 import { Tooltip, type TooltipPosition } from "@the_dissidents/svelte-ui";
-import { OrderableList } from '@the_dissidents/svelte-ui';
-import RichEdit from "../component/richedit/RichEdit.svelte";
 import { Fonts } from "../Fonts";
 import { Dialog } from "../dialog";
 import { openDialog } from "../DialogOutlet.svelte";
+
+import { BracketSetPresets } from "../linter/brackets/Presets";
+import { BracketLinter, type BracketSet } from "../linter/brackets/Brackets";
+import { Diagnostic } from "../linter/Common";
 
 
 let result = $state("");
@@ -38,14 +39,6 @@ let haystack = $state('');
 let needle = $state('');
 
 let fontname = $state('Arial');
-
-let list = $state([
-  {text: '123'},
-  {text: 'abc'},
-  {text: '543t635'},
-  {text: 'aeewwwbc'},
-  {text: 'abdfcc'}
-]);
 
 const command = new UICommand(() => '', [], {
   name: 'name',
@@ -89,11 +82,9 @@ function testAssertion() {
   Debug.assert(false);
 }
 
-let rich: RichText = $state([
-  'abc',
-  { type: 'leaf', content: 'def', attrs: ['bold'] },
-  'ghi'
-]);
+let bracketPreset: keyof typeof BracketSetPresets = $state('curlyQuotes');
+let bracketResult = $state('');
+let forbidDeepNesting = $state(true);
 </script>
 
 <button onclick={async () => {
@@ -112,8 +103,6 @@ let rich: RichText = $state([
   }}>
   ffmpeg config
 </button>
-
-<RichEdit bind:text={rich}></RichEdit>
 
 <label>
   <input type='checkbox' bind:checked={hwaccel} />
@@ -222,15 +211,36 @@ let rich: RichText = $state([
 
 <br>
 
-<OrderableList list={list}>
-  {#snippet row(item)}
-    <input type="text" bind:value={item.text} />
-  {/snippet}
-</OrderableList>
+<textarea bind:this={textarea} bind:value={haystack} style:width="100%"></textarea>
+
+<h5>brackets</h5>
+<select bind:value={bracketPreset}>
+  {#each Object.keys(BracketSetPresets) as key}
+    <option value={key}>{key}</option>
+  {/each}
+</select>
+<button onclick={() => {
+  const preset: BracketSet = {
+    ...BracketSetPresets[bracketPreset],
+    deepNestingPolicy: forbidDeepNesting ? 'forbid' : 'cycle'
+  };
+  const linter = new BracketLinter([preset]);
+  bracketResult = linter.check(haystack)
+    .map((x) => Diagnostic.prettyPrint(x, haystack)).join('\n\n');
+  if (bracketResult == '')
+    bracketResult = 'no problems';
+}}>check</button>
+<label>
+  <input type='checkbox' bind:checked={forbidDeepNesting}>
+  forbid deeply nested brackets
+</label>
 
 <br>
+<pre style="overflow-x: scroll; white-space: pre; width: 100%; padding: 0; margin: 0">
+<code>{bracketResult}</code>
+</pre>
 
-<textarea bind:this={textarea} bind:value={haystack} style:width="100%"></textarea>
+<h5>fuzzy</h5>
 <input type="text" bind:value={needle}/>
 <button onclick={() => testFuzzy(CharacterTokenizer)}>chartok</button>
 <button onclick={() => testFuzzy(DefaultTokenizer)}>deftok</button>

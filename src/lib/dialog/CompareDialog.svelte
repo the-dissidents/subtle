@@ -18,8 +18,6 @@ import { Interface } from '../frontend/Interface';
 import { Source } from '../frontend/Source';
 import { InputConfig } from "../config/Groups";
 import { constructData, constructHTMLReport, constructOutput, type DataEntry } from "./CompareReport";
-import { Debug } from "../Debug";
-  import { documentDir } from "@tauri-apps/api/path";
 
 interface Props {
   args: [style: SubtitleStyle],
