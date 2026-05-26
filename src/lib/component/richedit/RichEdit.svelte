@@ -14,18 +14,21 @@
 
   import { onDestroy, onMount } from "svelte";
   import type { SvelteHTMLElements } from 'svelte/elements';
+  import type { Diagnostic } from "../../linter/Common";
+  import { Linter, LinterKey } from "./Lint";
 
   type DIV = SvelteHTMLElements['div'];
 
   interface Props extends DIV {
     text: RichText,
+    diagnostics: Diagnostic[],
     deinit?: () => void,
     onBlur?: (x: RichText) => void,
     onFocus?: (x: RichText) => void,
     onInput?: (x: RichText) => void,
   };
 
-  let { text = $bindable(), onBlur, onFocus, onInput, deinit, ...rest }: Props = $props();
+  let { text = $bindable(), diagnostics, onBlur, onFocus, onInput, deinit, ...rest }: Props = $props();
 
   export function selection() {
     return [selStart, selEnd] as const;
@@ -87,6 +90,11 @@
   const italic = toggleMark(RichTextSchema.marks.italic);
   const underline = toggleMark(RichTextSchema.marks.underline);
 
+  $effect(() => {
+    if (diagnostics && view)
+      view.dispatch(view.state.tr.setMeta(LinterKey, diagnostics));
+  });
+
   onMount(() => {
     let state = EditorState.create({
       schema: RichTextSchema,
@@ -109,6 +117,7 @@
           "Mod-u": underline,
         }),
         VirtualSelection,
+        Linter(),
         new Plugin({
           appendTransaction(tr, oldState, newState) {
             if (!oldState.selection.eq(newState.selection)) {

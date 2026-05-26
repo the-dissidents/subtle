@@ -60,6 +60,7 @@ import DialogOutlet, { openDialog } from './lib/DialogOutlet.svelte';
 
 import * as z from "zod/v4-mini";
 import { initWindowMenu } from './lib/WindowMenu';
+  import ReviewToolbox from './lib/toolbox/ReviewToolbox.svelte';
 
 Debug.init();
 
@@ -348,6 +349,10 @@ observer.observe({ type: 'paint', buffered: true });
               </Tooltip>
             {/snippet}
             <ReferencesToolbox/>
+          </TabPage>
+          <TabPage id='review'>
+            {#snippet header()}{$_('tab.review')}{/snippet}
+            <ReviewToolbox/>
           </TabPage>
           <TabPage id='test'>
             {#snippet header()}Test{/snippet}

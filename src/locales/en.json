@@ -132,6 +132,19 @@
     "false": "false",
     "true": "true"
   },
+  "bracket": {
+    "stray-unclosed": "Stray '{a}'. Bracket was left unclosed."
+  },
+  "brackets": {
+    "expected-primary-closing": "Expected a primary closing bracket.",
+    "expected-primary-opening": "Expected a primary opening bracket.",
+    "expected-secondary-closing": "Expected a secondary closing bracket.",
+    "expected-secondary-opening": "Expected a secondary opening bracket.",
+    "incorrect-direction": "Incorrect direction for `{a}`.",
+    "non-preferred": "Use of non-preferred bracket form `{a}`.",
+    "stray-closing": "Stray `{a}`. Closing bracket without a matching open bracket.",
+    "too-deeply-nested": "Brackets are too deeply nested."
+  },
   "bugdialog": {
     "create-issue": "Create issue",
     "header": "report issues",
@@ -155,11 +168,13 @@
     "edit-entry": "edit entry text",
     "exchange-channel": "exchange channels",
     "fill-with-untimed": "fill entries with untimed text",
+    "fix-lint-problems": "fix lint problems",
     "fuzzy-replace": "fuzzy match and replace",
     "hold-to-create-entry": "hold to create entry",
     "import-file": "import file",
     "insert-channel": "add channel",
     "label": "edit label",
+    "lint-profile": "edit lint profile",
     "metadata": "edit metadata",
     "move-entries": "move entries",
     "positioning": "edit positioning",
@@ -490,6 +505,18 @@
     "red": "red",
     "yellow": "yellow"
   },
+  "lint": {
+    "bracket-checking": "bracket checking",
+    "clear": "clear",
+    "corner-quotes": "corner quotes",
+    "curly-quotes": "curly quotes (double outside)",
+    "edit-lint-profile": "edit lint profile",
+    "french-guillemet": "French guillemets",
+    "fullwidth-parens": "fullwidth parentheses",
+    "halfwidth-parens": "halfwidth parentheses",
+    "inverted-curly-quotes": "curly quotes (single outside)",
+    "unchecked": "unchecked"
+  },
   "menu": {
     "audio-stream-current": "(current)",
     "bug": "Report bugs",
@@ -649,6 +676,11 @@
     "url-d": "Anchors (e.g. #English) are not supported. To automatically navigate to a specified element, enable \"Use auto-scroll\"",
     "use-auto-scroll": "use auto-scroll"
   },
+  "review": {
+    "auto-fix-problems": "fixed{m,plural,=0 { all} other {}} {n,plural,=1 {# problem} other {# problems}}",
+    "n-problems-cannot-be-fixed-automatically": " ({n,plural,one {# problem} other {# problems}} cannot be fixed automatically)",
+    "nothing-to-fix": "nothing to fix"
+  },
   "richedit": {
     "override-styles": "style override"
   },
@@ -728,6 +760,9 @@
     "left": "left:",
     "line-color": "line color:",
     "line-size": "line size:",
+    "lint-disabled": "disabled",
+    "lint-edit": "edit",
+    "lint-enabled": "enabled",
     "margins": "margins:",
     "more-styling": "more styling",
     "name": "name:",
@@ -754,6 +789,7 @@
   "tab": {
     "properties": "Properties",
     "references": "References",
+    "review": "Review",
     "search-replace": "Search/Replace",
     "untimed-text": "Untimed text"
   },
@@ -761,6 +797,7 @@
     "add-column": "add column",
     "edit-columns": "edit columns",
     "end": "end",
+    "lint-messages": "Lint message{n,plural,one{} other{s}}:",
     "requirement-not-met": "Requirement{n,plural,one{} other{s}} not met:",
     "start": "start",
     "style": "style",

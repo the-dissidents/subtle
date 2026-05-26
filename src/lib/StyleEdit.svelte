@@ -18,6 +18,9 @@ import FilterEdit from "./FilterEdit.svelte";
 import FontSelect from "./FontSelect.svelte";
 import Colorpicker from "./ui/Colorpicker.svelte";
 
+import { openDialog } from "./DialogOutlet.svelte";
+import { Dialog } from "./dialog";
+
 interface Props {
   style: SubtitleStyle;
   subtitles: Subtitles;
@@ -27,7 +30,6 @@ interface Props {
 let { style: _style, subtitles = $bindable(), onsubmit }: Props = $props();
 let alignSelector: HTMLSelectElement | undefined = $state();
 let wrapSelector: HTMLSelectElement | undefined = $state();
-let button: HTMLButtonElement | undefined = $state();
 let duplicateWarning = $state(false);
 let style = writable(_style);
 
@@ -205,9 +207,9 @@ Source.onSubtitlesChanged.bind(me, (t) => {
       }}
       aria-label='move down'
     ><ArrowDown /></button><br/>
-    <button bind:this={button} onclick={() => contextMenu()}
-      aria-label='more'
-    ><MoreHorizontalIcon /></button><br/>
+    <button onclick={() => contextMenu()} aria-label='more'>
+      <MoreHorizontalIcon />
+    </button><br/>
   </div>
   <!-- properties -->
   <div class="flexgrow vlayout">
@@ -262,6 +264,31 @@ Source.onSubtitlesChanged.bind(me, (t) => {
           onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
           /><s>S</s></label>
         </div>
+      </ConfigRow>
+      <ConfigRow name={$_('style.lint-profile')}>
+        <label>
+          <input type='checkbox' class="button" checked={!!$style.lintProfile}
+            onclick={(e) => {
+              if (e.currentTarget.checked) {
+                if (!$style.lintProfile)
+                  $style.lintProfile = { bracketGroups: [] };
+              } else {
+                $style.lintProfile = null;
+              }
+            }}>
+          {$style.lintProfile ? $_('style.lint-enabled') : $_('style.lint-disabled')}
+        </label>
+        {#if $style.lintProfile}
+          <button type='button' onclick={async () => {
+            const result = await openDialog(Dialog.lintProfile, $style.lintProfile!);
+            if (result) {
+              $style.lintProfile = result;
+              Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
+            }
+          }}>
+            {$_('style.lint-edit')}
+          </button>
+        {/if}
       </ConfigRow>
     </ConfigTable>
     <!-- validator -->
@@ -380,11 +407,6 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 
 .usage {
   color: gray
-}
-
-button {
-  width: 25px;
-  /* height: 20px; */
 }
 
 input {

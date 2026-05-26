@@ -9,6 +9,8 @@ import { TableConfig } from "./Config";
 import { _ } from "svelte-i18n";
 import { applyStyle, layoutText, toCSSStyle, WrapStyle, type EvaluatedStyle, type Line } from "../../details/TextLayout";
 import { RichText } from "../../core/RichText";
+import type { Diagnostic } from "../../linter/Common";
+import { CompiledLintProfile } from "../../core/LintProfile";
 
 export type Column = {
     metric: keyof typeof Metrics,
@@ -28,16 +30,18 @@ export type ChannelLayout = {
     line: number, height: number,
     failed: SimpleMetricFilter[],
     cells: Cell[],
+    content: RichText,
+    diagnostics: Diagnostic[]
 };
 
 type Cell = {
     text: RichText,
-    layout: Line[]
+    layout: Line[],
 };
 
 type EntryLayout = {
-    entry: SubtitleEntry, 
-    line: number, 
+    entry: SubtitleEntry,
+    line: number,
     height: number,
     texts: ChannelLayout[],
     cells: Cell[],
@@ -64,14 +68,16 @@ export class TableLayout {
     manager: CanvasManager;
     entryColumns = $state<Column[]>([{ metric: 'startTime' }, { metric: 'endTime' }]);
     channelColumns = $state<Column[]>([{ metric: 'style' }, { metric: 'content' }]);
-    indexColumnLayout: ColumnLayout = 
+    indexColumnLayout: ColumnLayout =
         { name: '#', align: 'end', position: 0, textX: -1, width: -1 };
 
     entries: EntryLayout[] = [];
     lineMap = new WeakMap<SubtitleEntry, {line: number, height: number}>();
     totalLines = 0;
 
-    requestedLayout = true;
+    requestedLayout: false | {
+        lint: boolean
+    } = { lint: true };
 
     constructor(canvas: HTMLCanvasElement) {
         this.manager = new CanvasManager(canvas);
@@ -81,13 +87,13 @@ export class TableLayout {
         this.manager.canBeginDrag = (ev) => ev.offsetY > this.headerHeight / this.manager.scale;
 
         MainConfig.hook(
-            () => [InterfaceConfig.data.fontSize, InterfaceConfig.data.fontFamily], 
+            () => [InterfaceConfig.data.fontSize, InterfaceConfig.data.fontFamily],
             () => {
-                this.requestedLayout = true;
+                this.requestedLayout = { lint: false };
                 this.manager.requestRender();
             });
         MainConfig.hook(
-            () => TableConfig.data.maxZoom, 
+            () => TableConfig.data.maxZoom,
             (zoom) => this.manager.setMaxZoom(zoom));
 
         Source.onSubtitleObjectReload.bind(this, () => {
@@ -99,15 +105,17 @@ export class TableLayout {
                 // the only way columns are updated is through the subtitle table
                 // updateColumns();
             } else if (t !== ChangeType.Metadata) {
-                this.requestedLayout = true;
+                this.requestedLayout = {
+                    lint: t == ChangeType.LintProfile
+                };
                 this.manager.requestRender();
             }
         });
     }
 
     layout(ctx: CanvasRenderingContext2D) {
-        this.requestedLayout = false;
         const startTime = performance.now();
+
         ctx.resetTransform();
         ctx.scale(devicePixelRatio, devicePixelRatio);
 
@@ -118,8 +126,8 @@ export class TableLayout {
             const name = metric.shortName();
             col.layout = {
                 name, align: 'start',
-                position: -1, 
-                width: ctx.measureText(name).width + this.cellPadding * 2, 
+                position: -1,
+                width: ctx.measureText(name).width + this.cellPadding * 2,
                 textX: -1
             };
         }
@@ -130,6 +138,9 @@ export class TableLayout {
             height: number;
         }>();
 
+        const linters = new Map(Source.subs.styles.map((x) =>
+            [x, x.lintProfile ? new CompiledLintProfile(x.lintProfile) : undefined] as const));
+
         this.totalLines = 0;
         Source.subs.entries.forEach((entry, i) => {
             let entryColumnsHeight = 1;
@@ -137,10 +148,12 @@ export class TableLayout {
 
             const cells: Cell[] = this.entryColumns.map((col, j) => {
                 const metric = Metrics[col.metric];
+
                 const text = metric.textValue(entry, Source.subs.defaultStyle);
-                const oldLayout = oldEntry?.cells[j];
-                const layout = (oldLayout && RichText.equals(oldLayout.text, text)) 
-                    ? oldLayout.layout 
+                const oldCell = oldEntry?.cells[j];
+
+                const layout = (oldCell && RichText.equals(oldCell.text, text))
+                    ? oldCell.layout
                     : layoutText(text, ctx, {
                         baseStyle: metric.type.isMonospace
                             ? this.baseStyleMonospace : this.baseStyle,
@@ -159,15 +172,17 @@ export class TableLayout {
 
             let j = 0;
             for (const style of Source.subs.styles) {
-                if (!entry.texts.has(style)) continue;
+                const content = entry.texts.get(style);
+                if (content === undefined) continue;
 
-                let lineHeight = 1;
                 const oldChannel = oldEntry?.texts[j];
+                let lineHeight = 1;
+
                 const cells: Cell[] = this.channelColumns.map((col, k) => {
                     const text = Metrics[col.metric].textValue(entry, style);
                     const oldLayout = oldChannel?.cells[k];
-                    const layout = (oldLayout && RichText.equals(oldLayout.text, text)) 
-                        ? oldLayout.layout 
+                    const layout = (oldLayout && RichText.equals(oldLayout.text, text))
+                        ? oldLayout.layout
                         : layoutText(text, ctx, {
                             baseStyle: this.baseStyle,
                             warpStyle: WrapStyle.NoWrap,
@@ -180,10 +195,16 @@ export class TableLayout {
                     return { text, layout };
                 });
 
+                const diagnostics = (oldChannel && RichText.equals(oldChannel.content, content)
+                                  && this.requestedLayout && !this.requestedLayout.lint)
+                    ? oldChannel.diagnostics
+                    : linters.get(style)?.check(RichText.toString(content)) ?? [];
+
                 texts.push({
                     style, height: lineHeight,
+                    content, diagnostics,
                     line: this.totalLines + entryHeight, cells,
-                    failed: style.validator === null 
+                    failed: style.validator === null
                         ? [] : Filter.evaluate(style.validator, entry, style).failed
                 });
                 entryHeight += lineHeight;
@@ -202,14 +223,14 @@ export class TableLayout {
 
         let pos = 0;
         this.indexColumnLayout.position = 0;
-        this.indexColumnLayout.width = this.cellPadding * 2 
+        this.indexColumnLayout.width = this.cellPadding * 2
             + ctx.measureText(`${Math.max(this.entries.length+1, 100)}`).width;
         this.indexColumnLayout.textX = this.indexColumnLayout.width - this.cellPadding;
         pos += this.indexColumnLayout.width;
 
         for (const col of [...this.entryColumns, ...this.channelColumns]) {
             col.layout!.position = pos;
-            col.layout!.textX = 
+            col.layout!.textX =
                   col.layout!.align == 'start'  ? col.layout!.position + this.cellPadding
                 : col.layout!.align == 'end'    ? col.layout!.position + col.layout!.width - this.cellPadding
                 : col.layout!.align == 'center' ? col.layout!.position + col.layout!.width * 0.5
@@ -222,9 +243,11 @@ export class TableLayout {
             b: (this.totalLines + 1) * this.lineHeight + this.headerHeight + this.manager.scrollerSize
             // add 1 for virtual entry
         });
+
         const elapsed = performance.now() - startTime;
-        
         Debug.debug(`layout took ${elapsed.toFixed(1)}ms`);
+
+        this.requestedLayout = false;
     }
 
     #updateColumns() {
@@ -232,7 +255,7 @@ export class TableLayout {
             .map((x) => ({metric: x as keyof typeof Metrics, layout: undefined}));
         this.channelColumns = Source.subs.view.perChannelColumns
             .map((x) => ({metric: x as keyof typeof Metrics, layout: undefined}));
-        this.requestedLayout = true;
+        this.requestedLayout = { lint: false };
         this.manager.requestRender();
     }
 
@@ -240,7 +263,7 @@ export class TableLayout {
         Source.subs.view.perEntryColumns = this.entryColumns.map((x) => x.metric);
         Source.subs.view.perChannelColumns = this.channelColumns.map((x) => x.metric);
         Source.markChanged(ChangeType.View, get(_)('c.column-view'));
-        this.requestedLayout = true;
+        this.requestedLayout = { lint: false };
         this.manager.requestRender();
     }
 }

@@ -22,13 +22,11 @@ import { BracketSetPresets } from "../linter/brackets/Presets";
 import { BracketLinter, type BracketSet } from "../linter/brackets/Brackets";
 import { Diagnostic } from "../linter/Common";
 
-
 let result = $state("");
-MAPI.version().then((x) => {
-  Fonts.onInit(async () => {
-    const arial = (await Fonts.getFamily('Arial'))!;
-    result = `ffmpeg version is ${x}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}; fonts got ${arial.map((x) => `${x.fullName}=${x.realHeight}`)}`;
-  });
+Fonts.onInit(async () => {
+  const version = await MAPI.version();
+  const arial = (await Fonts.getFamily('Arial'))!;
+  result = `ffmpeg version is ${version}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}; fonts got ${arial.map((x) => `${x.fullName}=${x.realHeight}`)}`;
 });
 
 let hwaccel = $state(false);
@@ -86,6 +84,10 @@ let bracketPreset: keyof typeof BracketSetPresets = $state('curlyQuotes');
 let bracketResult = $state('');
 let forbidDeepNesting = $state(true);
 </script>
+
+<button onclick={async () => {
+  openDialog(Dialog.lintProfile, { bracketGroups: ['curlyQuotes', 'halfwidthParentheses'] });
+}}>test lint profile dialog</button>
 
 <button onclick={async () => {
   await dialog.save({

@@ -42,8 +42,8 @@ importers:
         specifier: ~2.4.1
         version: 2.4.1
       '@the_dissidents/svelte-ui':
-        specifier: ^0.0.11
-        version: 0.0.11(svelte@5.55.7(@typescript-eslint/types@8.59.3))
+        specifier: ^0.0.12
+        version: 0.0.12(svelte@5.55.7(@typescript-eslint/types@8.59.3))
       '@traversable/zod':
         specifier: ^0.0.57
         version: 0.0.57(zod@4.4.3)
@@ -1005,8 +1005,8 @@ packages:
   '@tauri-apps/plugin-window-state@2.4.1':
     resolution: {integrity: sha512-OuvdrzyY8Q5Dbzpj+GcrnV1iCeoZbcFdzMjanZMMcAEUNy/6PH5pxZPXpaZLOR7whlzXiuzx0L9EKZbH7zpdRw==}
 
-  '@the_dissidents/svelte-ui@0.0.11':
-    resolution: {integrity: sha512-SF1paLhCXPIHkO5Ue2aVsgqe7wH3bun0+UVgdqqeSIqNlJKnd2vteRk0sytS50fMyTsSPKq9loF5fC1s8AVmIA==}
+  '@the_dissidents/svelte-ui@0.0.12':
+    resolution: {integrity: sha512-881IR9j6CjcLentoOfOx2VW/AUHlAnrJlqv7d2soziyrgt4CuGYJf8IYAh/PX2stIbRoNp6SpfRHnJnJbv1unQ==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -3023,7 +3023,7 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.11.0
 
-  '@the_dissidents/svelte-ui@0.0.11(svelte@5.55.7(@typescript-eslint/types@8.59.3))':
+  '@the_dissidents/svelte-ui@0.0.12(svelte@5.55.7(@typescript-eslint/types@8.59.3))':
     dependencies:
       '@lucide/svelte': 1.16.0(svelte@5.55.7(@typescript-eslint/types@8.59.3))
       colorjs.io: 0.6.1

@@ -68,7 +68,6 @@ export const BracketSetPresets = {
             BracketPresets.fullwidthParentheses
         ],
     },
-
     fullwidthParentheses: {
         preferred: BracketPresets.fullwidthParentheses,
         nonPreferred: [

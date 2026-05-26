@@ -41,6 +41,7 @@ export enum ChangeType {
     Times,     // i.e. renderer needs to re-sort
     Order,
     Filter,
+    LintProfile,
     View,
     StyleDefinitions,
     General,   // TODO: this is unclear
@@ -111,7 +112,7 @@ async function doAutoSave() {
         Source.onSubtitleWillSave.dispatch(true);
         const text = Format.JSON.write(Source.subs).toString();
         await fs.writeTextFile(
-            await join('autosave', autoSaveName), text, 
+            await join('autosave', autoSaveName), text,
             { baseDir: fs.BaseDirectory.AppLocalData });
         changedSinceLastAutosave = false;
         Debug.info('autosaved', currentFile ?? '<untitled>');
@@ -134,7 +135,7 @@ async function cleanAutosave() {
             if (!isFile) return;
             const match = regex.exec(name);
             if (match && match[1] < old) {
-                await fs.remove(await join('autosave', name), 
+                await fs.remove(await join('autosave', name),
                     { baseDir: fs.BaseDirectory.AppLocalData });
                 Debug.trace('cleaned autosave:', name);
             }
@@ -143,7 +144,7 @@ async function cleanAutosave() {
 }
 
 const zFileSaveState = z.object({
-    name: z.string(), 
+    name: z.string(),
     video: z.optional(z.string()),
     audioStream: z.optional(z.int()),
 });
@@ -263,7 +264,7 @@ export const Source = {
         Editing.clearSelection();
         Editing.focused.style.set(newSubs.defaultStyle);
         currentFile.set(
-            (newSubs.migrated !== 'none' 
+            (newSubs.migrated !== 'none'
                 && newSubs.migrated !== 'olderVersion') ? '' : path);
         fileChanged.set(newSubs.migrated == 'olderVersion');
         changedSinceLastAutosave = false;

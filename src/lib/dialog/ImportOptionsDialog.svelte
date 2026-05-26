@@ -28,7 +28,7 @@ onMount(async () => {
     return close(null);
 
   return close({
-    style: 
+    style:
         styleOption == 'createNewOverride' ? { type: styleOption, name: overrideStyleName }
       : styleOption == 'override' ? { type: styleOption, overrideStyle }
       : { type: styleOption },
@@ -58,7 +58,7 @@ let overrideMetadata = $state(false);
     localizedName: () => $_('ok'),
     disabled: () => styleOption == 'createNewOverride' && duplicateWarning
   }
-]}><form>
+]}>
   <ConfigTable>
     <ConfigRow name={$_('importdialog.metadata')}>
       <label>
@@ -103,10 +103,10 @@ let overrideMetadata = $state(false);
       <label>
         <input type="radio" value="createNewOverride" bind:group={styleOption}/>
         {$_('importdialog.use-new-for-all')}
-        <input type='text' 
+        <input type='text'
           disabled={styleOption != 'createNewOverride'}
           class={{duplicate: duplicateWarning}}
-          oninput={() => duplicateWarning = !subs 
+          oninput={() => duplicateWarning = !subs
             || subs.styles.find((x) => x.name == overrideStyleName) !== undefined
             || overrideStyleName == ''}
           bind:value={overrideStyleName} />
@@ -114,19 +114,19 @@ let overrideMetadata = $state(false);
     </ConfigRow>
     <ConfigRow name={$_('importdialog.options')}>
       <label>
-        <input type="radio" value="usedOnly" 
+        <input type="radio" value="usedOnly"
           bind:group={selectOption} disabled={!hasStyles} />
         {$_('importdialog.import-styles-that-are-used')}
       </label><br/>
 
       <label>
-        <input type="radio" value="all" 
+        <input type="radio" value="all"
           bind:group={selectOption} disabled={!hasStyles} />
         {$_('importdialog.import-unused-styles-as-well')}
       </label><br/>
 
       <label>
-        <input type="radio" value="onlyStyles" 
+        <input type="radio" value="onlyStyles"
           bind:group={selectOption} disabled={!hasStyles} />
         {$_('importdialog.import-only-styles-and-no-subtitles')}
       </label><br/>
@@ -154,7 +154,7 @@ let overrideMetadata = $state(false);
       </label><br/>
     </ConfigRow>
   </ConfigTable>
-</form></DialogBase>
+</DialogBase>
 
 <style lang='scss'>
 .duplicate:not([disabled]) {

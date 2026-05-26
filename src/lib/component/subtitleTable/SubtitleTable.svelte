@@ -14,14 +14,15 @@ import { Menu } from "@tauri-apps/api/menu";
 import { DeleteIcon, PenLineIcon, PlusIcon } from "@lucide/svelte";
 import { onDestroy, onMount } from "svelte";
 import { _, locale } from 'svelte-i18n';
+  import MessagePopup from "./MessagePopup.svelte";
 
 let canvas = $state<HTMLCanvasElement>();
 let uiFocus = Frontend.uiFocus;
 
 let layout: TableLayout | undefined = $state();
-let input: TableInput | undefined = $state();
+let _input: TableInput | undefined = $state();
 
-let validationMessagePopup: Popup;
+let popup: MessagePopup;
 let columnPopup: Popup;
 
 const me = {};
@@ -29,9 +30,9 @@ onDestroy(() => EventHost.unbind(me));
 
 onMount(() => {
   Debug.assert(canvas !== undefined);
-  Debug.assert(validationMessagePopup !== undefined);
+  Debug.assert(popup !== undefined);
   layout = new TableLayout(canvas);
-  input = new TableInput(layout, validationMessagePopup);
+  _input = new TableInput(layout, popup);
   new TableRenderer(layout);
 });
 
@@ -106,11 +107,8 @@ onMount(() => {
   {/if}
 </Popup>
 
-<Popup bind:this={validationMessagePopup} position="left" kind='tooltip'>
-  <span style="white-space: pre-wrap;">
-    {input?.popupMessage}
-  </span>
-</Popup>
+<MessagePopup bind:this={popup}>
+</MessagePopup>
 
 <style lang='scss'>
   @media (prefers-color-scheme: dark) {

@@ -54,6 +54,10 @@ function sameAttrs(x: RichTextAttr[], y: RichTextAttr[]) {
 }
 
 export namespace RichText {
+    export function leaf(content: string, ...attrs: RichTextAttr[]): RichText {
+        return [{ type: 'leaf', content, attrs }];
+    }
+
     export function equals(a: RichText, b: RichText) {
         return eq(a, b);
     }

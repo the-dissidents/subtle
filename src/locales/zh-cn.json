@@ -132,6 +132,19 @@
     "false": "假",
     "true": "真"
   },
+  "bracket": {
+    "stray-unclosed": "孤单的括号/引号`{a}`：没有闭合"
+  },
+  "brackets": {
+    "expected-primary-closing": "应为外层括号/引号",
+    "expected-primary-opening": "应为外层括号/引号",
+    "expected-secondary-closing": "应为内层括号/引号",
+    "expected-secondary-opening": "应为内层括号/引号",
+    "incorrect-direction": "括号/引号方向错误：`{a}`",
+    "non-preferred": "不推荐的括号/引号形态",
+    "stray-closing": "孤单的括号/引号`{a}`：没有对应的开头符号",
+    "too-deeply-nested": "括号/引号层叠太深"
+  },
   "bugdialog": {
     "create-issue": "新增GitHub issue",
     "header": "报告问题",
@@ -155,11 +168,13 @@
     "edit-entry": "编辑条目文字",
     "exchange-channel": "交换频道",
     "fill-with-untimed": "用无时间文本填充条目",
+    "fix-lint-problems": "自动修复拼写问题",
     "fuzzy-replace": "模糊匹配替换",
     "hold-to-create-entry": "按住创建字幕块",
     "import-file": "导入文件",
     "insert-channel": "添加频道",
     "label": "编辑标签",
+    "lint-profile": "编辑拼写检查预设",
     "metadata": "编辑元数据",
     "move-entries": "移动条目",
     "positioning": "编辑定位",
@@ -522,6 +537,18 @@
     "red": "红色",
     "yellow": "黄色"
   },
+  "lint": {
+    "bracket-checking": "括号/引号检查",
+    "clear": "清除",
+    "corner-quotes": "方引号",
+    "curly-quotes": "弯引号（外双内单）",
+    "edit-lint-profile": "编辑拼写检查预设",
+    "french-guillemet": "法式引号",
+    "fullwidth-parens": "全角圆括号",
+    "halfwidth-parens": "半角圆括号",
+    "inverted-curly-quotes": "弯引号（外单内双）",
+    "unchecked": "不检查"
+  },
   "menu": {
     "audio-stream-current": "（当前音频）",
     "bug": "报告问题",
@@ -682,6 +709,11 @@
     "url-d": "不支持锚点（如#English）。若要达到自动定位的效果，请选中“使用自动滚动”",
     "use-auto-scroll": "使用自动滚动"
   },
+  "review": {
+    "auto-fix-problems": "自动修复了{m,select,0 {所有} other {}} {n} 个问题",
+    "n-problems-cannot-be-fixed-automatically": "（还有 {n} 个问题无法自动修复）",
+    "nothing-to-fix": "没有需要修复的问题"
+  },
   "richedit": {
     "override-styles": "覆盖样式"
   },
@@ -761,6 +793,10 @@
     "left": "左",
     "line-color": "轮廓颜色",
     "line-size": "轮廓粗细",
+    "lint-disabled": "已关闭",
+    "lint-edit": "编辑",
+    "lint-enabled": "已启用",
+    "lint-profile": "拼写检查",
     "margins": "边距",
     "more-styling": "更多格式选项",
     "name": "名称",
@@ -787,6 +823,7 @@
   "tab": {
     "properties": "属性",
     "references": "参考资料",
+    "review": "审阅",
     "search-replace": "查找/替换",
     "untimed-text": "无时间文本"
   },
@@ -794,6 +831,7 @@
     "add-column": "添加列",
     "edit-columns": "编辑列",
     "end": "结尾",
+    "lint-messages": "拼写检查报告：",
     "requirement-not-met": "未满足条件：",
     "start": "开始",
     "style": "样式",
