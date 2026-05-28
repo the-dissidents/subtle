@@ -17,9 +17,9 @@ export type Rect = {
 }
 
 export type ReadonlyRect = {
-    readonly l: number, 
-    readonly t: number, 
-    readonly r: number, 
+    readonly l: number,
+    readonly t: number,
+    readonly r: number,
     readonly b: number,
     readonly w: number,
     readonly h: number
@@ -48,11 +48,13 @@ export class CanvasManager {
 
     #endDrag?: (ev?: MouseEvent) => void;
 
-    readonly onDisplaySizeChanged = 
+    readonly onDisplaySizeChanged =
         new EventHost<[w: number, h: number, rw: number, rh: number]>();
     readonly onViewportChanged =
         new EventHost();
     readonly onMouseDown =
+        new EventHost<[ev: MouseEvent]>();
+    readonly onMouseUp =
         new EventHost<[ev: MouseEvent]>();
     readonly onMouseWheel =
         new EventHost<[tr: TranslatedWheelEvent, ev: WheelEvent]>();
@@ -84,7 +86,7 @@ export class CanvasManager {
 
     get physicalSize(): readonly [number, number] {
         return [
-            this.#width * window.devicePixelRatio, 
+            this.#width * window.devicePixelRatio,
             this.#height * window.devicePixelRatio
         ];
     }
@@ -112,7 +114,7 @@ export class CanvasManager {
     get scroll(): readonly [number, number] {
         return [this.#scrollX, this.#scrollY];
     }
-    
+
     setScroll(p: {x?: number, y?: number}) {
         if (p.x !== undefined) this.#scrollX = p.x;
         if (p.y !== undefined) this.#scrollY = p.y;
@@ -179,6 +181,7 @@ export class CanvasManager {
         this.#updateSize();
 
         eventReceiver.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));
+        eventReceiver.addEventListener('mouseup', (ev) => this.#onMouseUp(ev));
         eventReceiver.addEventListener('mousemove', (ev) => this.#onMouseMove(ev));
         eventReceiver.addEventListener('wheel', (ev) => this.#onMouseWheel(ev));
         eventReceiver.addEventListener('mouseleave', () => {
@@ -201,8 +204,8 @@ export class CanvasManager {
     }
 
     convertPosition(
-        from: CanvasManagerPositionSystem, 
-        to: CanvasManagerPositionSystem, 
+        from: CanvasManagerPositionSystem,
+        to: CanvasManagerPositionSystem,
         x: number, y: number
     ): [number, number] {
         if (from == to) return [x, y];
@@ -222,19 +225,19 @@ export class CanvasManager {
         return this.convertPosition('offset', to, ox, oy);
     }
 
-    get #hscrollerLength () { 
-        return Math.max(InterfaceConfig.data.minScrollerLength, 
+    get #hscrollerLength () {
+        return Math.max(InterfaceConfig.data.minScrollerLength,
             this.#width ** 2 / this.#scale / this.contentRect.w);
     }
-      
-    get #vscrollerLength () { 
-        return Math.max(InterfaceConfig.data.minScrollerLength, 
+
+    get #vscrollerLength () {
+        return Math.max(InterfaceConfig.data.minScrollerLength,
             this.#height ** 2 / this.#scale / this.contentRect.h);
     }
 
     get #hscrollSpace() {
         return this.contentRect.w - this.#width / this.#scale;
-    } 
+    }
 
     get #vscrollSpace() {
         return this.contentRect.h - this.#height / this.#scale;
@@ -255,7 +258,7 @@ export class CanvasManager {
                 this.onMouseDown.dispatch(ev);
                 doDrag = true;
             }
-        
+
             if (doDrag) {
                 [this.#dragStartX, this.#dragStartY] = [ev.offsetX, ev.offsetY];
                 [this.#dragStartScrollX, this.#dragStartScrollY] = [this.#scrollX, this.#scrollY];
@@ -266,7 +269,7 @@ export class CanvasManager {
                     if (!ev)
                         this.onDragInterrupted.dispatch();
                     else if (this.#dragType == 'custom') {
-                        const [offsetX, offsetY] = 
+                        const [offsetX, offsetY] =
                             this.convertPosition('client', 'offset', ev.clientX, ev.clientY);
                         this.onDragEnd.dispatch(offsetX, offsetY, ev);
                     }
@@ -282,20 +285,24 @@ export class CanvasManager {
         if (!doDrag) this.onMouseDown.dispatch(ev);
     }
 
+    #onMouseUp(ev: MouseEvent) {
+        this.onMouseUp.dispatch(ev);
+    }
+
     #onDrag(ev: MouseEvent) {
         const [offsetX, offsetY] = this.convertPosition('client', 'offset', ev.clientX, ev.clientY);
         if (ev.buttons == 1) {
             if (this.#dragType == 'hscroll') {
-                this.#scrollX = this.#dragStartScrollX + 
-                    (offsetX - this.#dragStartX) 
+                this.#scrollX = this.#dragStartScrollX +
+                    (offsetX - this.#dragStartX)
                     / (this.#width - this.#hscrollerLength) * this.#hscrollSpace;
                 this.#constrainScroll();
                 this.onViewportChanged.dispatch();
                 this.requestRender();
                 return;
             } else if (this.#dragType == 'vscroll') {
-                this.#scrollY = this.#dragStartScrollY + 
-                    (offsetY - this.#dragStartY) 
+                this.#scrollY = this.#dragStartScrollY +
+                    (offsetY - this.#dragStartY)
                     / (this.#height - this.#vscrollerLength) * this.#vscrollSpace;
                 this.#constrainScroll();
                 this.onViewportChanged.dispatch();
@@ -319,7 +326,7 @@ export class CanvasManager {
                 return;
             }
             const now = performance.now();
-            if (now - this.#scrollerFadeStartTime > scrollerFadeStart 
+            if (now - this.#scrollerFadeStartTime > scrollerFadeStart
                 || oldHighlight != this.#scrollerHighlight) this.requestRender();
             this.#scrollerFadeStartTime = now;
         }
@@ -332,7 +339,7 @@ export class CanvasManager {
             const centerX = ev.offsetX / this.#scale + this.#scrollX;
             const centerY = ev.offsetY / this.#scale + this.#scrollY;
             const oldscale = this.#scale;
-            this.#scale = Math.min(this.#maxZoom, 
+            this.#scale = Math.min(this.#maxZoom,
                 Math.max(1, this.#scale / Math.pow(1.01, tr.amount)));
             this.#scrollX = centerX - ev.offsetX / this.#scale;
             this.#scrollY = centerY - ev.offsetY / this.#scale;
@@ -368,12 +375,12 @@ export class CanvasManager {
 
         this.#cxt.resetTransform();
         if (this.doNotPrescaleHighDPI) {
-            this.#cxt.clearRect(0, 0, 
-                this.#width * devicePixelRatio, 
+            this.#cxt.clearRect(0, 0,
+                this.#width * devicePixelRatio,
                 this.#height * devicePixelRatio);
             this.#cxt.scale(this.#scale, this.#scale);
             this.#cxt.translate(
-                -this.#scrollX * devicePixelRatio, 
+                -this.#scrollX * devicePixelRatio,
                 -this.#scrollY * devicePixelRatio);
         } else {
             this.#cxt.scale(devicePixelRatio, devicePixelRatio);
@@ -388,8 +395,8 @@ export class CanvasManager {
         this.#cxt.scale(devicePixelRatio, devicePixelRatio);
 
         const now = performance.now();
-        const fade = 
-            1 - Math.max(0, now - this.#scrollerFadeStartTime - scrollerFadeStart) 
+        const fade =
+            1 - Math.max(0, now - this.#scrollerFadeStartTime - scrollerFadeStart)
             / (scrollerFade - scrollerFadeStart);
 
         const rect = this.contentRect;
@@ -400,8 +407,8 @@ export class CanvasManager {
             const highlight = this.#dragType == 'hscroll' || this.#scrollerHighlight == 'h';
             this.#cxt.fillStyle = `rgb(${scrollerColorRgb()} / ${highlight ? 100 : 40 * fade}%)`;
             this.#cxt.fillRect(
-                (this.#scrollX - rect.l) / this.#hscrollSpace * (this.#width - len), 
-                this.#height - scrollerSize, 
+                (this.#scrollX - rect.l) / this.#hscrollSpace * (this.#width - len),
+                this.#height - scrollerSize,
                 len, scrollerSize);
         }
         // vertical
@@ -410,13 +417,13 @@ export class CanvasManager {
             const highlight = this.#dragType == 'vscroll' || this.#scrollerHighlight == 'v';
             this.#cxt.fillStyle = `rgb(${scrollerColorRgb()} / ${highlight ? 100 : 40 * fade}%)`;
             this.#cxt.fillRect(
-                this.#width - scrollerSize, 
+                this.#width - scrollerSize,
                 (this.#scrollY - rect.t) / this.#vscrollSpace * (this.#height - len),
                 scrollerSize, len);
         }
 
         if (now - this.#scrollerFadeStartTime < scrollerFadeStart) {
-            setTimeout(() => this.requestRender(), 
+            setTimeout(() => this.requestRender(),
                 scrollerFadeStart - now + this.#scrollerFadeStartTime);
         } else if (now - this.#scrollerFadeStartTime < scrollerFade) {
             this.requestRender();
@@ -434,16 +441,16 @@ export class CanvasManager {
         this.canvas.height = Math.floor(this.#height * factor);
         this.requestRender();
         this.onDisplaySizeChanged.dispatch(
-            this.#width, this.#height, 
+            this.#width, this.#height,
             this.#width * factor, this.#height * factor);
     }
 
     #constrainScroll() {
         const rect = this.contentRect;
         this.#scrollerFadeStartTime = performance.now();
-        this.#scrollX = Math.max(rect.l, 
+        this.#scrollX = Math.max(rect.l,
             Math.min(rect.r - this.#width / this.#scale, this.#scrollX));
-        this.#scrollY = Math.max(rect.t, 
+        this.#scrollY = Math.max(rect.t,
             Math.min(rect.b - this.#height / this.#scale, this.#scrollY));
     }
 }

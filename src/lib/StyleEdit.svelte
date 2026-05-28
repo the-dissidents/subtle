@@ -20,6 +20,7 @@ import Colorpicker from "./ui/Colorpicker.svelte";
 
 import { openDialog } from "./DialogOutlet.svelte";
 import { Dialog } from "./dialog";
+  import { SavedStyles } from "./config/SavedStyles";
 
 interface Props {
   style: SubtitleStyle;
@@ -40,8 +41,6 @@ function isDuplicate(name: string) {
   }
   return false;
 }
-
-let savedStyles = Source.savedStyles;
 
 async function contextMenu() {
   let isDefault = $style == subtitles.defaultStyle;
@@ -109,8 +108,8 @@ async function contextMenu() {
       items: [
         {
           text: $_('style.replace-by'),
-          items: $savedStyles.length > 0
-            ? $savedStyles.map((x) => ({
+          items: $SavedStyles.length > 0
+            ? $SavedStyles.map((x) => ({
                 text: x.name,
                 action() {
                   Object.assign($style, x);
@@ -127,13 +126,13 @@ async function contextMenu() {
         {
           text: $_('style.save-as-preset'),
           async action() {
-            const i = $savedStyles.findIndex((x) => x.name == $style.name);
+            const i = $SavedStyles.findIndex((x) => x.name == $style.name);
             if (i >= 0) {
               if (!await dialog.ask($_('msg.overwrite-preset-with-same-name'))) return;
-              $savedStyles.splice(i, 1);
+              $SavedStyles.splice(i, 1);
             }
-            $savedStyles.push(SubtitleStyle.clone($style));
-            savedStyles.markChanged();
+            $SavedStyles.push(SubtitleStyle.clone($style));
+            SavedStyles.markChanged();
           }
         }
       ]

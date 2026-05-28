@@ -4,9 +4,10 @@ import type { Diagnostic } from "../../linter/Common";
 import { RichText } from "../../core/RichText";
 import { Filter, type SimpleMetricFilter } from "../../core/Filter";
 
+import { Debug } from "../../Debug";
+import { ArrowRightIcon } from "@lucide/svelte";
+
 import { _ } from 'svelte-i18n';
-  import { Debug } from "../../Debug";
-  import { ArrowRightIcon } from "@lucide/svelte";
 
 type Data = {
   text: RichText,
@@ -74,7 +75,7 @@ export function openState() { return popup.openState(); }
 export function close() { popup.close(); }
 </script>
 
-<Popup bind:this={popup} kind='panel'>
+<Popup bind:this={popup} kind='panel' position='left'>
   {#if data}
   <div class="vlayout">
     {#if data.failedFilters.length > 0}

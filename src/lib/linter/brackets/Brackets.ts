@@ -133,9 +133,7 @@ export class BracketLinter {
 
     static validateSettings(groups: BracketSet[]) {
         const [_, overwritten] = BracketLinter.compileGroups(groups);
-        return {
-            overwritten
-        };
+        return { overwritten };
     }
 
     constructor(groups: BracketSet[]) {

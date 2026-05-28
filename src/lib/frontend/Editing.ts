@@ -1,20 +1,24 @@
 console.info('Editing loading');
 
-import { get, writable, type Writable } from "svelte/store";
-import { Memorized } from "../config/MemorizedValue.svelte";
-import { EventHost } from "../details/EventHost";
-import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
-import { MetricDefinition, Metrics } from "../core/Filter";
 import { Basic } from "../Basic";
 import { Debug } from "../Debug";
 import { ChangeCause, ChangeType, Source } from "./Source";
 import { Frontend } from "./Frontend";
 
-import { unwrapFunctionStore, _ } from 'svelte-i18n';
+import type RichEdit from "../component/richedit/RichEdit.svelte";
+import { Memorized } from "../config/MemorizedValue.svelte";
+import { EventHost } from "../details/EventHost";
+
+import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { MetricDefinition, Metrics } from "../core/Filter";
+import { RichText } from "../core/RichText";
+
+import { get, writable, type Readable, type Writable } from "svelte/store";
+import { SvelteMap } from "svelte/reactivity";
 import { ask } from "@tauri-apps/plugin-dialog";
 import * as z from "zod/v4-mini";
-import type RichEdit from "../component/richedit/RichEdit.svelte";
-import { SvelteMap } from "svelte/reactivity";
+
+import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 export type SelectionState = {
@@ -23,8 +27,14 @@ export type SelectionState = {
     focused: SubtitleEntry | null
 };
 
-export type FocusState = {
+type WritableFocusState = {
     entry: Writable<SubtitleEntry | null | 'virtual'>,
+    control: RichEdit | null,
+    style: Writable<SubtitleStyle | null>
+}
+
+export type FocusState = {
+    entry: Readable<SubtitleEntry | null | 'virtual'>,
     control: RichEdit | null,
     style: Writable<SubtitleStyle | null>
 }
@@ -70,6 +80,18 @@ function updateFocusedStyle() {
     return style;
 }
 
+let __control: RichEdit | null = null;
+
+const focusState: WritableFocusState = {
+    entry: writable(null),
+    get control() { return __control; },
+    set control(x) {
+        __control = x;
+        Debug.info('focus.control -> ', x ? RichText.toString(x!.getText()) : 'none');
+    },
+    style: writable(null)
+};
+
 export const Editing = {
     selection: {
         submitted: new Set(),
@@ -78,11 +100,9 @@ export const Editing = {
     } as SelectionState,
 
     // TODO: make it more private to prevent direct editing
-    focused: {
-        entry: writable(null),
-        control: null,
-        style: writable(null)
-    } as FocusState,
+    get focused(): FocusState {
+        return focusState;
+    },
 
     editChanged: false,
     isEditingVirtualEntry: writable(false),
@@ -97,7 +117,7 @@ export const Editing = {
     onKeepEntryAtPosition: new EventHost<[entry: SubtitleEntry, previous: SubtitleEntry]>(),
 
     getFocusedEntry() {
-        return get(this.focused.entry);
+        return get(focusState.entry);
     },
 
     inSelection(entry: SubtitleEntry) {
@@ -177,8 +197,8 @@ export const Editing = {
         await Source.markChanged(ChangeType.Times, $_('action.insert-after'));
 
         // focus on the new entry
-        this.clearSelection();
-        this.selectEntry(entry, SelectMode.Single);
+        await this.clearSelection();
+        await this.selectEntry(entry, SelectMode.Single);
         updateFocusedStyle();
         setTimeout(() => {
             this.onKeepEntryInView.dispatch(entry);
@@ -192,7 +212,7 @@ export const Editing = {
         Debug.assert(focused instanceof SubtitleEntry);
         if (focused.texts.has(style)) return;
         focused.texts.set(style, '');
-        this.focused.style.set(style);
+        focusState.style.set(style);
         await Source.markChanged(ChangeType.InPlace, $_('c.insert-channel'));
         this.startEditingFocusedEntry();
     },
@@ -207,43 +227,50 @@ export const Editing = {
         await Source.markChanged(ChangeType.InPlace, $_('c.delete-channel'));
     },
 
-    async submitFocusedEntry() {
-        const focused = this.getFocusedEntry();
-        Debug.assert(focused instanceof SubtitleEntry);
-        if (!this.editChanged) return;
-
-        const style = get(this.focused.style);
-        const control = this.focused.control;
-        Debug.assert(style !== null);
-        Debug.assert(control !== null);
-        focused.texts.set(style, control.getText());
+    async submitEntry(entry: SubtitleEntry, style: SubtitleStyle, text: RichText) {
+        entry.texts.set(style, text);
+        this.editChanged = false;
         await Source.markChanged(ChangeType.InPlace, $_('c.edit-entry'));
     },
 
-    clearFocus(trySubmit = true) {
+    async submitFocusedEntry() {
         const focused = this.getFocusedEntry();
-        if (focused == null) return;
-        if (trySubmit && focused instanceof SubtitleEntry)
-            this.submitFocusedEntry();
-        this.focused.entry.set(null);
+        if (!(focused instanceof SubtitleEntry))
+            return Debug.early();
+        if (!this.editChanged) return;
+
+        const style = get(focusState.style);
+        const control = focusState.control;
+        Debug.assert(style !== null);
+        Debug.assert(control !== null);
+        this.submitEntry(focused, style, control.getText());
     },
 
-    setSelection(entries: readonly SubtitleEntry[]) {
+    async clearFocus(check = true) {
+        const focused = this.getFocusedEntry();
+        if (focused == null) return;
+        if (check && focused instanceof SubtitleEntry)
+            await this.submitFocusedEntry();
+            // Debug.assert(!this.editChanged)
+        focusState.entry.set(null);
+    },
+
+    async setSelection(entries: readonly SubtitleEntry[]) {
         this.selection.submitted.clear();
         for (const ent of entries)
             Editing.selection.submitted.add(ent);
         Editing.selection.focused = entries[0];
         Editing.selection.currentGroup.clear();
         Editing.selection.currentGroup.add(entries[0]);
-        this.clearFocus();
+        await this.clearFocus();
         Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     },
 
-    clearSelection(cause = ChangeCause.UIList) {
+    async clearSelection(cause = ChangeCause.UIList) {
         this.selection.submitted.clear();
         Editing.selection.currentGroup.clear();
         this.selection.focused = null;
-        this.clearFocus();
+        await this.clearFocus();
         this.onSelectionChanged.dispatch(cause);
     },
 
@@ -254,19 +281,20 @@ export const Editing = {
         const newEntries =
             Source.subs.entries.filter((x) => !selection.includes(x));
         Source.subs.entries = newEntries;
-        this.clearSelection();
-        if (next) this.selectEntry(next, SelectMode.Single);
-        else this.selectVirtualEntry();
+        await this.clearSelection();
+        if (next) await this.selectEntry(next, SelectMode.Single);
+        else await this.selectVirtualEntry();
 
         await Source.markChanged(ChangeType.Times, $_('action.delete'));
         this.onSelectionChanged.dispatch(cause);
     },
 
-    offsetFocus(n: number, mode: SelectMode, keepType = KeepInViewMode.KeepInSight) {
+    async offsetFocus(n: number, mode: SelectMode, keepType = KeepInViewMode.KeepInSight) {
         const focused = this.getFocusedEntry();
         if (focused == 'virtual' && mode == SelectMode.Single) {
             if (n == -1 && Source.subs.entries.length > 0) {
-                this.selectEntry(Source.subs.entries.at(-1)!, mode, ChangeCause.UIList, keepType);
+                await this.selectEntry(
+                    Source.subs.entries.at(-1)!, mode, ChangeCause.UIList, keepType);
                 return;
             }
         }
@@ -275,19 +303,19 @@ export const Editing = {
         const i = Source.subs.entries.indexOf(focused) + n;
         if (i >= Source.subs.entries.length) {
             if (mode == SelectMode.Single)
-                this.selectVirtualEntry();
+                await this.selectVirtualEntry();
             return;
         }
         if (i < 0) return;
-        this.selectEntry(Source.subs.entries[i], mode, ChangeCause.UIList, keepType);
+        await this.selectEntry(Source.subs.entries[i], mode, ChangeCause.UIList, keepType);
     },
 
-    toggleEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {
+    async toggleEntry(ent: SubtitleEntry, mode: SelectMode, cause = ChangeCause.UIList) {
         // it's only a 'toggle' when multiselecting; otherwise, just select it
         if (mode === SelectMode.Multiple) {
             this.isEditingVirtualEntry.set(false);
             if (this.getFocusedEntry() == ent) {
-                this.clearFocus();
+                await this.clearFocus();
             }
             if (this.selection.currentGroup.has(ent)) {
                 for (const e of this.selection.currentGroup)
@@ -301,16 +329,16 @@ export const Editing = {
                 return;
             }
         }
-        this.selectEntry(ent, mode, cause);
+        await this.selectEntry(ent, mode, cause);
     },
 
-    selectVirtualEntry() {
-        this.clearSelection();
-        this.focused.entry.set("virtual");
+    async selectVirtualEntry() {
+        await this.clearSelection();
+        focusState.entry.set("virtual");
         this.onKeepEntryInView.dispatch("virtual");
     },
 
-    selectEntry(
+    async selectEntry(
         ent: SubtitleEntry, mode: SelectMode,
         cause = ChangeCause.UIList, keepType = KeepInViewMode.KeepInSight
     ) {
@@ -348,8 +376,8 @@ export const Editing = {
             const oldFocus = this.getFocusedEntry();
 
             this.isEditingVirtualEntry.set(false);
-            this.clearFocus();
-            this.focused.entry.set(ent);
+            await this.clearFocus();
+            focusState.entry.set(ent);
             // TODO: focus on current style
             if (keepType == KeepInViewMode.SamePosition && oldFocus instanceof SubtitleEntry)
                 this.onKeepEntryAtPosition.dispatch(ent, oldFocus);

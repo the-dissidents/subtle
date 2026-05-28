@@ -245,11 +245,13 @@
     }
   }
 
+/*
   .legend {
     color: gray;
     margin-right: 1em;
     word-break: keep-all;
   }
+*/
 
   .separator {
     margin-inline: 10px;

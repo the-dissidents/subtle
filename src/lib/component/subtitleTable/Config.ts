@@ -68,9 +68,9 @@ export const TableCommands = {
           CommandBinding.from(['Alt+ArrowUp']), ],
     {
         name: () => $_('action.previous-entry-single'),
-        call: () => Editing.offsetFocus(-1, SelectMode.Single, 
-            InputConfig.data.arrowNavigationType == 'keepPosition' 
-            ? KeepInViewMode.SamePosition 
+        call: () => Editing.offsetFocus(-1, SelectMode.Single,
+            InputConfig.data.arrowNavigationType == 'keepPosition'
+            ? KeepInViewMode.SamePosition
             : KeepInViewMode.KeepInSight)
     }),
     previousEntrySequence: new UICommand(() => $_('category.table'),
@@ -78,9 +78,9 @@ export const TableCommands = {
           CommandBinding.from(['Alt+Shift+ArrowUp']), ],
     {
         name: () => $_('action.previous-entry-sequence'),
-        call: () => Editing.offsetFocus(-1, SelectMode.Sequence, 
-            InputConfig.data.arrowNavigationType == 'keepPosition' 
-            ? KeepInViewMode.SamePosition 
+        call: () => Editing.offsetFocus(-1, SelectMode.Sequence,
+            InputConfig.data.arrowNavigationType == 'keepPosition'
+            ? KeepInViewMode.SamePosition
             : KeepInViewMode.KeepInSight)
     }),
     nextEntrySingle: new UICommand(() => $_('category.table'),
@@ -88,9 +88,9 @@ export const TableCommands = {
           CommandBinding.from(['Alt+ArrowDown']), ],
     {
         name: () => $_('action.next-entry-single'),
-        call: () => Editing.offsetFocus(1, SelectMode.Single, 
-            InputConfig.data.arrowNavigationType == 'keepPosition' 
-            ? KeepInViewMode.SamePosition 
+        call: () => Editing.offsetFocus(1, SelectMode.Single,
+            InputConfig.data.arrowNavigationType == 'keepPosition'
+            ? KeepInViewMode.SamePosition
             : KeepInViewMode.KeepInSight)
     }),
     nextEntrySequence: new UICommand(() => $_('category.table'),
@@ -98,9 +98,9 @@ export const TableCommands = {
           CommandBinding.from(['Alt+Shift+ArrowDown']), ],
     {
         name: () => $_('action.next-entry-sequence'),
-        call: () => Editing.offsetFocus(1, SelectMode.Sequence, 
-            InputConfig.data.arrowNavigationType == 'keepPosition' 
-            ? KeepInViewMode.SamePosition 
+        call: () => Editing.offsetFocus(1, SelectMode.Sequence,
+            InputConfig.data.arrowNavigationType == 'keepPosition'
+            ? KeepInViewMode.SamePosition
             : KeepInViewMode.KeepInSight)
     }),
 
@@ -112,9 +112,9 @@ export const TableCommands = {
         call: () => {
           const entry = Utils.getAdjecentEntryWithThisStyle('previous');
           if (!entry) return;
-          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList, 
-              InputConfig.data.enterNavigationType == 'keepPosition' 
-              ? KeepInViewMode.SamePosition 
+          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList,
+              InputConfig.data.enterNavigationType == 'keepPosition'
+              ? KeepInViewMode.SamePosition
               : KeepInViewMode.KeepInSight);
         }
     }),
@@ -126,9 +126,9 @@ export const TableCommands = {
         call: () => {
           const entry = Utils.getAdjecentEntryWithThisStyle('next');
           if (!entry) return;
-          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList, 
-              InputConfig.data.enterNavigationType == 'keepPosition' 
-              ? KeepInViewMode.SamePosition 
+          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList,
+              InputConfig.data.enterNavigationType == 'keepPosition'
+              ? KeepInViewMode.SamePosition
               : KeepInViewMode.KeepInSight);
         }
     }),

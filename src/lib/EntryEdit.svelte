@@ -4,23 +4,25 @@ import { Debug } from './Debug';
 import LabelSelect from './LabelSelect.svelte';
 import StyleSelect from './StyleSelect.svelte';
 import TimestampInput from './TimestampInput.svelte';
-import { NumberInput } from '@the_dissidents/svelte-ui';
 
 import RichEdit from './component/richedit/RichEdit.svelte';
 import RichEditToolbar from './component/richedit/RichEditToolbar.svelte';
 
-import { SubtitleEntry, type Positioning } from './core/Subtitles.svelte';
+import { SubtitleEntry, SubtitleStyle, type Positioning } from './core/Subtitles.svelte';
 import { AlignMode, type LabelType } from "./core/Labels";
+import { CompiledLintProfile } from './core/LintProfile';
+
 import { Editing } from './frontend/Editing';
 import { ChangeType, Source } from './frontend/Source';
 import { Frontend } from './frontend/Frontend';
 
+import { NumberInput } from '@the_dissidents/svelte-ui';
 import { EllipsisIcon, PlusIcon } from '@lucide/svelte';
 import * as dialog from "@tauri-apps/plugin-dialog";
 import { Menu } from '@tauri-apps/api/menu';
-import { tick } from 'svelte';
-import { _ } from 'svelte-i18n';
 
+import { _ } from 'svelte-i18n';
+import { tick } from 'svelte';
 
 let editFormUpdateCounter = $state(0);
 let editAnchor: 'start' | 'end' = $state('start');
@@ -32,11 +34,21 @@ let editingPos: Positioning = $state(null);
 let editingAlign: AlignMode | null = $state(null);
 let editingLabel: LabelType = $state('none');
 let uiFocus = Frontend.uiFocus;
+
+let focusedEntry = Editing.focused.entry;
 let focusedStyle = Editing.focused.style;
+let linters = $state(new Map<SubtitleStyle, CompiledLintProfile | undefined>());
+
+function updateLinters() {
+  linters = new Map(Source.subs.styles.map(
+    (x) => [x, x.lintProfile ? new CompiledLintProfile(x.lintProfile) : undefined] as const));
+}
 
 const me = {};
 
-Source.onSubtitlesChanged.bind(me, () => {
+Source.onSubtitlesChanged.bind(me, (type) => {
+  if (type == ChangeType.General || type == ChangeType.LintProfile)
+    updateLinters();
   updateForm();
 });
 
@@ -194,8 +206,8 @@ function applyEditForm() {
       onAction={() => Editing.submitFocusedEntry()} />
   {/if}
 
-  {#if Editing.getFocusedEntry() instanceof SubtitleEntry}
-  {@const focused = Editing.getFocusedEntry() as SubtitleEntry}
+  {#if $focusedEntry instanceof SubtitleEntry}
+  {@const focused = $focusedEntry}
   <table class='fields'>
     <tbody>
       {#each Source.subs.styles as style (style.name)}
@@ -236,9 +248,7 @@ function applyEditForm() {
                 {
                   text: $_('style.delete'),
                   enabled: focused.texts.size > 1,
-                  action() {
-                    Editing.deleteChannel(style);
-                  }
+                  action() { Editing.deleteChannel(style); }
                 }
               ]
             });
@@ -251,18 +261,20 @@ function applyEditForm() {
               () => Editing.styleToEditor.get(style),
               (x) => Editing.styleToEditor.set(style, x)
             }
+            linter={linters.get(style)}
             deinit={() => Editing.styleToEditor.delete(style)}
-            onFocus={(_, ) => {
+            onFocus={() => {
               const self = Editing.styleToEditor.get(style);
               Debug.assert(!!self);
               $uiFocus = 'EditingField';
               Editing.focused.style.set(style);
               Editing.focused.control = self;
             }}
-            onBlur={() => {
+            onBlur={(text) => {
               if ($uiFocus === 'EditingField')
                 $uiFocus = 'Other';
-              Editing.submitFocusedEntry();
+              if (Editing.editChanged)
+                Editing.submitEntry(focused, style, text);
             }}
             onInput={() => {
               $uiFocus = 'EditingField';
