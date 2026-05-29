@@ -195,7 +195,8 @@ export class TableLayout {
                     return { text, layout };
                 });
 
-                const diagnostics = (oldChannel && RichText.equals(oldChannel.content, content)
+                const diagnostics = (oldChannel && oldChannel.style === style
+                                  && RichText.equals(oldChannel.content, content)
                                   && this.requestedLayout && !this.requestedLayout.lint)
                     ? oldChannel.diagnostics
                     : linters.get(style)?.check(RichText.toString(content)) ?? [];

@@ -21,6 +21,7 @@ import Colorpicker from "./ui/Colorpicker.svelte";
 import { openDialog } from "./DialogOutlet.svelte";
 import { Dialog } from "./dialog";
   import { SavedStyles } from "./config/SavedStyles";
+  import LintProfileSelect from "./LintProfileSelect.svelte";
 
 interface Props {
   style: SubtitleStyle;
@@ -265,12 +266,13 @@ Source.onSubtitlesChanged.bind(me, (t) => {
         </div>
       </ConfigRow>
       <ConfigRow name={$_('style.lint-profile')}>
+      <div class="hlayout">
         <label>
           <input type='checkbox' class="button" checked={!!$style.lintProfile}
             onclick={(e) => {
               if (e.currentTarget.checked) {
                 if (!$style.lintProfile)
-                  $style.lintProfile = { bracketGroups: [] };
+                  $style.lintProfile = { bracketGroups: [], regexes: [] };
               } else {
                 $style.lintProfile = null;
               }
@@ -278,6 +280,13 @@ Source.onSubtitlesChanged.bind(me, (t) => {
           {$style.lintProfile ? $_('style.lint-enabled') : $_('style.lint-disabled')}
         </label>
         {#if $style.lintProfile}
+          <LintProfileSelect value={$style.lintProfile}
+            onChange={(x) => {
+              if (x) {
+                $style.lintProfile = x;
+                Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
+              }
+            }} />
           <button type='button' onclick={async () => {
             const result = await openDialog(Dialog.lintProfile, $style.lintProfile!);
             if (result) {
@@ -288,6 +297,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
             {$_('style.lint-edit')}
           </button>
         {/if}
+      </div>
       </ConfigRow>
     </ConfigTable>
     <!-- validator -->

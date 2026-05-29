@@ -56,10 +56,8 @@ export class RestartableTask<Arg extends unknown[]> {
                 onReject: (err) => reject(err)
             };
 
-            const debounce = this.options?.debounceMs;
-            Debug.assert(!!debounce && debounce > 0);
-
             if (this.state.type == 'idle') {
+                const debounce = this.options?.debounceMs;
                 if (debounce && debounce > 0)
                     this.#schedule(request);
                 else

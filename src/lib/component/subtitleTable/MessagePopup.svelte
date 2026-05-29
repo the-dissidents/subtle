@@ -94,7 +94,7 @@ export function close() { popup.close(); }
           {#if s.superscripts.length > 0}
             <span class="lint">{s.text}<sup>{s.superscripts.join(', ')}</sup></span>
           {:else}
-            {s.text}
+            <span class="segment">{s.text}</span>
           {/if}
         {/each}
       </div>
@@ -133,10 +133,15 @@ export function close() { popup.close(); }
     line-height: 0;
   }
 
+  span.lint, span.segment {
+    white-space: pre-wrap;
+  }
+
   span.fix {
     display: inline-block;
 
     code {
+      white-space: pre-wrap;
       background-color: #eee;
       border-radius: 3px;
       padding: 0 3px;

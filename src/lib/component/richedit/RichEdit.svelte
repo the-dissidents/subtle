@@ -98,10 +98,12 @@
   const underline = toggleMark(RichTextSchema.marks.underline);
 
   const lintTask = new RestartableTask(async ([linter]: [CompiledLintProfile]) => {
+    await Debug.info('koko');
     if (!view) return;
     const diagnostics = linter.check(RichText.toString(text));
+    await Debug.info(diagnostics, 'eoe');
     view.dispatch(view.state.tr.setMeta(LinterKey, diagnostics));
-  }, { debounceMs: 300 });
+  }, { debounceMs: 0 });
 
   $effect(() => {
     if (linter) untrack(() => {
@@ -146,7 +148,9 @@
               update++;
               text = toRichText(newState.doc);
               clearLint();
-              if (linter) lintTask.request(linter);
+              if (linter) {
+                lintTask.request(linter);
+              }
               onInput?.(text);
             }
             return null;
@@ -226,6 +230,7 @@
     display: inline-block;
 
     code {
+      white-space: pre-wrap;
       background-color: #eee;
       border-radius: 3px;
       padding: 0 3px;

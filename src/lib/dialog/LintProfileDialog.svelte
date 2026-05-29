@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { SvelteSet } from 'svelte/reactivity';
 import DialogBase from '../DialogBase.svelte';
-import { BracketPresetName, type LintProfile } from '../core/LintProfile';
+import { BracketPresetName, RegexLintPresetName, type LintProfile } from '../core/LintProfile';
+import { BracketSetPresets } from '../linter/brackets/Presets';
+import LintProfileSelect from '../LintProfileSelect.svelte';
+
+import { SvelteSet } from 'svelte/reactivity';
 import { onMount } from 'svelte';
 
 import { _ } from 'svelte-i18n';
-  import { BracketSetPresets } from '../linter/brackets/Presets';
 
 interface Props {
   args: [profile: LintProfile],
@@ -18,119 +20,165 @@ let {
 
 let inner: DialogBase;
 
-onMount(async () => {
-  const profile = _args[0];
+function load(profile: LintProfile) {
+  bracketGroups.clear();
+  regexes.clear();
   profile.bracketGroups.forEach((x) => bracketGroups.add(x));
+  profile.regexes.forEach((x) => regexes.add(x));
+}
 
-  const result = await inner.showModal!();
-  close(result == 'ok' ? buildResult() : null);
+onMount(async () => {
+  load(_args[0]);
+  const r = await inner.showModal!();
+  close(r == 'ok' ? result : null);
 });
 
 const bracketGroups = new SvelteSet<BracketPresetName>();
+const regexes = new SvelteSet<RegexLintPresetName>();
 
-function buildResult(): LintProfile {
-  return {
-    bracketGroups: [...bracketGroups.keys()]
-  };
-}
+const result = $derived<LintProfile>({
+  bracketGroups: [...bracketGroups.keys()],
+  regexes: [...regexes.keys()]
+});
 </script>
 
-{#snippet radioboxes(data: [group: BracketPresetName, name: string][])}
-<label>
-  <input type='radio' checked={!data.find((x) => bracketGroups.has(x[0]))}
-    onchange={(e) => {
-      if (e.currentTarget.checked) {
-        for (const [g, _] of data)
-          bracketGroups.delete(g);
-      }
-    }}>
-  {$_('lint.unchecked')}
-</label>
+{#snippet regexCheckboxes(data: [group: RegexLintPresetName, name: string][])}
+  {#each data as [group, name]}
+    <label>
+      <input type='checkbox' checked={regexes.has(group)}
+        onchange={(e) => {
+          if (e.currentTarget.checked)
+            regexes.add(group);
+          else
+            regexes.delete(group);
+        }}>
+      {name}
+    </label>
+  {/each}
+{/snippet}
 
-{#each data as [group, name]}
+{#snippet regexRadios(data: [group: RegexLintPresetName, name: string][])}
   <label>
-    <input type='radio' checked={bracketGroups.has(group)}
+    <input type='radio' checked={!data.find((x) => regexes.has(x[0]))}
       onchange={(e) => {
-        if (e.currentTarget.checked) {
+        if (e.currentTarget.checked)
+          for (const [g, _] of data)
+            regexes.delete(g);
+      }}>
+    {$_('lint.unchecked')}
+  </label>
+
+  {#each data as [group, name]}
+    <label>
+      <input type='radio' checked={regexes.has(group)}
+        onchange={(e) => {
+          if (e.currentTarget.checked) {
+            for (const [g, _] of data)
+              regexes.delete(g);
+            regexes.add(group);
+          }
+        }}>
+      {name}
+    </label>
+  {/each}
+{/snippet}
+
+{#snippet bracketBoxes(data: [group: BracketPresetName, name: string][])}
+  <label>
+    <input type='radio' checked={!data.find((x) => bracketGroups.has(x[0]))}
+      onchange={(e) => {
+        if (e.currentTarget.checked)
           for (const [g, _] of data)
             bracketGroups.delete(g);
-          bracketGroups.add(group);
-        }
       }}>
-    {name}
-
-    <code>
-      {BracketSetPresets[group].preferred.primary[0]}
-    </code>
-    {#if 'secondary' in BracketSetPresets[group].preferred}
-      <code>
-        {BracketSetPresets[group].preferred.secondary[0]}
-      </code>
-      <code>
-        {BracketSetPresets[group].preferred.secondary[1]}
-      </code>
-    {/if}
-    <code>
-      {BracketSetPresets[group].preferred.primary[1]}
-    </code>
+    {$_('lint.unchecked')}
   </label>
-{/each}
+
+  {#each data as [group, name]}
+    <label>
+      <input type='radio' checked={bracketGroups.has(group)}
+        onchange={(e) => {
+          if (e.currentTarget.checked) {
+            for (const [g, _] of data)
+              bracketGroups.delete(g);
+            bracketGroups.add(group);
+          }
+        }}>
+
+      <span>
+        {name}
+        <code>
+          {BracketSetPresets[group].preferred.primary[0]}
+        </code>
+        {#if 'secondary' in BracketSetPresets[group].preferred}
+          <code>
+            {BracketSetPresets[group].preferred.secondary[0]}
+          </code>
+          <code>
+            {BracketSetPresets[group].preferred.secondary[1]}
+          </code>
+        {/if}
+        <code>
+          {BracketSetPresets[group].preferred.primary[1]}
+        </code>
+      </span>
+    </label>
+  {/each}
 {/snippet}
 
 <DialogBase bind:this={inner}>
-  {#snippet header()}
-    <h3>{$_('lint.edit-lint-profile')}</h3>
-  {/snippet}
+{#snippet header()}
+  <h3>{$_('lint.edit-lint-profile')}</h3>
+{/snippet}
+
+<div class="vlayout">
+  <LintProfileSelect value={result}
+    onChange={(x) => x ? load(x) : {}} allowManage={true} />
 
   <div class="hlayout">
     <fieldset>
       <legend>{$_('lint.bracket-checking')}</legend>
       <div class="list">
-        <button onclick={() => bracketGroups.clear()} disabled={bracketGroups.size == 0}>
-          {$_('lint.clear')}
-        </button>
-        {@render radioboxes([
+        {@render bracketBoxes([
           ['curlyQuotes', $_('lint.curly-quotes')],
           ['invertedCurlyQuotes', $_('lint.inverted-curly-quotes')],
           ['cornerQuotes', $_('lint.corner-quotes')],
           ['frenchGuillemetQuotes', $_('lint.french-guillemet')],
         ])}
         <hr>
-        {@render radioboxes([
+        {@render bracketBoxes([
           ['halfwidthParentheses', $_('lint.halfwidth-parens')],
           ['fullwidthParentheses', $_('lint.fullwidth-parens')],
         ])}
       </div>
     </fieldset>
 
-    <!-- <fieldset>
-      <legend>标点</legend>
-      <div class="list">
-        <label>
-          <input type='checkbox'>
-          禁止连续多个空格
-        </label>
-        <label>
-          <input type='checkbox'>
-          西文标点符号后应该恰好有一个空格
-        </label>
-        <label>
-          <input type='checkbox'>
-          全角标点符号前后不应有空格
-        </label>
-        <label>
-          <input type='checkbox'>
-          全角文字中标点符号不应为半角
-        </label>
-      </div>
-    </fieldset> -->
+    <div class="vlayout">
+      <fieldset>
+        <legend>{$_('lint.ellipsis')}</legend>
+        <div class="list">
+          {@render regexRadios([
+            ['useSingleEllipsis', $_('lint.single-ellipsis')],
+            ['useDoubleEllipsis', $_('lint.double-ellipsis')],
+          ])}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>{$_('lint.spaces-and-punct')}</legend>
+        <div class="list">
+          {@render regexCheckboxes([
+            ['noConsecutiveSpaces', $_('regexlint.consecutive-spaces')],
+            ['noLeadingTrailingSpaces', $_('regexlint.leading-trailing-spaces')],
+            ['noSpaceBeforePunctuation', $_('regexlint.no-space-before-latin-punct')],
+            ['spaceAfterLatinPunctuation', $_('regexlint.space-after-latin-punct')],
+            ['spaceAroundFullwidthPunctuation', $_('regexlint.space-around-fullwidth-punct')],
+            ['useChineseWordConnector', $_('regexlint.chinese-word-connector')],
+          ])}
+        </div>
+      </fieldset>
+    </div>
   </div>
-  <!-- <fieldset>
-    <legend>正则表达式规则</legend>
-    <ul>
-      <li></li>
-    </ul>
-  </fieldset> -->
+</div>
 </DialogBase>
 
 <style>
@@ -153,5 +201,14 @@ function buildResult(): LintProfile {
     display: flex;
     flex-direction: column;
     gap: 5px;
+  }
+
+  label {
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+    input {
+      margin-right: 5px;
+    }
   }
 </style>

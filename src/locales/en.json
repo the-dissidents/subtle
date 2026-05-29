@@ -510,11 +510,15 @@
     "clear": "clear",
     "corner-quotes": "corner quotes",
     "curly-quotes": "curly quotes (double outside)",
+    "custom": "custom",
+    "double-ellipsis": "use double ellipsis (……)",
     "edit-lint-profile": "edit lint profile",
     "french-guillemet": "French guillemets",
     "fullwidth-parens": "fullwidth parentheses",
     "halfwidth-parens": "halfwidth parentheses",
     "inverted-curly-quotes": "curly quotes (single outside)",
+    "single-ellipsis": "use single ellipsis (…)",
+    "spaces-and-punct": "spaces and punctuation",
     "unchecked": "unchecked"
   },
   "menu": {
@@ -675,6 +679,17 @@
     "url": "URL",
     "url-d": "Anchors (e.g. #English) are not supported. To automatically navigate to a specified element, enable \"Use auto-scroll\"",
     "use-auto-scroll": "use auto-scroll"
+  },
+  "regexlint": {
+    "chinese-word-connector": "use the correct form of the Chinese word connector",
+    "consecutive-spaces": "no consecutive spaces",
+    "leading-trailing-spaces": "no leading or trailing spaces",
+    "no-space-after-fullwidth-punct": "no space after fullwidth punctuation",
+    "no-space-before-fullwidth-punct": "no space before fullwidth punctuation",
+    "no-space-before-latin-punct": "no space before punctuations",
+    "non-preferred-ellipsis": "use of non-preferred form of ellipsis",
+    "space-after-latin-punct": "Latin punctuations should be followed by one space",
+    "space-around-fullwidth-punct": "no spaces around fullwidth punctuations"
   },
   "review": {
     "auto-fix-problems": "fixed{m,plural,=0 { all} other {}} {n,plural,=1 {# problem} other {# problems}}",

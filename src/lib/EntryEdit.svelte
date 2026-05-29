@@ -8,7 +8,7 @@ import TimestampInput from './TimestampInput.svelte';
 import RichEdit from './component/richedit/RichEdit.svelte';
 import RichEditToolbar from './component/richedit/RichEditToolbar.svelte';
 
-import { SubtitleEntry, SubtitleStyle, type Positioning } from './core/Subtitles.svelte';
+import { SubtitleEntry, type Positioning } from './core/Subtitles.svelte';
 import { AlignMode, type LabelType } from "./core/Labels";
 import { CompiledLintProfile } from './core/LintProfile';
 
@@ -23,6 +23,7 @@ import { Menu } from '@tauri-apps/api/menu';
 
 import { _ } from 'svelte-i18n';
 import { tick } from 'svelte';
+  import { SvelteMap } from 'svelte/reactivity';
 
 let editFormUpdateCounter = $state(0);
 let editAnchor: 'start' | 'end' = $state('start');
@@ -37,18 +38,21 @@ let uiFocus = Frontend.uiFocus;
 
 let focusedEntry = Editing.focused.entry;
 let focusedStyle = Editing.focused.style;
-let linters = $state(new Map<SubtitleStyle, CompiledLintProfile | undefined>());
 
 function updateLinters() {
-  linters = new Map(Source.subs.styles.map(
+  return new SvelteMap(Source.subs.styles.map(
     (x) => [x, x.lintProfile ? new CompiledLintProfile(x.lintProfile) : undefined] as const));
 }
+
+let linters = $state(updateLinters());
 
 const me = {};
 
 Source.onSubtitlesChanged.bind(me, (type) => {
-  if (type == ChangeType.General || type == ChangeType.LintProfile)
-    updateLinters();
+  if (type == ChangeType.General || type == ChangeType.LintProfile) {
+    linters = updateLinters();
+    Debug.debug('linters updated');
+  }
   updateForm();
 });
 
@@ -200,11 +204,9 @@ function applyEditForm() {
 </fieldset>
 <!-- channels view -->
 <div class="channels flexgrow isolated area" class:focused={$uiFocus == 'EditingField'}>
-  {#if $focusedStyle && Editing.styleToEditor.has($focusedStyle)}
-    <RichEditToolbar
-      target={Editing.styleToEditor.get($focusedStyle)!}
-      onAction={() => Editing.submitFocusedEntry()} />
-  {/if}
+  <RichEditToolbar
+    target={$focusedStyle ? Editing.styleToEditor.get($focusedStyle) : undefined}
+    onAction={() => Editing.submitFocusedEntry()} />
 
   {#if $focusedEntry instanceof SubtitleEntry}
   {@const focused = $focusedEntry}
