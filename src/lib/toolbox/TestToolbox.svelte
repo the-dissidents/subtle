@@ -21,6 +21,8 @@ import { openDialog } from "../DialogOutlet.svelte";
 import { BracketSetPresets } from "../linter/brackets/Presets";
 import { BracketLinter, type BracketSet } from "../linter/brackets/Brackets";
 import { Diagnostic } from "../linter/Common";
+  import { showInputPopup } from "../ui/InputPopup.svelte";
+  import { showConfirmationPopup } from "../ui/ConfirmationPopup.svelte";
 
 let result = $state("");
 Fonts.onInit(async () => {
@@ -85,8 +87,25 @@ let bracketResult = $state('');
 let forbidDeepNesting = $state(true);
 </script>
 
+
+<button onclick={async (e) => {
+  const input = await showConfirmationPopup(e.currentTarget, 'xyzzy?');
+  result = `confirmation popup: ${input}`;
+}}>confirm</button>
+
+<button onclick={async (e) => {
+  const input = await showInputPopup(e.currentTarget, 'enter:', {
+    validate: (s) => s.length > 5,
+    position: 'right'
+  });
+  result = `input popup: ${input}`;
+}}>input</button>
+
 <button onclick={async () => {
-  openDialog(Dialog.lintProfile, { bracketGroups: ['curlyQuotes', 'halfwidthParentheses'] });
+  openDialog(Dialog.lintProfile, {
+    bracketGroups: ['curlyQuotes', 'halfwidthParentheses'], regexes: [],
+    forbiddenPunctuation: ''
+  });
 }}>test lint profile dialog</button>
 
 <button onclick={async () => {

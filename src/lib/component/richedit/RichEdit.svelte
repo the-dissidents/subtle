@@ -83,11 +83,7 @@
     const doc = fromRichText(x);
     if (doc.eq(view.state.doc)) return;
 
-    view.updateState(EditorState.create({
-      schema: view.state.schema,
-      plugins: view.state.plugins,
-      doc
-    }));
+    view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, doc));
   });
 
   const backspace = chainCommands(deleteSelection, joinBackward, selectNodeBackward);
@@ -106,16 +102,8 @@
   }, { debounceMs: 0 });
 
   $effect(() => {
-    if (linter) untrack(() => {
-      clearLint();
-      lintTask.request(linter);
-    });
+    if (linter) untrack(() => lintTask.request(linter));
   });
-
-  function clearLint() {
-    if (view)
-      view.dispatch(view.state.tr.setMeta(LinterKey, []));
-  }
 
   onMount(() => {
     let state = EditorState.create({
@@ -147,10 +135,8 @@
             if (tr.find((x) => x.docChanged)) {
               update++;
               text = toRichText(newState.doc);
-              clearLint();
-              if (linter) {
+              if (linter)
                 lintTask.request(linter);
-              }
               onInput?.(text);
             }
             return null;
@@ -163,7 +149,7 @@
           }
         }),
         VirtualSelection,
-        Linter([], (d, rect) => {
+        Linter((d, rect) => {
           popupDiags = d;
           popup.open(rect);
         }, () => {

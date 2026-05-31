@@ -155,7 +155,8 @@ export function close() { popup.close(); }
     vertical-align: middle;
   }
 
-  ol {
+  ol, ul {
     padding-left: 2em;
+    margin: 5px 0;
   }
 </style>

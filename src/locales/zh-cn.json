@@ -483,6 +483,9 @@
     "no-preview-available": "无法显示预览",
     "this-font-doesnt-exist-on-your-computer": "你的电脑上没有这个字体"
   },
+  "forbidlint": {
+    "forbidden": "不允许使用该标点"
+  },
   "importdialog": {
     "after-existing-lines": "在现有行之后",
     "before-existing-lines": "在现有行之前",
@@ -540,18 +543,23 @@
   "lint": {
     "bracket-checking": "括号/引号检查",
     "clear": "清除",
+    "confirm-delete": "确认删除？",
     "corner-quotes": "方引号",
     "curly-quotes": "弯引号（外双内单）",
     "custom": "自定义",
     "double-ellipsis": "全省略号（……）",
     "edit-lint-profile": "编辑拼写检查预设",
     "ellipsis": "省略号",
+    "forbidden-punctuations": "禁止以下标点符号：",
     "french-guillemet": "法式引号",
     "fullwidth-parens": "全角圆括号",
     "halfwidth-parens": "半角圆括号",
     "inverted-curly-quotes": "弯引号（外单内双）",
+    "name-for-new-preset": "新预设名称",
+    "rename-to": "重命名：",
     "single-ellipsis": "半省略号（…）",
     "spaces-and-punct": "空格和标点",
+    "special": "特殊规则",
     "unchecked": "不检查"
   },
   "menu": {
@@ -719,11 +727,15 @@
     "consecutive-spaces": "禁止出现连续多个空格",
     "leading-trailing-spaces": "禁止在头尾出现空格",
     "no-space-after-fullwidth-punct": "全角标点符号后不应有空格",
+    "no-space-around-ellipsis": "省略号两端不应有空格",
     "no-space-before-fullwidth-punct": "全角标点符号前不应有空格",
-    "no-space-before-latin-punct": "标点符号前不应有空格",
+    "no-space-before-punct": "标点符号前不应有空格",
     "non-preferred-ellipsis": "不推荐的省略号形态",
     "space-after-latin-punct": "西文标点符号后应该恰好有一个空格",
-    "space-around-fullwidth-punct": "全角标点两边不能出现空格"
+    "space-around-ellipsis": "省略号两端须有一个空格",
+    "space-around-fullwidth-punct": "全角标点两边不能出现空格",
+    "use-fullwidth-punct": "CJK字符间要求使用全角标点",
+    "use-halfwidth-punct": "西文字符间要求使用半角标点"
   },
   "review": {
     "auto-fix-problems": "自动修复了{m,select,0 {所有} other {}} {n} 个问题",

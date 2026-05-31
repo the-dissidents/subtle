@@ -460,6 +460,9 @@
     "no-preview-available": "no preview available",
     "this-font-doesnt-exist-on-your-computer": "This font doesn't exist on your computer"
   },
+  "forbidlint": {
+    "forbidden": "forbidden punctuation"
+  },
   "importdialog": {
     "after-existing-lines": "after existing lines",
     "before-existing-lines": "before existing lines",
@@ -508,17 +511,22 @@
   "lint": {
     "bracket-checking": "bracket checking",
     "clear": "clear",
+    "confirm-delete": "delete?",
     "corner-quotes": "corner quotes",
     "curly-quotes": "curly quotes (double outside)",
     "custom": "custom",
     "double-ellipsis": "use double ellipsis (……)",
     "edit-lint-profile": "edit lint profile",
+    "forbidden-punctuations": "forbidden punctuations:",
     "french-guillemet": "French guillemets",
     "fullwidth-parens": "fullwidth parentheses",
     "halfwidth-parens": "halfwidth parentheses",
     "inverted-curly-quotes": "curly quotes (single outside)",
+    "name-for-new-preset": "name for new preset:",
+    "rename-to": "rename to:",
     "single-ellipsis": "use single ellipsis (…)",
     "spaces-and-punct": "spaces and punctuation",
+    "special": "special rules",
     "unchecked": "unchecked"
   },
   "menu": {
@@ -685,11 +693,15 @@
     "consecutive-spaces": "no consecutive spaces",
     "leading-trailing-spaces": "no leading or trailing spaces",
     "no-space-after-fullwidth-punct": "no space after fullwidth punctuation",
+    "no-space-around-ellipsis": "no spaces around ellipses",
     "no-space-before-fullwidth-punct": "no space before fullwidth punctuation",
-    "no-space-before-latin-punct": "no space before punctuations",
+    "no-space-before-punct": "no space before punctuations",
     "non-preferred-ellipsis": "use of non-preferred form of ellipsis",
     "space-after-latin-punct": "Latin punctuations should be followed by one space",
-    "space-around-fullwidth-punct": "no spaces around fullwidth punctuations"
+    "space-around-ellipsis": "ellipses should be surrounded by space",
+    "space-around-fullwidth-punct": "no spaces around fullwidth punctuations",
+    "use-fullwidth-punct": "use fullwidth punctuation in CJK text",
+    "use-halfwidth-punct": "use halfwidth punctuations in Latin text"
   },
   "review": {
     "auto-fix-problems": "fixed{m,plural,=0 { all} other {}} {n,plural,=1 {# problem} other {# problems}}",

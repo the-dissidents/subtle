@@ -8,6 +8,7 @@ import { SvelteSet } from 'svelte/reactivity';
 import { onMount } from 'svelte';
 
 import { _ } from 'svelte-i18n';
+  import { ConfigRow, ConfigTable } from '@the_dissidents/svelte-ui';
 
 interface Props {
   args: [profile: LintProfile],
@@ -25,6 +26,7 @@ function load(profile: LintProfile) {
   regexes.clear();
   profile.bracketGroups.forEach((x) => bracketGroups.add(x));
   profile.regexes.forEach((x) => regexes.add(x));
+  forbidden = profile.forbiddenPunctuation;
 }
 
 onMount(async () => {
@@ -35,10 +37,12 @@ onMount(async () => {
 
 const bracketGroups = new SvelteSet<BracketPresetName>();
 const regexes = new SvelteSet<RegexLintPresetName>();
+let forbidden = $state('');
 
 const result = $derived<LintProfile>({
   bracketGroups: [...bracketGroups.keys()],
-  regexes: [...regexes.keys()]
+  regexes: [...regexes.keys()],
+  forbiddenPunctuation: forbidden,
 });
 </script>
 
@@ -156,11 +160,20 @@ const result = $derived<LintProfile>({
     <div class="vlayout">
       <fieldset>
         <legend>{$_('lint.ellipsis')}</legend>
-        <div class="list">
-          {@render regexRadios([
-            ['useSingleEllipsis', $_('lint.single-ellipsis')],
-            ['useDoubleEllipsis', $_('lint.double-ellipsis')],
-          ])}
+        <div class="hlayout">
+          <div class="list">
+            {@render regexRadios([
+              ['useSingleEllipsis', $_('lint.single-ellipsis')],
+              ['useDoubleEllipsis', $_('lint.double-ellipsis')],
+            ])}
+          </div>
+          <div class="flexgrow"></div>
+          <div class="list">
+            {@render regexRadios([
+              ['spaceAroundEllipsis', $_('regexlint.space-around-ellipsis')],
+              ['noSpaceAroundEllipsis', $_('regexlint.no-space-around-ellipsis')],
+            ])}
+          </div>
         </div>
       </fieldset>
       <fieldset>
@@ -169,15 +182,26 @@ const result = $derived<LintProfile>({
           {@render regexCheckboxes([
             ['noConsecutiveSpaces', $_('regexlint.consecutive-spaces')],
             ['noLeadingTrailingSpaces', $_('regexlint.leading-trailing-spaces')],
-            ['noSpaceBeforePunctuation', $_('regexlint.no-space-before-latin-punct')],
+            ['noSpaceBeforePunctuation', $_('regexlint.no-space-before-punct')],
             ['spaceAfterLatinPunctuation', $_('regexlint.space-after-latin-punct')],
-            ['spaceAroundFullwidthPunctuation', $_('regexlint.space-around-fullwidth-punct')],
+            ['noSpaceAroundFullwidthPunctuation', $_('regexlint.space-around-fullwidth-punct')],
             ['useChineseWordConnector', $_('regexlint.chinese-word-connector')],
+            ['useFullwidthPunctuationInCJK', $_('regexlint.use-fullwidth-punct')],
+            ['useHalfwidthPunctuationInLatin', $_('regexlint.use-halfwidth-punct')],
           ])}
         </div>
       </fieldset>
     </div>
   </div>
+
+  <fieldset>
+    <legend>{$_('lint.special')}</legend>
+    <ConfigTable>
+      <ConfigRow name={$_('lint.forbidden-punctuations')}>
+        <input style:width="100%" type='text' bind:value={forbidden}>
+      </ConfigRow>
+    </ConfigTable>
+  </fieldset>
 </div>
 </DialogBase>
 
@@ -211,4 +235,10 @@ const result = $derived<LintProfile>({
       margin-right: 5px;
     }
   }
+
+  /* .vr {
+    border-left: 1px solid var(--separator-light);
+    width: 1px;
+    height: 100%;
+  } */
 </style>

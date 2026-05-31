@@ -2,7 +2,6 @@ import type { Node } from "prosemirror-model";
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
 import type { Diagnostic } from "../../linter/Common";
-import { Debug } from "../../Debug";
 
 function lintDeco(doc: Node, diags: Diagnostic[]) {
   return DecorationSet.create(doc,
@@ -19,18 +18,19 @@ function getDiag(view: EditorView, plugin: Plugin<DecorationSet>, dom: Element) 
 }
 
 export const Linter = (
-    initial: Diagnostic[] = [],
     show: (d: Diagnostic[], rect: DOMRect) => void,
     _hide: () => void,
 ) => new Plugin({
   state: {
-    init(_, {doc}) {
-        return lintDeco(doc, initial);
+    init() {
+        return DecorationSet.empty;
     },
     apply(tr, old) {
+        if ('composition' in tr) {
+            // don't update decorations while composing to avoid messing up things
+            return old.map(tr.mapping, tr.doc);
+        }
         const m = tr.getMeta(LinterKey) as Diagnostic[] | undefined;
-        if (m && m.length > 0)
-            Debug.info(m, 'oooo');
         return m ? lintDeco(tr.doc, m) : old;
     }
   },
