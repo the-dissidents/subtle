@@ -65,6 +65,30 @@ export const RegexLintPresets = {
         description: () => $_('regexlint.chinese-word-connector'),
         fix: () => `–`,
     }],
+    checkLatinDash: [{
+        type: 'punctuation',
+        pattern: /(?<=\s*)-{2,}(?=\s*)|(?<=\s+)-(?=\s+)/mug,
+        description: () => $_('regexlint.latin-dash'),
+        fix: () => `—`,
+
+        id: 'checkLatinDash'
+    }],
+    spaceAroundLatinDash: [{
+        type: 'punctuation',
+        pattern: /(?<=\p{Script=Latin})(-{2,}|—)(?=\p{Script=Latin})/mug,
+        description: () => $_('regexlint.space-around-latin-dash'),
+        fix: () => ` — `,
+
+        overrides: ['checkLatinDash']
+    }],
+    noSpaceAroundLatinDash: [{
+        type: 'punctuation',
+        pattern: /(?<=\p{Script=Latin})([ ]+(-{2,}|—)[ ]*|[ ]*(-{2,}|—)[ ]+)(?=\p{Script=Latin})/mug,
+        description: () => $_('regexlint.no-space-around-latin-dash'),
+        fix: () => ` — `,
+
+        overrides: ['checkLatinDash']
+    }],
     spaceAroundEllipsis: [{
         type: 'format',
         pattern: /(?<!^|\s)…+/mug,

@@ -691,15 +691,18 @@
   "regexlint": {
     "chinese-word-connector": "use the correct form of the Chinese word connector",
     "consecutive-spaces": "no consecutive spaces",
+    "latin-dash": "em-dashes should be surrounded by spaces",
     "leading-trailing-spaces": "no leading or trailing spaces",
     "no-space-after-fullwidth-punct": "no space after fullwidth punctuation",
     "no-space-around-ellipsis": "no spaces around ellipses",
+    "no-space-around-latin-dash": "no space around em-dashes",
     "no-space-before-fullwidth-punct": "no space before fullwidth punctuation",
     "no-space-before-punct": "no space before punctuations",
     "non-preferred-ellipsis": "use of non-preferred form of ellipsis",
     "space-after-latin-punct": "Latin punctuations should be followed by one space",
     "space-around-ellipsis": "ellipses should be surrounded by space",
     "space-around-fullwidth-punct": "no spaces around fullwidth punctuations",
+    "space-around-latin-dash": "em-dashes should be surrounded by spaces",
     "use-fullwidth-punct": "use fullwidth punctuation in CJK text",
     "use-halfwidth-punct": "use halfwidth punctuations in Latin text"
   },

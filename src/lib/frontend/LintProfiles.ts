@@ -16,7 +16,7 @@ const defaultLintProfiles: [string, LintProfile][] = [
     }],
     ['English (US)', {
         bracketGroups: ['curlyQuotes', 'halfwidthParentheses'],
-        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'spaceAroundEllipsis', 'useHalfwidthPunctuationInLatin'],
+        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'spaceAroundEllipsis', 'useHalfwidthPunctuationInLatin', 'checkLatinDash'],
         forbiddenPunctuation: '',
     }]
 ]
