@@ -8,16 +8,39 @@ const defaultLintProfiles: [string, LintProfile][] = [
         bracketGroups: ['curlyQuotes', 'fullwidthParentheses'],
         regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'noSpaceAroundFullwidthPunctuation', 'useChineseWordConnector', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
+        dashes: {
+            dialog: { type: 'enDash', spaces: true, separateLines: false },
+            dash: { type: 'emDash', spaces: true, endOnly: false },
+            cjkDash: { type: 'standard' }
+        }
     }],
     ['简体中文（方引号）', {
         bracketGroups: ['cornerQuotes', 'fullwidthParentheses'],
         regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'noSpaceAroundFullwidthPunctuation', 'useChineseWordConnector', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
+        dashes: {
+            dialog: { type: 'enDash', spaces: true, separateLines: false },
+            dash: { type: 'emDash', spaces: true, endOnly: false },
+            cjkDash: { type: 'standard' }
+        }
     }],
     ['English (US)', {
         bracketGroups: ['curlyQuotes', 'halfwidthParentheses'],
         regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'spaceAroundEllipsis', 'useHalfwidthPunctuationInLatin', 'checkLatinDash'],
         forbiddenPunctuation: '',
+        dashes: {
+            dialog: { type: 'enDash', spaces: true, separateLines: false },
+            dash: { type: 'emDash', spaces: true, endOnly: false },
+        }
+    }],
+    ['English (US, Netflix)', {
+        bracketGroups: ['curlyQuotes', 'halfwidthParentheses'],
+        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'spaceAroundEllipsis', 'useHalfwidthPunctuationInLatin', 'checkLatinDash'],
+        forbiddenPunctuation: '—–', // en- and em-dashes
+        dashes: {
+            dialog: { type: 'hyphen', spaces: false, separateLines: true },
+            dash: { type: 'doubleHyphen', spaces: false, endOnly: true },
+        }
     }]
 ]
 

@@ -6,6 +6,7 @@ import { zx } from '@traversable/zod';
 import { RegexLintPresets } from "../linter/regex/Presets";
 import { RegexLinter, type RegexLintRule } from "../linter/regex/Regex";
 import { ForbidPunctuationLinter } from "../linter/ForbidCharacters";
+import { DashesConfig } from "../linter/Dashes";
 
 export const BracketPresetName =
     z.enum(Object.keys(BracketSetPresets) as (keyof typeof BracketSetPresets)[]);
@@ -21,6 +22,7 @@ export const LintProfile = z.object({
     bracketGroups: z._default(z.array(BracketPresetName), []),
     regexes: z._default(z.array(RegexLintPresetName), []),
     forbiddenPunctuation: z._default(z.string(), ''),
+    dashes: z.optional(DashesConfig)
 });
 
 export type LintProfile = z.infer<typeof LintProfile>;

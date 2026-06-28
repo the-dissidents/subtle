@@ -235,6 +235,10 @@
     "header": "compare subtitle files",
     "matched-entries": "matched entries"
   },
+  "comparereport": {
+    "new": "new",
+    "original": "original"
+  },
   "config": {
     "arrow-navigation-type": "arrow navigation preference",
     "arrow-navigation-type-d": "The preferred position of the newly selected entry when navigating the subtitle table with Up/Down arrow keys.",

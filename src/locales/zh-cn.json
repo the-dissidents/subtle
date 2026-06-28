@@ -251,6 +251,10 @@
     "use-left": "全部使用左侧",
     "use-right": "全部使用右侧"
   },
+  "comparereport": {
+    "new": "修改版本",
+    "original": "原版本"
+  },
   "config": {
     "arrow-navigation-type": "上下方向键选择设置",
     "arrow-navigation-type-d": "指定按上下方向键选择时，新选中的字幕条应该滚动到什么位置",
@@ -547,6 +551,7 @@
     "corner-quotes": "方引号",
     "curly-quotes": "弯引号（外双内单）",
     "custom": "自定义",
+    "dashes": "破折号",
     "double-ellipsis": "全省略号（……）",
     "edit-lint-profile": "编辑拼写检查预设",
     "ellipsis": "省略号",

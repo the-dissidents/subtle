@@ -1,8 +1,7 @@
 import type { Diagnostic } from "./Common";
+import * as z from "zod/v4-mini";
 
-export type DashType = keyof typeof DashType;
-
-const DashType = {
+export const DashType = {
     emDash: '—',
     enDash: '–',
     hyphen: '-',
@@ -10,30 +9,34 @@ const DashType = {
     fullwidthHyphen: '－',
 };
 
-export type CJKDashType = keyof typeof CJKDashType;
+export type DashType = keyof typeof DashType;
+export const ZDashType = z.enum(Object.keys(DashType) as DashType[]);
 
-const CJKDashType = {
+export const CJKDashType = {
     standard: '——',
     unicode: '⸺'
 };
 
-export type DashesConfig = {
-    dialog: {
-        type: DashType,
-        spaces: boolean,
-        separateLines: boolean
-    },
-    dash: {
-        type: DashType,
-        spaces: boolean,
+export type CJKDashType = keyof typeof CJKDashType;
+export const ZCJKDashType = z.enum(Object.keys(CJKDashType) as CJKDashType[]);
 
-        // e.g. Netflix Timed Text Style Guide: "Use two hyphens to indicate an abrupt interruption by an action, sound or other speaker. In the case of a change of thought or trail-off by the same speaker, use ellipses."
-        endOnly: boolean,
-    },
-    cjkDash?: {
-        type: CJKDashType,
-    }
-}
+export const DashesConfig = z.object({
+    dialog: z.object({
+        type: ZDashType,
+        spaces: z.boolean(),
+        separateLines: z.boolean()
+    }),
+    dash: z.object({
+        type: ZDashType,
+        spaces: z.boolean(),
+        endOnly: z.boolean(),
+    }),
+    cjkDash: z.optional(z.object({
+        type: ZCJKDashType,
+    }))
+});
+
+export type DashesConfig = z.infer<typeof DashesConfig>;
 
 export class DashLinter {
     constructor(private config: DashesConfig) {}

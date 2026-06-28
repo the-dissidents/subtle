@@ -9,6 +9,7 @@ import { onMount } from 'svelte';
 
 import { _ } from 'svelte-i18n';
   import { ConfigRow, ConfigTable } from '@the_dissidents/svelte-ui';
+  import { DashType, type DashesConfig } from '../linter/Dashes';
 
 interface Props {
   args: [profile: LintProfile],
@@ -27,6 +28,7 @@ function load(profile: LintProfile) {
   profile.bracketGroups.forEach((x) => bracketGroups.add(x));
   profile.regexes.forEach((x) => regexes.add(x));
   forbidden = profile.forbiddenPunctuation;
+  dashes = profile.dashes;
 }
 
 onMount(async () => {
@@ -37,6 +39,7 @@ onMount(async () => {
 
 const bracketGroups = new SvelteSet<BracketPresetName>();
 const regexes = new SvelteSet<RegexLintPresetName>();
+let dashes = $state<DashesConfig>();
 let forbidden = $state('');
 
 const result = $derived<LintProfile>({
@@ -45,6 +48,20 @@ const result = $derived<LintProfile>({
   forbiddenPunctuation: forbidden,
 });
 </script>
+
+{#snippet dashSelector()}
+  {#each Object.entries(DashType) as [k, v]}
+    <label>
+      <input type='radio' checked={false}
+        onchange={(e) => {
+          if (e.currentTarget.checked) {
+
+          }
+        }}>
+      <span>{k} <code>{v}</code></span>
+    </label>
+  {/each}
+{/snippet}
 
 {#snippet regexCheckboxes(data: [group: RegexLintPresetName, name: string][])}
   {#each data as [group, name]}
@@ -161,14 +178,13 @@ const result = $derived<LintProfile>({
       <fieldset>
         <legend>{$_('lint.ellipsis')}</legend>
         <div class="hlayout">
-          <div class="list">
+          <div class="list flexgrow">
             {@render regexRadios([
               ['useSingleEllipsis', $_('lint.single-ellipsis')],
               ['useDoubleEllipsis', $_('lint.double-ellipsis')],
             ])}
           </div>
-          <div class="flexgrow"></div>
-          <div class="list">
+          <div class="list flexgrow">
             {@render regexRadios([
               ['spaceAroundEllipsis', $_('regexlint.space-around-ellipsis')],
               ['noSpaceAroundEllipsis', $_('regexlint.no-space-around-ellipsis')],
@@ -176,6 +192,7 @@ const result = $derived<LintProfile>({
           </div>
         </div>
       </fieldset>
+
       <fieldset>
         <legend>{$_('lint.spaces-and-punct')}</legend>
         <div class="list">
@@ -195,6 +212,55 @@ const result = $derived<LintProfile>({
   </div>
 
   <fieldset>
+    <legend>{$_('lint.dashes')}</legend>
+    <div class="hlayout">
+      <div class="list flexgrow">
+        <h5>表示对话的破折号</h5>
+        {@render dashSelector()}
+        <hr>
+        <label>
+          <input type='checkbox' bind:checked={
+            () => dashes?.dialog.spaces ?? false,
+            (x) => dashes!.dialog.spaces = x}>
+          周围需要空格
+        </label>
+        <label>
+          <input type='checkbox' bind:checked={
+            () => dashes?.dialog.separateLines ?? false,
+            (x) => dashes!.dialog.separateLines = x}>
+          必须换行
+        </label>
+      </div>
+      <div class="list flexgrow">
+        <h5>西文破折号</h5>
+        {@render dashSelector()}
+        <hr>
+        <label>
+          <input type='checkbox' bind:checked={
+            () => dashes?.dash.spaces ?? false,
+            (x) => dashes!.dash.spaces = x}>
+          周围需要空格
+        </label>
+        <label>
+          <input type='checkbox' bind:checked={
+            () => dashes?.dash.endOnly ?? false,
+            (x) => dashes!.dash.endOnly = x}>
+          限制只能出现在行尾
+        </label>
+      </div>
+      <div class="list flexgrow">
+        <h5>CJK破折号</h5>
+        <label>
+          <input type='checkbox' bind:checked={
+            () => !!dashes?.cjkDash,
+            (x) => (x ? dashes!.cjkDash = { type: 'standard' } : dashes!.cjkDash = undefined)}>
+          启用检查
+        </label>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
     <legend>{$_('lint.special')}</legend>
     <ConfigTable>
       <ConfigRow name={$_('lint.forbidden-punctuations')}>
@@ -206,6 +272,15 @@ const result = $derived<LintProfile>({
 </DialogBase>
 
 <style>
+  .hlayout {
+    gap: 5px
+  }
+
+  h5 {
+    border: none;
+    padding: 0;
+  }
+
   fieldset {
     border-radius: 2px;
     border: 1px solid gray;
@@ -217,7 +292,7 @@ const result = $derived<LintProfile>({
     color: white;
     background-color: gray;
     border-radius: 3px;
-    font-family: var(--monospaceFontFamily);
+    font-family: var(--uiFontFamily);
     padding-inline: 2px;
   }
 

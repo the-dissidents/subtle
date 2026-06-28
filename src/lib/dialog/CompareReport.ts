@@ -160,8 +160,8 @@ export function constructHTMLReport(data: DataEntry[]): string {
 <table>
 <thead>
 <tr>
-    <th colspan="4">Original</th>
-    <th colspan="4">New</th>
+    <th colspan="4">${escapeHtml($_('comparereport.original'))}</th>
+    <th colspan="4">${escapeHtml($_('comparereport.new'))}</th>
 </tr>
 <tr>
     <th>#</th><th>${escapeHtml($_('metrics.start-time-short'))}</th><th>${escapeHtml($_('metrics.end-time-short'))}</th><th>${escapeHtml($_('metrics.content'))}</th>
