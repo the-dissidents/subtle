@@ -72,6 +72,8 @@ const ZEntry = z.object({
 });
 
 function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
+    Debug.assert(Number.isFinite(entry.start));
+    Debug.assert(Number.isFinite(entry.end))
     return {
         start: entry.start,
         end: entry.end,
