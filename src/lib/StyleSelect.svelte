@@ -29,7 +29,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 
 <select tabindex='-1' class={{stretch}}
   disabled={disabled}
-  oninput={async (ev) => {
+  oninput={(ev) => {
     let oldStyle = currentStyle;
     currentStyle = styles[ev.currentTarget.selectedIndex];
     onsubmit?.(currentStyle, () => currentStyle = oldStyle);

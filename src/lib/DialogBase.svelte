@@ -69,7 +69,7 @@ let resolve: ((btn: string) => void) | undefined;
 export async function showModal() {
   return new Promise<string>((r) => {
     resolve = (btn) => {
-      Debug.debug('dialog returning', btn);
+      void Debug.debug('dialog returning', btn);
       r(btn);
       if (dialog?.open) dialog?.close();
       resolve = undefined;
@@ -77,7 +77,7 @@ export async function showModal() {
     Debug.assert(dialog !== undefined);
     Debug.assert(!dialog.open);
     dialog.showModal();
-    tick().then(() => {
+    void tick().then(() => {
       makeCenter();
       checkScroll();
     });

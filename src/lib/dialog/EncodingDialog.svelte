@@ -13,6 +13,7 @@ interface Props {
 }
 
 let { args, close }: Props = $props();
+// svelte-ignore state_referenced_locally
 let [path, source, result] = args;
 let inner: DialogBase;
 
@@ -21,14 +22,14 @@ onMount(async () => {
   candidates = result;
   if (candidates.length > 0) {
     selectedEncoding = candidates[0].name;
-    makePreview();
+    await makePreview();
   }
   let btn = await inner.showModal!();
   if (btn !== 'ok' || !selectedEncoding)
     return close(null);
-  
+
   close({
-    encoding: selectedEncoding, 
+    encoding: selectedEncoding,
     decoded: await MAPI.decodeFile(path, selectedEncoding)
   });
 });
@@ -44,7 +45,7 @@ async function makePreview() {
       preview = (await MAPI.decodeFile(path, selectedEncoding)).substring(0, 6000);
       okDisabled = false;
     } catch (e) {
-      Debug.warn(e);
+      await Debug.warn(e);
       preview = '';
       okDisabled = true;
     }
@@ -60,8 +61,8 @@ async function makePreview() {
     name: 'cancel',
     localizedName: () => $_('cancel')
   }, {
-    name: 'ok', 
-    localizedName: () => $_('ok'), 
+    name: 'ok',
+    localizedName: () => $_('ok'),
     disabled: () => okDisabled
   }]}
 >
@@ -82,8 +83,8 @@ async function makePreview() {
       {#if candidates && candidates.length > 0}
         {#each candidates as c, i (c)}
         <tr class={{
-          important: c.confidence == 100, 
-          unimportant: c.confidence < 20 
+          important: c.confidence == 100,
+          unimportant: c.confidence < 20
             || (i > 0 && candidates[0].confidence == 100)
         }}>
           <td class="right">

@@ -165,20 +165,20 @@ export class Subtitles {
         let ok = true;
         for (const style of this.styles) {
             if (!isProxy(style)) {
-                Debug.warn(`debugTestIntegrity: style is not a proxy: ${style.name}`);
+                void Debug.warn(`debugTestIntegrity: style is not a proxy: ${style.name}`);
                 console.log(style);
                 ok = false;
             }
         }
         if (!this.styles.includes(this.defaultStyle)) {
-            Debug.warn(`debugTestIntegrity: defaultStyle not found in styles`);
+            void Debug.warn(`debugTestIntegrity: defaultStyle not found in styles`);
             console.log(this.defaultStyle);
             ok = false;
         }
         const map = new Map<SubtitleStyle, number>();
         this.entries.forEach((ent, i) => {
             if (ent.texts.size == 0)
-                Debug.warn(`debugTestIntegrity: entry with no channels at ${i}`);
+                void Debug.warn(`debugTestIntegrity: entry with no channels at ${i}`);
             for (const [style, _] of ent.texts) {
                 if (!this.styles.includes(style)) {
                     map.set(style, (map.get(style) ?? 0) + 1);
@@ -187,7 +187,7 @@ export class Subtitles {
             }
         });
         for (const [style, n] of map) {
-            Debug.warn(`debugTestIntegrity: entry style not found in styles: ${style.name}${n > 1 ? ` [${n} times]` : ''}`);
+            void Debug.warn(`debugTestIntegrity: entry style not found in styles: ${style.name}${n > 1 ? ` [${n} times]` : ''}`);
             console.log(style);
         }
         return ok;

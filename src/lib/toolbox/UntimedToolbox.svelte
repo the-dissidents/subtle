@@ -13,6 +13,7 @@ let textarea: HTMLTextAreaElement;
 
 let fuzzy = $state({
   enabled: false,
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   tokenizer: 'character' as keyof typeof tokenizers,
   useStyle: Source.subs.defaultStyle,
   engine: null as fuzzyAlgorithm.Searcher<string, string> | null,
@@ -69,7 +70,7 @@ const UntimedCommands = {
   {
     name: () => get(_)('untimed.fuzzy.action-apply-match'),
     isApplicable: () => fuzzy.enabled,
-    call: () => {
+    call: async () => {
       if (fuzzy.currentEntry !== Editing.getFocusedEntry())
         return Debug.early();
 
@@ -79,7 +80,7 @@ const UntimedCommands = {
         .substring(textarea.selectionStart, textarea.selectionEnd);
       if (fuzzy.currentEntry.texts.get(fuzzy.useStyle) != str) {
         fuzzy.currentEntry.texts.set(fuzzy.useStyle, str);
-        Source.markChanged(ChangeType.InPlace, get(_)('c.fuzzy-replace'));
+        await Source.markChanged(ChangeType.InPlace, get(_)('c.fuzzy-replace'));
       }
     }
   }),
@@ -128,8 +129,9 @@ async function fillIn(range: SubtitleEntry[]) {
    && !await dialog.confirm($_('untimed.fill-in.already-has-style-msg',
     {values: { a: already.length, b: fillAsStyle.name }}))) return false;
 
-  range.forEach((x) => Editing.fillWithFirstLineOfUntimed(x, fillAsStyle, separator));
-  Source.markChanged(ChangeType.InPlace, $_('c.fill-with-untimed'));
+  for (const r of range)
+    await Editing.fillWithFirstLineOfUntimed(r, fillAsStyle, separator);
+  await Source.markChanged(ChangeType.InPlace, $_('c.fill-with-untimed'));
   return true;
 }
 
@@ -160,11 +162,11 @@ Editing.onSelectionChanged.bind(me, () => {
   fuzzyMatch();
 });
 
-function markChanged() {
+async function markChanged() {
   if (!changed) return;
   changed = false;
   fuzzy.engine = null;
-  Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
+  await Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
 }
 
 function fuzzyMatch() {
@@ -258,12 +260,12 @@ async function paste() {
     'The text in your clipboard is very long. Proceed to import?',
     {kind: 'warning'})) return;
   Source.subs.metadata.special.untimedText = text;
-  markChanged();
+  await markChanged();
 }
 
-function clear() {
+async function clear() {
   Source.subs.metadata.special.untimedText = '';
-  markChanged();
+  await markChanged();
 }
 </script>
 
@@ -314,7 +316,7 @@ function clear() {
         if (!($focusedEntry instanceof SubtitleEntry))
           return Debug.early();
         if (await fillIn([$focusedEntry]))
-          Editing.offsetFocus(1, SelectMode.Single);
+          await Editing.offsetFocus(1, SelectMode.Single);
       }}
     >{$_('untimed.fill-in.this-entry')}</button>
     <button disabled={selection.length == 0}

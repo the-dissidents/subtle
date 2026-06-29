@@ -210,7 +210,7 @@ export const SubtitleUtil = {
             switch (options.style.type) {
                 case 'override':
                 case 'createNewOverride':
-                    Debug.trace('override:', s.name, '->', overrideStyle.name);
+                    void Debug.trace('override:', s.name, '->', overrideStyle.name);
                     styleMap.set(s, overrideStyle);
                     return overrideStyle;
                 case 'keepAll': {
@@ -219,7 +219,7 @@ export const SubtitleUtil = {
                     newStyle.name = SubtitleTools.getUniqueStyleName(original, s.name);
                     original.styles.push(newStyle);
                     styleMap.set(s, newStyle);
-                    Debug.trace('KeepAll:', s.name, '->', newStyle.name);
+                    void Debug.trace('KeepAll:', s.name, '->', newStyle.name);
                     return newStyle;
                 }
                 case 'keepDifferent':

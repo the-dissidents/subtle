@@ -22,8 +22,8 @@
   const { target, onAction }: Props = $props();
 
   const view = $derived(target?.inner());
-  const selStart = $derived(target?.selection()[0]);
-  const selEnd = $derived(target?.selection()[1]);
+  const selStart: number | undefined = $derived(target?.selection()[0]);
+  const selEnd: number | undefined = $derived(target?.selection()[1]);
   const updateCounter = $derived(target?.updateCounter());
 
   function isMarkActive(m: MarkType) {

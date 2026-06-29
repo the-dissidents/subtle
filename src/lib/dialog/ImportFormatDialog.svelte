@@ -72,9 +72,10 @@ function parse() {
       {#if categories}
       {#each Object.entries(categories) as [k, v] (k)}
       {@const groups = groupBy(v as SubtitleParseMessage[], 'type')}
-      {@const info = format!.categoryDescription(k)}
+      {@const info = format.categoryDescription(k)}
         {#each Object.entries(groups) as [type, msgs] (type)}
-        {@const f = format!.formatMessage(type, msgs as never)}
+        <!-- eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -->
+        {@const f = format.formatMessage(type, msgs as never)}
           <li>
             <CircleAlertIcon />
             {f.heading}
@@ -112,8 +113,8 @@ function parse() {
       {#each format.options as opt (opt)}
         {#if opt.type == 'boolean'}
           <label>
-            <input type="checkbox" checked={opt.getValue(parser!)}
-              onchange={(x) => {opt.setValue(parser!, x.currentTarget.checked); parse()}}/>
+            <input type="checkbox" checked={opt.getValue(parser)}
+              onchange={(x) => {opt.setValue(parser, x.currentTarget.checked); parse()}}/>
             {opt.name}
             {#if opt.description}
               <Tooltip text={opt.description} />

@@ -102,7 +102,7 @@
   }, { debounceMs: 0 });
 
   $effect(() => {
-    if (linter) untrack(() => lintTask.request(linter));
+    if (linter) untrack(() => void lintTask.request(linter));
   });
 
   onMount(() => {
@@ -136,7 +136,7 @@
               update++;
               text = toRichText(newState.doc);
               if (linter)
-                lintTask.request(linter);
+                void lintTask.request(linter);
               onInput?.(text);
             }
             return null;

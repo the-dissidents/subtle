@@ -65,8 +65,8 @@ export type ASSParseUnsupportedMessage = {
     type: 'ignored-embedded-fonts'
 };
 
-export type ASSParseMessage = 
-    ({ category: 'invalid' } & ASSParseInvalidMessage) 
+export type ASSParseMessage =
+    ({ category: 'invalid' } & ASSParseInvalidMessage)
   | ({ category: 'unsupported' } & ASSParseUnsupportedMessage);
 
 export class ASSParser implements SubtitleParser {
@@ -150,7 +150,7 @@ export class ASSParser implements SubtitleParser {
             case 11: return AlignMode.CenterRight;
             default: return null;
         }
-        if (value >= 1 && value <= 9) return value as AlignMode;
+        if (value >= 1 && value <= 9) return value;
         return null;
     }
 
@@ -179,29 +179,29 @@ export class ASSParser implements SubtitleParser {
         const styleMatches = text.matchAll(stylesRegex);
         for (const match of styleMatches) {
             const bool = (field: string, f: (x: boolean) => boolean | void) => {
-                if (!styleFieldMap!.has(field)) return;
-                const value = items[styleFieldMap!.get(field)!];
+                if (!styleFieldMap.has(field)) return;
+                const value = items[styleFieldMap.get(field)!];
                 if (value == '-1' && f(true) !== false) return;
                 else if (value == '0' && f(false) !== false) return;
                 else this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
-            const float = 
+            const float =
             (field: string, f: (x: number) => boolean | void) => {
-                if (!styleFieldMap!.has(field)) return;
+                if (!styleFieldMap.has(field)) return;
                 const value = items[styleFieldMap.get(field)!];
                 const n = Number.parseFloat(value);
                 if (!isNaN(n) && f(n) !== false) return;
                 this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
             const color = (field: string, f: (x: Color.PlainColorObject) => boolean | void) => {
-                if (!styleFieldMap!.has(field)) return;
+                if (!styleFieldMap.has(field)) return;
                 const value = items[styleFieldMap.get(field)!];
                 const color = fromASSColor(value);
                 if (color !== null && f(color) !== false) return;
                 else this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
             const ignore = (field: string, def: string | RegExp) => {
-                if (!styleFieldMap!.has(field)) return;
+                if (!styleFieldMap.has(field)) return;
                 const value = items[styleFieldMap.get(field)!];
                 if (typeof def == 'string'
                     ? value == def
@@ -259,7 +259,7 @@ export class ASSParser implements SubtitleParser {
             // FIXME: SecondaryColour and BackColour are also ignored but not warned here
             // because we don't know when to warn, yet we don't want to warn every time
         }
-        
+
         if (!first) this.#invalid({ type: 'no-styles' });
         else this.#subs.defaultStyle = first;
     }
@@ -270,9 +270,9 @@ export class ASSParser implements SubtitleParser {
             throw new DeserializationError('invalid ASS');
 
         const fieldMap = getASSFormatFieldMap(text);
-        if (fieldMap == null 
-         || !fieldMap.has('Start') 
-         || !fieldMap.has('End') 
+        if (fieldMap == null
+         || !fieldMap.has('Start')
+         || !fieldMap.has('End')
          || !fieldMap.has('Style')
          || !fieldMap.has('Text'))
             throw new DeserializationError('invalid ASS');
@@ -375,10 +375,10 @@ export class ASSWriter implements SubtitleWriter {
             SubtitleTools.getUniqueStyleName(
                 this.subs, `${name.replace(',', '_')}_${this.#styleNames.size}`);
 
-        // `Default` seems to be a case-insensitive reserved word in the SSA format that always 
-        // points to the built-in default style; also the fields of dialogue lines are not 
-        // permitted to contain commas. As a consequence, if we have a style name in conflict with 
-        // this we must mangle it. 
+        // `Default` seems to be a case-insensitive reserved word in the SSA format that always
+        // points to the built-in default style; also the fields of dialogue lines are not
+        // permitted to contain commas. As a consequence, if we have a style name in conflict with
+        // this we must mangle it.
         for (const style of subs.styles) {
             if (style.name.toLowerCase() == 'default' || style.name.includes(','))
                 this.#styleNames.set(style, mangle(style.name));
@@ -474,7 +474,7 @@ export class ASSWriter implements SubtitleWriter {
         if (wrapStatistics[WrapStyle.NoWrap] == max)
             this.#defaultWrapStyle = WrapStyle.NoWrap;
 
-        let result = 
+        let result =
 `[Script Info]
 ; Script generated by subtle ${Basic.version}
 ScriptType: v4.00+
@@ -522,7 +522,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
 export function toASSColor(original: Color.ColorTypes) {
     const c = Color.to(original, 'srgb', { inGamut: true });
     const [r, g, b] = c.coords;
-    return '&H' 
+    return '&H'
         + ((1 - (c.alpha ?? 1)) * 255).toString(16).toUpperCase().padStart(2, '0')
         + (b * 255).toString(16).toUpperCase().padStart(2, '0')
         + (g * 255).toString(16).toUpperCase().padStart(2, '0')
@@ -534,7 +534,7 @@ export function fromASSColor(str: string): Color.PlainColorObject | null {
     if (!str.startsWith('&H') || str.length != 10) return null;
 
     const [r, g, b, alpha] = [
-        Number.parseInt(str.slice(8, 10), 16) / 255, 
+        Number.parseInt(str.slice(8, 10), 16) / 255,
         Number.parseInt(str.slice(6, 8), 16) / 255,
         Number.parseInt(str.slice(4, 6), 16) / 255,
         Number.parseInt(str.slice(2, 4), 16) / 255

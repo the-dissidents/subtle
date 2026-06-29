@@ -51,7 +51,7 @@ const me = {};
 Source.onSubtitlesChanged.bind(me, (type) => {
   if (type == ChangeType.General || type == ChangeType.LintProfile) {
     linters = updateLinters();
-    Debug.debug('linters updated');
+    void Debug.debug('linters updated');
   }
   updateForm();
 });
@@ -66,7 +66,7 @@ Editing.onSelectionChanged.bind(me, () => {
   if (focused instanceof SubtitleEntry) {
     updateForm();
     if ($uiFocus == 'EditingField')
-      tick().then(() => Editing.startEditingFocusedEntry());
+      void tick().then(() => Editing.startEditingFocusedEntry());
   }
 });
 
@@ -122,10 +122,10 @@ function applyEditForm() {
         editingT0 = editingT1 - editingDt;
       applyEditForm();
     }}
-    onchange={() => {
+    onchange={async () => {
       if (editingT1 < editingT0) editingT1 = editingT0;
       applyEditForm();
-      Source.markChanged(ChangeType.Times, $_('c.timestamp'));
+      await Source.markChanged(ChangeType.Times, $_('c.timestamp'));
     }}/>
   <TimestampInput bind:timestamp={editingDt}
     oninput={() => {
@@ -147,21 +147,21 @@ function applyEditForm() {
     <LabelSelect
       bind:value={editingLabel}
       stretch={true}
-      onsubmit={() => {
+      onsubmit={async () => {
         applyEditForm();
-        Source.markChanged(ChangeType.InPlace, $_('c.label'));
+        await Source.markChanged(ChangeType.InPlace, $_('c.label'));
       }}/>
   </label>
   <hr>
   <label>
     <input type="checkbox" checked={!!editingPos}
-      onchange={(x) => {
+      onchange={async (x) => {
         if (x.currentTarget.checked)
           editingPos = { type: 'absolute', x: 0, y: 0 };
         else
           editingPos = null;
         applyEditForm();
-        Source.markChanged(ChangeType.InPlace, $_('c.positioning'));
+        await Source.markChanged(ChangeType.InPlace, $_('c.positioning'));
       }}>
     {$_('editbox.custom-positioning')}
   </label>
@@ -176,23 +176,23 @@ function applyEditForm() {
   <hr>
   <label>
     <input type="checkbox" checked={!!editingAlign}
-      onchange={(x) => {
+      onchange={async (x) => {
         if (x.currentTarget.checked && editingAlign == null)
           editingAlign = $focusedStyle?.alignment ?? AlignMode.BottomCenter;
         if (!x.currentTarget.checked)
           editingAlign = null;
         applyEditForm();
-        Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
+        await Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
       }}>
     {$_('editbox.custom-alignment')}
   </label>
   {#if !!editingAlign}
     <select
         value={AlignMode[editingAlign]}
-        oninput={(x) => {
+        oninput={async (x) => {
           editingAlign = x.currentTarget.selectedIndex + 1;
           applyEditForm();
-          Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
+          await Source.markChanged(ChangeType.InPlace, $_('c.custom-alignment'));
         }}>
       <option value="BottomLeft">{$_('style.bottom-left')}</option>
       <option value="BottomCenter">{$_('style.bottom-center')}</option>
@@ -229,7 +229,7 @@ function applyEditForm() {
               }
               focused.texts.set(newStyle, focused.texts.get(style)!);
               focused.texts.delete(style);
-              Source.markChanged(ChangeType.InPlace, $_('c.change-style'));
+              await Source.markChanged(ChangeType.InPlace, $_('c.change-style'));
             }} />
           <button tabindex="-1" onclick={async () => {
             let otherUsed = [...focused.texts.keys()].filter((x) => x !== style);
@@ -241,24 +241,25 @@ function applyEditForm() {
                   items: otherUsed.map((x, i) => ({
                     id: i.toString(),
                     text: x.name,
-                    action() {
+                    async action() {
                       let textA = focused.texts.get(style);
                       let textB = focused.texts.get(x);
                       Debug.assert(textA !== undefined && textB !== undefined);
                       focused.texts.set(x, textA);
                       focused.texts.set(style, textB);
-                      Source.markChanged(ChangeType.InPlace, $_('c.exchange-channel'));
+                      await Source.markChanged(ChangeType.InPlace, $_('c.exchange-channel'));
                     }
                   }))
                 },
                 {
                   text: $_('style.delete'),
                   enabled: focused.texts.size > 1,
-                  action() { Editing.deleteChannel(style); }
+                  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                  async action() { await Editing.deleteChannel(style); }
                 }
               ]
             });
-            menu.popup();
+            await menu.popup();
           }}><EllipsisIcon /></button>
         </td>
         <td style='width:100%'>
@@ -276,11 +277,11 @@ function applyEditForm() {
               Editing.focused.style.set(style);
               Editing.focused.control = self;
             }}
-            onBlur={(text) => {
+            onBlur={async (text) => {
               if ($uiFocus === 'EditingField')
                 $uiFocus = 'Other';
               if (Editing.editChanged)
-                Editing.submitEntry(focused, style, text);
+                await Editing.submitEntry(focused, style, text);
             }}
             onInput={() => {
               $uiFocus = 'EditingField';

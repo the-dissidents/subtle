@@ -94,10 +94,10 @@ export class TableInput {
             Source.subs.metadata.uiState.tableScrollIndex = Math.max(0, result);
         });
 
-        this.manager.canvas.addEventListener('dblclick', () => this.#handleDoubleClick());
+        this.manager.canvas.addEventListener('dblclick', () => void this.#handleDoubleClick());
         this.manager.canvas.addEventListener('contextmenu', (ev) => {
             ev.preventDefault();
-            contextMenu();
+            void contextMenu();
         });
     }
 
@@ -111,7 +111,7 @@ export class TableInput {
 
         if (focused == 'virtual') {
             if (TableConfig.data.doubleClickStartEdit)
-            Editing.startEditingNewVirtualEntry();
+            await Editing.startEditingNewVirtualEntry();
         } else if (focused !== null) {
             switch (TableConfig.data.doubleClickPlaybackBehavior) {
                 case 'none': break;
@@ -120,7 +120,7 @@ export class TableInput {
                     break;
                 case 'play':
                     await Playback.forceSetPosition(focused.start);
-                    if (Playback.loaded) Playback.play(true);
+                    if (Playback.loaded) await Playback.play(true);
                     break;
                 default:
                     Debug.never(<never>TableConfig.data.doubleClickPlaybackBehavior);
@@ -180,7 +180,7 @@ export class TableInput {
         }
     }
 
-    #onMouseDown(ev: MouseEvent) {
+    async #onMouseDown(ev: MouseEvent) {
         this.focus();
         // don't do anything if mouse is within header area
         if (ev.offsetY < this.layout.headerHeight / this.manager.scale) return;
@@ -188,17 +188,17 @@ export class TableInput {
         if (ev.button == 0) {
             this.currentLine = this.#getLineFromOffset(ev.offsetY);
             if (this.currentLine > this.layout.totalLines) {
-                Editing.selectVirtualEntry();
+                await Editing.selectVirtualEntry();
                 return;
             } else {
                 const [_, entry] = this.#getTextFromLineIndex(this.currentLine);
-                if (entry) Editing.toggleEntry(entry, getSelectMode(ev), ChangeCause.UIList);
+                if (entry) await Editing.toggleEntry(entry, getSelectMode(ev), ChangeCause.UIList);
             }
         }
     }
 
     #requestAutoScroll() {
-        const doAutoScroll = () => {
+        const doAutoScroll = async () => {
             if (this.autoScrollY == 0) {
                 this.lastAnimateFrameTime = -1;
                 return;
@@ -212,18 +212,18 @@ export class TableInput {
             if (line != this.currentLine && this.layout.entries.length > 0) {
                 this.currentLine = line;
                 const [_, entry] = this.#getTextFromLineIndex(line);
-                if (entry) Editing.selectEntry(entry, SelectMode.Sequence);
+                if (entry) await Editing.selectEntry(entry, SelectMode.Sequence);
             }
 
             this.manager.requestRender();
-            requestAnimationFrame(() => doAutoScroll());
+            requestAnimationFrame(() => void doAutoScroll());
         }
         if (this.lastAnimateFrameTime < 0)
             this.lastAnimateFrameTime = performance.now();
-        requestAnimationFrame(() => doAutoScroll());
+        requestAnimationFrame(() => void doAutoScroll());
     }
 
-    #onDrag(_: number, offsetY: number) {
+    async #onDrag(_: number, offsetY: number) {
         function powWithSign(x: number, y: number) {
             return Math.sign(x) * Math.pow(Math.abs(x), y);
         }
@@ -245,7 +245,7 @@ export class TableInput {
         if (line != this.currentLine && this.layout.entries.length > 0) {
             this.currentLine = line;
             const [_, entry] = this.#getTextFromLineIndex(line);
-            if (entry) Editing.selectEntry(entry, SelectMode.Sequence);
+            if (entry) await Editing.selectEntry(entry, SelectMode.Sequence);
         }
     }
 

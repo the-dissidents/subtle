@@ -235,10 +235,10 @@ async function execute(type: SearchAction, option: SearchOption) {
     return;
   }
 
-  Debug.debug('executing search:', expr.source, type, option);
+  await Debug.debug('executing search:', expr.source, type, option);
 
   if (type == "select" || !$selectionOnly) {
-    Editing.clearSelection(ChangeCause.Action);
+    await Editing.clearSelection(ChangeCause.Action);
   }
 
   const repl = type == "replace" ? $replaceTerm : '';
@@ -248,7 +248,7 @@ async function execute(type: SearchAction, option: SearchOption) {
 
   if (!resumeFrom && option !== 'all') {
     type = 'select';
-    Debug.trace('no resumeFrom; falling back to select');
+    await Debug.trace('no resumeFrom; falling back to select');
   }
 
   let nDone = 0, nEntries = 0;
@@ -301,26 +301,26 @@ async function execute(type: SearchAction, option: SearchOption) {
       if (option != "all") {
         if (newType == 'select') {
           // select this, and done
-          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.Action);
+          await Editing.selectEntry(entry, SelectMode.Single, ChangeCause.Action);
           Editing.focused.style.set(newStyle);
-          setTimeout(() => {
+          setTimeout(async () => {
             const editor = Editing.styleToEditor.get(newStyle);
             if (!editor) {
-              Debug.warn('no editor', entry);
+              await Debug.warn('no editor', entry);
             } else {
               editor.focus();
               editor.scrollIntoView();
               editor.setSelectionRange(match!.index, match!.index + match![0].length);
             }
           }, 0);
-          Debug.trace('done selecting', text);
+          await Debug.trace('done selecting', text);
           resumeFrom = { entry, style: newStyle, fromIndex: match.index };
           break outer;
         } else {
           // just replaced one, select next
           entry.texts.set(newStyle, newRich);
           newType = 'select';
-          Debug.trace('just replaced, start selecting');
+          await Debug.trace('just replaced, start selecting');
         }
       }
     }
@@ -345,7 +345,7 @@ async function execute(type: SearchAction, option: SearchOption) {
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     } else if (type == "replace" || type === "replaceStyles") {
       status = $_('search.replaced-n-lines', {values: {n: nDone, nEntries}});
-      Source.markChanged(ChangeType.InPlace, $_('c.replace'));
+      await Source.markChanged(ChangeType.InPlace, $_('c.replace'));
     } else {
       status = $_('search.found-n-lines', {values: {n: nEntries}});
     }
@@ -353,7 +353,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     status = $_('search.found-nothing');
     resumeFrom = null;
     if (option != "all") {
-      Editing.clearFocus();
+      await Editing.clearFocus();
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     }
   }

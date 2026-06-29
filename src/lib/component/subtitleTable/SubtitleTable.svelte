@@ -63,9 +63,9 @@ onMount(() => {
           {/if}
         {/each}
       </select>
-      <button onclick={() => {
+      <button onclick={async () => {
         opt.list.splice(i, 1);
-        layout!.changeColumns();
+        await layout!.changeColumns();
       }} aria-label='delete'>
         <DeleteIcon />
       </button>
@@ -79,9 +79,9 @@ onMount(() => {
         onclick={async () =>
           (await Menu.new({items: unused.map(([x, y]) => ({
             text: y.localizedName(),
-            action() {
+            async action() {
               opt.list.push({ metric: x });
-              layout!.changeColumns();
+              await layout!.changeColumns();
             }
           }))})).popup()}
       >
@@ -99,9 +99,9 @@ onMount(() => {
     <h5>
       {$_('table.edit-columns')}
     </h5>
-    {@render metricList({list: layout!.entryColumns}, ['entry'])}
+    {@render metricList({list: layout.entryColumns}, ['entry'])}
     <hr>
-    {@render metricList({list: layout!.channelColumns}, ['style', 'channel'])}
+    {@render metricList({list: layout.channelColumns}, ['style', 'channel'])}
   </div>
   {/key}
   {/if}

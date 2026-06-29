@@ -77,7 +77,7 @@ export class RestartableTask<Arg extends unknown[]> {
                 };
                 this.state.current.isCancelled = true;
             }
-        })
+        });
     }
 
     #schedule(request: Request<Arg>) {

@@ -5,6 +5,7 @@ import svelte from 'eslint-plugin-svelte';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import ts from 'typescript-eslint';
+import svelteParser from "svelte-eslint-parser";
 import svelteConfig from './svelte.config.js';
 
 const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
@@ -12,23 +13,28 @@ const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
 	js.configs.recommended,
-	...ts.configs.recommended,
+    ...ts.configs.recommendedTypeChecked,
 	...svelte.configs.recommended,
 	{
 		languageOptions: {
-			globals: { ...globals.browser, ...globals.node }
+			globals: { ...globals.browser }
 		},
 		rules: {
 			"no-undef": 'off',
 			"no-unused-vars": "off",
+			"svelte/prefer-svelte-reactivity": 'off',
+			"svelte/require-each-key": 'off',
+            '@typescript-eslint/no-unsafe-assignment': 'off',
+            '@typescript-eslint/no-unsafe-member-access': 'off',
+            '@typescript-eslint/no-unsafe-call': 'off',
+            '@typescript-eslint/no-unsafe-argument': 'off',
+            '@typescript-eslint/no-unsafe-return': 'off',
             "@typescript-eslint/no-namespace": "off",
     		"@typescript-eslint/no-unused-vars": ["error", {
 				"argsIgnorePattern": "^_",
         		"destructuredArrayIgnorePattern": "^_",
 				"varsIgnorePattern": "^_",
 			}],
-			"svelte/prefer-svelte-reactivity": 'off',
-			"svelte/require-each-key": 'off'
 		}
 	},
 	{
@@ -38,6 +44,7 @@ export default defineConfig(
 			'**/*.svelte.js'
 		],
 		languageOptions: {
+            parser: svelteParser,
 			parserOptions: {
 				projectService: true,
 				extraFileExtensions: ['.svelte'],
@@ -45,5 +52,9 @@ export default defineConfig(
 				svelteConfig
 			}
 		}
-	}
+	},
+    {
+        files: ['**/*.js', '**/*.cjs', '**/*.mjs'],
+        ...ts.configs.disableTypeChecked,
+    }
 );

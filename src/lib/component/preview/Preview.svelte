@@ -18,7 +18,7 @@
   import * as z from "zod/v4-mini";
 
   let volume = Memorized.$('playbackVolume', z.number().check(z.gt(0)).check(z.lt(1)), 0.8);
-  volume.subscribe((x) => Playback.player?.setVolume(x));
+  volume.subscribe((x) => void Playback.player?.setVolume(x));
 
   let isPlaying = $state(false);
   let playPosStart = $state(0);
@@ -38,7 +38,7 @@
   onMount(() => {
     Debug.assert(!!canvas);
     Debug.assert(!!overlay);
-    layout = new PreviewLayout(canvas, overlay!);
+    layout = new PreviewLayout(canvas, overlay);
     layout.subsRenderer.onLayoutChanged.bind(layout, (x) => {boxes = x});
   });
 

@@ -17,6 +17,7 @@ import { CircleAlertIcon, CircleCheckIcon, CircleHelpIcon, CircleXIcon, InfoIcon
 import { onMount } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { _ } from 'svelte-i18n';
+  import { RichText } from '../core/RichText';
 
 interface Props {
   args: [],
@@ -113,14 +114,14 @@ async function handleSubsetButton(setting: FontSetting) {
       for (const entry of Source.subs.entries)
         for (const channel of entry.texts)
           if (setting.styles.has(channel[0].name))
-            text += channel[1];
+            text += RichText.toString(channel[1]);
 
       try {
         const result = await MAPI.subsetEncode(setting.face.url, setting.face.index, text);
         setting.subset = { type: 'ok', result };
       } catch (e) {
-        Debug.forwardError(e);
-        setting.subset = { type: 'error', msg: `${e}` };
+        await Debug.forwardError(e);
+        setting.subset = { type: 'error', msg: String(e) };
       }
       break;
     }

@@ -49,7 +49,7 @@
       if (name) {
         const i = $SavedLintProfiles.findIndex(([_, p]) => p == selectedPreset);
         Debug.assert(i >= 0 && !!selectedPreset);
-        $SavedLintProfiles[i] = [name, selectedPreset!];
+        $SavedLintProfiles[i] = [name, selectedPreset];
         SavedLintProfiles.markChanged();
       }
     }}><PencilIcon /></button>

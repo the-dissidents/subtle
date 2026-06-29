@@ -48,8 +48,13 @@ export enum ChangeType {
     Metadata
 }
 
-function readSnapshot(s: Snapshot, archive: string) {
+async function readSnapshot(s: Snapshot, archive: string) {
     Source.subs = Format.JSON.parse(archive).done();
+
+    await Editing.clearFocus(false);
+    await Editing.clearSelection();
+    Editing.focused.style.set(Source.subs.defaultStyle);
+
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch(false);
     // Source.onSubtitlesChanged.dispatch(s.change);
@@ -204,7 +209,7 @@ export const Source = {
         redoStack.push(top);
         const snap = undoStack.at(-1)!;
         Debug.assert(!!snap);
-        readSnapshot(snap, await MAPI.readUndo());
+        await readSnapshot(snap, await MAPI.readUndo());
         this.onUndoBufferChanged.dispatch();
         Frontend.setStatus($_('msg.undone', {values: {op: top.description}}), 'info');
         return true;
@@ -217,7 +222,7 @@ export const Source = {
         }
         const top = redoStack.pop()!;
         undoStack.push(top);
-        readSnapshot(top, await MAPI.readRedo());
+        await readSnapshot(top, await MAPI.readRedo());
         this.onUndoBufferChanged.dispatch();
         Frontend.setStatus($_('msg.redone', {values: {op: top.description}}), 'info');
         return true;
@@ -232,8 +237,8 @@ export const Source = {
     async openDocument(newSubs: Subtitles, path: string = '') {
         if (path !== '') pushRecent(path);
         this.subs = newSubs;
-        Editing.clearFocus(false);
-        Editing.clearSelection();
+        await Editing.clearFocus(false);
+        await Editing.clearSelection();
         Editing.focused.style.set(newSubs.defaultStyle);
         currentFile.set(
             (newSubs.migrated !== 'none'
@@ -247,8 +252,8 @@ export const Source = {
             saved: !get(fileChanged),
             description: 'You should NOT see this unless there is a bug'
         }];
-        await MAPI.clearHistory(Format.JSON.write(this.subs).toString());
         redoStack = [];
+        await MAPI.clearHistory(Format.JSON.write(this.subs).toString());
 
         this.onSubtitleObjectReload.dispatch(true);
         this.onSubtitlesChanged.dispatch(ChangeType.General);

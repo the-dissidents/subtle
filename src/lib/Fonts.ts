@@ -11,7 +11,7 @@ const faces = new Map<FaceId, LoadedFontFace>();
 const cachedFamilies = new Map<string, LoadedFontFace[]>();
 
 const allFamilies = new Set<string>();
-const onInitCallbacks: (() => void)[] = [];
+const onInitCallbacks: (() => void | Promise<void>)[] = [];
 
 export type LoadedFontFace = ResolvedFontFace & {
     // loaded: FontFace
@@ -24,7 +24,7 @@ async function getFace(face: ResolvedFontFace) {
     if (f) return f;
 
     // const newf = new FontFace(
-    //     `__subtle_ff_${face.familyName}_${counter}`, 
+    //     `__subtle_ff_${face.familyName}_${counter}`,
     //     // `url("${convertFileSrc(face.url)}#${face.index}")`,
     //     `local("${face.familyName}")`,
     // {
@@ -72,11 +72,11 @@ export const Fonts = {
         Debug.info(`found ${allFamilies.size} font families`);
         initialized = true;
         for (const c of onInitCallbacks)
-            c();
+            await c();
     },
 
-    onInit(callback: () => void) {
-        if (initialized) callback();
+    async onInit(callback: () => void | Promise<void>) {
+        if (initialized) await callback();
         else onInitCallbacks.push(callback);
     },
 

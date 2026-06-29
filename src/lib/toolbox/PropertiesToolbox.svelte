@@ -34,28 +34,28 @@ Source.onSubtitleObjectReload.bind(me, () => {
   updateCounter += 1;
 });
 
-function newStyle() {
+async function newStyle() {
   let newStyle = SubtitleStyle.new(
     SubtitleTools.getUniqueStyleName(Source.subs, 'new'));
   Source.subs.styles.push(newStyle);
-  Source.markChanged(ChangeType.StyleDefinitions, $_('c.add-style'));
+  await Source.markChanged(ChangeType.StyleDefinitions, $_('c.add-style'));
 }
 
-function removeUnusedStyles() {
+async function removeUnusedStyles() {
   let usedStyles = new Set<SubtitleStyle>(
     Source.subs.entries.flatMap((x) => [...x.texts.keys()]));
   Source.subs.styles = Source.subs.styles.filter((x) =>
     usedStyles.has(x) || Source.subs.defaultStyle.name == x.name);
-  Source.markChanged(ChangeType.StyleDefinitions, $_('ppty.remove-all-unused'));
+  await Source.markChanged(ChangeType.StyleDefinitions, $_('ppty.remove-all-unused'));
   styles = Source.subs.styles;
 }
 
-function markMetadataChange() {
-  Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
+async function markMetadataChange() {
+  await Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
 }
 
 async function manageSavedStyles() {
-  (await Menu.new({
+  await (await Menu.new({
     items: $SavedStyles.length > 0
       ? $SavedStyles.map((x) => ({
         text: x.name,
@@ -104,14 +104,14 @@ async function manageSavedStyles() {
       <NumberInput class='res' bind:value={metadata.height}
         min={1} max={10000}
         onchange={markMetadataChange}/>
-      <button disabled={$loadState !== 'loaded'} onclick={() => {
+      <button disabled={$loadState !== 'loaded'} onclick={async () => {
         Debug.assert(Playback.player?.videoSize !== undefined);
         Debug.assert(Playback.player?.sampleAspectRatio !== undefined);
         const [w, h] = Playback.player.videoSize;
         const sar = Playback.player.sampleAspectRatio;
         metadata.width = Math.round(w * sar);
         metadata.height = Math.round(h);
-        markMetadataChange();
+        await markMetadataChange();
       }}>
         {$_('ppty.match-video-resolution')}
       </button>

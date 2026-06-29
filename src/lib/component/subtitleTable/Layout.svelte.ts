@@ -246,24 +246,26 @@ export class TableLayout {
         });
 
         const elapsed = performance.now() - startTime;
-        Debug.debug(`layout took ${elapsed.toFixed(1)}ms`);
+        void Debug.debug(`layout took ${elapsed.toFixed(1)}ms`);
 
         this.requestedLayout = false;
     }
 
     #updateColumns() {
         this.entryColumns = Source.subs.view.perEntryColumns
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
             .map((x) => ({metric: x as keyof typeof Metrics, layout: undefined}));
         this.channelColumns = Source.subs.view.perChannelColumns
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
             .map((x) => ({metric: x as keyof typeof Metrics, layout: undefined}));
         this.requestedLayout = { lint: false };
         this.manager.requestRender();
     }
 
-    changeColumns() {
+    async changeColumns() {
         Source.subs.view.perEntryColumns = this.entryColumns.map((x) => x.metric);
         Source.subs.view.perChannelColumns = this.channelColumns.map((x) => x.metric);
-        Source.markChanged(ChangeType.View, get(_)('c.column-view'));
+        await Source.markChanged(ChangeType.View, get(_)('c.column-view'));
         this.requestedLayout = { lint: false };
         this.manager.requestRender();
     }

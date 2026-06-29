@@ -152,13 +152,13 @@ function updateSnapOverride(ev: KeyboardEvent) {
       <label>
         <input type="checkbox"
           checked={!exclude.has(style)}
-          onchange={(ev) => {
+          onchange={async (ev) => {
             if (ev.currentTarget.checked)
               exclude.delete(style);
             else
               exclude.add(style);
             layout!.requestedLayout = true;
-            Source.markChanged(ChangeType.View, $_('c.timeline-row-view'));
+            await Source.markChanged(ChangeType.View, $_('c.timeline-row-view'));
           }} />
         {style.name}
       </label>

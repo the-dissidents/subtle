@@ -33,6 +33,8 @@ let { style: _style, subtitles = $bindable(), onsubmit }: Props = $props();
 let alignSelector: HTMLSelectElement | undefined = $state();
 let wrapSelector: HTMLSelectElement | undefined = $state();
 let duplicateWarning = $state(false);
+
+// todo: why?
 let style = writable(_style);
 
 function isDuplicate(name: string) {
@@ -52,6 +54,7 @@ async function contextMenu() {
     items: [
     {
       text: $_('style.delete'),
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       async action() {
         if (isDefault) {
           await dialog.message($_('msg.you-cant-delete-a-default-style'));
@@ -69,19 +72,20 @@ async function contextMenu() {
         let i = subtitles.styles.indexOf($style);
         if (i < 0) return Debug.early();
         subtitles.styles.splice(i, 1);
-        Source.markChanged(
+        await Source.markChanged(
           used.length > 0 ? ChangeType.General : ChangeType.StyleDefinitions, $_('c.delete-style'));
         onsubmit?.();
       }
     },
     {
       text: $_('style.duplicate'),
-      action() {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      async action() {
         let clone = SubtitleStyle.clone($style);
         clone.name = SubtitleTools.getUniqueStyleName(subtitles, $style.name);
         subtitles.styles.push(clone);
         // subtitles.styles = subtitles.styles;
-        Source.markChanged(ChangeType.StyleDefinitions, $_('c.duplicate-style'));
+        await Source.markChanged(ChangeType.StyleDefinitions, $_('c.duplicate-style'));
         onsubmit?.();
       }
     },
@@ -112,11 +116,11 @@ async function contextMenu() {
           items: $SavedStyles.length > 0
             ? $SavedStyles.map((x) => ({
                 text: x.name,
-                action() {
+                async action() {
                   Object.assign($style, x);
                   $style.name = SubtitleTools.getUniqueStyleName(Source.subs, x.name, $style);
                   $style = $style;
-                  Source.markChanged(ChangeType.StyleDefinitions, $_('action.replace-style-by-preset'));
+                  await Source.markChanged(ChangeType.StyleDefinitions, $_('action.replace-style-by-preset'));
                 }
               }))
             : [{
@@ -126,6 +130,7 @@ async function contextMenu() {
         },
         {
           text: $_('style.save-as-preset'),
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
           async action() {
             const i = $SavedStyles.findIndex((x) => x.name == $style.name);
             if (i >= 0) {
@@ -139,7 +144,7 @@ async function contextMenu() {
       ]
     }
   ]});
-  menu.popup();
+  await menu.popup();
 }
 
 let update = $state(0);
@@ -164,20 +169,20 @@ Source.onSubtitlesChanged.bind(me, (t) => {
   <div class="toolbar">
     <!-- add style -->
     <button
-      onclick={() => {
+      onclick={async () => {
         const i = subtitles.styles.indexOf($style);
         Debug.assert(i >= 0);
         const name = SubtitleTools.getUniqueStyleName(subtitles, 'new');
         const newStyle = SubtitleStyle.new(name);
         subtitles.styles = subtitles.styles.toSpliced(i, 0, newStyle);
-        Source.markChanged(ChangeType.StyleDefinitions, $_('c.add-style'));
+        await Source.markChanged(ChangeType.StyleDefinitions, $_('c.add-style'));
         onsubmit?.();
       }}
       aria-label='add'
     ><PlusIcon /></button><br/>
     <!-- move up -->
     <button disabled={$style === subtitles.styles[0]}
-      onclick={() => {
+      onclick={async () => {
         const i = subtitles.styles.indexOf($style);
         Debug.assert(i >= 0);
         subtitles.styles = [
@@ -186,14 +191,14 @@ Source.onSubtitlesChanged.bind(me, (t) => {
           subtitles.styles[i-1],
           ...subtitles.styles.slice(i+1)
         ];
-        Source.markChanged(ChangeType.StyleDefinitions, $_('c.reorder-styles'));
+        await Source.markChanged(ChangeType.StyleDefinitions, $_('c.reorder-styles'));
         onsubmit?.();
       }}
       aria-label='move up'
     ><ArrowUp /></button><br/>
     <!-- move down -->
     <button disabled={$style === subtitles.styles.at(-1)}
-      onclick={() => {
+      onclick={async () => {
         let i = subtitles.styles.indexOf($style);
         Debug.assert(i >= 0);
         subtitles.styles = [
@@ -202,7 +207,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
           $style,
           ...subtitles.styles.slice(i+2)
         ];
-        Source.markChanged(ChangeType.StyleDefinitions, $_('c.reorder-styles'));
+        await Source.markChanged(ChangeType.StyleDefinitions, $_('c.reorder-styles'));
         onsubmit?.();
       }}
       aria-label='move down'
@@ -221,22 +226,22 @@ Source.onSubtitlesChanged.bind(me, (t) => {
             value={$style.name}
             class={{duplicate: duplicateWarning, flexgrow: true}}
             oninput={(ev) => duplicateWarning = isDuplicate(ev.currentTarget.value)}
-            onchange={(ev) => {
+            onchange={async (ev) => {
               if (isDuplicate(ev.currentTarget.value)) {
                 ev.currentTarget.value = $style.name;
                 duplicateWarning = false;
               } else {
                 $style.name = ev.currentTarget.value;
-                Source.markChanged(ChangeType.InPlace, $_('c.style-name'));
+                await Source.markChanged(ChangeType.InPlace, $_('c.style-name'));
               }
             }}/>
           <label style="padding-left: 5px;">
             <input type='checkbox'
               checked={subtitles.defaultStyle == $style}
-              onclick={(ev) => {
+              onclick={async (ev) => {
                 subtitles.defaultStyle = $style;
                 ev.currentTarget.checked = true;
-                Source.markChanged(ChangeType.InPlace, $_('c.default-style'));
+                await Source.markChanged(ChangeType.InPlace, $_('c.default-style'));
               }}/>
             {$_('style.default')}
           </label>
@@ -281,17 +286,17 @@ Source.onSubtitlesChanged.bind(me, (t) => {
         </label>
         {#if $style.lintProfile}
           <LintProfileSelect value={$style.lintProfile}
-            onChange={(x) => {
+            onChange={async (x) => {
               if (x) {
                 $style.lintProfile = x;
-                Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
+                await Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
               }
             }} />
           <button type='button' onclick={async () => {
             const result = await openDialog(Dialog.lintProfile, $style.lintProfile!);
             if (result) {
               $style.lintProfile = result;
-              Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
+              await Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
             }
           }}>
             {$_('style.lint-edit')}
@@ -333,9 +338,9 @@ Source.onSubtitlesChanged.bind(me, (t) => {
           <select
               bind:this={alignSelector}
               value={AlignMode[$style.alignment]}
-              oninput={() => {
+              oninput={async () => {
                 $style.alignment = alignSelector!.selectedIndex + 1;
-                Source.markChanged(ChangeType.InPlace, $_('c.style-alignment'));
+                await Source.markChanged(ChangeType.InPlace, $_('c.style-alignment'));
               }}>
             <option value="BottomLeft">{$_('style.bottom-left')}</option>
             <option value="BottomCenter">{$_('style.bottom-center')}</option>
@@ -352,9 +357,9 @@ Source.onSubtitlesChanged.bind(me, (t) => {
           <select
               bind:this={wrapSelector}
               value={$style.wrapStyle}
-              oninput={() => {
+              oninput={async () => {
                 $style.wrapStyle = wrapSelector!.selectedIndex;
-                Source.markChanged(ChangeType.InPlace, $_('c.wrap-style'));
+                await Source.markChanged(ChangeType.InPlace, $_('c.wrap-style'));
               }}>
             <option value={WrapStyle.Balanced}>{$_('style.wrap-balanced')}</option>
             <option value={WrapStyle.Greedy}>{$_('style.wrap-greedy')}</option>

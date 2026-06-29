@@ -220,7 +220,7 @@ export class TimelineRenderer {
     }
 
     if (this.layout.requestedSampler)
-      this.layout.processSampler();
+      void this.layout.processSampler();
   }
 
   #getTick(scale: number): [small: number, nMed: number, nBig: number] {

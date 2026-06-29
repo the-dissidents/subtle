@@ -71,7 +71,7 @@ function isNameUnique() {
     .find((x) => x.name !== activeSource[0].name && x.name == name) === undefined;
 }
 
-async function update() {
+function update() {
   if (activeSource.length !== 1) return;
   if (isNameUnique())
     activeSource[0].name = name;
@@ -241,7 +241,7 @@ async function importJSON() {
               if (!$sources.find((x) => x.name == name)) break;
             }
             $sources.push({
-              ...$state.snapshot(activeSource[0]) as z.infer<typeof zReferenceSource>,
+              ...$state.snapshot(activeSource[0]),
               name
             });
             sources.markChanged();

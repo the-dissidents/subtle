@@ -1,16 +1,13 @@
 import { Basic } from "../Basic";
-import { Debug } from "../Debug";
 import { DeserializationError } from "../Serialization";
-import { ASSString } from "./ASSString";
 import { HTMLString, type HTMLStringWarnings } from "./HTMLString";
-import { RichText } from "./RichText";
 import { SubtitleLinearFormatWriter } from "./SimpleFormats";
 import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser } from "./Subtitles.svelte";
 
 function getTime(h: string, m: string, s: string, ms: string) {
-    return Number.parseInt(h) * 3600 
-         + Number.parseInt(m) * 60 
-         + Number.parseInt(s) 
+    return Number.parseInt(h) * 3600
+         + Number.parseInt(m) * 60
+         + Number.parseInt(s)
          + Number.parseInt(ms) * 0.001;
 }
 
@@ -98,7 +95,7 @@ export class SRTParser implements SubtitleParser {
                 // read times
                 start = getTime(times[1], times[2], times[3], times[4]);
                 end = getTime(times[5], times[6], times[7], times[8]);
-                
+
                 if (times[9]) {
                     // we do not support coordinates
                     this.#ignoredCoords++;
@@ -124,7 +121,7 @@ export class SRTParser implements SubtitleParser {
         } else {
             throw new DeserializationError('invalid or empty SRT');
         }
-        
+
         this.#subs.migrated = 'text';
         if (this.#ignoredCoords > 0) this.#messages.push({
             type: 'ignored-coordinates',
@@ -163,9 +160,9 @@ export const SRTSubtitles = {
         return timeRegex.test(source) ? null : false;
     },
     parse: (source) => new SRTParser(source),
-    
+
     // TODO: emit a warning if any text line contains timeRegex
-    write: (subs) => new SubtitleLinearFormatWriter(subs, 
+    write: (subs) => new SubtitleLinearFormatWriter(subs,
         (linear) => linear
             .filter((x) => x.text.trim().length > 0)
             .map((ent, i) => `${i+1}\n${

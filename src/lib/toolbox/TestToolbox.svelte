@@ -25,10 +25,11 @@ import { Diagnostic } from "../linter/Common";
   import { showConfirmationPopup } from "../ui/ConfirmationPopup.svelte";
 
 let result = $state("");
-Fonts.onInit(async () => {
+
+void Fonts.onInit(async () => {
   const version = await MAPI.version();
   const arial = (await Fonts.getFamily('Arial'))!;
-  result = `ffmpeg version is ${version}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}; fonts got ${arial.map((x) => `${x.fullName}=${x.realHeight}`)}`;
+  result = `ffmpeg version is ${version}; UA is ${navigator.userAgent}; factor for Arial: ${Typography.getRealDimFactor('Arial')}; fonts got ${arial.map((x) => `${x.fullName}=${x.realHeight}`).join(',')}`;
 });
 
 let hwaccel = $state(false);
@@ -48,8 +49,8 @@ const command = new UICommand(() => '', [], {
     menuName: 'secondary',
     items: ['five', 'six', 'seven', 'eight'].map((y) => ({
       name: y,
-      call() {
-        dialog.message(`${x}-${y}`);
+      async call() {
+        await dialog.message(`${x}-${y}`);
       }
     }))
   }))
@@ -71,7 +72,7 @@ function testFuzzy(tok: Tokenizer<string, string>) {
     ).join('')} (${res.matchRatio.toFixed(3)})`;
     textarea!.focus();
     textarea!.setSelectionRange(res.start, res.end);
-    Debug.info(res);
+    void Debug.info(res);
   } else {
     text += 'no match';
   }
@@ -102,7 +103,7 @@ let forbidDeepNesting = $state(true);
 }}>input</button>
 
 <button onclick={async () => {
-  openDialog(Dialog.lintProfile, {
+  await openDialog(Dialog.lintProfile, {
     bracketGroups: ['curlyQuotes', 'halfwidthParentheses'], regexes: [],
     forbiddenPunctuation: ''
   });
@@ -115,12 +116,12 @@ let forbidDeepNesting = $state(true);
 }}>test save dialog</button>
 
 <button onclick={async () => {
-  DialogCommands.compareDialog.call();
+  await DialogCommands.compareDialog.call();
 }}>compare</button>
 
 <button
   onclick={async () => {
-    Debug.info(await MAPI.config());
+    await Debug.info(await MAPI.config());
   }}>
   ffmpeg config
 </button>
@@ -181,7 +182,7 @@ let forbidDeepNesting = $state(true);
 </button>
 
 <button
-  onclick={async () => {
+  onclick={() => {
     throw new Error('test rejection');
   }}>
   create rejection
@@ -189,7 +190,7 @@ let forbidDeepNesting = $state(true);
 
 <button
   onclick={async () => {
-    invoke('make_panic');
+    await invoke('make_panic');
   }}>
   create panic
 </button>
@@ -199,7 +200,7 @@ let forbidDeepNesting = $state(true);
     let m = Menu.new({
       items: [command.toMenuItem()]
     });
-    (await m).popup();
+    await (await m).popup();
   }}>
   menu command
 </button>
@@ -271,7 +272,7 @@ let forbidDeepNesting = $state(true);
 
 <input type='text' bind:value={fontname} />
 <button onclick={async () => {
-  Debug.info(await MAPI.resolveFontFamily(fontname));
+  await Debug.info(await MAPI.resolveFontFamily(fontname));
 }}>resolve font family</button>
 
 <br>

@@ -48,15 +48,15 @@ locale.subscribe(() => refresh++);
       {$_('configdialog.all-items-are-automatically-saved')}
     </p>
     <div class='vlayout'>
-      <button onclick={() => {
-        revealItemInDir(MainConfig.configPath);
-      }}>{$_('configdialog.show-config-file-advanced')}</button>
-      <button onclick={async () => {
-        openPath(await appLogDir());
-      }}>{$_('configdialog.show-log-path')}</button>
-      <button onclick={async () => {
-        openPath(await appLocalDataDir());
-      }}>{$_('configdialog.show-autosave-path')}</button>
+      <button onclick={() => revealItemInDir(MainConfig.configPath)}>
+        {$_('configdialog.show-config-file-advanced')}
+      </button>
+      <button onclick={async () => openPath(await appLogDir())}>
+        {$_('configdialog.show-log-path')}
+      </button>
+      <button onclick={async () => openPath(await appLocalDataDir())}>
+        {$_('configdialog.show-autosave-path')}
+      </button>
     </div>
   </div>
 

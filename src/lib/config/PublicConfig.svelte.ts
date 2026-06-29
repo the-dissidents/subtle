@@ -88,7 +88,7 @@ export class PublicConfigGroup<T extends PublicConfigGroupDefinition> {
                     Debug.never(def);
             }
         }
-        
+
         this.ztype = z.pipe(z.object(schemaContent), z.transform((x) => x as GroupType<T>));
         this.defaults = z.parse(this.ztype, {});
     }
@@ -144,19 +144,19 @@ export class PublicConfig {
         } finally {
             this.#initialized = true;
             for (const callback of this.#onInitCallbacks)
-                tick().then(() => callback());
+                void tick().then(() => callback());
         }
     }
 
     async save() {
         await Basic.ensureConfigDirectoryExists();
-    
+
         const data: Record<string, GroupType<PublicConfigGroupDefinition>> = {};
         for (const key in this.groups)
             data[key] = this.groups[key].data;
 
         const configName = `${this.name}.json`;
-        await fs.writeTextFile(configName, 
+        await fs.writeTextFile(configName,
             JSON.stringify(data, null, 2), {baseDir: fs.BaseDirectory.AppConfig});
     }
 
@@ -166,9 +166,10 @@ export class PublicConfig {
         } else callback();
     }
 
+    // see details/Hook.svelte.ts
     hook<T>(track: () => T, action: (value: $state.Snapshot<T>) => void) {
         this.onInitialized(() => action($state.snapshot(track())));
-        
+
         hook(track, (value) => {
             if (!this.#initialized) return;
             action(value);

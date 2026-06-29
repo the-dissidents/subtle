@@ -50,11 +50,13 @@
     visible: boolean
   };
 
-  Fonts.onInit(() => list = [...Fonts.families].map((x) => ({
-    name: x,
-    ctrl: undefined,
-    visible: false
-  })));
+  void Fonts.onInit(() => {
+    list = [...Fonts.families].map((x) => ({
+      name: x,
+      ctrl: undefined,
+      visible: false
+    }));
+  });
 
   function updateVisibility() {
     for (const entry of list) {

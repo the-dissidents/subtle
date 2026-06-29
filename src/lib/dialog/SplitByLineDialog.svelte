@@ -79,15 +79,16 @@ onMount(async () => {
         existing === undefined
           ? lines[i]
           : reversed
-            ? lines[i] + '\n' + existing
-            : existing + '\n' + lines[i]);
+            ? RichText.concat(lines[i], '\n', existing)
+            : RichText.concat(existing, '\n', lines[i])
+      );
     }
     if (markMoreThan.use && lines.length > markMoreThan.n)
       ent.label = markMoreThan.label;
     if (markLessThan.use && lines.length < markLessThan.n)
       ent.label = markLessThan.label;
   }
-  Source.markChanged(
+  await Source.markChanged(
     newStyles.size > 0 ? ChangeType.General: ChangeType.InPlace,
     $_('c.split-by-line'));
   close();
@@ -256,7 +257,9 @@ let removeEmptyLines = $state(true);
 let reversed = $state(false);
 let selectedRow = $state(-1);
 let previewLines: string[] = $state([]);
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 let markMoreThan = $state({use: false, n: 2, label: 'red' as LabelType});
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 let markLessThan = $state({use: false, n: 2, label: 'red' as LabelType});
 let hasError = $state(true);
 

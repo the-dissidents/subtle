@@ -13,7 +13,7 @@
     interpolationMode: readonly [string, string, string],
   };
 
-  const modes: Record<string, ModeInfo> = {
+  const modes = {
     srgb: {
       bounds: [255, 255, 255],
       expr: (v0, v1, v2, alpha = 1) =>
@@ -35,7 +35,7 @@
       fromColorIo: (v0, v1, v2) => [v0, v1, v2],
       interpolationMode: ['in oklch', 'in oklch', 'in oklch longer hue'],
     },
-  };
+  } satisfies Record<string, ModeInfo>;
 
   type ColorMode = keyof typeof modes;
 

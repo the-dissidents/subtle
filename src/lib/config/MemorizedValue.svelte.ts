@@ -22,7 +22,7 @@ export abstract class Memorized<S, Orig = S> {
         if (key in memorizedData) {
             const otherType = memorizedData[key].type;
             Debug.assert(
-                JSON.stringify(ztype._zod.def) === otherType, 
+                JSON.stringify(ztype._zod.def) === otherType,
                 'type mismatch');
             return memorizedData[key] as SimpleMemorized<T>;
         }
@@ -33,7 +33,7 @@ export abstract class Memorized<S, Orig = S> {
         if (key in memorizedData) {
             const otherType = memorizedData[key].type;
             Debug.assert(
-                JSON.stringify(ztype._zod.def) === otherType, 
+                JSON.stringify(ztype._zod.def) === otherType,
                 'type mismatch');
             Debug.assert(memorizedData[key] instanceof OverridableMemorized);
             return memorizedData[key] as OverridableMemorized<T>;
@@ -59,7 +59,7 @@ export abstract class Memorized<S, Orig = S> {
                 if (key in memorizedData) {
                     memorizedData[key].deserialize(value);
                 } else {
-                    Debug.warn('unrecognized pair in memorized data file', key, value);
+                    await Debug.warn('unrecognized pair in memorized data file', key, value);
                 }
             }
         } catch (e) {
@@ -85,14 +85,14 @@ export abstract class Memorized<S, Orig = S> {
             for (const [key, value] of Object.entries(memorizedData)) {
                 data[key] = value.serialize();
             }
-            await writeTextFile(configPath, 
+            await writeTextFile(configPath,
                 JSON.stringify(data), {baseDir: BaseDirectory.AppConfig});
             await Debug.debug('saved memorized values');
         }, get(_)('msg.error-saving-private-config'));
     }
 
     protected constructor(
-        protected key: string, 
+        protected key: string,
         protected value: Orig,
     ) {
         (memorizedData[key] as Memorized<S, Orig>) = this;
@@ -126,7 +126,7 @@ export class SimpleMemorized<T extends z.core.$ZodType> extends Memorized<z.infe
     #typeid: string;
 
     constructor(
-        key: string, 
+        key: string,
         protected ztype: T,
         value: z.infer<T>
     ) {
@@ -145,7 +145,7 @@ export class SimpleMemorized<T extends z.core.$ZodType> extends Memorized<z.infe
     protected override deserialize(value: unknown) {
         const result = z.safeParse(this.ztype, value);
         if (!result.success)
-            Debug.warn('type mismatch in memorized data file', 
+            void Debug.warn('type mismatch in memorized data file',
                 this.key, value, z.prettifyError(result.error));
         else
             this.set(result.data);

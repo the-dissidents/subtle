@@ -54,7 +54,7 @@ const autoWidth: Action<HTMLSelectElement> = (elem) => {
     span.remove();
   }
   $effect(() => {
-    tick().then(() => updateSelectWidth());
+    void tick().then(() => updateSelectWidth());
     elem.addEventListener("input", updateSelectWidth);
     return () => {
       elem.removeEventListener("input", updateSelectWidth);
@@ -190,6 +190,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
         use:autoWidth
         onchange={(ev) => {
           const method = MetricFilterMethods[f.method];
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
           const name = <keyof typeof Metrics>ev.currentTarget.value;
           Debug.assert(name in Metrics);
 
@@ -279,7 +280,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
             action: remove
           },
         ]});
-        menu.popup();
+        await menu.popup();
       }}>
         <MoreHorizontalIcon />
       </button>

@@ -29,7 +29,7 @@ export type MetricValue<T> =
     : never;
 
 class MetricTypeDefinition<
-    Name extends MetricType, 
+    Name extends MetricType,
     Serialized extends z.ZodMiniType
 > {
     readonly clone: (value: MetricValue<Name>) => MetricValue<Name>;
@@ -92,17 +92,17 @@ export const MetricTypeDefinitions = {
 export class MetricDefinition<TypeName extends MetricType> {
     readonly integer: boolean;
     readonly description?: () => string;
-    
+
     get type() {
         return MetricTypeDefinitions[this.typeName];
     }
-    
+
     constructor (
         public readonly typeName: TypeName,
         public readonly context: MetricContext,
         public readonly localizedName: () => string,
         public readonly shortName: () => string,
-        public readonly value: 
+        public readonly value:
             (entry: SubtitleEntry, style: SubtitleStyle) => MetricValue<TypeName>,
         opts?: {
             description?: () => string,
@@ -125,7 +125,7 @@ export class MetricDefinition<TypeName extends MetricType> {
 };
 
 export class MetricFilterMethod<
-    Subject extends MetricType = MetricType, 
+    Subject extends MetricType = MetricType,
     Params extends readonly MetricType[] = MetricType[]
 > {
     constructor(
@@ -133,7 +133,7 @@ export class MetricFilterMethod<
         readonly localizedName: () => string,
         readonly parameters: Params,
         readonly exec: (
-            s: MetricValue<Subject>, 
+            s: MetricValue<Subject>,
             ...params: {[K in keyof Params]: MetricValue<Params[K]>}
         ) => boolean
     ) {}
@@ -145,87 +145,87 @@ function getTextLength(s: string) {
 
 export const Metrics: Record<string, MetricDefinition<MetricType>> = {
     startTime: new MetricDefinition('time', 'entry',
-        () => $_('metrics.start-time'), 
-        () => $_('metrics.start-time-short'), 
+        () => $_('metrics.start-time'),
+        () => $_('metrics.start-time-short'),
         (e) => e.start),
     endTime: new MetricDefinition('time', 'entry',
-        () => $_('metrics.end-time'), 
-        () => $_('metrics.end-time-short'), 
+        () => $_('metrics.end-time'),
+        () => $_('metrics.end-time-short'),
         (e) => e.end),
     duration: new MetricDefinition('time', 'entry',
-        () => $_('metrics.duration'), 
-        () => $_('metrics.duration'), 
+        () => $_('metrics.duration'),
+        () => $_('metrics.duration'),
         (e) => e.end - e.start),
     hasOverridePosition: new MetricDefinition('boolean', 'entry',
-        () => $_('metrics.has-override-position'), 
-        () => $_('metrics.has-override-position'), 
+        () => $_('metrics.has-override-position'),
+        () => $_('metrics.has-override-position'),
         (e) => e.positioning !== null),
     hasOverrideAlignment: new MetricDefinition('boolean', 'entry',
-        () => $_('metrics.has-override-alignment'), 
-        () => $_('metrics.has-override-alignment'), 
+        () => $_('metrics.has-override-alignment'),
+        () => $_('metrics.has-override-alignment'),
         (e) => e.alignment !== null),
     label: new MetricDefinition('label', 'entry',
-        () => $_('metrics.label'), 
-        () => $_('metrics.label'), 
+        () => $_('metrics.label'),
+        () => $_('metrics.label'),
         (e) => e.label),
     channels: new MetricDefinition('number', 'entry',
-        () => $_('metrics.number-of-channels'), 
-        () => $_('metrics.number-of-channels-short'), 
-        (e) => e.texts.size, 
+        () => $_('metrics.number-of-channels'),
+        () => $_('metrics.number-of-channels-short'),
+        (e) => e.texts.size,
         { integer: true }),
     style: new MetricDefinition('style', 'style',
-        () => $_('metrics.style'), 
-        () => $_('metrics.style'), 
+        () => $_('metrics.style'),
+        () => $_('metrics.style'),
         (_e, s) => s),
     content: new MetricDefinition('richtext', 'channel',
-        () => $_('metrics.content'), 
-        () => $_('metrics.content'), 
+        () => $_('metrics.content'),
+        () => $_('metrics.content'),
         (e, s) => e.texts.get(s)!),
     lines: new MetricDefinition('number', 'channel',
-        () => $_('metrics.number-of-lines'), 
-        () => $_('metrics.number-of-lines-short'), 
+        () => $_('metrics.number-of-lines'),
+        () => $_('metrics.number-of-lines-short'),
         (e, s) => RichText.toString(e.texts.get(s)!).split('\n').length,
         { integer: true }),
     chars: new MetricDefinition('number', 'channel',
-        () => $_('metrics.number-of-characters'), 
-        () => $_('metrics.number-of-characters-short'), 
+        () => $_('metrics.number-of-characters'),
+        () => $_('metrics.number-of-characters-short'),
         (e, s) => e.texts.get(s)!.length,
         { integer: true }),
     letters: new MetricDefinition('number', 'channel',
-        () => $_('metrics.number-of-readable-characters'), 
-        () => $_('metrics.number-of-readable-characters-short'), 
+        () => $_('metrics.number-of-readable-characters'),
+        () => $_('metrics.number-of-readable-characters-short'),
         (e, s) => getTextLength(RichText.toString(e.texts.get(s)!)),
         {
             integer: true,
             description: () => $_('metrics.readable-characters-d')
         }),
     charsInLongestLine: new MetricDefinition('number', 'channel',
-        () => $_('metrics.number-of-characters-in-longest-line'), 
-        () => $_('metrics.number-of-characters-in-longest-line-short'), 
-        (e, s) => Math.max(0, 
+        () => $_('metrics.number-of-characters-in-longest-line'),
+        () => $_('metrics.number-of-characters-in-longest-line-short'),
+        (e, s) => Math.max(0,
             ...RichText.toString(e.texts.get(s)!).split('\n').map((x) => x.length)),
         { integer: true }),
     lettersInLongestLine: new MetricDefinition('number', 'channel',
-        () => $_('metrics.number-of-letters-in-longest-line'), 
-        () => $_('metrics.number-of-letters-in-longest-line-short'), 
-        (e, s) => Math.max(0, 
+        () => $_('metrics.number-of-letters-in-longest-line'),
+        () => $_('metrics.number-of-letters-in-longest-line-short'),
+        (e, s) => Math.max(0,
             ...RichText.toString(e.texts.get(s)!).split('\n').map(getTextLength)),
         {
             integer: true,
             description: () => $_('metrics.readable-characters-d')
         }),
     widthOfLongestLine: new MetricDefinition('number', 'channel',
-        () => $_('metrics.width-of-longest-line'), 
-        () => $_('metrics.width-of-longest-line-short'), 
-        (e, s) => Math.max(0, 
+        () => $_('metrics.width-of-longest-line'),
+        () => $_('metrics.width-of-longest-line-short'),
+        (e, s) => Math.max(0,
             ...RichText.toString(e.texts.get(s)!).split('\n').map(wcwidth)),
         {
             integer: true,
             description: () => $_('metrics.width-d')
         }),
     lettersPerSecond: new MetricDefinition('number', 'channel',
-        () => $_('metrics.readable-characters-per-second'), 
-        () => $_('metrics.readable-characters-per-second-short'), 
+        () => $_('metrics.readable-characters-per-second'),
+        () => $_('metrics.readable-characters-per-second-short'),
         (e, s) => {
             const value = getTextLength(RichText.toString(e.texts.get(s)!)) / (e.end - e.start);
             // TODO: is it ok to return 0 for NaN?
@@ -364,8 +364,8 @@ export const MetricFilterMethods = {
     ),
 } as const;
 
-export const MetricFilterDefaultMethods: 
-    {[key in MetricType]: MetricFilterMethodName} = 
+export const MetricFilterDefaultMethods:
+    {[key in MetricType]: MetricFilterMethodName} =
 {
     string: 'stringNonEmpty',
     richtext: 'rtNonEmpty',
@@ -414,7 +414,7 @@ export const Filter = {
                 case "and":
                     return { failed: results.flat() };
                 case "or":
-                    return results.some((x) => x.length == 0) 
+                    return results.some((x) => x.length == 0)
                         ? { failed: [] }
                         : { failed: results.flat() };
                 default:
@@ -483,7 +483,7 @@ export const Filter = {
         const result = z.safeParse(ZFilterBase, obj);
         if (!result.success)
             throw new DeserializationError('parsing filter: ' + z.prettifyError(result.error));
-        
+
         function d(f: z.infer<typeof ZFilterBase>): MetricFilter {
             if ('type' in f) {
                 return {
@@ -517,12 +517,12 @@ const ZSimpleFilter = z.object({
 }).check(({issues, value: x}) => {
     const m = Metrics[x.metric as keyof typeof Metrics];
     const method = MetricFilterMethods[x.method];
-    if (method.subject != m.typeName) issues.push({ 
+    if (method.subject != m.typeName) issues.push({
         code: 'custom', input: x,
         message: 'method type mismatch',
         continue: true
     });
-    if (x.parameters.length != method.parameters.length) issues.push({ 
+    if (x.parameters.length != method.parameters.length) issues.push({
         code: 'custom', input: x.parameters,
         message: `${method.parameters.length} parameters expected`,
         continue: true
@@ -536,5 +536,5 @@ const ZFilterBase = z.union([
             return z.array(ZFilterBase);
         }
     }),
-    ZSimpleFilter, 
+    ZSimpleFilter,
 ]);

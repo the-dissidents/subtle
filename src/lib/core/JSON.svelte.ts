@@ -163,13 +163,13 @@ export class JSONParser implements SubtitleParser {
 
         const styleMap = new Map(this.#subs.styles.map((x) => [x.name, x]));
         if (sv.timelineExcludeStyles.some((x) => !styleMap.has(x)))
-            Debug.warn('invalid item(s) in timelineExcludeStyles');
+            void Debug.warn('invalid item(s) in timelineExcludeStyles');
         this.#subs.view.timelineExcludeStyles =
             new SvelteSet(sv.timelineExcludeStyles.flatMap((x) => styleMap.get(x) ?? []));
 
         if (sv.timelineActiveChannel) {
             if (!styleMap.has(sv.timelineActiveChannel))
-                Debug.warn('invalid timelineActiveChannel');
+                void Debug.warn('invalid timelineActiveChannel');
             this.#subs.view.timelineActiveChannel =
                 new WeakRef(styleMap.get(sv.timelineActiveChannel)!);
         }
@@ -220,7 +220,7 @@ export class JSONParser implements SubtitleParser {
             if (!style) throw new DeserializationError(`invalid style name: ${styleName}`);
 
             if (entry.texts.has(style)) {
-                Debug.warn(`note: style appeared multiple times in one entry: ${styleName}: in`, obj);
+                void Debug.warn(`note: style appeared multiple times in one entry: ${styleName}: in`, obj);
 
                 const duplicated = this.#duplicatedStyles.get(style);
                 let found: SubtitleStyle | undefined;
@@ -229,12 +229,12 @@ export class JSONParser implements SubtitleParser {
                     if (!found) {
                         found = this.#createDuplicateStyle(style);
                         duplicated.push(found);
-                        Debug.debug('migrate: new duplicate style:', found.name);
+                        void Debug.debug('migrate: new duplicate style:', found.name);
                     }
                 } else {
                     found = this.#createDuplicateStyle(style);
                     this.#duplicatedStyles.set(style, [found]);
-                    Debug.debug('migrate: new duplicate style:', found.name);
+                    void Debug.debug('migrate: new duplicate style:', found.name);
                 }
                 style = found;
             }

@@ -5,7 +5,7 @@ import { Editing } from '../frontend/Editing';
 import { get } from 'svelte/store';
 
 type Handler = {
-  query?: (term?: string) => void;
+  query?: (term?: string) => Promise<void>;
   focus?: () => void;
 };
 
@@ -64,10 +64,10 @@ let input = $state<HTMLInputElement>();
 
 let toolboxFocus = Frontend.toolboxFocus;
 
-handler.query = (term?: string) => {
+handler.query = async (term?: string) => {
   if (term) keyword = term;
   if ($toolboxFocus !== 'references') $toolboxFocus = 'references';
-  guardAsync(async () => {
+  await guardAsync(async () => {
     const k = keyword.trim();
     if (currentSource === undefined || iframe === undefined || k.length == 0) return;
     Frontend.setStatus($_('msg.querying-source', {values: {source: currentSource.name}}));
@@ -90,8 +90,8 @@ currentSourceName.subscribe((x) => {
 <div class='vlayout fill'>
   <div class='hlayout'>
     <input type="text" class='flexgrow' bind:value={keyword} bind:this={input}
-      onkeydown={(ev) => {
-        if (ev.key == 'Enter') handler.query!();
+      onkeydown={async (ev) => {
+        if (ev.key == 'Enter') await handler.query!();
       }} />
     <button onclick={() => handler.query!()}
             disabled={currentSource === undefined || keyword.trim().length == 0}>
@@ -105,7 +105,7 @@ currentSourceName.subscribe((x) => {
         <option value={source}>{source.name}</option>
       {/each}
     </select>
-    <button onclick={() => openDialog(Dialog.referenceSources)}>
+    <button onclick={async () => await openDialog(Dialog.referenceSources)}>
       <PencilLineIcon />
     </button>
   </div>

@@ -13,7 +13,7 @@ function getLinters() {
     [x, x.lintProfile ? new CompiledLintProfile(x.lintProfile) : undefined] as const));
 }
 
-function fixAll() {
+async function fixAll() {
   const linters = getLinters();
 
   let nChanged = 0, nTotal = 0;
@@ -47,7 +47,7 @@ function fixAll() {
     Frontend.setStatus($_('review.nothing-to-fix'));
   } else {
     if (nChanged > 0)
-      Source.markChanged(ChangeType.InPlace, $_('c.fix-lint-problems'));
+      await Source.markChanged(ChangeType.InPlace, $_('c.fix-lint-problems'));
 
     Frontend.setStatus(
       $_('review.auto-fix-problems', { values: { n: nChanged, m: nTotal - nChanged } })

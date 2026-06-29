@@ -4,7 +4,7 @@
       const component = mount(ConfirmationPopup, {
         props: {
           element, prompt,
-          onSubmit: async (x) => {
+          onSubmit: async (x: boolean) => {
             await unmount(component);
             resolve(x);
           }

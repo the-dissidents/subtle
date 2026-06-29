@@ -20,7 +20,7 @@
           element, prompt,
           validate: options?.validate,
           position: options?.position,
-          onSubmit: async (x) => {
+          onSubmit: async (x?: string) => {
             await unmount(component);
             resolve(x ?? null);
           }

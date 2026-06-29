@@ -29,7 +29,7 @@ export const TimelineHandle = {
     currentMode: Memorized.$('currentMode',
         z.union([z.literal('select'), z.literal('create'), z.literal('split')]), 'select'),
     isDuringAction: () => false,
-    interruptAction: () => {},
+    interruptAction: async (): Promise<void> => {},
 }
 
 abstract class TimelineAction {
@@ -43,17 +43,17 @@ abstract class TimelineAction {
     onMouseDown(_e: MouseEvent): boolean { return false; }
     canBeginDrag(_e0: MouseEvent): boolean { return false; }
 
-    onDrag(_offsetX: number, _offsetY: number, _ev: MouseEvent) {}
+    onDrag(_offsetX: number, _offsetY: number, _ev: MouseEvent): Promise<void> | void {}
 
-    onDragEnd(_offsetX: number, _offsetY: number, _ev: MouseEvent) {
-        this.interrupt();
+    onDragEnd(_offsetX: number, _offsetY: number, _ev: MouseEvent): Promise<void> | void {
+        return this.interrupt();
     }
 
-    onDragInterrupted() {
-        this.interrupt();
+    onDragInterrupted(): Promise<void> | void {
+        return this.interrupt();
     }
 
-    interrupt() {
+    interrupt(): Promise<void> | void {
         this.self.currentAction = undefined;
     }
 }
@@ -101,7 +101,7 @@ class BoxSelect extends TimelineAction {
         this.y1 = e0.offsetY + this.layout.manager.scroll[1];
     }
 
-    onDrag(offsetX: number, offsetY: number): void {
+    async onDrag(offsetX: number, offsetY: number) {
         const x2 = offsetX + this.layout.manager.scroll[0],
               y2 = offsetY + this.layout.manager.scroll[1];
         const b: Box = {
@@ -114,7 +114,7 @@ class BoxSelect extends TimelineAction {
             this.self.selection = new SvelteSet(
                 [...this.origSelection, ...newGroup]);
             this.thisGroup = newGroup;
-            this.self.dispatchSelectionChanged();
+            await this.self.dispatchSelectionChanged();
         }
         this.layout.keepPosInSafeArea((x2 - this.layout.leftColumnWidth) / this.layout.scale);
         this.layout.manager.requestRender();
@@ -126,11 +126,11 @@ class BoxSelect extends TimelineAction {
         this.layout.manager.requestRender();
     }
 
-    override interrupt() {
+    override async interrupt() {
         this.self.currentAction = undefined;
         this.self.selectBox = null;
         this.self.selection = new SvelteSet(this.origSelection);
-        this.self.dispatchSelectionChanged();
+        await this.self.dispatchSelectionChanged();
         this.layout.manager.requestRender();
     }
 }
@@ -146,12 +146,12 @@ abstract class MoveResizeBase extends TimelineAction {
         super(self, layout, e0);
     }
 
-    onDragEnd(): void {
+    async onDragEnd() {
         this.self.currentAction = undefined;
         this.self.alignmentLine = null;
         this.layout.manager.requestRender();
         if (this.changed)
-            Source.markChanged(ChangeType.Times, get(_)('c.drag-to-move-resize'));
+            await Source.markChanged(ChangeType.Times, get(_)('c.drag-to-move-resize'));
         else
             this.afterEnd();
     }
@@ -196,7 +196,7 @@ class DragMove extends MoveResizeBase {
     constructor(
         self: TimelineInput, layout: TimelineLayout, e0: MouseEvent,
         origPositions: Map<SubtitleEntry, { start: number; end: number; }>,
-        afterEnd: () => void,
+        afterEnd: () => Promise<void>,
         underMouse: SubtitleEntry[]
     ) {
         super(self, layout, e0, origPositions, afterEnd);
@@ -236,7 +236,7 @@ class DragSeam extends MoveResizeBase {
 
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent,
         private first: SubtitleEntry, private second: SubtitleEntry,
-        afterEnd: () => void)
+        afterEnd: () => Promise<void>)
     {
         super(self, layout, e0, new Map([
             [first, {start: first.start, end: first.end}],
@@ -270,7 +270,7 @@ class DragResize extends MoveResizeBase {
 
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent,
         origPositions: Map<SubtitleEntry, { start: number; end: number; }>,
-        afterEnd: () => void,
+        afterEnd: () => Promise<void>,
         private where: 'start' | 'end',
     ) {
         super(self, layout, e0, origPositions, afterEnd);
@@ -331,12 +331,12 @@ class CreateEntry extends TimelineAction {
     async onDragEnd() {
         this.self.currentAction = undefined;
         if (this.entry.end == this.entry.start) {
-            this.onDragInterrupted();
+            await this.onDragInterrupted();
         } else {
             if (get(Editing.useUntimedForNewEntires)) {
-                Editing.fillWithFirstLineOfUntimed(this.entry, this.style);
+                await Editing.fillWithFirstLineOfUntimed(this.entry, this.style);
             }
-            Source.markChanged(ChangeType.Times, get(_)('c.drag-to-create'));
+            await Source.markChanged(ChangeType.Times, get(_)('c.drag-to-create'));
             // TODO: start editing?
         }
     }
@@ -403,7 +403,6 @@ class SplitEntry extends TimelineAction {
         const pos = Math.max(1, Math.min(textLength - 1, Math.floor(x * textLength)));
         split.positions.set(style, pos);
         this.layout.manager.requestRender();
-        return true;
     }
 
     override interrupt() {
@@ -413,13 +412,13 @@ class SplitEntry extends TimelineAction {
         this.layout.manager.requestRender();
     }
 
-    override onDragEnd(offsetX: number) {
+    override async onDragEnd(offsetX: number) {
         Debug.assert(this.self.splitting !== null);
         this.styles.shift();
 
         if (this.styles.length == 0) {
             // all done, do split
-            const target = this.self.splitting!.target;
+            const target = this.self.splitting.target;
             const index = Source.subs.entries.indexOf(target);
             if (index < 0) return Debug.early();
 
@@ -428,16 +427,16 @@ class SplitEntry extends TimelineAction {
             newEntry.label = target.label;
             target.start = this.origPos;
             for (const [style, text] of target.texts) {
-                const pos = this.self.splitting!.positions.get(style)!;
+                const pos = this.self.splitting.positions.get(style)!;
                 newEntry.texts.set(style, RichText.substring(text, 0, pos));
                 target.texts.set(style, RichText.substring(text, pos));
             }
-            Source.markChanged(ChangeType.Times, get(_)('c.split-entry-timeline'));
+            await Source.markChanged(ChangeType.Times, get(_)('c.split-entry-timeline'));
 
             this.self.splitting = null;
             this.self.currentAction = undefined;
         } else {
-            this.self.splitting!.current = this.styles[0];
+            this.self.splitting.current = this.styles[0];
             this.onDrag(offsetX);
         }
         this.layout.manager.requestRender();
@@ -492,10 +491,10 @@ export class TimelineInput {
 
         this.currentAction = $state();
         TimelineHandle.isDuringAction = () => this.currentAction !== undefined;
-        TimelineHandle.interruptAction = () => {
+        TimelineHandle.interruptAction = async () => {
             if (!this.currentAction) return;
-            this.currentAction.interrupt();
             this.manager.requestRender();
+            await this.currentAction.interrupt();
         };
     }
 
@@ -560,8 +559,8 @@ export class TimelineInput {
         return this.layout.offset + (x - this.layout.leftColumnWidth) / this.layout.scale;
     }
 
-    dispatchSelectionChanged() {
-        Editing.clearFocus();
+    async dispatchSelectionChanged() {
+        await Editing.clearFocus();
         Editing.selection.submitted = new Set(this.selection);
         if (this.selection.size == 1) {
             const array = [...this.selection.values()];
@@ -616,7 +615,7 @@ export class TimelineInput {
 
         if (e.button == 2) {
             e.preventDefault();
-            contextMenu();
+            void contextMenu();
         }
     }
 
@@ -624,7 +623,7 @@ export class TimelineInput {
         if (this.selection.size == 1
          && Editing.getFocusedEntry() == [...this.selection][0])
         {
-            SubtitleTableHandle.processDoubleClick?.();
+            void SubtitleTableHandle.processDoubleClick?.();
         }
     }
 
@@ -737,7 +736,9 @@ export class TimelineInput {
         return undefined;
     }
 
-    #initializeDrag(e0: MouseEvent, afterEnd: () => void, underMouse: SubtitleEntry[]) {
+    async #initializeDrag(
+        e0: MouseEvent, afterEnd: () => Promise<void>, underMouse: SubtitleEntry[]
+    ) {
         const sels = [...this.selection];
         if (sels.length == 0) return false;
 
@@ -765,7 +766,7 @@ export class TimelineInput {
                 : undefined;
             if (seams) {
                 // drag seam
-                Editing.setSelection(seams);
+                await Editing.setSelection(seams);
                 this.currentAction = new DragSeam(this, this.layout, e0, seams[0], seams[1], afterEnd);
                 return true;
             }
@@ -789,7 +790,7 @@ export class TimelineInput {
         }
     }
 
-    #canBeginDrag(e0: MouseEvent): boolean {
+    async #canBeginDrag(e0: MouseEvent): Promise<boolean> {
         if (e0.offsetX < this.layout.leftColumnWidth)
             return false;
 
@@ -801,7 +802,7 @@ export class TimelineInput {
         // select
         if (e0.offsetY < TimelineLayout.HEADER_HEIGHT) {
             this.currentAction = new MoveCursor(this, this.layout, e0);
-            this.#onDrag(e0.offsetX, e0.offsetY, e0);
+            await this.#onDrag(e0.offsetX, e0.offsetY, e0);
             return true;
         } else {
             const underMouse = this.layout.findEntriesByPosition(
@@ -813,8 +814,8 @@ export class TimelineInput {
                 // right-clicked on something
                 // clear selection and re-select only if it's not selected
                 if (!underMouse.some((x) => this.selection.has(x))) {
-                    Editing.clearSelection(ChangeCause.Timeline);
-                    Editing.selectEntry(underMouse[0],
+                    await Editing.clearSelection(ChangeCause.Timeline);
+                    await Editing.selectEntry(underMouse[0],
                         SelectMode.Single, ChangeCause.Action);
                 }
                 // TODO: context menu?
@@ -824,7 +825,7 @@ export class TimelineInput {
                 if (underMouse.length == 0) {
                     if (!e0.getModifierState(Basic.ctrlKey)) {
                         // clear selection
-                        Editing.clearSelection(ChangeCause.Timeline);
+                        await Editing.clearSelection(ChangeCause.Timeline);
                         this.selection.clear();
                         this.manager.requestRender();
                     }
@@ -840,19 +841,19 @@ export class TimelineInput {
                     return true;
                 }
 
-                let afterEnd = () => {};
+                let afterEnd = async () => {};
                 // left-clicked on something
                 // renew selection
                 if (e0.getModifierState(Basic.ctrlKey)) {
                     // multiple select. Only the first entry counts
                     if (!this.selection.has(underMouse[0])) {
                         this.selection.add(underMouse[0]);
-                        this.dispatchSelectionChanged();
+                        await this.dispatchSelectionChanged();
                         this.manager.requestRender();
-                    } else afterEnd = () => {
+                    } else afterEnd = async () => {
                         // if hasn't dragged
                         this.selection.delete(underMouse[0]);
-                        this.dispatchSelectionChanged();
+                        await this.dispatchSelectionChanged();
                         this.manager.requestRender();
                     }
                     return false;
@@ -860,10 +861,10 @@ export class TimelineInput {
                     // single select
                     let selected = underMouse[0];
                     if (this.selection.size > 1) {
-                        afterEnd = () => {
+                        afterEnd = async () => {
                             this.selection.clear();
                             this.selection.add(selected);
-                            Editing.selectEntry(selected,
+                            await Editing.selectEntry(selected,
                                 SelectMode.Single, ChangeCause.Timeline);
                         };
                     } else {
@@ -872,7 +873,7 @@ export class TimelineInput {
                         selected = underMouse[(underMouse.indexOf(one) + 1) % underMouse.length];
                         this.selection.clear();
                         this.selection.add(selected);
-                        Editing.selectEntry(selected,
+                        await Editing.selectEntry(selected,
                             SelectMode.Single, ChangeCause.Timeline);
                     }
                     this.manager.requestRender();
@@ -891,9 +892,9 @@ export class TimelineInput {
         Debug.assert(false);
     }
 
-    #onDrag(offsetX: number, offsetY: number, ev: MouseEvent) {
+    async #onDrag(offsetX: number, offsetY: number, ev: MouseEvent) {
         if (!this.currentAction) return;
-        this.currentAction.onDrag(offsetX, offsetY, ev);
+        await this.currentAction.onDrag(offsetX, offsetY, ev);
     }
 
     #registerInterruptKey() {
@@ -912,13 +913,13 @@ export class TimelineInput {
         document.addEventListener('keydown', f, { once: true });
     };
 
-    #onDragEnd(offsetX: number, offsetY: number, ev: MouseEvent) {
+    async #onDragEnd(offsetX: number, _offsetY: number, ev: MouseEvent) {
         if (!this.currentAction) return Debug.early();
-        this.currentAction.onDragEnd(offsetX, offsetX, ev);
+        await this.currentAction.onDragEnd(offsetX, offsetX, ev);
     }
 
-    #onDragInterrupted() {
+    async #onDragInterrupted() {
         if (!this.currentAction) return Debug.early();
-        this.currentAction.onDragInterrupted();
+        await this.currentAction.onDragInterrupted();
     }
 }

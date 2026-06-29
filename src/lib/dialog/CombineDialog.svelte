@@ -32,12 +32,12 @@ let selectionOnly = $state(true),
     hasbeen = $state(false);
 
 onMount(async () => {
-  run(false);
+  await run(false);
   await inner.showModal!();
   close();
 });
 
-function run(doit: boolean) {
+async function run(doit: boolean) {
   start = start ?? 0;
   end = end ?? 0;
   number = [0, 0, 0];
@@ -98,15 +98,13 @@ function run(doit: boolean) {
   if (doit) {
     hasbeen = true;
     if (done.size > 0) {
-      Editing.clearSelection();
+      await Editing.clearSelection();
       for (let ent of selection.filter((x) => !done.has(x)))
         Editing.selection.submitted.add(ent);
-      Source.markChanged(ChangeType.Times, $_('c.combine-by-matching-time'));
+      await Source.markChanged(ChangeType.Times, $_('c.combine-by-matching-time'));
     }
-    if (marked.size > 0) {
-      if (done.size == 0)
-        Source.markChanged(ChangeType.InPlace, $_('c.combine-by-matching-time'));
-    }
+    if (marked.size > 0 && done.size == 0)
+      await Source.markChanged(ChangeType.InPlace, $_('c.combine-by-matching-time'));
   } else
     hasbeen = false;
 }
