@@ -138,7 +138,7 @@ export class SubtitleRenderer {
 
     updateTimes() {
         this.#sortedEntries = this.#subs.entries
-            .map((x, i) => ({oldIndex: i, newIndex: -1, entry: x}) as WrappedEntry)
+            .map((x, i) => ({oldIndex: i, newIndex: -1, entry: x}))
             .toSorted((a, b) => a.entry.start - b.entry.start);
         for (let i = 0; i < this.#sortedEntries.length; i++)
             this.#sortedEntries[i].newIndex = i;

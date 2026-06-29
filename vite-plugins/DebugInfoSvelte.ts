@@ -9,7 +9,7 @@ export default function debugInfoSvelte(): Plugin {
 
     enforce: 'pre',
 
-    async transform(code, id) {
+    transform(code, id) {
       if (!/\.svelte$/.test(id)) {
         return null;
       }

@@ -174,7 +174,8 @@ export const KeybindingManager = {
         initialized = true;
         await this.read();
         this.update();
-        document.addEventListener('keydown', (ev) => {
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        document.addEventListener('keydown', async (ev) => {
             const result = this.processKeydown(ev);
             hotkeyWasPressed = false;
             switch (result.type) {
@@ -192,7 +193,7 @@ export const KeybindingManager = {
                 case "activate":
                     ev.preventDefault();
                     hotkeyWasPressed = true;
-                    result.command.start(result.key);
+                    await result.command.start(result.key);
                     break;
                 case "waitNext":
                     ev.preventDefault();
@@ -212,7 +213,7 @@ export const KeybindingManager = {
             hotkeyWasPressed = false;
             switch (result.type) {
                 case 'deactivate':
-                    result.commands.forEach((x) => x.end());
+                    result.commands.forEach((x) => void x.end());
                     break;
                 case 'notFound':
                     break;
@@ -234,7 +235,7 @@ export const KeybindingManager = {
                 hotkeyWasPressed = true;
             }
             if (hotkeyWasPressed && ev.inputType == 'insertText') {
-                Debug.trace('preventing', ev);
+                void Debug.trace('preventing', ev);
                 ev.preventDefault();
                 hotkeyWasPressed = false;
             }
@@ -393,8 +394,8 @@ export const KeybindingManager = {
                 const any = !other.contexts && !key.contexts;
                 const overlap = any ? []
                     : !other.contexts ? [...key.contexts!]
-                    : !key.contexts ? [...other.contexts!]
-                    : [...other.contexts!].filter((x) => key.contexts!.has(x));
+                    : !key.contexts ? [...other.contexts]
+                    : [...other.contexts].filter((x) => key.contexts!.has(x));
                 if ((any || overlap.length > 0) && other.command !== cmd)
                     conflicts.push([other.command, overlap]);
             }

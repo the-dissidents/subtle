@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 console.info('Debug loading');
 
 import { invoke } from "@tauri-apps/api/core";
@@ -82,7 +83,7 @@ export const Debug: {
     info(...data: unknown[]): Promise<void>,
     warn(...data: unknown[]): Promise<void>,
     error(...data: unknown[]): Promise<void>,
-    forwardError(e: Error | unknown): Promise<void>,
+    forwardError(e: unknown): Promise<void>,
     assert(cond: boolean, file?: string, line?: number): asserts cond,
     early(file?: string, func?: string, line?: number): void,
     never(value?: never): never
@@ -125,58 +126,58 @@ export const Debug: {
             }
         });
 
-        window.addEventListener('error', async (ev) => {
+        window.addEventListener('error', (ev) => {
             if (!HasStacktrace.has(ev.error)) {
                 // hack: demote ResizeObserver errors
                 // see https://github.com/the-dissidents/subtle/issues/123
                 if (ev.message.startsWith('ResizeObserver loop completed with')) {
-                    Debug.warn('ResizeObserver loop completed with undelivered notifications');
+                    void Debug.warn('ResizeObserver loop completed with undelivered notifications');
                     return true;
                 }
-                Debug.error(`Unhandled error: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`, ev.error);
+                void Debug.error(`Unhandled error: ${ev.message} [${ev.filename}:${ev.lineno},${ev.colno}]`, ev.error);
             }
             return true;
         });
-        window.addEventListener('unhandledrejection', async (ev) => {
+        window.addEventListener('unhandledrejection', (ev) => {
             // ev.preventDefault();
             if (!HasStacktrace.has(ev.reason)) {
-                Debug.error(`Unhandled rejection`, ev.reason);
+                void Debug.error(`Unhandled rejection`, ev.reason);
             }
         });
     },
     async trace(...data: unknown[]) {
         if (this.filterLevel >= LogLevelFilter.Trace)
             console.log(formatPrelude('TRACE'), ...data);
-        callLog(LogLevel.Trace, formatData(data));
+        await callLog(LogLevel.Trace, formatData(data));
     },
     async debug(...data: unknown[]) {
         if (this.filterLevel >= LogLevelFilter.Debug)
             console.debug(formatPrelude('DEBUG'), ...data);
-        callLog(LogLevel.Debug, formatData(data));
+        await callLog(LogLevel.Debug, formatData(data));
     },
     async info(...data: unknown[]) {
         if (this.filterLevel >= LogLevelFilter.Info)
             console.info(formatPrelude('INFO'), ...data);
-        callLog(LogLevel.Info, formatData(data));
+        await callLog(LogLevel.Info, formatData(data));
     },
     async warn(...data: unknown[]) {
         if (this.filterLevel >= LogLevelFilter.Warn)
             console.warn(formatPrelude('WARN'), ...data);
-        callLog(LogLevel.Warn, formatData(data));
+        await callLog(LogLevel.Warn, formatData(data));
     },
     async error(...data: unknown[]) {
         if (this.filterLevel >= LogLevelFilter.Error)
             console.error(formatPrelude('ERROR'), ...data);
         const format = formatData(data);
         this.onError.dispatch('webview', format);
-        callLog(LogLevel.Error, format);
+        await callLog(LogLevel.Error, format);
     },
-    async forwardError(e: Error | unknown) {
+    async forwardError(e: unknown) {
         if (e instanceof Error) {
             if (this.filterLevel >= LogLevelFilter.Error)
                 console.error(formatPrelude('ERROR'), e);
             const format = formatData([e]);
-            callLog(LogLevel.Error, format);
+            await callLog(LogLevel.Error, format);
         } else {
             await this.error(e);
         }
@@ -188,7 +189,7 @@ export const Debug: {
             if (this.filterLevel >= LogLevelFilter.Error)
                 console.error(formatPrelude('ERROR', file), msg);
             this.onError.dispatch(file, msg);
-            callLog(LogLevel.Error, msg, file);
+            void callLog(LogLevel.Error, msg, file);
 
             const error = new Error(msg);
             HasStacktrace.add(error);
@@ -198,12 +199,12 @@ export const Debug: {
     early(file?: string, func?: string, line?: number): void {
         func ??= 'unknown';
         file ??= '?';
-        callLog(LogLevel.Info, `<${func}> returned early `
+        void callLog(LogLevel.Info, `<${func}> returned early `
             + (line ? `at line ${line}` : '(no location info)'), file);
     },
     never(x?: never): never {
         const msg = `Unreachable code reached (never=${x})`;
-        this.error(msg);
+        void this.error(msg);
         const error = new Error(msg);
         HasStacktrace.add(error);
         throw error;

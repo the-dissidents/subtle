@@ -11,6 +11,6 @@ export class DeserializationError extends Error {
 export function parseObjectZ<Z extends z.core.$ZodType>(obj: unknown, ztype: Z, name: string) {
     const result = z.safeParse(ztype, obj, {reportInput: true});
     if (result.success) return result.data;
-    Debug.info(result.error);
+    void Debug.info(result.error);
     throw new DeserializationError(`parsing ${name}: ` + z.prettifyError(result.error));
 }

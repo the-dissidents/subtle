@@ -179,11 +179,11 @@ export class BracketLinter {
                     };
 
                     if (charMap.has(open)) {
-                        Debug.warn(`BracketLinter: overwriting ${open}`);
+                        void Debug.warn(`BracketLinter: overwriting ${open}`);
                         overwritten.add(open);
                     }
                     if (charMap.has(close) && close !== open) {
-                        Debug.warn(`BracketLinter: overwriting ${close}`);
+                        void Debug.warn(`BracketLinter: overwriting ${close}`);
                         overwritten.add(close);
                     }
 

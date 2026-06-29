@@ -36,7 +36,7 @@ export class TableRenderer {
         hook(() => theme.isDark, () => this.manager.requestRender());
     }
 
-    render(ctx: CanvasRenderingContext2D) {
+    async render(ctx: CanvasRenderingContext2D) {
         const drawLine = (x1: number, y1: number, x2: number, y2: number) => {
             ctx.beginPath();
             ctx.moveTo(x1, y1);
@@ -61,7 +61,7 @@ export class TableRenderer {
         }
 
         if (this.layout.requestedLayout) {
-            this.layout.layout(ctx);
+            await this.layout.layout(ctx);
         }
 
         const [sx, sy] = this.manager.scroll;

@@ -66,10 +66,10 @@ class Scale extends TimelineAction {
         this.origScale = this.layout.scale;
     }
 
-    onDrag(_offsetX: number, _offsetY: number, ev: MouseEvent): void {
-        this.layout.setScale(this.origScale /
+    async onDrag(_offsetX: number, _offsetY: number, ev: MouseEvent) {
+        await this.layout.setScale(this.origScale /
             Math.pow(1.03, (this.e0.clientX - ev.clientX)));
-        this.layout.setOffset(this.origPos - this.e0.offsetX / this.layout.scale);
+        await this.layout.setOffset(this.origPos - this.e0.offsetX / this.layout.scale);
     }
 }
 
@@ -78,13 +78,13 @@ class MoveCursor extends TimelineAction {
         super(self, layout, e0);
     }
 
-    onDrag(offsetX: number): void {
+    async onDrag(offsetX: number) {
         let curPos =
             (offsetX - this.layout.leftColumnWidth) / this.layout.scale + this.layout.offset;
         // always snap to frame, it's only valid that way with video loaded
         curPos = Playback.snapPositionToFrame(curPos, 'round');
         if (curPos == Playback.position) return;
-        Playback.setPosition(curPos);
+        await Playback.setPosition(curPos);
     }
 }
 
@@ -116,7 +116,7 @@ class BoxSelect extends TimelineAction {
             this.thisGroup = newGroup;
             await this.self.dispatchSelectionChanged();
         }
-        this.layout.keepPosInSafeArea((x2 - this.layout.leftColumnWidth) / this.layout.scale);
+        await this.layout.keepPosInSafeArea((x2 - this.layout.leftColumnWidth) / this.layout.scale);
         this.layout.manager.requestRender();
     }
 
@@ -246,7 +246,7 @@ class DragSeam extends MoveResizeBase {
         this.origVal = first.end;
     }
 
-    onDrag(offsetX: number, _offsetY: number): void {
+    async onDrag(offsetX: number, _offsetY: number) {
         const val = this.origVal + this.self.convertX(offsetX) - this.origPos;
         let newVal = val;
         if (TimelineHandle.useSnap.get())
@@ -258,7 +258,7 @@ class DragSeam extends MoveResizeBase {
         this.second.start = newVal;
 
         this.changed = newVal != this.origVal;
-        this.layout.keepPosInSafeArea(newVal);
+        await this.layout.keepPosInSafeArea(newVal);
         this.layout.manager.requestRender();
     }
 }
@@ -280,7 +280,7 @@ class DragResize extends MoveResizeBase {
         this.end = last.end;
     }
 
-    onDrag(offsetX: number, _offsetY: number): void {
+    async onDrag(offsetX: number, _offsetY: number) {
         if (this.end == this.start) return;
 
         const val = this.origVal + this.self.convertX(offsetX) - this.origPos;
@@ -305,7 +305,7 @@ class DragResize extends MoveResizeBase {
             ent.end = (pos.end - this.start) * factor + newStart;
         }
         this.changed = newVal != this.origVal;
-        this.layout.keepPosInSafeArea(newVal);
+        await this.layout.keepPosInSafeArea(newVal);
         this.layout.manager.requestRender();
     }
 }
@@ -473,12 +473,12 @@ export class TimelineInput {
         this.manager.onMouseWheel.bind(this, this.#onMouseWheel.bind(this));
         this.manager.onUserScroll.bind(this, () => {this.layout.requestedSampler = true});
 
-        Editing.onSelectionChanged.bind(this, (cause) => {
+        Editing.onSelectionChanged.bind(this, async (cause) => {
             if (cause != ChangeCause.Timeline) {
                 this.selection = new SvelteSet(Editing.getSelection());
                 const focused = Editing.getFocusedEntry();
                 if (focused instanceof SubtitleEntry)
-                    this.layout.keepEntryInView(focused);
+                    await this.layout.keepEntryInView(focused);
                 this.manager.requestRender();
             }
         });
@@ -583,17 +583,17 @@ export class TimelineInput {
             [sels[0], sels[0]]);
     }
 
-    #onMouseWheel(tr: TranslatedWheelEvent, e: WheelEvent) {
+    async #onMouseWheel(tr: TranslatedWheelEvent, e: WheelEvent) {
         if (tr.isZoom) {
             const origPos = this.convertX(e.offsetX);
-            this.layout.setScale(this.layout.scale / Math.pow(1.03, tr.amount));
-            this.layout.setOffset(
+            await this.layout.setScale(this.layout.scale / Math.pow(1.03, tr.amount));
+            await this.layout.setOffset(
                 origPos - (e.offsetX - this.layout.leftColumnWidth) / this.layout.scale);
         } else {
             const amount =
                 tr.isTrackpad ? tr.amountX :
                 tr.amountX == 0 ? tr.amountY : tr.amountX;
-            this.layout.setOffset(this.layout.offset + amount * 0.5 / this.layout.scale);
+            await this.layout.setOffset(this.layout.offset + amount * 0.5 / this.layout.scale);
         }
     }
 
@@ -899,17 +899,19 @@ export class TimelineInput {
 
     #registerInterruptKey() {
         // TODO: maybe make it a command ('interrupt timeline operation') instead?
-        const f = (ev: KeyboardEvent) => {
+        const f = async (ev: KeyboardEvent) => {
             if (ev.key == 'Escape') {
-                this.manager.interruptDrag();
+                await this.manager.interruptDrag();
                 this.manager.requestRender();
             }
         };
 
         this.manager.onDragEnd.bind(this, () => {
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             document.removeEventListener('keydown', f);
         }, { once: true });
 
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         document.addEventListener('keydown', f, { once: true });
     };
 

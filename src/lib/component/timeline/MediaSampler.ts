@@ -78,7 +78,7 @@ export class MediaSampler {
     }
 
     private constructor(
-        private readonly media: MMedia, 
+        private readonly media: MMedia,
         /** points per second */
         private readonly resolution: number,
     ) {
@@ -91,7 +91,7 @@ export class MediaSampler {
     static async open(media: MMedia, audio: number, resolution: number) {
         await media.openAudioSampler(audio, resolution);
         await media.openVideoSampler(-1, InterfaceConfig.data.useHwaccel);
-        
+
         return new MediaSampler(media, resolution);
     }
 
@@ -169,7 +169,7 @@ export class MediaSampler {
                 }
                 this.onProgress?.();
                 if (result.isEof) {
-                    await Debug.trace(`sampling done upon EOF`, 
+                    await Debug.trace(`sampling done upon EOF`,
                         result.audio?.endTime?.toFixed(4), result.video?.endTime?.toFixed(4));
                     this.#sampling = false;
                     this.#updateEOF(result.audio?.endTime);
@@ -189,8 +189,8 @@ export class MediaSampler {
                 }
                 return true;
             });
-            if (ok) requestAnimationFrame(() => doSampling());
+            if (ok) requestAnimationFrame(() => void doSampling());
         }
-        requestAnimationFrame(() => doSampling());
+        requestAnimationFrame(() => void doSampling());
     }
 }

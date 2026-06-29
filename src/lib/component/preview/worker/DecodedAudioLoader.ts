@@ -28,7 +28,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
     #volume = 1;
     #playing: boolean = false;
 
-    constructor(options?: AudioWorkletNodeOptions | undefined) {
+    constructor(options?: AudioWorkletNodeOptions) {
         super(options);
         this.port.onmessage = (e: MessageEvent<AudioInputData>) => {
             switch (e.data.type) {

@@ -29,7 +29,7 @@ export const Utils = {
         return false;
     },
 
-    moveSelectionContinuous(direction: number) {
+    async moveSelectionContinuous(direction: number) {
         if (this.isSelectionDisjunct()) return Debug.early();
         const selection = Editing.getSelection();
         if (selection.length == 0 || direction == 0) return Debug.early();
@@ -38,7 +38,7 @@ export const Utils = {
         if (index + direction < 0 || index + direction > Source.subs.entries.length) return;
         Source.subs.entries.splice(index, selection.length);
         Source.subs.entries.splice(index + direction, 0, ...selection);
-        Source.markChanged(ChangeType.Order, $_('c.move-entries'));
+        await Source.markChanged(ChangeType.Order, $_('c.move-entries'));
 
         const entry = direction > 0 ? selection.at(-1)! : selection[0];
         setTimeout(() => {
@@ -46,7 +46,7 @@ export const Utils = {
         }, 0);
     },
 
-    moveSelectionTo(to: 'beginning' | 'end') {
+    async moveSelectionTo(to: 'beginning' | 'end') {
         const selection = Editing.getSelection();
         if (selection.length == 0) return Debug.early();
         const selectionSet = new Set(selection);
@@ -58,11 +58,11 @@ export const Utils = {
             newEntries = [...newEntries, ...selection]; break;
         }
         Source.subs.entries = newEntries;
-        Source.markChanged(ChangeType.Order, $_('c.move-entries'));
+        await Source.markChanged(ChangeType.Order, $_('c.move-entries'));
     },
 
     // TODO: make this a dialog
-    fixOverlap(selection: SubtitleEntry[], epsilon = InputConfig.data.epsilon) {
+    async fixOverlap(selection: SubtitleEntry[], epsilon = InputConfig.data.epsilon) {
         let count = 0;
         for (let i = 0; i < selection.length - 1; i++) {
             const entry = selection[i];
@@ -81,10 +81,10 @@ export const Utils = {
 
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: count}}));
         if (count > 0)
-            Source.markChanged(ChangeType.Times, $_('action.fix-erroneous-overlapping'));
+            await Source.markChanged(ChangeType.Times, $_('action.fix-erroneous-overlapping'));
     },
 
-    mergeDuplicate(selection: SubtitleEntry[]) {
+    async mergeDuplicate(selection: SubtitleEntry[]) {
         const deletion = new Set<SubtitleEntry>;
         for (let i = 0; i < selection.length; i++) {
             const entry = selection[i];
@@ -116,25 +116,25 @@ export const Utils = {
 
         Frontend.setStatus($_('msg.combined-n-entries', {values: {n: deletion.size}}));
         if (deletion.size > 0)
-            Source.markChanged(ChangeType.Times, $_('action.merge-overlapping-duplicates'));
+            await Source.markChanged(ChangeType.Times, $_('action.merge-overlapping-duplicates'));
     },
 
-    mergeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
+    async mergeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
             const textA = RichText.trimEnd(ent.texts.get(a) ?? '');
             const textB = RichText.trimEnd(ent.texts.get(b) ?? '');
             if (textB === '') continue;
-            ent.texts.set(a, textA + ' ' + textB);
+            ent.texts.set(a, RichText.concat(textA, ' ', textB));
             ent.texts.delete(b);
             done++;
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace, $_('action.merge-channel'));
+            await Source.markChanged(ChangeType.InPlace, $_('action.merge-channel'));
     },
 
-    exchangeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
+    async exchangeStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
             const textA = ent.texts.get(a);
@@ -150,7 +150,7 @@ export const Utils = {
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace, $_('action.exchange-channel'));
+            await Source.markChanged(ChangeType.InPlace, $_('action.exchange-channel'));
     },
 
     async replaceStyle(entries: SubtitleEntry[], a: SubtitleStyle, b: SubtitleStyle) {
@@ -167,10 +167,10 @@ export const Utils = {
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace, $_('action.replace-channel'));
+            await Source.markChanged(ChangeType.InPlace, $_('action.replace-channel'));
     },
 
-    removeStyle(entries: SubtitleEntry[], style: SubtitleStyle) {
+    async removeStyle(entries: SubtitleEntry[], style: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
             if (ent.texts.has(style)) {
@@ -185,10 +185,10 @@ export const Utils = {
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace, $_('action.remove-channel'));
+            await Source.markChanged(ChangeType.InPlace, $_('action.remove-channel'));
     },
 
-    removeNewlines(entries: SubtitleEntry[], style: SubtitleStyle) {
+    async removeNewlines(entries: SubtitleEntry[], style: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
             const rt = ent.texts.get(style);
@@ -200,10 +200,10 @@ export const Utils = {
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace, $_('action.remove-newlines'));
+            await Source.markChanged(ChangeType.InPlace, $_('action.remove-newlines'));
     },
 
-    removeFormatting(entries: SubtitleEntry[], style: SubtitleStyle) {
+    async removeFormatting(entries: SubtitleEntry[], style: SubtitleStyle) {
         let done = 0;
         for (const ent of entries) {
             const rt = ent.texts.get(style);
@@ -216,10 +216,10 @@ export const Utils = {
         }
         Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
         if (done)
-            Source.markChanged(ChangeType.InPlace, $_('action.remove-formatting'));
+            await Source.markChanged(ChangeType.InPlace, $_('action.remove-formatting'));
     },
 
-    mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {
+    async mergeEntries(selection: SubtitleEntry[], keepAll: boolean) {
         const first = selection[0];
         let start = first.start, end = first.end;
         for (let i = 1; i < selection.length; i++) {
@@ -236,8 +236,8 @@ export const Utils = {
         first.start = start;
         first.end = end;
 
-        Editing.selectEntry(first, SelectMode.Single);
-        Source.markChanged(ChangeType.Times, $_('action.merge-entries'));
+        await Editing.selectEntry(first, SelectMode.Single);
+        await Source.markChanged(ChangeType.Times, $_('action.merge-entries'));
     },
 
     getAdjecentEntryWithThisStyle(dir: 'next' | 'previous') {
@@ -253,7 +253,7 @@ export const Utils = {
         ) ?? null;
     },
 
-    sortSelection(cmp: (a: SubtitleEntry, b: SubtitleEntry) => number, changeName: string) {
+    async sortSelection(cmp: (a: SubtitleEntry, b: SubtitleEntry) => number, changeName: string) {
         const selection = Editing.getSelection();
         // assumes selection is not disjunct
         const start = Source.subs.entries.indexOf(selection[0]);
@@ -263,6 +263,6 @@ export const Utils = {
             positionMap.set(Source.subs.entries[i], i);
         selection.sort(cmp);
         Source.subs.entries.splice(start, selection.length, ...selection);
-        Source.markChanged(ChangeType.Order, changeName);
+        await Source.markChanged(ChangeType.Order, changeName);
     }
 }

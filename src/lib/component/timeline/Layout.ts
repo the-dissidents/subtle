@@ -88,25 +88,25 @@ export class TimelineLayout {
       await Playback.sampler.close();
       this.#samplerMedia = undefined;
       Playback.sampler = null;
-      Playback.setPosition(0);
+      await Playback.setPosition(0);
       this.manager.requestRender();
       await Debug.info('closed timeline');
     });
 
-    Playback.onPositionChanged.bind(this, (pos) => {
+    Playback.onPositionChanged.bind(this, async (pos) => {
       if (!Playback.player) {
         const originalPos = pos;
         if (pos < 0) pos = 0;
         pos = Math.max(pos, this.minPosition);
         pos = Math.min(pos, this.maxPosition);
         if (pos != originalPos) {
-          Playback.setPosition(pos);
+          await Playback.setPosition(pos);
           return;
         }
       } else if (Playback.isPlaying) {
-        const moved = this.keepPosInSafeArea(pos);
+        const moved = await this.keepPosInSafeArea(pos);
         if (!moved && TimelineHandle.lockCursor.get())
-          this.setOffset(this.offset + (pos - this.#previousPos));
+          await this.setOffset(this.offset + (pos - this.#previousPos));
       }
       this.#previousPos = pos;
       this.manager.requestRender();
@@ -117,11 +117,11 @@ export class TimelineLayout {
       Playback.sampler = sampler;
     });
 
-    Source.onSubtitlesChanged.bind(this, (type) => {
+    Source.onSubtitlesChanged.bind(this, async (type) => {
       if (type == ChangeType.StyleDefinitions || type == ChangeType.General)
         this.requestedLayout = true;
       if (type == ChangeType.Times || type == ChangeType.General)
-        this.#updateContentArea();
+        await this.#updateContentArea();
       if (type != ChangeType.Metadata)
         this.manager.requestRender();
     });
@@ -133,19 +133,19 @@ export class TimelineLayout {
       const state = Source.subs.metadata.uiState;
       if (!state || !newFile) return;
 
-      const callback = () => {
+      const callback = async () => {
         if (state.timelineScale !== null && state.timelineOffset !== null) {
-          this.setScale(state.timelineScale);
-          this.setOffset(state.timelineOffset);
+          await this.setScale(state.timelineScale);
+          await this.setOffset(state.timelineOffset);
         } else {
-          this.setScale(10);
-          this.setOffset(0);
+          await this.setScale(10);
+          await this.setOffset(0);
         }
       }
       requestAnimationFrame(() => {
         if (get(Playback.loadState) == 'loading')
           Playback.onLoaded.bind(this, callback, {once: true});
-        else callback();
+        else void callback();
       });
     });
     Source.onSubtitleWillSave.bind(this, () => {
@@ -183,24 +183,24 @@ export class TimelineLayout {
     return this.#shownStyles;
   }
 
-  setScale(v: number) {
+  async setScale(v: number) {
     Debug.assert(v > 0);
     v = Math.max(v, this.width / this.positionSpan, 0.15);
     v = Math.min(v, 500);
     if (v == this.scale) return;
 
     this.#scale = v;
-    this.#updateContentArea();
+    await this.#updateContentArea();
     this.manager.requestRender();
     this.requestedSampler = true;
   }
 
-  setOffset(v: number) {
+  async setOffset(v: number) {
     if (v < 0) v = 0;
 
     v = Math.max(v, this.minPosition);
     v = Math.min(v, this.maxPosition - this.width / this.scale);
-    this.manager.setScroll({x: v * this.scale});
+    await this.manager.setScroll({x: v * this.scale});
     this.manager.requestRender();
     this.requestedSampler = true;
   }
@@ -252,33 +252,33 @@ export class TimelineLayout {
     return result;
   }
 
-  keepEntryInView(ent: SubtitleEntry) {
+  async keepEntryInView(ent: SubtitleEntry) {
     const [w, x] = this.getHorizontalPos(ent, {local: true});
     const dxStart = x;
     const dxEnd = (x + w) - this.width;
     if (dxStart >= 0 && dxEnd <= 0) return;
     if (Math.abs(dxStart) < Math.abs(dxEnd))
-      this.setOffset(this.offset + dxStart / this.scale);
+      await this.setOffset(this.offset + dxStart / this.scale);
     else
-      this.setOffset(this.offset + dxEnd / this.scale);
+      await this.setOffset(this.offset + dxEnd / this.scale);
   }
 
-  keepPosInSafeArea(pos: number) {
+  async keepPosInSafeArea(pos: number) {
     const left = Math.max(0, this.offset + CURSOR_SAFE_AREA_RIGHT_MARGIN / this.#scale),
          right = this.offset + (this.width
             - CURSOR_SAFE_AREA_RIGHT_MARGIN - this.leftColumnWidth) / this.#scale;
     if (pos < left) {
-      this.setOffset(this.offset + pos - left);
+      await this.setOffset(this.offset + pos - left);
       return true;
     }
     if (pos > right) {
-      this.setOffset(this.offset + pos - right);
+      await this.setOffset(this.offset + pos - right);
       return true;
     }
     return false;
   }
 
-  layout(ctx: CanvasRenderingContext2D) {
+  async layout(ctx: CanvasRenderingContext2D) {
     this.requestedLayout = false;
     const subs = Source.subs;
     const exclude = subs.view.timelineExcludeStyles;
@@ -292,12 +292,12 @@ export class TimelineLayout {
       + TimelineLayout.LEFT_COLUMN_MARGIN * 2;
 
     this.manager.requestRender();
-    this.#updateContentArea();
+    await this.#updateContentArea();
     this.onLayout.dispatch();
   }
 
-  #updateContentArea() {
-    this.manager.setContentRect({
+  async #updateContentArea() {
+    await this.manager.setContentRect({
       l: this.minPosition * this.scale,
       r: this.maxPosition * this.scale,
       b: this.entryHeight * this.#shownStyles.length
@@ -306,16 +306,16 @@ export class TimelineLayout {
     });
   }
 
-  #processDisplaySizeChanged(w: number, h: number): void {
+  async #processDisplaySizeChanged(w: number, h: number) {
     this.width = w;
     this.height = h;
     this.requestedLayout = true;
-    this.#updateContentArea();
-    this.setOffset(this.offset);
+    await this.#updateContentArea();
+    await this.setOffset(this.offset);
     this.manager.requestRender();
   }
 
-  async processSampler() {
+  processSampler() {
     if (!Playback.sampler) return;
     const s = Playback.sampler;
 
@@ -354,11 +354,11 @@ export class TimelineLayout {
       end = Playback.duration + s.startTime;
     if (end == start) return;
     if (end < start) {
-      Debug.debug(start, '>', end);
+      void Debug.debug(start, '>', end);
       return;
     }
 
-    s.startSampling(start, end);
+    void s.startSampling(start, end);
     this.manager.requestRender();
   }
 }

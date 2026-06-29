@@ -74,7 +74,7 @@ function updateFocusedStyle() {
             : Source.subs.styles.find((x) => focused.texts.has(x));
         Debug.assert(first !== undefined);
         Editing.focused.style.set(first);
-        Debug.debug('changed focused style to', first.name);
+        void Debug.debug('changed focused style to', first.name);
         return first;
     }
     return style;
@@ -87,7 +87,7 @@ const focusState: WritableFocusState = {
     get control() { return __control; },
     set control(x) {
         __control = x;
-        Debug.info('focus.control -> ', x ? RichText.toString(x!.getText()) : 'none');
+        void Debug.info('focus.control -> ', x ? RichText.toString(x.getText()) : 'none');
     },
     style: writable(null)
 };
@@ -243,7 +243,7 @@ export const Editing = {
         const control = focusState.control;
         Debug.assert(style !== null);
         Debug.assert(control !== null);
-        this.submitEntry(focused, style, control.getText());
+        await this.submitEntry(focused, style, control.getText());
     },
 
     async clearFocus(check = true) {

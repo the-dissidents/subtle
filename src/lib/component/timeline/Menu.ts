@@ -40,5 +40,5 @@ export async function contextMenu() {
         { item: 'Separator' },
         BasicCommands.label.toMenuItem(),
     ]});
-    menu.popup();
+    await menu.popup();
 }

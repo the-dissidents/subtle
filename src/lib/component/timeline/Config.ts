@@ -97,11 +97,11 @@ export const TimelineCommands = {
             && !!Source.subs.view.timelineActiveChannel?.deref(),
         call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> =>
             makeHoldToCreate(TimelineCommands.holdToCreateEntry2),
-        onDeactivate: ([entry, style]) => {
+        onDeactivate: async ([entry, style]) => {
             EventHost.unbind(entry);
             if (get(Editing.useUntimedForNewEntires))
-                Editing.fillWithFirstLineOfUntimed(entry, style);
-            Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
+                await Editing.fillWithFirstLineOfUntimed(entry, style);
+            await Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
         }
     }),
     holdToCreateEntry2: new UICommand(() => $_('category.timeline'),
@@ -112,11 +112,11 @@ export const TimelineCommands = {
             && !!Source.subs.view.timelineActiveChannel?.deref(),
         call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> =>
             makeHoldToCreate(TimelineCommands.holdToCreateEntry1),
-        onDeactivate: ([entry, style]) => {
+        onDeactivate: async ([entry, style]) => {
             EventHost.unbind(entry);
             if (get(Editing.useUntimedForNewEntires))
-                Editing.fillWithFirstLineOfUntimed(entry, style);
-            Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
+                await Editing.fillWithFirstLineOfUntimed(entry, style);
+            await Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
         }
     }),
     moveWholeStartTo: new UICommand(() => $_('category.timeline'),
@@ -124,7 +124,7 @@ export const TimelineCommands = {
     {
         name: () => $_('action.move-whole-start-time-to-cursor'),
         isApplicable: () => Editing.getSelection().length > 0,
-        call: () => {
+        async call() {
             const selection = Editing.getSelection();
             const start = Math.min(...selection.map((x) => x.start));
             const delta = start - Playback.position;
@@ -132,7 +132,7 @@ export const TimelineCommands = {
                 x.start -= delta;
                 x.end -= delta;
             });
-            Source.markChanged(ChangeType.Times, $_('action.move-whole-start-time-to-cursor'));
+            await Source.markChanged(ChangeType.Times, $_('action.move-whole-start-time-to-cursor'));
         }
     }),
     moveWholeEndTo: new UICommand(() => $_('category.timeline'),
@@ -140,7 +140,7 @@ export const TimelineCommands = {
     {
         name: () => $_('action.move-whole-end-time-to-cursor'),
         isApplicable: () => Editing.getSelection().length > 0,
-        call: () => {
+        async call() {
             const selection = Editing.getSelection();
             const end = Math.max(...selection.map((x) => x.end));
             const delta = end - Playback.position;
@@ -148,7 +148,7 @@ export const TimelineCommands = {
                 x.start -= delta;
                 x.end -= delta;
             });
-            Source.markChanged(ChangeType.Times, $_('action.move-whole-end-time-to-cursor'));
+            await Source.markChanged(ChangeType.Times, $_('action.move-whole-end-time-to-cursor'));
         }
     }),
     setStart: new UICommand(() => $_('category.timeline'),
@@ -156,12 +156,12 @@ export const TimelineCommands = {
     {
         name: () => $_('action.set-start-time-to-cursor'),
         isApplicable: () => Editing.getFocusedEntry() instanceof SubtitleEntry,
-        call: () => {
+        async call() {
             const focus = Editing.getFocusedEntry();
             Debug.assert(focus instanceof SubtitleEntry);
             if (focus.end > Playback.position) {
                 focus.start = Playback.position;
-                Source.markChanged(ChangeType.Times, $_('action.set-start-time-to-cursor'));
+                await Source.markChanged(ChangeType.Times, $_('action.set-start-time-to-cursor'));
             }
         }
     }),
@@ -170,12 +170,12 @@ export const TimelineCommands = {
     {
         name: () => $_('action.set-end-time-to-cursor'),
         isApplicable: () => Editing.getFocusedEntry() instanceof SubtitleEntry,
-        call: () => {
+        async call() {
             const focus = Editing.getFocusedEntry();
             Debug.assert(focus instanceof SubtitleEntry);
             if (focus.start < Playback.position) {
                 focus.end = Playback.position;
-                Source.markChanged(ChangeType.Times, $_('action.set-end-time-to-cursor'));
+                await Source.markChanged(ChangeType.Times, $_('action.set-end-time-to-cursor'));
             }
         }
     }),

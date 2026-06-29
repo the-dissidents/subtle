@@ -94,7 +94,7 @@ export const Interface = {
                     return null;
                 return parser.done();
             }
-            throw undefined;
+            throw Error();
         }, $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), null);
     },
 
@@ -149,7 +149,7 @@ export const Interface = {
 
         const entries = SubtitleUtil.merge(Source.subs, newSubs, options);
         if (entries.length > 0) {
-            Editing.setSelection(entries);
+            await Editing.setSelection(entries);
         }
         await Source.markChanged(ChangeType.General, $_('c.import-file'));
         Frontend.setStatus($_('msg.imported'));
@@ -231,7 +231,7 @@ export const InterfaceCommands = {
         name: () => $_('menu.new-file'),
         call: async () => {
             if (await Interface.warnIfNotSaved())
-                Interface.newFile();
+                await Interface.newFile();
         }
     }),
     openMenu: new UICommand(() => $_('category.document'),
@@ -264,7 +264,7 @@ export const InterfaceCommands = {
                             .slice(-2).join(Basic.pathSeparator),
                         async call() {
                             if (await Interface.warnIfNotSaved())
-                                Interface.openFile(x.name);
+                                await Interface.openFile(x.name);
                         }
                     }))
                 ),
@@ -293,7 +293,7 @@ export const InterfaceCommands = {
         call: async () => {
             const path = await Interface.askOpenFile();
             if (!path) return;
-            Interface.importFile(path);
+            await Interface.importFile(path);
         }
     }),
     exportASS: new UICommand(() => $_('category.document'),
@@ -311,7 +311,7 @@ export const InterfaceCommands = {
         call: async () => {
             const result = await openDialog(Dialog.exportText);
             if (!result) return;
-            Interface.askExportFile(result.ext, () => result.content);
+            await Interface.askExportFile(result.ext, () => result.content);
         }
     }),
     exportMenu: new UICommand(() => $_('category.document'),
@@ -321,11 +321,11 @@ export const InterfaceCommands = {
         items: [
             {
                 name: () => 'ASS',
-                call: () => { InterfaceCommands.exportASS.call(); }
+                call: (): Promise<void> => InterfaceCommands.exportASS.call()
             },
             {
                 name: () => $_('cxtmenu.srt-plaintext'),
-                call: () => { InterfaceCommands.exportSRTPlaintext.call() }
+                call: (): Promise<void> => InterfaceCommands.exportSRTPlaintext.call()
             }
         ]
     }),

@@ -28,12 +28,12 @@ const SearchCommands = {
           const [start, end] = ctrl.selection();
           return end - start > 0;
       },
-      call() {
+      async call() {
           const ctrl = Editing.focused.control;
           if (!ctrl) return;
           const [start, end] = ctrl.selection();
           const term = RichText.toString(ctrl.getText()).substring(start, end);
-          handler.query!(term);
+          await handler.query!(term);
       },
   }),
 };

@@ -28,21 +28,15 @@ let position = 0,
     duration = 0;
 
 const me = {};
-tick().then(() => {
+void tick().then(() => {
     MediaPlayerInterface.onPlayback.bind(me, async (pos) => {
         position = pos;
         Playback.onPositionChanged.dispatch(pos);
 
         if (Playback.isPlaying) {
             const playArea = Playback.playArea.value;
-            // if (playArea.start !== undefined && position < playArea.start) {
-            //     Debug.debug('jumping to in point from before', playArea, position);
-            //     // await this.play(false);
-            //     await Playback.setPosition(playArea.start);
-            //     return;
-            // }
             if (playArea.end !== undefined && position > playArea.end) {
-                Debug.debug('jumping to in point from after out point', playArea, position);
+                void Debug.debug('jumping to in point from after out point', playArea, position);
                 Playback.playArea.override = null;
                 if (!playArea.loop) await Playback.play(false);
                 await Playback.forceSetPosition(playArea.start ?? 0);
@@ -131,11 +125,11 @@ export const Playback = {
         }
     },
 
-    setPosition(pos: number, opt?: SetPositionOptions) {
+    async setPosition(pos: number, opt?: SetPositionOptions) {
         if (this.player === null)
-            this.forceSetPosition(pos);
+            await this.forceSetPosition(pos);
         else
-            this.player.seek(pos, opt);
+            await this.player.seek(pos, opt);
     },
 
     snapPositionToFrame(pos: number, rounding: 'left' | 'right' | 'round') {
@@ -193,9 +187,9 @@ export const PlaybackCommands = {
           CommandBinding.from(['Alt+Space']), ],
     {
         name: () => $_('action.toggle-play'),
-        call: () => {
+        call: async () => {
             if (Playback.player)
-                Playback.toggle();
+                await Playback.toggle();
         }
     }),
     toggleInPoint: new UICommand(() => $_('category.media'),

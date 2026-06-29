@@ -14,14 +14,14 @@ class MemorizedStyles extends Memorized<SerializedSubtitleStyle[], SubtitleStyle
     }
     protected deserialize(value: unknown): void {
         if (!Array.isArray(value)) {
-            Debug.warn('unable to deserialize styles');
+            void Debug.warn('unable to deserialize styles');
             return;
         }
         this.value = value.flatMap((x) => {
             try {
                 return [SubtitleStyle.deserializeWithoutValidator(x)];
             } catch (e) {
-                Debug.warn('unable to deserialize style', x, e);
+                void Debug.warn('unable to deserialize style', x, e);
                 return [];
             }
         });

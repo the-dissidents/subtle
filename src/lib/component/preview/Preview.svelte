@@ -92,12 +92,12 @@
       step="any" min={playPosStart} max={playPosEnd}
       bind:value={playPos}
       disabled={$loadState !== 'loaded'}
-      oninput={() => {
+      oninput={async () => {
         if ($loadState !== 'loaded') {
           playPos = 0;
           return;
         }
-        Playback.setPosition(playPos, {imprecise: true});
+        await Playback.setPosition(playPos, {imprecise: true});
       }}/>
     <button onclick={(e) => {
       const self = e.currentTarget;

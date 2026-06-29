@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 console.info('core/Filter loading');
 
 import { Debug } from "../Debug";
@@ -434,7 +435,7 @@ export const Filter = {
         const method = MetricFilterMethods[filter.method].localizedName();
         const params = (filter.parameters as unknown as never[]).map((x, i) => {
             const type = MetricFilterMethods[filter.method].parameters[i];
-            return MetricTypeDefinitions[type].toText(x);
+            return RichText.toString(MetricTypeDefinitions[type].toText(x));
         });
         return `${not} ${name} ${method} ${params.join(' ')}`;
     },

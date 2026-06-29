@@ -188,6 +188,7 @@ export namespace RichText {
             const len = result.length;
             if (typeof x === 'string') {
                 if (typeof result[len-1] === 'string')
+                    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-base-to-string
                     result[len-1] += x;
                 else
                     result.push(x);

@@ -16,7 +16,7 @@ function htmlColorToASSColor(str: string): string | null {
         const col = Color.parse(str);
         return toASSColor(col);
     } catch (e) {
-        Debug.warn('failed to parse HTML color:', e);
+        void Debug.warn('failed to parse HTML color:', e);
         return null;
     }
 }
@@ -48,7 +48,7 @@ function attrToTag(attr: RichTextAttr): Tag | [] {
 
 export namespace HTMLString {
     export function parse(
-        source: string, base: SubtitleStyle, 
+        source: string, base: SubtitleStyle,
         warnings: HTMLStringWarnings
     ): RichText {
         const ass = htmlToAss(source, warnings);
@@ -70,7 +70,7 @@ export namespace HTMLString {
                 result += part;
             else {
                 const tags = part.attrs.flatMap(attrToTag);
-                result += `${tags.map((x) => x.start)}${part.content}${tags.reverse().map((x) => x.end)}`;
+                result += `${tags.map((x) => x.start).join('')}${part.content}${tags.reverse().map((x) => x.end).join('')}`;
             }
         }
         return result;
@@ -93,7 +93,7 @@ interface FontState {
 function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
     const output: string[] = [];
     const stack: FontState[] = [{ face: "", size: 0, color: null }];
-    
+
     let isLineStart = true;
     let cursor = 0;
 
@@ -105,7 +105,7 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
             if (output[lastIdx].endsWith(" ")) {
                 output[lastIdx] = output[lastIdx].replace(/ +$/, "");
                 if (output[lastIdx] === "") output.pop();
-                else break; 
+                else break;
             } else {
                 break;
             }
@@ -155,7 +155,7 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
             // to avoid swallowing generic text that happens to have braces.
             const closingIndex = text.indexOf('}', cursor);
             const nextChar = text[cursor + 1];
-            
+
             const isEscaped = nextChar === '\\';
             const isMicroDvd = nextChar && "CcFfoPSsYy".includes(nextChar) && text[cursor + 2] === ':';
 
@@ -167,7 +167,7 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
                 output.push("{");
                 cursor++;
             }
-            
+
             // FFmpeg sets line_start = 0 for any non-whitespace, non-newline char
             isLineStart = false;
             continue;
@@ -178,7 +178,7 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
             // Handle "<<" escape sequence (common in some subs)
             let consecutive = 0;
             while (text[cursor + 1 + consecutive] === '<') consecutive++;
-            
+
             if (consecutive > 0) {
                 // Print "<<" as literal text
                 output.push("<".repeat(consecutive + 1));
@@ -204,7 +204,7 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
             // Basic validation: Tag names usually don't have certain chars
             // FFmpeg logic checks for first space to separate name/params
             const match = rawContent.match(/^\s*([a-zA-Z0-9_/]+)(?:\s+(.*))?$/);
-            
+
             if (!match) {
                 // Malformed tag, treat as text
                 output.push("<");
@@ -217,7 +217,7 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
             const params = match[2] || "";
 
             // --- Tag Processing ---
-            
+
             if (tagName === "br") {
                 output.push("\\N");
             }
@@ -258,7 +258,7 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
                     // Matches: key="value", key='value', or key=value
                     const attrRegex = /(size|color|face)\s*=\s*(?:["']([^"']*)["']|([^ \t\r\n>]*))/gi;
                     let attrMatch;
-                    
+
                     while ((attrMatch = attrRegex.exec(params)) !== null) {
                         const key = attrMatch[1].toLowerCase();
                         const val = attrMatch[2] || attrMatch[3];
@@ -288,7 +288,7 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
             }
 
             cursor = tagEnd + 1;
-            // Tags don't reset line_start in FFmpeg logic unless they output text, 
+            // Tags don't reset line_start in FFmpeg logic unless they output text,
             // but strictly speaking, the loop check usually sets line_start=0 for non-space chars.
             // However, control codes (processed here) shouldn't disable trim logic for subsequent spaces.
             continue;
@@ -302,12 +302,12 @@ function htmlToAss(text: string, warnings: HTMLStringWarnings): string {
 
     // Final Cleanup
     let result = output.join("");
-    
+
     // Remove trailing \N if present (mimicking FFmpeg logic)
     while (result.endsWith("\\N")) {
         result = result.substring(0, result.length - 2);
     }
-    
+
     // Strip trailing spaces again on the final buffer
     result = result.replace(/ +$/, "");
 

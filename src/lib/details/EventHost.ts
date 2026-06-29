@@ -53,6 +53,7 @@ export class AsyncEventHost<T extends unknown[] = []> {
             const list = [...this.#listeners]
                 .flatMap(([_, f]) => f.map(([x, _]) => x(...args)))
                 .filter((x) => x !== undefined);
+            // eslint-disable-next-line @typescript-eslint/await-thenable
             await Promise.allSettled(list);
         } finally {
             for (const [k, f] of [...this.#listeners])

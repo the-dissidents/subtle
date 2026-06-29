@@ -4,7 +4,7 @@ import { Debug } from "../Debug";
 import { fetch } from "@tauri-apps/plugin-http";
 
 const zReferenceString = z.array(z.union([
-    z.string(), 
+    z.string(),
     z.object({
         type: z.literal('keyword')
     }),
@@ -41,9 +41,9 @@ export type ReferenceContext = {
 };
 
 function substitute(
-    str: ReferenceString, 
-    source: ReferenceSource, 
-    ctx: ReferenceContext, 
+    str: ReferenceString,
+    source: ReferenceSource,
+    ctx: ReferenceContext,
     encoder = (s: string) => s
 ) {
     let result = '';
@@ -55,7 +55,7 @@ function substitute(
         else if (elem.type == 'variable') {
             const variable = source.variables[elem.id];
             result += encoder(
-                   ctx.variables.get(variable.name) 
+                   ctx.variables.get(variable.name)
                 ?? variable.defaultValue ?? '');
         } else
             Debug.never(elem);
@@ -129,7 +129,7 @@ export const Reference = {
         return defaultSources;
     },
 
-    async getUrl(source: ReferenceSource, ctx: ReferenceContext) {
+    getUrl(source: ReferenceSource, ctx: ReferenceContext) {
         const url = new URL(substitute(source.url, source, ctx, encodeURIComponent));
         return url;
     },
@@ -139,7 +139,7 @@ export const Reference = {
         const response = await fetch(url);
         const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
 
-        const selected = source.selector 
+        const selected = source.selector
             ? doc.querySelector(substitute(source.selector, source, ctx)) : null;
 
         const attrs = ['src', 'href'];
@@ -162,7 +162,7 @@ export const Reference = {
                     x.style.setProperty(k, v, 'important');
             });
         }
-        doc.querySelectorAll('script').forEach((x) => 
+        doc.querySelectorAll('script').forEach((x) =>
             x.parentNode?.removeChild(x));
         return doc.documentElement.outerHTML;
     },

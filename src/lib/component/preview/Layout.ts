@@ -17,9 +17,19 @@ export class PreviewLayout {
     get manager() {
         return this.#manager;
     }
-    
+
     get subsRenderer() {
         return this.#subsRenderer;
+    }
+
+    async #updateContentRect() {
+        const [w, h] = this.#manager.size;
+        const scale = this.#manager.scale;
+        const wmargin = w / scale / 2;
+        const hmargin = h / scale / 2;
+        await this.#manager.setContentRect({
+            l: -wmargin, t: -hmargin, r: w + wmargin, b: h + hmargin
+        });
     }
 
     constructor(
@@ -29,16 +39,17 @@ export class PreviewLayout {
         this.#manager = new CanvasManager(canvas);
         this.#manager.doNotPrescaleHighDPI = true;
         this.#manager.onDisplaySizeChanged.bind(this, () => this.#updateContentRect());
-        this.#manager.setMaxZoom(MediaConfig.data.maxZoom);
-        this.#manager.onUserZoom.bind(this, () => {
-            this.#manager.setMaxZoom(MediaConfig.data.maxZoom);
-            this.#updateContentRect();
+        // too lazy to set up a proper async static create()
+        void this.#manager.setMaxZoom(MediaConfig.data.maxZoom);
+        this.#manager.onUserZoom.bind(this, async () => {
+            await this.#manager.setMaxZoom(MediaConfig.data.maxZoom);
+            await this.#updateContentRect();
         });
         this.#manager.renderer = (ctx) => this.#render(ctx);
 
-        canvas.ondblclick = () => {
-            this.#manager.setScroll({x: 0, y: 0});
-            this.#manager.setScale(1);
+        canvas.ondblclick = async () => {
+            await this.#manager.setScroll({x: 0, y: 0});
+            await this.#manager.setScale(1);
         };
 
         this.#subsRenderer = new SubtitleRenderer(this.#manager, Source.subs);
@@ -71,7 +82,7 @@ export class PreviewLayout {
                 'offset', 'canvas', ev.offsetX, ev.offsetY);
             x *= devicePixelRatio;
             y *= devicePixelRatio;
-            const h = this.#subsRenderer.layout.find((b) => 
+            const h = this.#subsRenderer.layout.find((b) =>
                 b.x <= x && b.y <= y && b.x + b.line.width >= x && b.y + b.line.height >= y);
             if (h !== this.#hovering && this.#manager.dragType !== 'custom') {
                 if (h) {
@@ -106,11 +117,11 @@ export class PreviewLayout {
             this.manager.requestRender();
         });
 
-        this.#manager.onDragEnd.bind(this, () => {
+        this.#manager.onDragEnd.bind(this, async () => {
             const pos = this.#hovering?.positioning;
             Debug.assert(!!pos && pos.type == 'absolute');
             this.#startPos = [pos.x, pos.y];
-            Source.markChanged(ChangeType.InPlace, $_('c.positioning'));
+            await Source.markChanged(ChangeType.InPlace, $_('c.positioning'));
         });
 
         this.manager.onDragInterrupted.bind(this, () => {
@@ -141,15 +152,5 @@ export class PreviewLayout {
                     ctx.strokeRect(box.x, box.y, box.line.width, box.line.height);
                 });
         }
-    }
-
-    #updateContentRect() {
-        const [w, h] = this.#manager.size;
-        const scale = this.#manager.scale;
-        const wmargin = w / scale / 2;
-        const hmargin = h / scale / 2;
-        this.#manager.setContentRect({
-            l: -wmargin, t: -hmargin, r: w + wmargin, b: h + hmargin
-        });
     }
 }

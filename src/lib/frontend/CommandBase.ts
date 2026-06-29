@@ -39,7 +39,7 @@ function commandOptionToMenu<T>(
             if (global && item.isApplicable && !item.isApplicable())
                 return;
 
-            item.call();
+            void item.call();
             let name = unwrap(item.name);
             for (const p of parents.toReversed()) {
                 Debug.assert('items' in p);
@@ -174,7 +174,7 @@ export class UICommand<TState = void> {
             return Debug.early(`already running: ${this.name}`);
         if (!this.isApplicable) return false;
 
-        Debug.trace('executing command', this.name);
+        await Debug.trace('executing command', this.name);
         // @ts-expect-error -- converting to unknown
         UICommand.#activated.set(this, key);
         await this.#runCommand(this.options);
@@ -192,7 +192,7 @@ export class UICommand<TState = void> {
         if (this.#state == undefined)
             return; // inside a selection dialog
         if (this.options.onDeactivate) {
-            Debug.debug('executing onDeactivate', this.name);
+            await Debug.debug('executing onDeactivate', this.name);
             await this.options.onDeactivate(this.#state.value);
         }
         // @ts-expect-error -- converting to unknown

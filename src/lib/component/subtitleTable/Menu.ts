@@ -63,5 +63,5 @@ export async function contextMenu() {
             ]
         },
     ]});
-    menu.popup();
+    await menu.popup();
 }

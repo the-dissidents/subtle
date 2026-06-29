@@ -60,7 +60,7 @@ function format(
         } else switch (x.type) {
             case 'size':
                 if (!opts.disableSize)
-                    style.size! *= x.value;
+                    style.size *= x.value;
                 break;
             default:
                 Debug.never(x.type);

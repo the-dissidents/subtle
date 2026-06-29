@@ -53,6 +53,7 @@ export class RestartableTask<Arg extends unknown[]> {
                 arg,
                 isCancelled: false,
                 onDone: () => resolve(),
+                // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                 onReject: (err) => reject(err)
             };
 
@@ -61,7 +62,7 @@ export class RestartableTask<Arg extends unknown[]> {
                 if (debounce && debounce > 0)
                     this.#schedule(request);
                 else
-                    this.#execute(request);
+                    void this.#execute(request);
             } else if (this.state.type == 'scheduled') {
                 this.state.current.onDone(); // destroy the unused promise
                 clearTimeout(this.state.timer);
@@ -97,12 +98,12 @@ export class RestartableTask<Arg extends unknown[]> {
             await this.executor(request.arg, request);
             request.onDone();
         } catch (e) {
-            Debug.forwardError(e);
+            await Debug.forwardError(e);
             request.onReject(e);
         } finally {
             const state = this.state as State<Arg>;
             if (state.type === 'cancelling')
-                this.#execute(state.new);
+                await this.#execute(state.new);
             else
                 this.state = { type: 'idle' };
         }

@@ -32,10 +32,10 @@ export function parseSubtitleSource(source: string): Subtitles | null {
             return f.parse(source).done();
         } catch (e) {
             // pass
-            Debug.debug(e);
+            void Debug.debug(e);
         }
     }
-    Debug.debug('no recognized format');
+    void Debug.debug('no recognized format');
     return null;
 }
 
@@ -54,7 +54,7 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
         return {
             isZoom: true,
             isTrackpad,
-            amount: e.deltaY * (isTrackpad 
+            amount: e.deltaY * (isTrackpad
                 ? InputConfig.data.trackpadZoomFactor
                 : InputConfig.data.mouseZoomFactor)
         };
@@ -79,8 +79,8 @@ export function translateWheelEvent(e: WheelEvent): TranslatedWheelEvent {
 
 export type UIFocus = (typeof UIFocusList)[number];
 export const UIFocusList = [
-    'EditingField', 
-    'Table', 
+    'EditingField',
+    'Table',
     'Timeline',
     'Preview',
     'Other'
@@ -101,7 +101,7 @@ export const Frontend = {
     },
 
     setStatus(msg: string, type: StatusType = 'info') {
-        Debug.trace('status ->', msg, type);
+        void Debug.trace('status ->', msg, type);
         status.set({ msg, type });
     },
 
@@ -119,14 +119,14 @@ export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback?:
         try {
             return await x();
         } catch (x) {
-            Frontend.setStatus(`${msg}: ${x}`, 'error');
-            Debug.info('guardAsync:', msg, x);
+            Frontend.setStatus(`${msg}: ${String(x)}`, 'error');
+            await Debug.info('guardAsync:', msg, x);
             return fallback;
         };
     }
 }
 
-type EnforceNotPromise<T extends () => unknown> = 
+type EnforceNotPromise<T extends () => unknown> =
     ReturnType<T> extends Promise<unknown> ? never : T;
 
 export function guard<T extends () => void>(x: EnforceNotPromise<T>, msg: string): void;
@@ -140,8 +140,8 @@ export function guard<T>(x: () => T, msg: string, fallback?: T) {
         try {
             return x();
         } catch (x) {
-            Frontend.setStatus(`${msg}: ${x}`, 'error');
-            Debug.info('guard:', msg, x);
+            Frontend.setStatus(`${msg}: ${String(x)}`, 'error');
+            void Debug.info('guard:', msg, x);
             return fallback;
         };
     }

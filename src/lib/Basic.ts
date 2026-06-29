@@ -7,7 +7,7 @@ import * as fs from "@tauri-apps/plugin-fs";
 import { getVersion } from "@tauri-apps/api/app";
 
 let version = '?';
-getVersion().then((x) => version = x);
+void getVersion().then((x) => version = x);
 
 import * as Color from "colorjs.io/fn";
 Color.ColorSpace.register(Color.sRGB);
@@ -19,6 +19,13 @@ const osType = os.type(),
       ctrlKey = os.type() == 'macos' ? 'Meta' : 'Control';
 
 export type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Uint8ClampedArray | Float32Array | Float64Array;
+
+class TimeoutError extends Error {
+    constructor() {
+        super('timeout');
+        this.name = 'TimeoutError';
+    }
+}
 
 export const Basic = {
     get version() { return version; },
@@ -49,7 +56,7 @@ export const Basic = {
 
     timeout<T>(t: number, p: Promise<T>): Promise<T> {
         return Promise.race([p,
-            new Promise<T>((_, reject) => setTimeout(() => reject('timeout'), t))]);
+            new Promise<T>((_, reject) => setTimeout(() => reject(new TimeoutError()), t))]);
     },
 
     /**
@@ -72,7 +79,8 @@ export const Basic = {
     },
 
     formatTimestamp: (t: number, n: number = 3, char = '.') => {
-        if (t < 0) Debug.warn('timestamp < 0:', t);
+        if (t < 0) void Debug.warn('timestamp < 0:', t);
+        if (!isFinite(t)) void Debug.warn('timestamp not finite:', t);
 
         const fixedStr = Math.max(0, t).toFixed(n);
         const [intStr, fracStr = ''] = fixedStr.split('.');

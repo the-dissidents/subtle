@@ -138,7 +138,7 @@ export async function initWindowMenu() {
 
 const me = {};
 
-Source.onSubtitlesChanged.bind(me, (type) => {
+Source.onSubtitlesChanged.bind(me, async (type) => {
     if (type == ChangeType.General || type == ChangeType.StyleDefinitions)
-        initWindowMenu();
+        await initWindowMenu();
 });

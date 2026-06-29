@@ -6,7 +6,7 @@ import debugInfoSvelte from './vite-plugins/DebugInfoSvelte';
 import debugInfoTS from './vite-plugins/DebugInfoTS';
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig(() => ({
   plugins: [
     debugInfoSvelte(),
     debugInfoTS(),

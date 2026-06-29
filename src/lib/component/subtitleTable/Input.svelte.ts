@@ -39,7 +39,7 @@ export class TableInput {
 
         Editing.onSelectionChanged.bind(this, () => this.manager.requestRender());
 
-        Editing.onKeepEntryAtPosition.bind(this, (ent, old) => {
+        Editing.onKeepEntryAtPosition.bind(this, async (ent, old) => {
             if (this.manager.dragType !== 'none') return;
 
             const posNew = layout.lineMap.get(ent);
@@ -49,11 +49,11 @@ export class TableInput {
                 return;
             }
             const sy = (posNew.line - posOld.line) * layout.lineHeight + this.manager.scroll[1];
-            layout.manager.setScroll({y: sy})
+            await layout.manager.setScroll({y: sy})
             Editing.onKeepEntryInView.dispatch(ent);
         });
 
-        Editing.onKeepEntryInView.bind(this, (ent) => {
+        Editing.onKeepEntryInView.bind(this, async (ent) => {
             // otherwise dragging outside/auto scrolling becomes unusable
             if (this.manager.dragType !== 'none') return;
 
@@ -67,11 +67,11 @@ export class TableInput {
                     (pos.line + pos.height + 1) * layout.lineHeight
                         - this.manager.size[1] / this.manager.scale,
                     Math.min(this.manager.scroll[1], pos.line * layout.lineHeight));
-                this.manager.setScroll({y: sy})
+                await this.manager.setScroll({y: sy})
                 this.manager.requestRender();
             } else {
                 const sy = this.manager.contentRect.b - this.manager.size[1] / this.manager.scale;
-                this.manager.setScroll({y: sy})
+                await this.manager.setScroll({y: sy})
                 this.manager.requestRender();
             }
         });
@@ -81,10 +81,11 @@ export class TableInput {
         Source.onSubtitleObjectReload.bind(this, (newFile) => {
             const state = Source.subs.metadata.uiState;
             if (!state || !newFile) return;
-            requestAnimationFrame(() => {
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
+            requestAnimationFrame(async () => {
                 if (state.tableScrollIndex >= layout.entries.length) return;
                 const entryLayout = layout.entries[state.tableScrollIndex];
-                this.manager.setScroll({y: entryLayout.line * layout.lineHeight})
+                await this.manager.setScroll({y: entryLayout.line * layout.lineHeight})
                 this.manager.requestRender();
             })
         });
@@ -116,7 +117,7 @@ export class TableInput {
             switch (TableConfig.data.doubleClickPlaybackBehavior) {
                 case 'none': break;
                 case 'seek':
-                    Playback.setPosition(focused.start);
+                    await Playback.setPosition(focused.start);
                     break;
                 case 'play':
                     await Playback.forceSetPosition(focused.start);
@@ -204,7 +205,7 @@ export class TableInput {
                 return;
             }
             const time = performance.now();
-            this.manager.setScroll({ y: this.manager.scroll[1]
+            await this.manager.setScroll({ y: this.manager.scroll[1]
                 + this.autoScrollY * (time - this.lastAnimateFrameTime) * 0.001 });
             this.lastAnimateFrameTime = time;
 

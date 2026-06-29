@@ -94,6 +94,7 @@ export class TableLayout {
             });
         MainConfig.hook(
             () => TableConfig.data.maxZoom,
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             (zoom) => this.manager.setMaxZoom(zoom));
 
         Source.onSubtitleObjectReload.bind(this, () => {
@@ -113,7 +114,7 @@ export class TableLayout {
         });
     }
 
-    layout(ctx: CanvasRenderingContext2D) {
+    async layout(ctx: CanvasRenderingContext2D) {
         const startTime = performance.now();
 
         ctx.resetTransform();
@@ -239,7 +240,7 @@ export class TableLayout {
             pos += col.layout!.width;
         }
 
-        this.manager.setContentRect({
+        await this.manager.setContentRect({
             r: pos + this.manager.scrollerSize,
             b: (this.totalLines + 1) * this.lineHeight + this.headerHeight + this.manager.scrollerSize
             // add 1 for virtual entry

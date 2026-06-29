@@ -78,7 +78,10 @@ function notSelectionCommonStyles() {
     return Source.subs.styles.filter((x) => !common.includes(x));
 }
 
-export function forEachStyle(h: (style: SubtitleStyle) => void, styles = Source.subs.styles) {
+export function forEachStyle(
+    h: (style: SubtitleStyle) => void | Promise<void>,
+    styles = Source.subs.styles
+) {
     return styles.map((style) => ({
         name: style.name,
         call: () => h(style)
@@ -89,7 +92,7 @@ function doubleForEachStyle(
     styles1: SubtitleStyle[],
     styles2: SubtitleStyle[],
     menuName: () => string,
-    h: (a: SubtitleStyle, b: SubtitleStyle) => void,
+    h: (a: SubtitleStyle, b: SubtitleStyle) => void | Promise<void>,
     skipSame = true
 ) {
     return styles1.map((x) => ({
@@ -107,10 +110,10 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.edit-this-entry'),
         isApplicable: () => Editing.getFocusedEntry() !== null,
-        call() {
+        async call() {
             const focusedEntry = Editing.getFocusedEntry();
             if (focusedEntry == 'virtual')
-                Editing.startEditingNewVirtualEntry();
+                await Editing.startEditingNewVirtualEntry();
             else
                 Editing.startEditingFocusedEntry();
         }
@@ -126,9 +129,9 @@ export const BasicCommands: Record<string, AnyUICommand> = {
             await Editing.submitFocusedEntry();
             const i = Source.subs.entries.indexOf(focusedEntry) + 1;
             if (i == Source.subs.entries.length)
-                Editing.startEditingNewVirtualEntry();
+                await Editing.startEditingNewVirtualEntry();
             else
-                Editing.offsetFocus(1, SelectMode.Single,
+                await Editing.offsetFocus(1, SelectMode.Single,
                     InputConfig.data.enterNavigationType == 'keepPosition'
                     ? KeepInViewMode.SamePosition
                     : KeepInViewMode.KeepInSight);
@@ -145,7 +148,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
             await Editing.submitFocusedEntry();
             const next = Utils.getAdjecentEntryWithThisStyle('next');
             if (!next) return;
-            Editing.selectEntry(next, SelectMode.Single, ChangeCause.UIList,
+            await Editing.selectEntry(next, SelectMode.Single, ChangeCause.UIList,
                 InputConfig.data.enterNavigationType == 'keepPosition'
                 ? KeepInViewMode.SamePosition
                 : KeepInViewMode.KeepInSight);
@@ -237,7 +240,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.copy-text'),
         isApplicable: hasSelection,
-        items: () => forEachStyle((style) => {
+        items: () => forEachStyle(async (style) => {
             const selection = Editing.getSelection();
             if (selection.length == 0) return;
             const results: string[] = [];
@@ -246,7 +249,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 if (text) results.push(RichText.toString(text));
             });
             // FIXME: RichText
-            clipboard.writeText(results.join(' '));
+            await clipboard.writeText(results.join(' '));
             Frontend.setStatus($_('msg.copied'));
         }, selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
@@ -258,7 +261,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         isApplicable: hasSelection,
         async call() {
             await copySelection(toJSON);
-            Editing.deleteSelection();
+            await Editing.deleteSelection();
         }
     }),
     pasteText: new UICommand(() => $_('category.editing'),
@@ -314,7 +317,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 position = Source.subs.entries.findIndex(
                     (x) => Editing.selection.submitted.has(x)
                         || Editing.selection.currentGroup.has(x));
-                Editing.clearSelection();
+                await Editing.clearSelection();
             } else position = Source.subs.entries.length;
 
             const entries = SubtitleUtil.merge(Source.subs, portion, {
@@ -330,7 +333,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
             });
             if (entries.length > 0) {
                 await Source.markChanged(ChangeType.General, $_('action.paste'));
-                Editing.setSelection(entries);
+                await Editing.setSelection(entries);
                 Frontend.setStatus($_('msg.pasted'));
             } else {
                 Frontend.setStatus($_('msg.nothing-to-paste'), 'error');
@@ -377,12 +380,12 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.invert-selection'),
         isApplicable: hasSelection,
-        call() {
+        async call() {
             const newSelection = new Set<SubtitleEntry>;
             const oldSelection = new Set(Editing.getSelection());
             for (const e of Source.subs.entries)
                 if (!oldSelection.has(e)) newSelection.add(e);
-            Editing.clearFocus();
+            await Editing.clearFocus();
             Editing.selection.focused = null;
             Editing.selection.currentGroup.clear();
             Editing.selection.submitted = newSelection;
@@ -394,7 +397,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.insert-before'),
         isApplicable: hasFocus,
-        call() {
+        async call() {
             const ent = Editing.getFocusedEntry();
             Debug.assert(ent instanceof SubtitleEntry);
             const index = Source.subs.entries.indexOf(ent);
@@ -421,14 +424,14 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 }
             }
             Editing.insertEntry(ent.texts.keys(), start, end, index);
-            Source.markChanged(ChangeType.Times, $_('action.insert-before'));
+            await Source.markChanged(ChangeType.Times, $_('action.insert-before'));
         },
     }),
     insertAfterFocus: new UICommand(() => $_('category.editing'),
         [ CommandBinding.from(['CmdOrCtrl+Enter'], ['Table', 'EditingField']), ],
     {
         name: () => $_('action.insert-after'),
-        call() {
+        async call() {
             let ent = Editing.getFocusedEntry();
             if (!(ent instanceof SubtitleEntry)) ent = null;
             const index = ent ? Source.subs.entries.indexOf(ent) + 1 : Source.subs.entries.length;
@@ -452,7 +455,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 }
             }
             Editing.insertEntry(ent?.texts?.keys() ?? undefined, start, end, index);
-            Source.markChanged(ChangeType.Times, $_('action.insert-after'));
+            await Source.markChanged(ChangeType.Times, $_('action.insert-after'));
         },
     }),
     moveUp: new UICommand(() => $_('category.editing'),
@@ -499,7 +502,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.combine'),
         isApplicable: () => hasSelection(1) && selectionCanCombine(),
-        call() {
+        async call() {
             const selection = Editing.getSelection();
             const first = selection[0];
             for (const entry of selection.slice(1)) {
@@ -509,8 +512,8 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 Debug.assert(index >= 0);
                 Source.subs.entries.splice(index, 1);
             }
-            Editing.selectEntry(first, SelectMode.Single);
-            Source.markChanged(ChangeType.Times, $_('action.combine'));
+            await Editing.selectEntry(first, SelectMode.Single);
+            await Source.markChanged(ChangeType.Times, $_('action.combine'));
         },
     }),
     splitChannels: new UICommand(() => $_('category.editing'),
@@ -518,7 +521,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.split-simultaneous'),
         isApplicable: () => hasSelection(),
-        call() {
+        async call() {
             const selection = Editing.getSelection();
             const newSelection: SubtitleEntry[] = [];
             for (let i = 0; i < selection.length; i++) {
@@ -537,10 +540,10 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 newSelection.push(...newEntries);
             }
             if (newSelection.length != selection.length) {
-                Editing.clearSelection();
+                await Editing.clearSelection();
                 for (const ent of newSelection)
                     Editing.selection.submitted.add(ent);
-                Source.markChanged(ChangeType.Times, $_('action.split-simultaneous'));
+                await Source.markChanged(ChangeType.Times, $_('action.split-simultaneous'));
             }
         },
     }),
@@ -574,10 +577,10 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         isApplicable: hasSelection,
         items: LABEL_TYPES.map((x) => ({
             name: () => $_(`label.${x}`),
-            call() {
+            async call() {
                 for (const entry of Editing.getSelection())
                     entry.label = x;
-                Source.markChanged(ChangeType.InPlace, $_('c.label'));
+                await Source.markChanged(ChangeType.InPlace, $_('c.label'));
             },
         }))
     }),
@@ -589,7 +592,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         async call() {
             const options = await openDialog(Dialog.transformTimes);
             if (options && SubtitleUtil.shiftTimes(Source.subs, options))
-                Source.markChanged(ChangeType.Times, $_('c.transform-times'));
+                await Source.markChanged(ChangeType.Times, $_('c.transform-times'));
         },
     }),
     sortSelectionByTime: new UICommand(() => $_('category.tool'),
@@ -612,7 +615,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.create-channel'),
         isApplicable: () => hasSelection() && notSelectionCommonStyles().length > 0,
-        items: () => forEachStyle((x) => {
+        items: () => forEachStyle(async (x) => {
             const selection = Editing.getSelection();
             let done = false;
             for (const ent of selection)
@@ -620,7 +623,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                     ent.texts.set(x, '');
                     done = true;
                 }
-            if (done) Source.markChanged(ChangeType.InPlace, $_('action.create-channel'));
+            if (done) await Source.markChanged(ChangeType.InPlace, $_('action.create-channel'));
         }, notSelectionCommonStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -659,7 +662,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.remove-empty'),
         isApplicable: () => hasSelection(),
-        call() {
+        async call() {
             const selection = Editing.getSelection();
             let done = 0;
             for (const ent of selection) {
@@ -675,7 +678,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 }
             }
             Frontend.setStatus($_('msg.changed-n-entries', {values: {n: done}}));
-            if (done) Source.markChanged(ChangeType.Times, $_('action.remove-empty'));
+            if (done) await Source.markChanged(ChangeType.Times, $_('action.remove-empty'));
         },
     }),
     replaceChannel: new UICommand(() => $_('category.editing'),

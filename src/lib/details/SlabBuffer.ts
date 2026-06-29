@@ -21,7 +21,7 @@ export class SlabBuffer<T extends TypedArray> {
         private _maxItemSize: number
     ) {
         const len = _maxCapacity * _maxItemSize;
-        Debug.debug(`allocating pool: ${_maxCapacity} * ${_maxItemSize} = ${len}`);
+        void Debug.debug(`allocating pool: ${_maxCapacity} * ${_maxItemSize} = ${len}`);
         this.#buffer = new type(_maxCapacity * _maxItemSize);
         this.#occupied = new Array(_maxCapacity);
         this.#occupied.fill(false);
@@ -35,7 +35,7 @@ export class SlabBuffer<T extends TypedArray> {
 
         Debug.assert(this.#occupied.find((x) => x) === undefined);
         const len = maxCapacity * maxItemSize;
-        Debug.debug(`reallocating pool: ${maxCapacity} * ${maxItemSize} = ${len}`);
+        void Debug.debug(`reallocating pool: ${maxCapacity} * ${maxItemSize} = ${len}`);
         this.#buffer = new this.type(maxCapacity * maxItemSize);
         this._maxCapacity = maxCapacity;
         this._maxItemSize = maxItemSize;
@@ -51,10 +51,10 @@ export class SlabBuffer<T extends TypedArray> {
 
         if (this.#occupied.find((x) => x) === undefined)
             return this.#resize(maxCapacity, maxItemSize);
-        
+
         const len = maxCapacity * maxItemSize;
         Debug.assert(maxCapacity >= this._maxCapacity && maxItemSize >= this._maxItemSize);
-        Debug.warn(`reallocating pool SLOW: ${maxCapacity} * ${maxItemSize} = ${len}`);
+        void Debug.warn(`reallocating pool SLOW: ${maxCapacity} * ${maxItemSize} = ${len}`);
 
         const newBuffer = new this.type(maxCapacity * maxItemSize);
         for (let i = 0; i < this._maxCapacity; i++) {

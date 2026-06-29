@@ -77,7 +77,7 @@ async function doAutoSave() {
     if (isEmpty) return;
 
     if (!changedSinceLastAutosave) {
-        Debug.info('no change since last autosave');
+        await Debug.info('no change since last autosave');
         return;
     }; // only autosave when changed
 
@@ -94,7 +94,7 @@ async function doAutoSave() {
             await join('autosave', autoSaveName), text,
             { baseDir: fs.BaseDirectory.AppLocalData });
         changedSinceLastAutosave = false;
-        Debug.info('autosaved', currentFile ?? '<untitled>');
+        await Debug.info('autosaved', currentFile ?? '<untitled>');
         Frontend.setStatus($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
     }, $_('msg.autosave-failed'));
 }
@@ -116,7 +116,7 @@ async function cleanAutosave() {
             if (match && match[1] < old) {
                 await fs.remove(await join('autosave', name),
                     { baseDir: fs.BaseDirectory.AppLocalData });
-                Debug.trace('cleaned autosave:', name);
+                await Debug.trace('cleaned autosave:', name);
             }
         }
     }, $_('msg.failed-to-clean-autosave'));
@@ -175,7 +175,7 @@ export const Source = {
     },
 
     async markChanged(type: ChangeType, description: string) {
-        Debug.trace('marking change:', ChangeType[type], description);
+        await Debug.trace('marking change:', ChangeType[type], description);
         fileChanged.set(true);
         changedSinceLastAutosave = true;
         isEmpty = false;
@@ -235,7 +235,7 @@ export const Source = {
     },
 
     async openDocument(newSubs: Subtitles, path: string = '') {
-        if (path !== '') pushRecent(path);
+        if (path !== '') await pushRecent(path);
         this.subs = newSubs;
         await Editing.clearFocus(false);
         await Editing.clearSelection();
@@ -275,7 +275,7 @@ export const Source = {
             fileChanged.set(false);
             changedSinceLastAutosave = false;
             if (file != get(this.currentFile)) {
-                pushRecent(file);
+                await pushRecent(file);
                 currentFile.set(file);
             }
             await cleanAutosave();
@@ -309,7 +309,7 @@ export const SourceCommands = {
         name: () => $_('menu.undo'),
         call: async () => {
             if (TimelineHandle.isDuringAction())
-                TimelineHandle.interruptAction();
+                await TimelineHandle.interruptAction();
             else
                 await Source.undo();
         }
@@ -321,7 +321,7 @@ export const SourceCommands = {
         name: () => $_('menu.redo'),
         call: async () => {
             if (TimelineHandle.isDuringAction())
-                TimelineHandle.interruptAction();
+                await TimelineHandle.interruptAction();
             else
                 await Source.redo();
         }

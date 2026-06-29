@@ -42,7 +42,7 @@ function createChannel(
 
         switch (msg.event) {
         case 'debug':
-            Debug.info(msg.data.message);
+            void Debug.info(msg.data.message);
             break;
         case 'runtimeError':
             return reject(new MediaError('runtimeError: ' + msg.data.what, from));
@@ -119,7 +119,7 @@ export class MMedia {
         private _duration: number,
         private _streams: StreamDescription[]
     ) {
-        Debug.info(`media ${id} opened`);
+        void Debug.info(`media ${id} opened`);
     }
 
     #readFrames(
@@ -168,7 +168,7 @@ export class MMedia {
             const channel = createChannel('open', {
                 opened: (data) => resolve(data.id)
             }, reject);
-            invoke('open_media', {path, channel});
+            void invoke('open_media', {path, channel});
         });
         const status = await new Promise<{
             audioIndex: number,
@@ -179,7 +179,7 @@ export class MMedia {
             const channel = createChannel('open/status', {
                 mediaStatus: (data) => resolve(data)
             }, reject);
-            invoke('media_status', {id, channel});
+            void invoke('media_status', {id, channel});
         });
         return new MMedia(id, status.duration, status.streams);
     }
@@ -193,13 +193,13 @@ export class MMedia {
         await new Promise<void>((resolve, reject) => {
             const channel = createChannel('close', {
                 done: () => {
-                    Debug.info(`media ${this.id} closed`);
+                    void Debug.info(`media ${this.id} closed`);
                     this.#destroyed = true;
                     // IPC.deleteListeners(this);
                     resolve();
                 }
             }, reject);
-            invoke('close_media', {id: this.id, channel});
+            void invoke('close_media', {id: this.id, channel});
         });
     }
 
@@ -209,7 +209,7 @@ export class MMedia {
             const channel = createChannel('openAudio', {
                 audioStatus: (data) => resolve(data)
             }, reject);
-            invoke('open_audio', {id: this.id, audioId, channel});
+            void invoke('open_audio', {id: this.id, audioId, channel});
         });
         return this.#audio;
     }
@@ -220,7 +220,7 @@ export class MMedia {
             const channel = createChannel('openAudioSampler', {
                 audioStatus: (data) => resolve(data)
             }, reject);
-            invoke('open_audio_sampler', {id: this.id, audioId, samplePerSecond, channel});
+            void invoke('open_audio_sampler', {id: this.id, audioId, samplePerSecond, channel});
         });
         return this.#audio;
     }
@@ -231,7 +231,7 @@ export class MMedia {
             const channel = createChannel('openVideo', {
                 videoStatus: (data) => resolve(data)
             }, reject);
-            invoke('open_video', {id: this.id, videoId, accel, channel});
+            void invoke('open_video', {id: this.id, videoId, accel, channel});
         });
         this.#outSize = [...this.#video.size];
         return this.#video;
@@ -243,7 +243,7 @@ export class MMedia {
             const channel = createChannel('openVideoSampler', {
                 videoStatus: (data) => resolve(data)
             }, reject);
-            invoke('open_video_sampler', {id: this.id, videoId, accel, channel});
+            void invoke('open_video_sampler', {id: this.id, videoId, accel, channel});
         });
         return this.#video;
     }
@@ -257,7 +257,7 @@ export class MMedia {
             const channel = createChannel('setVideoSize', {
                 done: () => resolve()
             }, reject);
-            invoke('video_set_size', {id: this.id, channel, width, height});
+            void invoke('video_set_size', {id: this.id, channel, width, height});
         });
         this.#outSize = [width, height];
     }
@@ -272,7 +272,7 @@ export class MMedia {
                 channel = createChannel('sampleAutomatic', {
                     sampleDone: (data) => resolve(data)
                 }, reject);
-                invoke('sample_automatic', { id: this.id, targetWorkingTimeMs, channel });
+                void invoke('sample_automatic', { id: this.id, targetWorkingTimeMs, channel });
             });
         } finally {
             this.#currentJobs -= 1;
@@ -290,7 +290,7 @@ export class MMedia {
         try {
             const result = await new Promise<ArrayBuffer>((resolve, reject) => {
                 channel = createChannel('decodeAutomatic', {}, reject);
-                invoke<ArrayBuffer>('get_frames_automatic', {
+                void invoke<ArrayBuffer>('get_frames_automatic', {
                     id: this.id, targetWorkingTimeMs, channel
                 }).then(resolve);
             });
@@ -311,7 +311,7 @@ export class MMedia {
                 channel = createChannel('seek', {
                     done: () => resolve()
                 }, reject);
-                invoke('seek_media', { id: this.id, channel, time });
+                void invoke('seek_media', { id: this.id, channel, time });
             });
         } finally {
             this.#currentJobs -= 1;
@@ -328,7 +328,7 @@ export class MMedia {
                 channel = createChannel('seekByte', {
                     done: () => resolve()
                 }, reject);
-                invoke('seek_media_byte', { id: this.id, channel, pos });
+                void invoke('seek_media_byte', { id: this.id, channel, pos });
             });
         } finally {
             this.#currentJobs -= 1;
@@ -345,7 +345,7 @@ export class MMedia {
                 channel = createChannel('seekAudio', {
                     done: () => resolve()
                 }, reject);
-                invoke('seek_audio', { id: this.id, channel, time });
+                void invoke('seek_audio', { id: this.id, channel, time });
             });
         } finally {
             this.#currentJobs -= 1;
@@ -362,7 +362,7 @@ export class MMedia {
                 channel = createChannel('seekVideo', {
                     done: () => resolve()
                 }, reject);
-                invoke('seek_video', { id: this.id, channel, time });
+                void invoke('seek_video', { id: this.id, channel, time });
             });
         } finally {
             this.#currentJobs -= 1;
@@ -377,7 +377,7 @@ export class MMedia {
         try {
             return await new Promise<DecodeResult>((resolve, reject) => {
                 channel = createChannel('skipUntil', {}, reject);
-                invoke<ArrayBuffer>('skip_until', {
+                void invoke<ArrayBuffer>('skip_until', {
                     id: this.id, time, channel
                 }).then((x) => {
                     if (x.byteLength > 0)
@@ -397,7 +397,7 @@ export class MMedia {
                 frameQueryResult: (data) => resolve(data),
                 noResult: () => resolve(null)
             }, reject);
-            invoke('get_keyframe_before', { id: this.id, channel, time });
+            void invoke('get_keyframe_before', { id: this.id, channel, time });
         });
     }
 
@@ -409,7 +409,7 @@ export class MMedia {
                 frameQueryResult: (data) => resolve(data),
                 noResult: () => resolve(null)
             }, reject);
-            invoke('get_frame_before', { id: this.id, channel, time });
+            void invoke('get_frame_before', { id: this.id, channel, time });
         });
     }
 }
@@ -420,7 +420,7 @@ export const MAPI = {
             const channel = createChannel('version', {
                 ffmpegVersion: (data) => resolve(data.value)
             }, reject);
-            invoke('media_version', {channel});
+            void invoke('media_version', {channel});
         });
     },
 
@@ -433,7 +433,7 @@ export const MAPI = {
             const channel = createChannel('test_performance', {
                 done: () => resolve()
             }, reject, -1);
-            invoke('test_performance', {path, postprocess, hwaccel, channel});
+            void invoke('test_performance', {path, postprocess, hwaccel, channel});
         });
     },
 

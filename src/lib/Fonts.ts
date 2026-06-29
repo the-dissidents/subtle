@@ -18,24 +18,10 @@ export type LoadedFontFace = ResolvedFontFace & {
     loaded: boolean
 };
 
-async function getFace(face: ResolvedFontFace) {
+function getFace(face: ResolvedFontFace) {
     const id: FaceId = `${face.url}@${face.index}`;
     const f = faces.get(id);
     if (f) return f;
-
-    // const newf = new FontFace(
-    //     `__subtle_ff_${face.familyName}_${counter}`,
-    //     // `url("${convertFileSrc(face.url)}#${face.index}")`,
-    //     `local("${face.familyName}")`,
-    // {
-    //     weight: face.weight.toString(),
-    //     stretch: face.stretch.toString(),
-    //     style: face.style
-    // });
-    // await newf.load();
-    // document.fonts.add(newf);
-    // Debug.info('added font', id);
-    // counter++;
 
     const obj = { ...face, loaded: true };
     faces.set(id, obj);
@@ -69,7 +55,7 @@ export const Fonts = {
     async init() {
         allFamilies.clear();
         (await MAPI.getAllFontFamilies()).forEach((x) => allFamilies.add(x));
-        Debug.info(`found ${allFamilies.size} font families`);
+        void Debug.info(`found ${allFamilies.size} font families`);
         initialized = true;
         for (const c of onInitCallbacks)
             await c();
@@ -94,10 +80,7 @@ export const Fonts = {
 
         const family = await MAPI.resolveFontFamily(name);
         if (!family) return null;
-        const result =
-            (await Promise.allSettled(family.faces.map((x) => getFace(x))))
-            .filter((x) => x.status == 'fulfilled')
-            .map((x) => x.value);
+        const result = family.faces.map((x) => getFace(x));
         cachedFamilies.set(name, result);
         return result;
     },

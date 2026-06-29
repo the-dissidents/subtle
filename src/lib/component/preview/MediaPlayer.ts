@@ -71,7 +71,7 @@ export class MediaPlayer {
 
     get startTime() {
         return Math.min(
-            this.media.video!.startTime, 
+            this.media.video!.startTime,
             this.media.audio?.startTime ?? Infinity);
     }
 
@@ -80,8 +80,8 @@ export class MediaPlayer {
     }
 
     private constructor(
-        private readonly media: MMedia, 
-        private readonly manager: CanvasManager, 
+        private readonly media: MMedia,
+        private readonly manager: CanvasManager,
         private rawurl: string,
         private audio: Audio
     ) {
@@ -97,9 +97,9 @@ export class MediaPlayer {
             this.#bufCanvas.height = h;
             this.#updateOutputSize();
         });
-        
+
         this.#updateOutputSize();
-        this.#populateBuffer();
+        void this.#populateBuffer();
     }
 
     #reallocatePool() {
@@ -111,7 +111,7 @@ export class MediaPlayer {
             return this.#pool;
         }
         this.#pool = this.#pool.resize(
-            Math.max(this.#pool.maxCapacity, len), 
+            Math.max(this.#pool.maxCapacity, len),
             Math.max(this.#pool.maxItemSize, size)
         );
         return this.#pool;
@@ -132,14 +132,14 @@ export class MediaPlayer {
             [ow, oh] = [w, w / ratio];
         else
             [ow, oh] = [h * ratio, h];
-        this.#displayOffset = 
+        this.#displayOffset =
             [Math.round((w - ow) / 2), Math.round((h - oh) / 2)];
 
         ow = Math.max(1, Math.round(ow));
         oh = Math.max(1, Math.round(oh));
         this.#displaySize = [ow, oh];
 
-        if (MediaConfig.data.limitFrameSize > 0.5 
+        if (MediaConfig.data.limitFrameSize > 0.5
          && ow * oh * 4 > MediaConfig.data.limitFrameSize * 1024 * 1024)
         {
             oh = Math.sqrt(MediaConfig.data.limitFrameSize / 4 / ratio) * 1024;
@@ -147,7 +147,7 @@ export class MediaPlayer {
             ow = Math.max(1, Math.round(ow));
             oh = Math.max(1, Math.round(oh));
         }
-        this.#resizeTask.request(ow, oh);
+        void this.#resizeTask.request(ow, oh);
     }
 
     static async create(manager: CanvasManager, rawurl: string, audioId: number) {
@@ -159,8 +159,8 @@ export class MediaPlayer {
             audioStatus = await media.openAudio(audioId);
             await Debug.debug('VideoPlayer: opened media');
         } catch (e) {
-            media.close();
-            Debug.error(e);
+            await media.close();
+            await Debug.error(e);
             throw e;
         }
         const audio = await Audio.create(audioStatus.sampleRate);
@@ -170,7 +170,7 @@ export class MediaPlayer {
 
     async close() {
         EventHost.unbind(this);
-        
+
         await this.#mutex.use(async () => {
             if (this.#closed) return;
             await this.#clearCache();
@@ -205,7 +205,7 @@ export class MediaPlayer {
     #seekDone() {
         const frame = this.#videoBuffer[0];
         this.#seeking = undefined;
-        Debug.debug(`seekDone: seeked to [${frame.time.toFixed(3)}]`);
+        void Debug.debug(`seekDone: seeked to [${frame.time.toFixed(3)}]`);
     }
 
     // Must be called while locked
@@ -237,7 +237,7 @@ export class MediaPlayer {
         if (this.#videoBuffer.length == 1) {
             this.#timestamp = frame.time;
             MediaPlayerInterface.onPlayback.dispatch(frame.time);
-            if (!this.#presenting) this.#present();
+            if (!this.#presenting) void this.#present();
         }
     }
 
@@ -262,10 +262,10 @@ export class MediaPlayer {
          && this.audio.tail! - this.audio.head! >= MediaConfig.data.audioPreloadAmount)
         {
             if (this.audio.tail === undefined)
-                Debug.warn('doDecode: video cache full but audio cache empty');
+                await Debug.warn('doDecode: video cache full but audio cache empty');
             // enough frames preloaded
             // update the debug info about buffer lengths
-            if (!this.#presenting) this.#present();
+            if (!this.#presenting) void this.#present();
             return false;
         }
 
@@ -293,7 +293,7 @@ export class MediaPlayer {
     async #drawFrame(frame: VideoFrameData) {
         const ctx = this.#bufCtx;
         const start = performance.now();
-        
+
         const [w, h] = this.manager.physicalSize;
         const [ow, oh] = frame.size;
         const [dw, dh] = this.#displaySize;
@@ -320,7 +320,7 @@ export class MediaPlayer {
         let audioTime: string, latencyStr: string;
         if (this.audio.head !== undefined) {
             const latency = (frame.time - this.audio.head) * 1000;
-            this.#diag.latencySquared = this.#diag.latencySquared * DAMPING 
+            this.#diag.latencySquared = this.#diag.latencySquared * DAMPING
                 + (latency * latency * (1 - DAMPING));
 
             audioTime = this.audio.head.toFixed(3);
@@ -329,7 +329,7 @@ export class MediaPlayer {
             audioTime = 'n/a!';
             latencyStr = 'n/a!';
         }
-        
+
         ctx.fillStyle = 'green';
         ctx.font = `${window.devicePixelRatio * 10}px Courier`;
         ctx.textBaseline = 'top';
@@ -351,7 +351,7 @@ export class MediaPlayer {
             `VBL ${this.#videoBuffer.length}`.padEnd(9)
             + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 100);
         ctx.fillText(
-            `ABL ${this.audio.bufferLength}`.padEnd(9) 
+            `ABL ${this.audio.bufferLength}`.padEnd(9)
             + `(${(audioSize / 1024).toFixed(0)}KB)`, x, 120);
         if (rescaled)
             ctx.fillText(`RES ${ow}x${oh} -> ${dw}x${dh}`, x, 140);
@@ -370,7 +370,7 @@ export class MediaPlayer {
         });
         const max = Math.max(...bins.filter(isFinite), big);
 
-        const W = 200, H = 100, 
+        const W = 200, H = 100,
               X = w - W,
               Y = h - 20;
 
@@ -401,7 +401,7 @@ export class MediaPlayer {
             }
             // if no frames in buffer, wait for it to get populated
             if (!frame) return 0;
-            
+
             if (frame.time !== this.#timestamp) {
                 await Debug.warn(`presentNext: ts=${this.#timestamp} but fts=${frame.time}`);
             }
@@ -411,7 +411,7 @@ export class MediaPlayer {
             this.manager.requestRender();
             return -1;
         }
-    
+
         // if there's no audio, we can't synchronize and must wait for it
         if (this.audio.head === undefined)
             return 0;
@@ -427,7 +427,7 @@ export class MediaPlayer {
             }
             // or the buffer is empty
             if (!this.#populateBufferRunning)
-                this.#populateBuffer();
+                void this.#populateBuffer();
             return 0;
         }
 
@@ -451,7 +451,7 @@ export class MediaPlayer {
 
         // ensure the buffer is refilling since we're consuming frames
         if (!this.#populateBufferRunning)
-            this.#populateBuffer();
+            void this.#populateBuffer();
 
         // get next frame's time as target or fall back to this frame
         const targetTime = (this.#videoBuffer.at(0) ?? frame).time;
@@ -481,7 +481,7 @@ export class MediaPlayer {
             await Debug.trace('starting playback');
             await this.audio.play();
         });
-        if (!this.#presenting) this.#present();
+        if (!this.#presenting) void this.#present();
         MediaPlayerInterface.onPlayStateChanged.dispatch();
     }
 
@@ -495,10 +495,10 @@ export class MediaPlayer {
         MediaPlayerInterface.onPlayStateChanged.dispatch();
     }
 
-    async requestNextFrame() {
+    requestNextFrame() {
         Debug.assert(!this.#closed);
         if (this.#playEOF) return;
-        this.#seekTask.request(this.#timestamp + 0.001);
+        void this.#seekTask.request(this.#timestamp + 0.001);
     }
 
     async requestPreviousFrame() {
@@ -506,10 +506,10 @@ export class MediaPlayer {
         if (this.#timestamp == 0) return;
         const result = await Playback.sampler?.getFrameBefore(this.#timestamp);
         if (!result) {
-            Debug.warn('cannot find previous frame');
+            void Debug.warn('cannot find previous frame');
             return;
         }
-        this.#seekTask.request(result.time);
+        void this.#seekTask.request(result.time);
     }
 
     async seek(t: number, opt?: SetPositionOptions) {
@@ -518,7 +518,7 @@ export class MediaPlayer {
         return await this.#seekTask.request(t, opt);
     }
 
-    #seekTask = 
+    #seekTask =
     new RestartableTask<[target: number, opt?: SetPositionOptions]>(
         async ([target, opt], tok) => await this.#mutex.use(async () => {
             if (this.#closed
@@ -592,35 +592,34 @@ export class MediaPlayer {
                         await this.media.seekVideo(newTarget);
                         frames = await this.media.skipUntil(target, this.#pool);
                     }
-                    if (i > 0) {
-                        Debug.debug(`seek: retried ${i} time[s]`);
-                    }
+                    if (i > 0)
+                        await Debug.debug(`seek: retried ${i} time[s]`);
 
                     await this.#receiveFrames(frames);
                 }
             }
-            if (!this.#populateBufferRunning) this.#populateBuffer();
-            if (!this.#presenting) this.#present();
+            if (!this.#populateBufferRunning) void this.#populateBuffer();
+            if (!this.#presenting) void this.#present();
         }),
         { deduplicator: ([a, b], [c, d]) => a === c && b === d }
     )
 
-    #resizeTask = 
+    #resizeTask =
     new RestartableTask<[ow: number, oh: number]>(
         async ([ow, oh], _tok) => {
             if (this.#closed) return;
             const [cw, ch] = this.media.outputSize;
             if (ow === cw && oh === ch) {
-                if (!this.#presenting) this.#present();
+                if (!this.#presenting) void this.#present();
                 return;
             }
-            
+
             await this.#mutex.use(async () => {
                 await Debug.trace(`resize: ${ow}x${oh}`);
                 await this.media.setVideoSize(ow, oh);
                 this.#reallocatePool();
                 if (!this.#playing)
-                    this.#seekTask.request(this.#timestamp, { force: true });
+                    void this.#seekTask.request(this.#timestamp, { force: true });
             })
         },
         { deduplicator: ([a, b], [c, d]) => a == c && b == d }
@@ -642,7 +641,7 @@ export class MediaPlayer {
             }
 
             await this.#clearCache();
-            this.#seekTask.request(this.#timestamp);
+            void this.#seekTask.request(this.#timestamp);
         });
     }
 }

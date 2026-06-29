@@ -177,14 +177,14 @@ export class CanvasManager {
         this.#cxt = context;
 
         new ResizeObserver(
-            () => requestAnimationFrame(() => this.#updateSize()))
+            () => requestAnimationFrame(() => void this.#updateSize()))
                 .observe(eventReceiver);
-        this.#updateSize();
+        void this.#updateSize();
 
-        eventReceiver.addEventListener('mousedown', (ev) => this.#onMouseDown(ev));
-        eventReceiver.addEventListener('mouseup', (ev) => this.#onMouseUp(ev));
-        eventReceiver.addEventListener('mousemove', (ev) => this.#onMouseMove(ev));
-        eventReceiver.addEventListener('wheel', (ev) => this.#onMouseWheel(ev));
+        eventReceiver.addEventListener('mousedown', (ev) => void this.#onMouseDown(ev));
+        eventReceiver.addEventListener('mouseup', (ev) => void this.#onMouseUp(ev));
+        eventReceiver.addEventListener('mousemove', (ev) => void this.#onMouseMove(ev));
+        eventReceiver.addEventListener('wheel', (ev) => void this.#onMouseWheel(ev));
         eventReceiver.addEventListener('mouseleave', () => {
             if (this.#scrollerHighlight !== 'none')
                 this.requestRender();
@@ -196,7 +196,7 @@ export class CanvasManager {
         if (this.#requestedRender) return;
         this.#requestedRender = true;
         if (this.#isRendering) return;
-        requestAnimationFrame(() => this.#render());
+        requestAnimationFrame(() => void this.#render());
     }
 
     async interruptDrag() {
@@ -264,8 +264,8 @@ export class CanvasManager {
                 [this.#dragStartX, this.#dragStartY] = [ev.offsetX, ev.offsetY];
                 [this.#dragStartScrollX, this.#dragStartScrollY] = [this.#scrollX, this.#scrollY];
 
-                const handlerMove = (ev: MouseEvent) => this.#onDrag(ev);
-                const handlerUp = (ev: MouseEvent) => this.#endDrag!(ev);
+                const handlerMove = (ev: MouseEvent) => void this.#onDrag(ev);
+                const handlerUp = (ev: MouseEvent) => void this.#endDrag!(ev);
                 this.#endDrag = async (ev) => {
                     if (!ev)
                         await this.onDragInterrupted.dispatchAndAwaitAll();
@@ -368,7 +368,7 @@ export class CanvasManager {
         }
     }
 
-    #render() {
+    async #render() {
         this.#requestedRender = false;
         if (!this.renderer) return Debug.early();
         if (this.#isRendering) return Debug.early();
@@ -389,7 +389,7 @@ export class CanvasManager {
             this.#cxt.scale(this.#scale, this.#scale);
             this.#cxt.translate(-this.#scrollX, -this.#scrollY);
         }
-        this.renderer(this.#cxt);
+        await this.renderer(this.#cxt);
 
         // for scrollers, draw in screen space again
         this.#cxt.resetTransform();
@@ -431,7 +431,7 @@ export class CanvasManager {
         }
         this.#isRendering = false;
         if (this.#requestedRender)
-            requestAnimationFrame(() => this.#render());
+            requestAnimationFrame(() => void this.#render());
     }
 
     async #updateSize() {

@@ -17,7 +17,11 @@ export default defineConfig(
 	...svelte.configs.recommended,
 	{
 		languageOptions: {
-			globals: { ...globals.browser }
+			globals: { ...globals.browser },
+            parserOptions: {
+                projectService: true,
+                tsconfigRootDir: import.meta.dirname,
+            },
 		},
 		rules: {
 			"no-undef": 'off',
