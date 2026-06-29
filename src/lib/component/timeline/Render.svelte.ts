@@ -75,13 +75,13 @@ export class TimelineRenderer {
       () => this.manager.requestRender());
   }
 
-  #render(ctx: CanvasRenderingContext2D) {
+  async #render(ctx: CanvasRenderingContext2D) {
     if (this.layout.requestedLayout)
-      this.layout.layout(ctx);
+      await this.layout.layout(ctx);
 
     const t0 = Date.now();
 
-    this.layout.setScale(this.layout.scale);
+    await this.layout.setScale(this.layout.scale);
     this.#renderWaveform(ctx);
     this.#renderRuler(ctx);
     this.#renderTracks(ctx);

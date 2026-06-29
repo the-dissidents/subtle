@@ -109,10 +109,10 @@ export const TableCommands = {
           CommandBinding.from(['Shift+CmdOrCtrl+Alt+ArrowUp']), ],
     {
         name: () => $_('action.previous-entry-with-this-style'),
-        call: () => {
+        call: async () => {
           const entry = Utils.getAdjecentEntryWithThisStyle('previous');
           if (!entry) return;
-          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList,
+          await Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList,
               InputConfig.data.enterNavigationType == 'keepPosition'
               ? KeepInViewMode.SamePosition
               : KeepInViewMode.KeepInSight);
@@ -123,10 +123,10 @@ export const TableCommands = {
           CommandBinding.from(['Shift+CmdOrCtrl+Alt+ArrowDown']), ],
     {
         name: () => $_('action.next-entry-with-this-style'),
-        call: () => {
+        call: async () => {
           const entry = Utils.getAdjecentEntryWithThisStyle('next');
           if (!entry) return;
-          Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList,
+          await Editing.selectEntry(entry, SelectMode.Single, ChangeCause.UIList,
               InputConfig.data.enterNavigationType == 'keepPosition'
               ? KeepInViewMode.SamePosition
               : KeepInViewMode.KeepInSight);

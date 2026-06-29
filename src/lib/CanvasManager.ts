@@ -71,7 +71,8 @@ export class CanvasManager {
     readonly onUserZoom = new EventHost();
     readonly onUserScroll = new EventHost();
 
-    canBeginDrag: (ev: MouseEvent) => boolean | Promise<boolean> = () => false;
+    // must synchronous
+    canBeginDrag: (ev: MouseEvent) => boolean = () => false;
 
     renderer?: (ctx: CanvasRenderingContext2D) => void | Promise<void>;
     doNotPrescaleHighDPI = false;
@@ -200,8 +201,8 @@ export class CanvasManager {
     }
 
     async interruptDrag() {
-        Debug.assert(this.dragType == 'custom');
-        await this.#endDrag!(undefined);
+        Debug.assert(this.dragType == 'custom' && !!this.#endDrag);
+        await this.#endDrag(undefined);
     }
 
     convertPosition(
@@ -254,9 +255,8 @@ export class CanvasManager {
             } else if (hasH && ev.offsetY > this.#height - scrollerSize) {
                 this.#dragType = 'hscroll';
                 doDrag = true;
-            } else if (await this.canBeginDrag(ev)) {
+            } else if (this.canBeginDrag(ev)) {
                 this.#dragType = 'custom';
-                await this.onMouseDown.dispatchAndAwaitAll(ev);
                 doDrag = true;
             }
 
@@ -267,6 +267,7 @@ export class CanvasManager {
                 const handlerMove = (ev: MouseEvent) => void this.#onDrag(ev);
                 const handlerUp = (ev: MouseEvent) => void this.#endDrag!(ev);
                 this.#endDrag = async (ev) => {
+                    await Debug.info('ending drag');
                     if (!ev)
                         await this.onDragInterrupted.dispatchAndAwaitAll();
                     else if (this.#dragType == 'custom') {
@@ -278,8 +279,15 @@ export class CanvasManager {
                     document.removeEventListener('mouseup', handlerUp);
                     this.#dragType = 'none';
                 }
+                // set up the listeners ASAP before awaiting anything
+                // todo: if endDrag happens before onMouseDown finishes we must wait for the latter
                 document.addEventListener('mousemove', handlerMove);
                 document.addEventListener('mouseup', handlerUp, { once: true });
+
+                if (this.#dragType == 'custom') {
+                    await this.onMouseDown.dispatchAndAwaitAll(ev);
+                    await Debug.info('starting drag');
+                }
             }
         }
 
