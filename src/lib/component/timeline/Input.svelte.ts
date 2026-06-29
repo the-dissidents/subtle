@@ -597,28 +597,6 @@ export class TimelineInput {
         }
     }
 
-    #onMouseDown(e: MouseEvent) {
-        if (e.offsetX < this.layout.leftColumnWidth) {
-            const style = this.layout.getChannelFromOffsetY(e.offsetY);
-            if (style) {
-                if (Source.subs.view.timelineActiveChannel?.deref() === style)
-                    Source.subs.view.timelineActiveChannel = null;
-                else
-                    Source.subs.view.timelineActiveChannel = new WeakRef(style);
-                this.manager.requestRender();
-            }
-            return;
-        }
-
-        if (this.currentAction?.onMouseDown(e))
-            return;
-
-        if (e.button == 2) {
-            e.preventDefault();
-            void contextMenu();
-        }
-    }
-
     #onDoubleClick() {
         if (this.selection.size == 1
          && Editing.getFocusedEntry() == [...this.selection][0])
@@ -736,7 +714,7 @@ export class TimelineInput {
         return undefined;
     }
 
-    async #initializeDrag(
+    #initializeDrag(
         e0: MouseEvent, afterEnd: () => Promise<void>, underMouse: SubtitleEntry[]
     ) {
         const sels = [...this.selection];
@@ -766,7 +744,7 @@ export class TimelineInput {
                 : undefined;
             if (seams) {
                 // drag seam
-                await Editing.setSelection(seams);
+                void Editing.setSelection(seams);
                 this.currentAction = new DragSeam(this, this.layout, e0, seams[0], seams[1], afterEnd);
                 return true;
             }
@@ -790,7 +768,24 @@ export class TimelineInput {
         }
     }
 
-    async #canBeginDrag(e0: MouseEvent): Promise<boolean> {
+    #onMouseDown(e: MouseEvent) {
+        if (e.offsetX < this.layout.leftColumnWidth) {
+            const style = this.layout.getChannelFromOffsetY(e.offsetY);
+            if (style) {
+                if (Source.subs.view.timelineActiveChannel?.deref() === style)
+                    Source.subs.view.timelineActiveChannel = null;
+                else
+                    Source.subs.view.timelineActiveChannel = new WeakRef(style);
+                this.manager.requestRender();
+            }
+            return;
+        }
+
+        if (this.currentAction?.onMouseDown(e))
+            return;
+    }
+
+    #canBeginDrag(e0: MouseEvent): boolean {
         if (e0.offsetX < this.layout.leftColumnWidth)
             return false;
 
@@ -802,7 +797,7 @@ export class TimelineInput {
         // select
         if (e0.offsetY < TimelineLayout.HEADER_HEIGHT) {
             this.currentAction = new MoveCursor(this, this.layout, e0);
-            await this.#onDrag(e0.offsetX, e0.offsetY, e0);
+            void this.#onDrag(e0.offsetX, e0.offsetY, e0);
             return true;
         } else {
             const underMouse = this.layout.findEntriesByPosition(
@@ -813,19 +808,21 @@ export class TimelineInput {
             } else if (e0.button == 2) {
                 // right-clicked on something
                 // clear selection and re-select only if it's not selected
-                if (!underMouse.some((x) => this.selection.has(x))) {
-                    await Editing.clearSelection(ChangeCause.Timeline);
-                    await Editing.selectEntry(underMouse[0],
-                        SelectMode.Single, ChangeCause.Action);
-                }
-                // TODO: context menu?
+                void (async () => {
+                    if (!underMouse.some((x) => this.selection.has(x))) {
+                        await Editing.clearSelection(ChangeCause.Timeline);
+                        await Editing.selectEntry(underMouse[0],
+                            SelectMode.Single, ChangeCause.Action);
+                    }
+                    await contextMenu();
+                })();
                 return false;
             } else if (e0.button == 0) {
                 // left-clicked on nothing
                 if (underMouse.length == 0) {
                     if (!e0.getModifierState(Basic.ctrlKey)) {
                         // clear selection
-                        await Editing.clearSelection(ChangeCause.Timeline);
+                        void Editing.clearSelection(ChangeCause.Timeline);
                         this.selection.clear();
                         this.manager.requestRender();
                     }
@@ -848,7 +845,7 @@ export class TimelineInput {
                     // multiple select. Only the first entry counts
                     if (!this.selection.has(underMouse[0])) {
                         this.selection.add(underMouse[0]);
-                        await this.dispatchSelectionChanged();
+                        void this.dispatchSelectionChanged();
                         this.manager.requestRender();
                     } else afterEnd = async () => {
                         // if hasn't dragged
@@ -873,7 +870,7 @@ export class TimelineInput {
                         selected = underMouse[(underMouse.indexOf(one) + 1) % underMouse.length];
                         this.selection.clear();
                         this.selection.add(selected);
-                        await Editing.selectEntry(selected,
+                        void Editing.selectEntry(selected,
                             SelectMode.Single, ChangeCause.Timeline);
                     }
                     this.manager.requestRender();

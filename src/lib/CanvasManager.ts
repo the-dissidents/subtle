@@ -54,7 +54,7 @@ export class CanvasManager {
     readonly onViewportChanged =
         new AsyncEventHost();
     readonly onMouseDown =
-        new AsyncEventHost<[ev: MouseEvent]>();
+        new AsyncEventHost<[ev: MouseEvent, isDragBegin: boolean]>();
     readonly onMouseUp =
         new AsyncEventHost<[ev: MouseEvent]>();
     readonly onMouseWheel =
@@ -72,7 +72,7 @@ export class CanvasManager {
     readonly onUserScroll = new EventHost();
 
     // must synchronous
-    canBeginDrag: (ev: MouseEvent) => boolean = () => false;
+    canBeginDrag: (ev: MouseEvent) => boolean | (() => Promise<void>) = () => false;
 
     renderer?: (ctx: CanvasRenderingContext2D) => void | Promise<void>;
     doNotPrescaleHighDPI = false;
@@ -255,43 +255,50 @@ export class CanvasManager {
             } else if (hasH && ev.offsetY > this.#height - scrollerSize) {
                 this.#dragType = 'hscroll';
                 doDrag = true;
-            } else if (this.canBeginDrag(ev)) {
-                this.#dragType = 'custom';
-                doDrag = true;
-            }
-
-            if (doDrag) {
-                [this.#dragStartX, this.#dragStartY] = [ev.offsetX, ev.offsetY];
-                [this.#dragStartScrollX, this.#dragStartScrollY] = [this.#scrollX, this.#scrollY];
-
-                const handlerMove = (ev: MouseEvent) => void this.#onDrag(ev);
-                const handlerUp = (ev: MouseEvent) => void this.#endDrag!(ev);
-                this.#endDrag = async (ev) => {
-                    await Debug.info('ending drag');
-                    if (!ev)
-                        await this.onDragInterrupted.dispatchAndAwaitAll();
-                    else if (this.#dragType == 'custom') {
-                        const [offsetX, offsetY] =
-                            this.convertPosition('client', 'offset', ev.clientX, ev.clientY);
-                        await this.onDragEnd.dispatchAndAwaitAll(offsetX, offsetY, ev);
-                    }
-                    document.removeEventListener('mousemove', handlerMove);
-                    document.removeEventListener('mouseup', handlerUp);
-                    this.#dragType = 'none';
-                }
-                // set up the listeners ASAP before awaiting anything
-                // todo: if endDrag happens before onMouseDown finishes we must wait for the latter
-                document.addEventListener('mousemove', handlerMove);
-                document.addEventListener('mouseup', handlerUp, { once: true });
-
-                if (this.#dragType == 'custom') {
-                    await this.onMouseDown.dispatchAndAwaitAll(ev);
-                    await Debug.info('starting drag');
-                }
             }
         }
 
-        if (!doDrag) await this.onMouseDown.dispatchAndAwaitAll(ev);
+        let beginDragHandler: boolean | (() => Promise<void>) = false;
+        if ((beginDragHandler = this.canBeginDrag(ev))) {
+            this.#dragType = 'custom';
+            doDrag = true;
+        }
+
+        if (doDrag) {
+            [this.#dragStartX, this.#dragStartY] = [ev.offsetX, ev.offsetY];
+            [this.#dragStartScrollX, this.#dragStartScrollY] = [this.#scrollX, this.#scrollY];
+
+            const handlerMove = (ev: MouseEvent) => void this.#onDrag(ev);
+            const handlerUp = (ev: MouseEvent) => void this.#endDrag!(ev);
+            this.#endDrag = async (ev) => {
+                await Debug.info('ending drag');
+                if (!ev)
+                    await this.onDragInterrupted.dispatchAndAwaitAll();
+                else if (this.#dragType == 'custom') {
+                    const [offsetX, offsetY] =
+                        this.convertPosition('client', 'offset', ev.clientX, ev.clientY);
+                    await this.onDragEnd.dispatchAndAwaitAll(offsetX, offsetY, ev);
+                }
+                document.removeEventListener('mousemove', handlerMove);
+                document.removeEventListener('mouseup', handlerUp);
+                this.#dragType = 'none';
+            }
+            // set up the listeners ASAP before awaiting anything
+            // todo: if endDrag happens before onMouseDown finishes we must wait for the latter
+            document.addEventListener('mousemove', handlerMove);
+            document.addEventListener('mouseup', handlerUp, { once: true });
+
+            if (typeof beginDragHandler == 'function') {
+                await beginDragHandler();
+            }
+
+            if (this.#dragType == 'custom') {
+                await this.onMouseDown.dispatchAndAwaitAll(ev, true);
+                await Debug.info('starting drag');
+            }
+        }
+
+        if (!doDrag) await this.onMouseDown.dispatchAndAwaitAll(ev, false);
     }
 
     async #onMouseUp(ev: MouseEvent) {
