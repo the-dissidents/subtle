@@ -272,7 +272,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
             onclick={(e) => {
               if (e.currentTarget.checked) {
                 if (!$style.lintProfile)
-                  $style.lintProfile = { bracketGroups: [], regexes: [] };
+                  $style.lintProfile = { bracketGroups: [], regexes: [], forbiddenPunctuation: '' };
               } else {
                 $style.lintProfile = null;
               }

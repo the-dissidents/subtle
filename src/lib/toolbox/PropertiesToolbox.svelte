@@ -15,6 +15,7 @@ import { flip } from 'svelte/animate';
 import { _ } from 'svelte-i18n';
 import { Menu } from '@tauri-apps/api/menu';
 import { PackageOpenIcon, PlusIcon } from '@lucide/svelte';
+  import { SavedStyles } from '../config/SavedStyles';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
@@ -53,12 +54,10 @@ function markMetadataChange() {
   Source.markChanged(ChangeType.Metadata, $_('c.metadata'));
 }
 
-let savedStyles = Source.savedStyles;
-
 async function manageSavedStyles() {
   (await Menu.new({
-    items: $savedStyles.length > 0
-      ? $savedStyles.map((x) => ({
+    items: $SavedStyles.length > 0
+      ? $SavedStyles.map((x) => ({
         text: x.name,
         items: [
           {
@@ -68,14 +67,13 @@ async function manageSavedStyles() {
               style.name = SubtitleTools.getUniqueStyleName(Source.subs, style.name);
               Source.subs.styles.push(style);
             }
-          },
-          {
+          }, {
             text: $_('ppty.delete'),
             action() {
-              const i = $savedStyles.indexOf(x);
+              const i = $SavedStyles.indexOf(x);
               Debug.assert(i >= 0);
-              $savedStyles.splice(i, 1);
-              savedStyles.markChanged();
+              $SavedStyles.splice(i, 1);
+              SavedStyles.markChanged();
             }
           }
         ],
@@ -136,6 +134,7 @@ async function manageSavedStyles() {
       </div>
     {/each}
   {/key}
+  <hr>
   <div class='hlayout'>
     <button onclick={newStyle}>
       <PlusIcon/>

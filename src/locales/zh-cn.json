@@ -380,6 +380,21 @@
     "srt-plaintext": "SRT / 纯文本 / ...",
     "utilities": "工具"
   },
+  "dash": {
+    "doubleHyphenMinus": "双连字符",
+    "emDash": "em-dash",
+    "enDash": "en-dash",
+    "fullwidthHyphenMinus": "全角连字符",
+    "horizontalBar": "横线",
+    "hyphenMinus": "连字符"
+  },
+  "dashlint": {
+    "dialog-dashes-should-begin-on-a-new-line": "对话应另起一行",
+    "no-midline-dashes": "只允许在行尾出现破折号；考虑使用省略号",
+    "wrong-cjk-dashes": "不推荐的中日韩文破折号形态",
+    "wrong-dash": "不推荐的西文破折号形态",
+    "wrong-dialog-dash": "不推荐的对话破折号形态"
+  },
   "dismiss": "关闭",
   "editbox": {
     "anchor-end": "锚定结尾",
@@ -552,6 +567,12 @@
     "curly-quotes": "弯引号（外双内单）",
     "custom": "自定义",
     "dashes": "破折号",
+    "dashes-line-end-only": "限制只能出现在行尾",
+    "dashes-need-spaces-around": "周围需要空格",
+    "dashes-normal": "正常",
+    "dashes-require-newline": "必须换行",
+    "dashes-unicode": "Unicode",
+    "dialog-dashes": "表示对话的破折号",
     "double-ellipsis": "全省略号（……）",
     "edit-lint-profile": "编辑拼写检查预设",
     "ellipsis": "省略号",
@@ -560,8 +581,10 @@
     "fullwidth-parens": "全角圆括号",
     "halfwidth-parens": "半角圆括号",
     "inverted-curly-quotes": "弯引号（外单内双）",
+    "latin-dashes": "西文破折号",
     "name-for-new-preset": "新预设名称",
     "rename-to": "重命名：",
+    "reset-presets": "重置拼写检查预设",
     "single-ellipsis": "半省略号（…）",
     "spaces-and-punct": "空格和标点",
     "special": "特殊规则",
@@ -742,7 +765,7 @@
     "space-around-ellipsis": "省略号两端须有一个空格",
     "space-around-fullwidth-punct": "全角标点两边不能出现空格",
     "space-around-latin-dash": "西文破折号两端应有空格",
-    "use-fullwidth-punct": "CJK字符间要求使用全角标点",
+    "use-fullwidth-punct": "中日韩文字符间要求使用全角标点",
     "use-halfwidth-punct": "西文字符间要求使用半角标点"
   },
   "review": {
@@ -922,10 +945,10 @@
       "search-failed-to-find-anything": "未发现模糊匹配",
       "snap-to-following-punctuation": "吸附到后面的标点符号",
       "snap-to-whole-words": "吸附到西文单词",
-      "syllable-cjk-character": "音节或CJK字符",
+      "syllable-cjk-character": "西文音节或中日韩文字符",
       "threshold": "模糊匹配阈值",
       "tokenizer": "分词方法",
-      "word-cjk-character": "单词或CJK字符"
+      "word-cjk-character": "西文单词或中日韩文字符"
     },
     "justify": "均匀排版",
     "lock": "锁定",

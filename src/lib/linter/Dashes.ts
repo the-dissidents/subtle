@@ -1,12 +1,16 @@
 import type { Diagnostic } from "./Common";
 import * as z from "zod/v4-mini";
 
+import { unwrapFunctionStore, _ } from 'svelte-i18n';
+const $_ = unwrapFunctionStore(_);
+
 export const DashType = {
     emDash: '—',
     enDash: '–',
-    hyphen: '-',
-    doubleHyphen: '--',
-    fullwidthHyphen: '－',
+    hyphenMinus: '-',
+    doubleHyphenMinus: '--',
+    fullwidthHyphenMinus: '－',
+    horizontalBar: '―'
 };
 
 export type DashType = keyof typeof DashType;
@@ -67,7 +71,7 @@ export class DashLinter {
         // We check CJK dashes only around fullwidth characters and if the option is enabled.
 
         const diagnostics: Diagnostic[] = [];
-        const dashRegex = /([ \t]*)([-–—－⸺\u2012-\u2015]+)([ \t]*)/g;
+        const dashRegex = /([ \t]*)([-－⸺\u2010-\u2015]+)([ \t]*)/g;
         let match;
 
         while ((match = dashRegex.exec(entry)) !== null) {
@@ -88,25 +92,7 @@ export class DashLinter {
              && !isStartOfLine && !isEndOfLine
             ) continue;
 
-            // Evaluate CJK constraint
-            if (this.config.cjkDash !== undefined
-            && (this.isCJKChar(leftContext.trim().slice(-1)) ||
-                this.isCJKChar(rightContext.trim().charAt(0)) ||
-                dashChars === '——' || dashChars === '⸺')
-            ) {
-                const preferred = CJKDashType[this.config.cjkDash.type];
-                if (dashChars !== preferred || leftSpaces.length > 0 || rightSpaces.length > 0) {
-                    diagnostics.push({
-                        start, to,
-                        type: 'punctuation',
-                        description: `CJK dashes must use '${preferred}' with no surrounding spaces.`,
-                        fix: { substitute: preferred, confident: true }
-                    });
-                }
-                continue;
-            }
-
-            // Determine if the sequence is a dialog dash
+            // try to determine if the sequence is a dialog dash
             let isDialog = isStartOfLine;
             if (!isDialog) {
                 const sentenceFinal = /[.?!]["'”’]*[ \t]*$/.test(leftContext);
@@ -116,12 +102,11 @@ export class DashLinter {
                 }
             }
 
+            // dialog dashes
             if (isDialog) {
-                // dialog dashes
                 if (this.config.dialog.separateLines && !isStartOfLine) diagnostics.push({
                     start, to, type: 'format',
-                    description: 'Dialog dashes should begin on a new line.'
-                    // No fix: Automatically injecting newlines could desynchronize timing/length parameters.
+                    description: $_('dashlint.dialog-dashes-should-begin-on-a-new-line')
                 });
 
                 const expectedChar = DashType[this.config.dialog.type];
@@ -135,15 +120,36 @@ export class DashLinter {
                 if (fullMatch !== expectedSub) diagnostics.push({
                     start, to,
                     type: 'punctuation',
-                    description: `Dialog dash should be '${expectedChar}' with ${spaces ? 'spaces' : 'no spaces'}.`,
+                    description: $_('dashlint.wrong-dialog-dash'),
                     fix: { substitute: expectedSub, confident: true }
                 });
-            } else {
-                // regular dashes
+                continue;
+            }
+
+            // CJK dashes
+            if (this.config.cjkDash !== undefined
+            && (this.isCJKChar(leftContext.trim().slice(-1)) ||
+                this.isCJKChar(rightContext.trim().charAt(0)) ||
+                dashChars === '——' || dashChars === '⸺')
+            ) {
+                const preferred = CJKDashType[this.config.cjkDash.type];
+                if (dashChars !== preferred || leftSpaces.length > 0 || rightSpaces.length > 0) {
+                    diagnostics.push({
+                        start, to,
+                        type: 'punctuation',
+                        description: $_('dashlint.wrong-cjk-dashes', { values: { preferred } }),
+                        fix: { substitute: preferred, confident: true }
+                    });
+                }
+                continue;
+            }
+
+            // regular dashes
+            {
                 if (this.config.dash.endOnly && !isEndOfLine) diagnostics.push({
                     start, to,
                     type: 'punctuation',
-                    description: 'Mid-line dashes are disallowed (endOnly: true). Use ellipses for mid-line trail-offs.'
+                    description: $_('dashlint.no-midline-dashes')
                 }); else {
                     const expectedChar = DashType[this.config.dash.type];
                     const spaces = this.config.dash.spaces;
@@ -155,7 +161,7 @@ export class DashLinter {
                     if (fullMatch !== expectedSub) diagnostics.push({
                         start, to,
                         type: 'punctuation',
-                        description: `Dash should be '${expectedChar}' with ${spaces ? 'spaces' : 'no spaces'}.`,
+                        description: $_('dashlint.wrong-dash'),
                         fix: { substitute: expectedSub, confident: true }
                     });
                 }

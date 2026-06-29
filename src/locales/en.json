@@ -363,6 +363,21 @@
     "srt-plaintext": "SRT / plaintext / ...",
     "utilities": "utilities"
   },
+  "dash": {
+    "doubleHyphenMinus": "double hyphen",
+    "emDash": "em-dash",
+    "enDash": "en-dash",
+    "fullwidthHyphenMinus": "fullwidth hyphen",
+    "horizontalBar": "quotation dash",
+    "hyphenMinus": "hyphen"
+  },
+  "dashlint": {
+    "dialog-dashes-should-begin-on-a-new-line": "Dialog dashes should begin on a new line.",
+    "no-midline-dashes": "Mid-line dashes are disallowed. Use ellipses for mid-line trail-offs.",
+    "wrong-cjk-dashes": "CJK dashes must use '{preferred}' with no surrounding spaces.",
+    "wrong-dash": "use of non-preferred dash form",
+    "wrong-dialog-dash": "use of non-preferred form of dialog dash"
+  },
   "dismiss": "Dismiss",
   "editbox": {
     "anchor-end": "anchor end",
@@ -519,6 +534,8 @@
     "corner-quotes": "corner quotes",
     "curly-quotes": "curly quotes (double outside)",
     "custom": "custom",
+    "dashes-normal": "normal",
+    "dashes-unicode": "Unicode",
     "double-ellipsis": "use double ellipsis (……)",
     "edit-lint-profile": "edit lint profile",
     "forbidden-punctuations": "forbidden punctuations:",
@@ -526,6 +543,7 @@
     "fullwidth-parens": "fullwidth parentheses",
     "halfwidth-parens": "halfwidth parentheses",
     "inverted-curly-quotes": "curly quotes (single outside)",
+    "latin-dashes": "Latin dashes",
     "name-for-new-preset": "name for new preset:",
     "rename-to": "rename to:",
     "single-ellipsis": "use single ellipsis (…)",

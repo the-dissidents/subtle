@@ -10,6 +10,7 @@ import { onMount } from 'svelte';
 import { _ } from 'svelte-i18n';
   import { ConfigRow, ConfigTable } from '@the_dissidents/svelte-ui';
   import { DashType, type DashesConfig } from '../linter/Dashes';
+  import { resetSavedLintProfiles } from '../frontend/LintProfiles';
 
 interface Props {
   args: [profile: LintProfile],
@@ -46,19 +47,19 @@ const result = $derived<LintProfile>({
   bracketGroups: [...bracketGroups.keys()],
   regexes: [...regexes.keys()],
   forbiddenPunctuation: forbidden,
+  dashes,
 });
 </script>
 
-{#snippet dashSelector()}
+{#snippet dashSelector(dashObj?: { type: DashType })}
   {#each Object.entries(DashType) as [k, v]}
     <label>
-      <input type='radio' checked={false}
+      <input type='radio' checked={dashObj?.type == k}
         onchange={(e) => {
-          if (e.currentTarget.checked) {
-
-          }
+          if (dashObj && e.currentTarget.checked)
+            dashObj.type = k as DashType;
         }}>
-      <span>{k} <code>{v}</code></span>
+      <span>{$_(`dash.${k}`)} <code>{v}</code></span>
     </label>
   {/each}
 {/snippet}
@@ -155,6 +156,7 @@ const result = $derived<LintProfile>({
 <div class="vlayout">
   <LintProfileSelect value={result}
     onChange={(x) => x ? load(x) : {}} allowManage={true} />
+  <button onclick={() => resetSavedLintProfiles()}>{$_('lint.reset-presets')}</button>
 
   <div class="hlayout">
     <fieldset>
@@ -211,50 +213,72 @@ const result = $derived<LintProfile>({
     </div>
   </div>
 
-  <fieldset>
-    <legend>{$_('lint.dashes')}</legend>
+  <fieldset disabled={!dashes}>
+    <legend>
+      <input type='checkbox'
+        bind:checked={
+          () => !!dashes,
+          (x) => x ? dashes = {
+            dash: { type: 'emDash', spaces: true, endOnly: false },
+            dialog: { type: 'emDash', spaces: true, separateLines: true },
+          } : dashes = undefined
+        }>
+      {$_('lint.dashes')}
+    </legend>
     <div class="hlayout">
       <div class="list flexgrow">
-        <h5>表示对话的破折号</h5>
-        {@render dashSelector()}
+        <h5>{$_('lint.dialog-dashes')}</h5>
+        {@render dashSelector(dashes?.dialog)}
         <hr>
         <label>
           <input type='checkbox' bind:checked={
             () => dashes?.dialog.spaces ?? false,
             (x) => dashes!.dialog.spaces = x}>
-          周围需要空格
+          {$_('lint.dashes-need-spaces-around')}
         </label>
         <label>
           <input type='checkbox' bind:checked={
             () => dashes?.dialog.separateLines ?? false,
             (x) => dashes!.dialog.separateLines = x}>
-          必须换行
+          {$_('lint.dashes-require-newline')}
         </label>
       </div>
       <div class="list flexgrow">
-        <h5>西文破折号</h5>
-        {@render dashSelector()}
+        <h5>{$_('lint.latin-dashes')}</h5>
+        {@render dashSelector(dashes?.dash)}
         <hr>
         <label>
           <input type='checkbox' bind:checked={
             () => dashes?.dash.spaces ?? false,
             (x) => dashes!.dash.spaces = x}>
-          周围需要空格
+          {$_('lint.dashes-need-spaces-around')}
         </label>
         <label>
           <input type='checkbox' bind:checked={
             () => dashes?.dash.endOnly ?? false,
             (x) => dashes!.dash.endOnly = x}>
-          限制只能出现在行尾
+          {$_('lint.dashes-line-end-only')}
         </label>
       </div>
       <div class="list flexgrow">
         <h5>CJK破折号</h5>
         <label>
-          <input type='checkbox' bind:checked={
-            () => !!dashes?.cjkDash,
-            (x) => (x ? dashes!.cjkDash = { type: 'standard' } : dashes!.cjkDash = undefined)}>
-          启用检查
+          <input type='radio' checked={!dashes?.cjkDash}
+            onchange={(e) => e.currentTarget.checked
+              ? (dashes!.cjkDash = undefined) : {}}>
+          {$_('lint.unchecked')}
+        </label>
+        <label>
+          <input type='radio' checked={dashes?.cjkDash?.type == 'standard'}
+            onchange={(e) => e.currentTarget.checked
+              ? (dashes!.cjkDash = { type: 'standard' }) : {}}>
+          {$_('lint.dashes-normal')}
+        </label>
+        <label>
+          <input type='radio' checked={dashes?.cjkDash?.type == 'unicode'}
+            onchange={(e) => e.currentTarget.checked
+              ? (dashes!.cjkDash = { type: 'unicode' }) : {}}>
+          {$_('lint.dashes-unicode')}
         </label>
       </div>
     </div>

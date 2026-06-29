@@ -23,7 +23,7 @@ import { Menu } from '@tauri-apps/api/menu';
 
 import { _ } from 'svelte-i18n';
 import { tick } from 'svelte';
-  import { SvelteMap } from 'svelte/reactivity';
+import { SvelteMap } from 'svelte/reactivity';
 
 let editFormUpdateCounter = $state(0);
 let editAnchor: 'start' | 'end' = $state('start');
@@ -54,6 +54,10 @@ Source.onSubtitlesChanged.bind(me, (type) => {
     Debug.debug('linters updated');
   }
   updateForm();
+});
+
+Source.onSubtitleObjectReload.bind(me, () => {
+  editFormUpdateCounter++;
 });
 
 Editing.onSelectionChanged.bind(me, () => {
@@ -203,7 +207,7 @@ function applyEditForm() {
   {/if}
 </fieldset>
 <!-- channels view -->
-<div class="channels flexgrow isolated area" class:focused={$uiFocus == 'EditingField'}>
+<div class="vlayout channels flexgrow isolated area" class:focused={$uiFocus == 'EditingField'}>
   <RichEditToolbar
     target={$focusedStyle ? Editing.styleToEditor.get($focusedStyle) : undefined}
     onAction={() => Editing.submitFocusedEntry()} />
@@ -306,7 +310,7 @@ function applyEditForm() {
     </tbody>
   </table>
   {:else}
-  <div class="fill hlayout" style="justify-content: center; align-items: center;">
+  <div class="flexgrow hlayout hint">
     <i>{Editing.getFocusedEntry() == 'virtual'
       ? $_('editbox.at-virtual-entry')
       : $_('editbox.no-selection')}</i>
@@ -354,6 +358,13 @@ td {
   border-radius: 3px;
 }
 
+.hint {
+  color: var(--disabled-text-light);
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+}
+
 @media (prefers-color-scheme: light) {
   .selected {
     background-color: var(--uchu-pink-2);
@@ -363,6 +374,9 @@ td {
 @media (prefers-color-scheme: dark) {
   .selected {
     background-color: var(--uchu-blue-9);
+  }
+  .hint {
+    color: var(--disabled-text-dark);
   }
 }
 </style>

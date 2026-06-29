@@ -6,7 +6,7 @@ import { zx } from '@traversable/zod';
 import { RegexLintPresets } from "../linter/regex/Presets";
 import { RegexLinter, type RegexLintRule } from "../linter/regex/Regex";
 import { ForbidPunctuationLinter } from "../linter/ForbidCharacters";
-import { DashesConfig } from "../linter/Dashes";
+import { DashesConfig, DashLinter } from "../linter/Dashes";
 
 export const BracketPresetName =
     z.enum(Object.keys(BracketSetPresets) as (keyof typeof BracketSetPresets)[]);
@@ -33,12 +33,14 @@ export class CompiledLintProfile {
     #bracket: BracketLinter;
     #regex: RegexLinter;
     #forbid: ForbidPunctuationLinter;
+    #dashes?: DashLinter;
 
     constructor(p: LintProfile) {
         this.#bracket = new BracketLinter(p.bracketGroups.map((x) => BracketSetPresets[x]));
         this.#regex = new RegexLinter(
             p.regexes.flatMap((x) => RegexLintPresets[x] as RegexLintRule[]));
         this.#forbid = new ForbidPunctuationLinter(p.forbiddenPunctuation);
+        this.#dashes = p.dashes ? new DashLinter(p.dashes) : undefined;
     }
 
     check(text: string) {
@@ -46,7 +48,8 @@ export class CompiledLintProfile {
         diags.push(
             ...this.#bracket.check(text),
             ...this.#regex.check(text),
-            ...this.#forbid.check(text)
+            ...this.#forbid.check(text),
+            ...(this.#dashes?.check(text) ?? [])
         );
         return diags.sort((a, b) => a.to - b.to);
     }
