@@ -93,11 +93,9 @@
   const italic = toggleMark(RichTextSchema.marks.italic);
   const underline = toggleMark(RichTextSchema.marks.underline);
 
-  const lintTask = new RestartableTask(async ([linter]: [CompiledLintProfile]) => {
-    await Debug.info('koko');
+  const lintTask = new RestartableTask(([linter]: [CompiledLintProfile]) => {
     if (!view) return;
     const diagnostics = linter.check(RichText.toString(text));
-    await Debug.info(diagnostics, 'eoe');
     view.dispatch(view.state.tr.setMeta(LinterKey, diagnostics));
   }, { debounceMs: 0 });
 

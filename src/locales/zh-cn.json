@@ -770,7 +770,11 @@
   },
   "review": {
     "auto-fix-problems": "自动修复了{m,select,0 {所有} other {}} {n} 个问题",
+    "found-next": "定位到下一个问题",
+    "found-previous": "定位到上一个问题",
     "n-problems-cannot-be-fixed-automatically": "（还有 {n} 个问题无法自动修复）",
+    "not-found-next": "没有下一个问题",
+    "not-found-previous": "没有上一个问题",
     "nothing-to-fix": "没有需要修复的问题"
   },
   "richedit": {

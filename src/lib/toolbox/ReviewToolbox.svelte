@@ -1,9 +1,11 @@
 <script lang="ts">
 import { CompiledLintProfile } from "../core/LintProfile";
 import { RichText } from "../core/RichText";
-import type { SubtitleStyle } from "../core/Subtitles.svelte";
-  import { Frontend } from "../frontend/Frontend";
-import { ChangeType, Source } from "../frontend/Source";
+import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { Debug } from "../Debug";
+import { Editing, SelectMode } from "../frontend/Editing";
+import { Frontend } from "../frontend/Frontend";
+import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 import { Diagnostic } from "../linter/Common";
 
 import { _ } from 'svelte-i18n';
@@ -56,13 +58,44 @@ async function fixAll() {
       : ''))
   }
 }
+
+let focusedEntry = Editing.focused.entry;
+
+async function gotoProblem(dir: 1 | -1) {
+  if (!($focusedEntry instanceof SubtitleEntry)) return;
+
+  const linters = getLinters();
+  let i = Source.subs.entries.indexOf($focusedEntry);
+  Debug.assert(i >= 0);
+  i += dir;
+  while (i >= 0 && i < Source.subs.entries.length) {
+    const ent = Source.subs.entries[i];
+    const hasProblem = [...ent.texts.entries()].find(
+      ([style, text]) => {
+        const linter = linters.get(style);
+        if (!linter) return false;
+        return linter.check(RichText.toString(text)).length > 0;
+      });
+    if (hasProblem) {
+      await Editing.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
+      Frontend.setStatus(dir > 0 ? $_('review.found-next') : $_('review.found-previous'));
+      return;
+    }
+
+    i += dir;
+  }
+  Frontend.setStatus(
+    dir > 0 ? $_('review.not-found-next') : $_('review.not-found-previous'), 'error');
+}
 </script>
 
 <div class='vlayout fill'>
   <h5>拼写检查</h5>
   <div>
-    <button>上一个问题</button>
-    <button>下一个问题</button>
+    <button disabled={!($focusedEntry instanceof SubtitleEntry)}
+      onclick={() => gotoProblem(-1)}>上一个问题</button>
+    <button disabled={!($focusedEntry instanceof SubtitleEntry)}
+      onclick={() => gotoProblem(1)}>下一个问题</button>
     <button onclick={() => fixAll()}>尝试修复所有问题</button>
   </div>
 </div>

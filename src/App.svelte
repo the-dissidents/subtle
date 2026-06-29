@@ -9,7 +9,7 @@ i18n.register('en', () => import('./locales/en.json'));
 i18n.register('zh-cn', () => import('./locales/zh-cn.json'));
 i18n.register('zh-tw', () => import('./locales/zh-tw.json'));
 
-(async () => {
+void (async () => {
   await i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
 })();
 
@@ -51,7 +51,7 @@ import { Source, SourceCommands } from './lib/frontend/Source';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 import { Frontend } from './lib/frontend/Frontend';
 
-import { BugIcon, CommandIcon, FilmIcon, SettingsIcon, TriangleAlertIcon } from '@lucide/svelte';
+import { BugIcon, CommandIcon, FilmIcon, Redo2Icon, SettingsIcon, TriangleAlertIcon, Undo2Icon } from '@lucide/svelte';
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { MAPI } from './lib/API';
 import { Fonts } from './lib/Fonts';
@@ -62,7 +62,7 @@ import * as z from "zod/v4-mini";
 import { initWindowMenu } from './lib/WindowMenu';
   import ReviewToolbox from './lib/toolbox/ReviewToolbox.svelte';
 
-Debug.init();
+void Debug.init();
 
 const appWindow = getCurrentWebviewWindow();
 
@@ -109,51 +109,51 @@ MainConfig.hook(() => InterfaceConfig.data.editorFontFamily,
 MainConfig.hook(() => InterfaceConfig.data.monospaceFontFamily,
   (v) => document.documentElement.style.setProperty('--monospaceFontFamily', v));
 
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 MainConfig.hook(() => InterfaceConfig.data.language, async (lang) => {
   await locale.set(lang);
   await initWindowMenu();
-  Debug.debug('language =', lang);
+  await Debug.debug('language =', lang);
 });
 
 MainConfig.hook(() => InterfaceConfig.data.autosaveInterval, (v) => {
   Source.startAutoSave();
-  Debug.debug('autosave interval =', v);
+  void Debug.debug('autosave interval =', v);
 });
 
 MainConfig.hook(() => DebugConfig.data.redirectLogs, (v) => {
   Debug.redirectNative = v;
-  Debug.debug('redirectLogs =', v);
+  void Debug.debug('redirectLogs =', v);
 });
 
 MainConfig.hook(() => DebugConfig.data.logLevel, (v) => {
   Debug.filterLevel = GetLevelFilter[v as keyof typeof GetLevelFilter];
-  Debug.debug('webview filter level =', v);
+  void Debug.debug('webview filter level =', v);
 });
 
 MainConfig.hook(() => DebugConfig.data.persistentLogLevel, (v) =>
-  Debug.setPersistentFilterLevel(GetLevelFilter[v as keyof typeof GetLevelFilter]));
+  void Debug.setPersistentFilterLevel(GetLevelFilter[v as keyof typeof GetLevelFilter]));
 
 let settingTheme = false;
-MainConfig.hook(() => InterfaceConfig.data.theme,
-  async (theme) => {
-    if (settingTheme) return;
-    settingTheme = true;
-    await appWindow.setTheme(theme == 'light' ? 'light'
-                           : theme == 'dark' ? 'dark'
-                           : undefined);
-    settingTheme = false;
-    Debug.debug('changed theme', InterfaceConfig.data.theme);
-  });
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+MainConfig.hook(() => InterfaceConfig.data.theme, async (theme) => {
+  if (settingTheme) return;
+  settingTheme = true;
+  await appWindow.setTheme(theme == 'light' ? 'light'
+                          : theme == 'dark' ? 'dark'
+                          : undefined);
+  settingTheme = false;
+  await Debug.debug('changed theme', InterfaceConfig.data.theme);
+});
 
-MainConfig.init();
-KeybindingManager.init();
-Fonts.init();
+void MainConfig.init();
+void KeybindingManager.init();
+void Fonts.init();
 
-
-getVersion().then((x) =>
+void getVersion().then((x) =>
   appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
 
-appWindow.onCloseRequested(async (ev) => {
+void appWindow.onCloseRequested(async (ev) => {
   if (!await Interface.warnIfNotSaved()) {
     ev.preventDefault();
     return;
@@ -168,7 +168,8 @@ appWindow.onCloseRequested(async (ev) => {
   await saveWindowState(StateFlags.ALL);
 });
 
-appWindow.onDragDropEvent(async (ev) => {
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+void appWindow.onDragDropEvent(async (ev) => {
   if (ev.payload.type == 'drop') {
     const path = ev.payload.paths.at(0);
     if (!path) return Debug.early();
@@ -187,7 +188,8 @@ let timelineH = Memorized.$('timelineH', z.number(), 150);
 let leftPaneW = Memorized.$('leftPaneW', z.number(), 300);
 let videoH = Memorized.$('videoH', z.number(), 200);
 
-Memorized.init();
+void Memorized.init();
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
 Memorized.onInitialize(async () => {
   await restoreStateCurrent(StateFlags.ALL);
   videoCanvasContainer!.style.height = `${$videoH}px`;
@@ -211,20 +213,18 @@ onMount(() => {
 });
 
 const observer = new PerformanceObserver((list) => {
-  for (const entry of list.getEntries()) {
-    if (entry.name === 'first-contentful-paint') {
-      Debug.info(`------ FCP at ${entry.startTime}ms`);
-    }
-  }
+  for (const entry of list.getEntries())
+    if (entry.name === 'first-contentful-paint')
+      void Debug.info(`------ FCP at ${entry.startTime}ms`);
 });
 observer.observe({ type: 'paint', buffered: true });
 </script>
 
 <svelte:window
-  onload={() => {
+  onload={async () => {
     const time = performance.now();
-    getVersion().then((x) => Debug.info(`------ SUBTLE ${x} on ${Basic.architecture} ${Basic.platform} ${Basic.osVersion} | load time: ${time}`));
-    Source.init();
+    void getVersion().then((x) => Debug.info(`------ SUBTLE ${x} on ${Basic.architecture} ${Basic.platform} ${Basic.osVersion} | load time: ${time}`));
+    await Source.init();
   }}
   onbeforeunload={(ev) => {
     if (get(Source.fileChanged)) ev.preventDefault();
@@ -270,10 +270,10 @@ observer.observe({ type: 'paint', buffered: true });
       {#key undoRedoUpdateCounter}
       <li><button
         onclick={() => SourceCommands.undo.call()}
-        disabled={!Source.canUndo()}>{$_('menu.undo')}</button></li>
+        disabled={!Source.canUndo()}><Undo2Icon /></button></li>
       <li><button
         onclick={() => SourceCommands.redo.call()}
-        disabled={!Source.canRedo()}>{$_('menu.redo')}</button></li>
+        disabled={!Source.canRedo()}><Redo2Icon /></button></li>
       {/key}
       <li class='separator'></li>
       <li><button onclick={() => InterfaceCommands.openVideo.call()}>

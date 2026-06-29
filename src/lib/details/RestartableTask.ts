@@ -35,7 +35,7 @@ export class RestartableTask<Arg extends unknown[]> {
     private state: State<Arg> = { type: 'idle' };
 
     constructor(
-        private executor: (arg: Arg, token: CancellationToken) => Promise<void>,
+        private executor: (arg: Arg, token: CancellationToken) => Promise<void> | void,
         private options?: RestartableTaskOptions<Arg>
     ) {}
 
