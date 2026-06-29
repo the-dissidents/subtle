@@ -120,10 +120,10 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.edit-next-entry'),
         isApplicable: hasFocus,
-        call() {
+        async call() {
             const focusedEntry = Editing.getFocusedEntry();
             if (!(focusedEntry instanceof SubtitleEntry)) return;
-            Editing.submitFocusedEntry();
+            await Editing.submitFocusedEntry();
             const i = Source.subs.entries.indexOf(focusedEntry) + 1;
             if (i == Source.subs.entries.length)
                 Editing.startEditingNewVirtualEntry();
@@ -139,10 +139,10 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.edit-next-entry-with-this-style'),
         isApplicable: hasFocus,
-        call() {
+        async call() {
             const focusedEntry = Editing.getFocusedEntry();
             if (!(focusedEntry instanceof SubtitleEntry)) return;
-            Editing.submitFocusedEntry();
+            await Editing.submitFocusedEntry();
             const next = Utils.getAdjecentEntryWithThisStyle('next');
             if (!next) return;
             Editing.selectEntry(next, SelectMode.Single, ChangeCause.UIList,

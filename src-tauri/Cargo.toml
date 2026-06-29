@@ -1,6 +1,6 @@
 [package]
 name = "subtle-subtitles"
-version = "0.7.5"
+version = "0.7.6-a0"
 description = "Cross-platform subtitle editor"
 authors = ["the_dissidents"]
 edition = "2024"
@@ -18,15 +18,17 @@ tauri = { version = "2", features = ["devtools", "protocol-asset"] }
 serde = { version = "1", features = ["derive"] }
 tauri-plugin-os = "2"
 tauri-plugin-fs = "2"
-tauri-plugin-clipboard-manager = "2.0.1"
+tauri-plugin-clipboard-manager = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-log = "2"
+tauri-plugin-http = "2"
+tauri-plugin-window-state = "2"
 ffmpeg-next = { version = "7.1.0", features = ["build"] }
 rand = "0.8.5"
 ffmpeg-sys-next = "7.1.0"
 serde_json = "1.0.133"
 log = "0.4.22"
-tauri-plugin-opener = "2.2.6"
-tauri-plugin-log = "2"
 lazy_static = "1.5.0"
 time = "0.3.41"
 deranged = "=0.3.11"
@@ -34,7 +36,6 @@ vsprintf = "2.0.0"
 num_cpus = "1.17.0"
 encoding_rs = "0.8.35"
 chardetng = "0.1.17"
-tauri-plugin-http = "2"
 ordered-float = "5.1.0"
 num-traits = "0.2.19"
 getset = "0.1.6"
@@ -54,9 +55,6 @@ ffmpeg-sys-next = { version = "7.1.0", features = [] }
 
 [target.'cfg(not(windows))'.dependencies]
 pprof = { version = "0.14.0", features = ["flamegraph", "frame-pointer"] }
-
-[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-window-state = "2"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

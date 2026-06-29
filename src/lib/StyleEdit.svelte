@@ -13,10 +13,15 @@ import { Utils } from "./frontend/Utils";
 import { ChangeType, Source } from "./frontend/Source";
 import { WrapStyle } from "./details/TextLayout";
 
-import { Collapsible, NumberInput } from "@the_dissidents/svelte-ui";
+import { Collapsible, ConfigRow, ConfigTable, NumberInput } from "@the_dissidents/svelte-ui";
 import FilterEdit from "./FilterEdit.svelte";
 import FontSelect from "./FontSelect.svelte";
 import Colorpicker from "./ui/Colorpicker.svelte";
+
+import { openDialog } from "./DialogOutlet.svelte";
+import { Dialog } from "./dialog";
+  import { SavedStyles } from "./config/SavedStyles";
+  import LintProfileSelect from "./LintProfileSelect.svelte";
 
 interface Props {
   style: SubtitleStyle;
@@ -27,7 +32,6 @@ interface Props {
 let { style: _style, subtitles = $bindable(), onsubmit }: Props = $props();
 let alignSelector: HTMLSelectElement | undefined = $state();
 let wrapSelector: HTMLSelectElement | undefined = $state();
-let button: HTMLButtonElement | undefined = $state();
 let duplicateWarning = $state(false);
 let style = writable(_style);
 
@@ -38,8 +42,6 @@ function isDuplicate(name: string) {
   }
   return false;
 }
-
-let savedStyles = Source.savedStyles;
 
 async function contextMenu() {
   let isDefault = $style == subtitles.defaultStyle;
@@ -107,8 +109,8 @@ async function contextMenu() {
       items: [
         {
           text: $_('style.replace-by'),
-          items: $savedStyles.length > 0
-            ? $savedStyles.map((x) => ({
+          items: $SavedStyles.length > 0
+            ? $SavedStyles.map((x) => ({
                 text: x.name,
                 action() {
                   Object.assign($style, x);
@@ -125,13 +127,13 @@ async function contextMenu() {
         {
           text: $_('style.save-as-preset'),
           async action() {
-            const i = $savedStyles.findIndex((x) => x.name == $style.name);
+            const i = $SavedStyles.findIndex((x) => x.name == $style.name);
             if (i >= 0) {
               if (!await dialog.ask($_('msg.overwrite-preset-with-same-name'))) return;
-              $savedStyles.splice(i, 1);
+              $SavedStyles.splice(i, 1);
             }
-            $savedStyles.push(SubtitleStyle.clone($style));
-            savedStyles.markChanged();
+            $SavedStyles.push(SubtitleStyle.clone($style));
+            SavedStyles.markChanged();
           }
         }
       ]
@@ -139,7 +141,23 @@ async function contextMenu() {
   ]});
   menu.popup();
 }
+
+let update = $state(0);
+const me = {};
+Source.onSubtitlesChanged.bind(me, (t) => {
+  if (t == ChangeType.General || t == ChangeType.Times)
+    update++;
+})
 </script>
+
+<Collapsible active={true}>
+
+{#snippet header()}
+  {#key update}
+  {@const n = subtitles.entries.filter((x) => x.texts.has($style)).length}
+    {$style.name} <span class="usage">{$_('style.usage-msg', {values: { n }})}</span>
+  {/key}
+{/snippet}
 
 <div class='hlayout'>
   <!-- toolbar -->
@@ -189,71 +207,99 @@ async function contextMenu() {
       }}
       aria-label='move down'
     ><ArrowDown /></button><br/>
-    <button bind:this={button} onclick={() => contextMenu()}
-      aria-label='more'
-    ><MoreHorizontalIcon /></button><br/>
+    <button onclick={() => contextMenu()} aria-label='more'>
+      <MoreHorizontalIcon />
+    </button><br/>
   </div>
   <!-- properties -->
   <div class="flexgrow vlayout">
     <!-- basic -->
-    <table class="stretch">
-      <tbody>
-        <tr>
-          <td>{$_('style.name')}</td>
-          <td class='hlayout'>
-            <input type='text'
-              value={$style.name}
-              class={{duplicate: duplicateWarning, flexgrow: true}}
-              oninput={(ev) => duplicateWarning = isDuplicate(ev.currentTarget.value)}
-              onchange={(ev) => {
-                if (isDuplicate(ev.currentTarget.value)) {
-                  ev.currentTarget.value = $style.name;
-                  duplicateWarning = false;
-                } else {
-                  $style.name = ev.currentTarget.value;
-                  Source.markChanged(ChangeType.InPlace, $_('c.style-name'));
-                }
+    <ConfigTable>
+      <ConfigRow name={$_('style.name')}>
+        <div class="hlayout">
+          <input type='text'
+            value={$style.name}
+            class={{duplicate: duplicateWarning, flexgrow: true}}
+            oninput={(ev) => duplicateWarning = isDuplicate(ev.currentTarget.value)}
+            onchange={(ev) => {
+              if (isDuplicate(ev.currentTarget.value)) {
+                ev.currentTarget.value = $style.name;
+                duplicateWarning = false;
+              } else {
+                $style.name = ev.currentTarget.value;
+                Source.markChanged(ChangeType.InPlace, $_('c.style-name'));
+              }
+            }}/>
+          <label style="padding-left: 5px;">
+            <input type='checkbox'
+              checked={subtitles.defaultStyle == $style}
+              onclick={(ev) => {
+                subtitles.defaultStyle = $style;
+                ev.currentTarget.checked = true;
+                Source.markChanged(ChangeType.InPlace, $_('c.default-style'));
               }}/>
-            <label style="padding-left: 5px;">
-              <input type='checkbox'
-                checked={subtitles.defaultStyle == $style}
-                onclick={(ev) => {
-                  subtitles.defaultStyle = $style;
-                  ev.currentTarget.checked = true;
-                  Source.markChanged(ChangeType.InPlace, $_('c.default-style'));
-                }}/>
-              {$_('style.default')}
-            </label>
-          </td>
-        </tr>
-        <tr>
-          <td>{$_('style.font')}</td>
-          <td><FontSelect bind:value={$style.font}
-            style="width: 100%"
-            onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font'))}/>
-          </td>
-        </tr>
-        <tr>
-          <td>{$_('style.size')}</td>
-          <td class="hlayout style">
-            <NumberInput width="100%" bind:value={$style.size}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-size'))}/>
-            <label><input type='checkbox' bind:checked={$style.styles.bold}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
-              /><b>B</b></label>
-            <label><input type='checkbox' bind:checked={$style.styles.italic}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
-              /><i>I</i></label>
-            <label><input type='checkbox' bind:checked={$style.styles.underline}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
-              /><u>U</u></label>
-            <label><input type='checkbox' bind:checked={$style.styles.strikethrough}
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
-              /><s>S</s></label>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            {$_('style.default')}
+          </label>
+        </div>
+      </ConfigRow>
+      <ConfigRow name={$_('style.font')}>
+        <FontSelect bind:value={$style.font}
+          style="width: 100%"
+          onChange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font'))}/>
+      </ConfigRow>
+      <ConfigRow name={$_('style.size')}>
+        <div class="hlayout style">
+        <NumberInput width="100%" bind:value={$style.size}
+          onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-size'))}/>
+        <label><input type='checkbox' bind:checked={$style.styles.bold}
+          onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
+          /><b>B</b></label>
+        <label><input type='checkbox' bind:checked={$style.styles.italic}
+          onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
+          /><i>I</i></label>
+        <label><input type='checkbox' bind:checked={$style.styles.underline}
+          onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
+          /><u>U</u></label>
+        <label><input type='checkbox' bind:checked={$style.styles.strikethrough}
+          onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
+          /><s>S</s></label>
+        </div>
+      </ConfigRow>
+      <ConfigRow name={$_('style.lint-profile')}>
+      <div class="hlayout">
+        <label>
+          <input type='checkbox' class="button" checked={!!$style.lintProfile}
+            onclick={(e) => {
+              if (e.currentTarget.checked) {
+                if (!$style.lintProfile)
+                  $style.lintProfile = { bracketGroups: [], regexes: [], forbiddenPunctuation: '' };
+              } else {
+                $style.lintProfile = null;
+              }
+            }}>
+          {$style.lintProfile ? $_('style.lint-enabled') : $_('style.lint-disabled')}
+        </label>
+        {#if $style.lintProfile}
+          <LintProfileSelect value={$style.lintProfile}
+            onChange={(x) => {
+              if (x) {
+                $style.lintProfile = x;
+                Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
+              }
+            }} />
+          <button type='button' onclick={async () => {
+            const result = await openDialog(Dialog.lintProfile, $style.lintProfile!);
+            if (result) {
+              $style.lintProfile = result;
+              Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
+            }
+          }}>
+            {$_('style.lint-edit')}
+          </button>
+        {/if}
+      </div>
+      </ConfigRow>
+    </ConfigTable>
     <!-- validator -->
     <Collapsible header={$_('style.validator')}>
       <FilterEdit bind:filter={$style.validator}
@@ -262,107 +308,89 @@ async function contextMenu() {
     </Collapsible>
     <!-- advanced -->
     <Collapsible header={$_('style.more-styling')}>
-      <table class="stretch">
-        <tbody>
-          <tr>
-            <td>{$_('style.text-color')}</td>
-            <td>
-              <Colorpicker bind:color={$style.color}
-                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
-            </td>
-          </tr>
-          <tr>
-            <td>{$_('style.line-color')}</td>
-            <td>
-              <Colorpicker bind:color={$style.outlineColor}
-                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
-            </td>
-          </tr>
-          <tr>
-            <td>{$_('style.line-size')}</td>
-            <td><NumberInput width="100%" bind:value={$style.outline} min='0'
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-size'))}/>
-            </td>
-          </tr>
-          <tr>
-            <td>{$_('style.shadow-color')}</td>
-            <td>
-              <Colorpicker bind:color={$style.shadowColor}
-                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow-color'))}/>
-            </td>
-          </tr>
-          <tr>
-            <td>{$_('style.shadow')}</td>
-            <td><NumberInput width="100%" bind:value={$style.shadow} min='0'
-              onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow'))}/>
-            </td>
-          </tr>
-          <tr>
-            <td>{$_('style.alignment')}</td>
-            <td><select
-                bind:this={alignSelector}
-                value={AlignMode[$style.alignment]}
-                oninput={() => {
-                  $style.alignment = alignSelector!.selectedIndex + 1;
-                  Source.markChanged(ChangeType.InPlace, $_('c.style-alignment'));
-                }}>
-              <option value="BottomLeft">{$_('style.bottom-left')}</option>
-              <option value="BottomCenter">{$_('style.bottom-center')}</option>
-              <option value="BottomRight">{$_('style.bottom-right')}</option>
-              <option value="CenterLeft">{$_('style.center-left')}</option>
-              <option value="Center">{$_('style.center')}</option>
-              <option value="CenterRight">{$_('style.center-right')}</option>
-              <option value="TopLeft">{$_('style.top-left')}</option>
-              <option value="TopCenter">{$_('style.top-center')}</option>
-              <option value="TopRight">{$_('style.top-right')}</option>
-            </select></td>
-          </tr>
-          <tr>
-            <td>{$_('style.wrap-style')}</td>
-            <td><select
-                bind:this={wrapSelector}
-                value={$style.wrapStyle}
-                oninput={() => {
-                  $style.wrapStyle = wrapSelector!.selectedIndex;
-                  Source.markChanged(ChangeType.InPlace, $_('c.wrap-style'));
-                }}>
-              <option value={WrapStyle.Balanced}>{$_('style.wrap-balanced')}</option>
-              <option value={WrapStyle.Greedy}>{$_('style.wrap-greedy')}</option>
-              <option value={WrapStyle.NoWrap}>{$_('style.wrap-nowrap')}</option>
-            </select></td>
-          </tr>
-          <tr>
-            <td>{$_('style.margins')}</td>
-            <td>
-              <div class="flex margin">
-                <div><label>{$_('style.top')}
-                  <NumberInput min={0} max={1000}
-                    bind:value={$style.margin.top}
-                    onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
-                </label></div>
-                <div><label>{$_('style.bottom')}
-                  <NumberInput min={0} max={1000}
-                    bind:value={$style.margin.bottom}
-                    onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
-                </label></div>
-                <div><label>{$_('style.left')}
-                  <NumberInput min={0} max={1000}
-                    bind:value={$style.margin.left}
-                    onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
-                </label></div>
-                <div><label>{$_('style.right')}
-                  <NumberInput min={0} max={1000}
-                    bind:value={$style.margin.right}
-                    onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
-                </label></div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <ConfigTable>
+        <ConfigRow name={$_('style.text-color')}>
+          <Colorpicker bind:color={$style.color}
+            onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-color'))}/>
+        </ConfigRow>
+        <ConfigRow name={$_('style.line-color')}>
+          <Colorpicker bind:color={$style.outlineColor}
+            onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
+        </ConfigRow>
+        <ConfigRow name={$_('style.line-size')}>
+          <NumberInput width="100%" bind:value={$style.outline} min='0'
+            onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-size'))}/>
+        </ConfigRow>
+        <ConfigRow name={$_('style.shadow-color')}>
+          <Colorpicker bind:color={$style.shadowColor}
+            onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow-color'))}/>
+        </ConfigRow>
+        <ConfigRow name={$_('style.shadow')}>
+          <NumberInput width="100%" bind:value={$style.shadow} min='0'
+            onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow'))}/>
+        </ConfigRow>
+        <ConfigRow name={$_('style.alignment')}>
+          <select
+              bind:this={alignSelector}
+              value={AlignMode[$style.alignment]}
+              oninput={() => {
+                $style.alignment = alignSelector!.selectedIndex + 1;
+                Source.markChanged(ChangeType.InPlace, $_('c.style-alignment'));
+              }}>
+            <option value="BottomLeft">{$_('style.bottom-left')}</option>
+            <option value="BottomCenter">{$_('style.bottom-center')}</option>
+            <option value="BottomRight">{$_('style.bottom-right')}</option>
+            <option value="CenterLeft">{$_('style.center-left')}</option>
+            <option value="Center">{$_('style.center')}</option>
+            <option value="CenterRight">{$_('style.center-right')}</option>
+            <option value="TopLeft">{$_('style.top-left')}</option>
+            <option value="TopCenter">{$_('style.top-center')}</option>
+            <option value="TopRight">{$_('style.top-right')}</option>
+          </select>
+        </ConfigRow>
+        <ConfigRow name={$_('style.wrap-style')}>
+          <select
+              bind:this={wrapSelector}
+              value={$style.wrapStyle}
+              oninput={() => {
+                $style.wrapStyle = wrapSelector!.selectedIndex;
+                Source.markChanged(ChangeType.InPlace, $_('c.wrap-style'));
+              }}>
+            <option value={WrapStyle.Balanced}>{$_('style.wrap-balanced')}</option>
+            <option value={WrapStyle.Greedy}>{$_('style.wrap-greedy')}</option>
+            <option value={WrapStyle.NoWrap}>{$_('style.wrap-nowrap')}</option>
+          </select>
+        </ConfigRow>
+        <ConfigRow name={$_('style.margins')}>
+          <div class="flex margin">
+            <div><label>{$_('style.top')}
+              <NumberInput min={0} max={1000}
+                bind:value={$style.margin.top}
+                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
+            </label></div>
+            <div><label>{$_('style.bottom')}
+              <NumberInput min={0} max={1000}
+                bind:value={$style.margin.bottom}
+                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
+            </label></div>
+            <div><label>{$_('style.left')}
+              <NumberInput min={0} max={1000}
+                bind:value={$style.margin.left}
+                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
+            </label></div>
+            <div><label>{$_('style.right')}
+              <NumberInput min={0} max={1000}
+                bind:value={$style.margin.right}
+                onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-margin'))}/>
+            </label></div>
+          </div>
+        </ConfigRow>
+      </ConfigTable>
     </Collapsible>
   </div>
 </div>
+
+</Collapsible>
 
 <style lang='scss'>
 .duplicate {
@@ -380,27 +408,14 @@ async function contextMenu() {
   flex-wrap: wrap;
 }
 
-.stretch {
-  width: 100%;
-}
-
-table td:first-child {
-  font-size: 95%;
-  white-space: nowrap;
-  padding-right: 10px;
-  /* text-transform: uppercase; */
-  /* font-weight: bold; */
-}
-
 .style label {
   white-space: nowrap;
   padding-right: 5px;
   font-family: 'Times New Roman', Times, serif;
 }
 
-button {
-  width: 25px;
-  /* height: 20px; */
+.usage {
+  color: gray
 }
 
 input {

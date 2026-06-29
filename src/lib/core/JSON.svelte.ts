@@ -20,8 +20,9 @@ import { ZRichText } from "./RichText";
  *  - 000700 (major) inline formatting through RichText
  *                   wrapStyle in style
  *                   positioning and alignment in entry
+ *  - 000706 (minor) styles have lint profiles
  */
-export const SubtitleFormatVersion = '000700';
+export const SubtitleFormatVersion = '000706';
 export const SubtitleCompatibleVersion = '000700';
 
 export type JSONParseMessage = {
@@ -71,6 +72,8 @@ const ZEntry = z.object({
 });
 
 function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
+    Debug.assert(Number.isFinite(entry.start));
+    Debug.assert(Number.isFinite(entry.end))
     return {
         start: entry.start,
         end: entry.end,

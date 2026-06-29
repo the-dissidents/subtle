@@ -38,4 +38,7 @@ export const Dialog = {
     get compare() {
         return (async () => (await import('./CompareDialog.svelte')).default)();
     },
+    get lintProfile() {
+        return (async () => (await import('./LintProfileDialog.svelte')).default)();
+    },
 }

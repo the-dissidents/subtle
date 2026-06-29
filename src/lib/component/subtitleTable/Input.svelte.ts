@@ -1,6 +1,5 @@
 import { Debug } from "../../Debug";
 import type { CanvasManager } from "../../CanvasManager";
-import { Filter, type SimpleMetricFilter } from "../../core/Filter";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 
 import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
@@ -12,10 +11,9 @@ import type { TableLayout, ChannelLayout } from "./Layout.svelte";
 import { TableConfig } from "./Config";
 
 import { _ } from 'svelte-i18n';
-import { get } from "svelte/store";
 import { contextMenu } from "./Menu";
 
-import { type Popup } from "@the_dissidents/svelte-ui";
+import type MessagePopup from "./MessagePopup.svelte";
 
 export const SubtitleTableHandle = {
     processDoubleClick: undefined as (undefined | (() => Promise<void>)),
@@ -23,17 +21,15 @@ export const SubtitleTableHandle = {
 
 export class TableInput {
     private manager: CanvasManager;
-    private currentFails: SimpleMetricFilter[] = [];
+    private currentChannel?: ChannelLayout;
 
     private currentLine = -1;
     private autoScrollY = 0;
     private lastAnimateFrameTime = -1;
 
-    popupMessage = $state('');
-
     constructor(
         private layout: TableLayout,
-        private validationMessagePopup: Popup,
+        private popup: MessagePopup,
     ) {
         this.manager = layout.manager;
         this.manager.onMouseMove.bind(this, (ev) => this.#onMouseMove(ev));
@@ -156,26 +152,30 @@ export class TableInput {
 
         const [cx, _cy] = this.manager.convertPosition('offset', 'canvas', ev.offsetX, ev.offsetY);
         const channelColumnStart = this.layout.channelColumns[0].layout?.position ?? Infinity;
-        const currentLine = this.#getLineFromOffset(ev.offsetY);
-        const currentText = cx > channelColumnStart
-            ? this.#getTextFromLineIndex(currentLine)?.[0]
+        const currentChannel = cx > channelColumnStart
+            ? this.#getTextFromLineIndex(this.#getLineFromOffset(ev.offsetY))?.[0]
             : undefined;
 
-        if (currentText?.failed !== this.currentFails) {
-            this.currentFails = currentText?.failed ?? [];
-            if (this.validationMessagePopup.openState())
-                this.validationMessagePopup.close!();
-            if (this.currentFails.length > 0) {
-                Debug.assert(currentText !== undefined);
-                this.popupMessage =
-                    get(_)('table.requirement-not-met', {values: {n: this.currentFails.length}})
-                    + '\n'
-                    + this.currentFails.map((x) => Filter.describe(x)).join('\n');
+        if (currentChannel !== this.currentChannel) {
+            this.currentChannel = currentChannel;
+            if (this.popup.openState())
+                this.popup.close!();
+
+            if (currentChannel !== undefined
+            && (currentChannel.failed.length > 0 || currentChannel.diagnostics.length > 0))
+            {
+                Debug.assert(currentChannel !== undefined);
                 const [left, top] = this.manager.convertPosition('canvas', 'client',
                     channelColumnStart,
-                    currentText.line * this.layout.lineHeight + this.layout.headerHeight);
-                this.validationMessagePopup.open!({left, top, width: 0,
-                    height: currentText.height * 0.5 * this.layout.lineHeight / this.manager.scale});
+                    currentChannel.line * this.layout.lineHeight + this.layout.headerHeight);
+                this.popup.open!({
+                    text: currentChannel.content,
+                    failedFilters: currentChannel.failed,
+                    diagnostics: currentChannel.diagnostics,
+                }, {
+                    left, top, width: 0,
+                    height: currentChannel.height * 0.5 * this.layout.lineHeight / this.manager.scale
+                });
             }
         }
     }

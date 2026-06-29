@@ -4,6 +4,7 @@
 @include main.configure(
   $ui-font-family:   var(--fontFamily),
   // $mono-font-family: monospace,
+  $label-font-size:  0.9rem,
   $input-font-size:  0.85rem,
   $text-font-size:   var(--fontSize),
 
@@ -70,6 +71,8 @@
 
   // $border-radius-large: 3px,
   // $border-radius-small: 2px,
+
+  $config-label-alignment: start,
 );
 
 /* patching ui-svelte */

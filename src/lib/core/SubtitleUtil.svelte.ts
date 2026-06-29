@@ -201,6 +201,7 @@ export const SubtitleUtil = {
             const add = () => {
                 // make sure it is a proxy
                 const newStyle = $state(s);
+                s.name = SubtitleTools.getUniqueStyleName(original, s.name);
                 original.styles.push(newStyle);
                 styleMap.set(s, newStyle);
                 return newStyle;

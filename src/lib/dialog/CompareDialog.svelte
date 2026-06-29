@@ -3,22 +3,21 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import { _ } from 'svelte-i18n';
 import { onMount } from 'svelte';
 
-import { ListView, overlayMenu, showProgress } from '@the_dissidents/svelte-ui';
+import { ConfigRow, ConfigTable, ListView, overlayMenu, showProgress } from '@the_dissidents/svelte-ui';
 import DialogBase from '../DialogBase.svelte';
 
-import type { DiffEntry } from '../bindings/DiffEntry';
 import { type MatchResult } from "../bindings/MatchResult";
 import { Basic } from '../Basic';
 import { MAPI } from '../API';
 
-import { DefaultTokenizer, Searcher, type MergedDiffPart } from '../details/Fuzzy';
-import { SubtitleEntry, Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte';
+import { Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { RichText } from '../core/RichText';
 import { Format } from "../core/SimpleFormats";
 import { LinearFormatCombineStrategy } from "../core/SubtitleUtil.svelte";
 import { Interface } from '../frontend/Interface';
 import { Source } from '../frontend/Source';
-  import { InputConfig } from "../config/Groups";
+import { InputConfig } from "../config/Groups";
+import { constructData, constructHTMLReport, constructOutput, type DataEntry } from "./CompareReport";
 
 interface Props {
   args: [style: SubtitleStyle],
@@ -82,66 +81,36 @@ onMount(async () => {
     return close();
   }
 
-  for (const l of result.tokens) {
-    switch (l.matchType) {
-      case 'match':
-      case 'substitute': {
-        const t1 = A[l.i!].text;
-        const t2 = B[l.j!].text;
-        // this is the correct order (search for A in B)
-        const result = new Searcher(t2, DefaultTokenizer.caseSensitive(true))
-          .search(t1, { wholeSequence: true });
-        data.push({ first: A[l.i!], second: B[l.j!], merged: result?.merged });
-        break;
-      }
-      case 'delete':
-        data.push({ first: A[l.i!] });
-        break;
-      case 'insert':
-        data.push({ second: B[l.j!] });
-        break;
-    }
-  }
+  data = constructData(A, B, result);
 
   await inner.showModal!();
 
   close();
 });
 
-type DataEntry = {
-  first?: DiffEntry & {},
-  second?: DiffEntry,
-  merged?: MergedDiffPart<string>[],
-  useFirstTime?: boolean,
-  useFirstText?: boolean,
-}
-
 let data: DataEntry[] = $state([]);
-
-function constructOutput() {
-  const newsub = new Subtitles();
-  data.forEach((x) => {
-    if (x.useFirstText === undefined || x.useFirstTime === undefined)
-      return;
-    const time = x.useFirstTime === true ? x.first : x.second;
-    const text = x.useFirstText === true ? x.first : x.second;
-    if (!time || !text) return;
-    const entry = new SubtitleEntry(time.start, time.end);
-    entry.texts.set(newsub.defaultStyle, text.text);
-    newsub.entries.push(entry);
-  });
-  return newsub;
-}
 
 async function exportFile() {
   const path = await dialog.save({
       filters: [{name: 'SRT', extensions: ['srt']}],
   });
   if (!path) return;
-  const string = Format.SRT.write(constructOutput())
+  const string = Format.SRT.write(constructOutput(data))
     .strategy(LinearFormatCombineStrategy.KeepOrder)
     .toString();
   return await Source.exportTo(path, string);
+}
+
+async function exportReport() {
+  // Debug.warn('1');
+  const path = await dialog.save({
+      filters: [{name: 'HTML', extensions: ['html']}],
+  });
+  if (!path) return;
+  // Debug.warn('2');
+
+  // return await Source.exportTo((await documentDir()) + '/report.html', constructHTMLReport(data));
+  return await Source.exportTo(path, constructHTMLReport(data));
 }
 </script>
 
@@ -152,11 +121,9 @@ async function exportFile() {
     <h3>{$_('comparedialog.header')}</h3>
   {/snippet}
 
-  <table class="config">
-  <tbody>
-    <tr>
-      <td>{$_('comparedialog.matched-entries')}</td>
-      <td class="hlayout">
+  <ConfigTable>
+    <ConfigRow name={$_('comparedialog.matched-entries')}>
+      <div class="hlayout">
         <button class="left" disabled>{$_('comparedialog.times')}</button>
         <button class="middle"
           onclick={() => data.forEach((x) => x.first && x.second && (x.useFirstTime = true))}
@@ -190,11 +157,10 @@ async function exportFile() {
           onclick={() => data.forEach((x) =>
             x.useFirstText === false && (x.useFirstText = undefined))}
         >{$_('comparedialog.clear-right')}</button>
-      </td>
-    </tr>
-    <tr>
-      <td>{$_('comparedialog.unmatched-entries')}</td>
-      <td class="hlayout">
+      </div>
+    </ConfigRow>
+    <ConfigRow name={$_('comparedialog.unmatched-entries')}>
+      <div class="hlayout">
         <button class="left" disabled>{$_('comparedialog.left-side')}</button>
         <button class="middle"
           onclick={() => data.forEach((x) => x.first && !x.second
@@ -214,16 +180,13 @@ async function exportFile() {
           onclick={() => data.forEach((x) => !x.first && x.second
             && (x.useFirstTime = undefined, x.useFirstText = undefined))}
         >{$_('comparedialog.remove')}</button>
-      </td>
-    </tr>
-    <tr>
-      <td></td>
-      <td>
-        <button onclick={() => exportFile()}>{$_('comparedialog.export')}</button>
-      </td>
-    </tr>
-  </tbody>
-  </table>
+      </div>
+    </ConfigRow>
+    <ConfigRow name="">
+      <button onclick={() => exportFile()}>{$_('comparedialog.export')}</button>
+      <button onclick={() => exportReport()}>{$_('comparedialog.export-report')}</button>
+    </ConfigRow>
+  </ConfigTable>
 
   <ListView columns={[
     ['i1',       { header: '#',     width: 'max-content', align: 'end' }],

@@ -53,8 +53,11 @@ function sameAttrs(x: RichTextAttr[], y: RichTextAttr[]) {
     return !x.find((a) => !y.find((b) => attrEq(a, b)));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace RichText {
+    export function leaf(content: string, ...attrs: RichTextAttr[]): RichText {
+        return [{ type: 'leaf', content, attrs }];
+    }
+
     export function equals(a: RichText, b: RichText) {
         return eq(a, b);
     }
@@ -73,7 +76,7 @@ export namespace RichText {
         if (typeof rt === 'string') {
             return rt.length;
         }
-        return rt.reduce((p, node) => 
+        return rt.reduce((p, node) =>
             p + (typeof node === 'string' ? node : node.content).length, 0);
     }
 
@@ -84,7 +87,7 @@ export namespace RichText {
         const result: RichText[] = [];
         let str = RichText.toString(rt);
 
-        const match = typeof pattern == 'string' 
+        const match = typeof pattern == 'string'
             ? () => {
                 const i = str.indexOf(pattern);
                 if (i < 0) return undefined;
@@ -136,7 +139,7 @@ export namespace RichText {
             if (nodeEnd > start && currentPos < end) {
                 const sliceStart = Math.max(0, start - currentPos);
                 const sliceEnd = Math.min(nodeLength, end - currentPos);
-                
+
                 if (sliceStart === 0 && sliceEnd === nodeLength) {
                     result.push(node);
                 } else {

@@ -24,6 +24,7 @@ const overlapColor        = $derived(theme.isDark ? 'lightpink'       : 'crimson
 const focusBackground     = $derived(theme.isDark ? 'darkslategray'   : 'lightblue');
 const selectedBackground  = $derived(theme.isDark ? '#444'          : '#e8e8e8');
 const errorBackground     = $derived(theme.isDark ? '#aa335599'     : '#eedd0099');
+const lintProblemLine     = $derived(theme.isDark ? '#eedd0099'     : '#aa335599');
 
 export class TableRenderer {
     private manager: CanvasManager;
@@ -103,7 +104,7 @@ export class TableRenderer {
             // channels; in the order of Source.subs.styles
             let y0 = baseY;
             let j = 0;
-            for (const { failed, height, cells } of texts) {
+            for (const { failed, height, cells, diagnostics } of texts) {
                 const xpos = this.layout.channelColumns[0].layout!.position;
 
                 // background for failed validation
@@ -123,6 +124,13 @@ export class TableRenderer {
                         col.layout!.textX,
                         y0 + 0.5 * this.layout.lineHeight);
                 });
+
+                if (diagnostics.length > 0) {
+                    ctx.fillStyle = lintProblemLine;
+                    const bottom = y0 + height * this.layout.lineHeight;
+                    const lineHeight = 3;
+                    ctx.fillRect(xpos, bottom - lineHeight, width + sx - xpos, lineHeight);
+                }
 
                 // inner horizontal lines
                 y0 += height * this.layout.lineHeight;

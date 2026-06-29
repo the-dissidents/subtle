@@ -281,6 +281,8 @@ class DragResize extends MoveResizeBase {
     }
 
     onDrag(offsetX: number, _offsetY: number): void {
+        if (this.end == this.start) return;
+
         const val = this.origVal + this.self.convertX(offsetX) - this.origPos;
         let newVal = val;
         if (TimelineHandle.useSnap.get())
@@ -578,7 +580,7 @@ export class TimelineInput {
         return sels.reduce<[SubtitleEntry, SubtitleEntry]>(
             ([pf, pl], current) => [
                 current.start < pf.start ? current : pf,
-                current.end > pl.end ? current : pf],
+                current.end > pl.end ? current : pl],
             [sels[0], sels[0]]);
     }
 

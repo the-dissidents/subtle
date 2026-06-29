@@ -132,6 +132,19 @@
     "false": "假",
     "true": "真"
   },
+  "bracket": {
+    "stray-unclosed": "孤单的括号/引号`{a}`：没有闭合"
+  },
+  "brackets": {
+    "expected-primary-closing": "应为外层括号/引号",
+    "expected-primary-opening": "应为外层括号/引号",
+    "expected-secondary-closing": "应为内层括号/引号",
+    "expected-secondary-opening": "应为内层括号/引号",
+    "incorrect-direction": "括号/引号方向错误：`{a}`",
+    "non-preferred": "不推荐的括号/引号形态",
+    "stray-closing": "孤单的括号/引号`{a}`：没有对应的开头符号",
+    "too-deeply-nested": "括号/引号层叠太深"
+  },
   "bugdialog": {
     "create-issue": "新增GitHub issue",
     "header": "报告问题",
@@ -155,11 +168,13 @@
     "edit-entry": "编辑条目文字",
     "exchange-channel": "交换频道",
     "fill-with-untimed": "用无时间文本填充条目",
+    "fix-lint-problems": "自动修复拼写问题",
     "fuzzy-replace": "模糊匹配替换",
     "hold-to-create-entry": "按住创建字幕块",
     "import-file": "导入文件",
     "insert-channel": "添加频道",
     "label": "编辑标签",
+    "lint-profile": "编辑拼写检查预设",
     "metadata": "编辑元数据",
     "move-entries": "移动条目",
     "positioning": "编辑定位",
@@ -221,7 +236,8 @@
     "clear-left": "清除左侧",
     "clear-right": "清除右侧",
     "close": "关闭",
-    "export": "导出",
+    "export": "导出合并的字幕文件",
+    "export-report": "导出比较报告",
     "header": "比较字幕文件",
     "left-side": "左侧",
     "matched-entries": "匹配的字幕条",
@@ -234,6 +250,10 @@
     "unmatched-entries": "无法匹配的字幕条",
     "use-left": "全部使用左侧",
     "use-right": "全部使用右侧"
+  },
+  "comparereport": {
+    "new": "修改版本",
+    "original": "原版本"
   },
   "config": {
     "arrow-navigation-type": "上下方向键选择设置",
@@ -360,6 +380,21 @@
     "srt-plaintext": "SRT / 纯文本 / ...",
     "utilities": "工具"
   },
+  "dash": {
+    "doubleHyphenMinus": "双连字符",
+    "emDash": "em-dash",
+    "enDash": "en-dash",
+    "fullwidthHyphenMinus": "全角连字符",
+    "horizontalBar": "横线",
+    "hyphenMinus": "连字符"
+  },
+  "dashlint": {
+    "dialog-dashes-should-begin-on-a-new-line": "对话应另起一行",
+    "no-midline-dashes": "只允许在行尾出现破折号；考虑使用省略号",
+    "wrong-cjk-dashes": "不推荐的中日韩文破折号形态",
+    "wrong-dash": "不推荐的西文破折号形态",
+    "wrong-dialog-dash": "不推荐的对话破折号形态"
+  },
   "dismiss": "关闭",
   "editbox": {
     "anchor-end": "锚定结尾",
@@ -467,6 +502,9 @@
     "no-preview-available": "无法显示预览",
     "this-font-doesnt-exist-on-your-computer": "你的电脑上没有这个字体"
   },
+  "forbidlint": {
+    "forbidden": "不允许使用该标点"
+  },
   "importdialog": {
     "after-existing-lines": "在现有行之后",
     "before-existing-lines": "在现有行之前",
@@ -520,6 +558,37 @@
     "purple": "紫色",
     "red": "红色",
     "yellow": "黄色"
+  },
+  "lint": {
+    "bracket-checking": "括号/引号检查",
+    "clear": "清除",
+    "confirm-delete": "确认删除？",
+    "corner-quotes": "方引号",
+    "curly-quotes": "弯引号（外双内单）",
+    "custom": "自定义",
+    "dashes": "破折号",
+    "dashes-line-end-only": "限制只能出现在行尾",
+    "dashes-need-spaces-around": "周围需要空格",
+    "dashes-normal": "正常",
+    "dashes-require-newline": "必须换行",
+    "dashes-unicode": "Unicode",
+    "dialog-dashes": "表示对话的破折号",
+    "double-ellipsis": "全省略号（……）",
+    "edit-lint-profile": "编辑拼写检查预设",
+    "ellipsis": "省略号",
+    "forbidden-punctuations": "禁止以下标点符号：",
+    "french-guillemet": "法式引号",
+    "fullwidth-parens": "全角圆括号",
+    "halfwidth-parens": "半角圆括号",
+    "inverted-curly-quotes": "弯引号（外单内双）",
+    "latin-dashes": "西文破折号",
+    "name-for-new-preset": "新预设名称",
+    "rename-to": "重命名：",
+    "reset-presets": "重置拼写检查预设",
+    "single-ellipsis": "半省略号（…）",
+    "spaces-and-punct": "空格和标点",
+    "special": "特殊规则",
+    "unchecked": "不检查"
   },
   "menu": {
     "audio-stream-current": "（当前音频）",
@@ -681,6 +750,29 @@
     "url-d": "不支持锚点（如#English）。若要达到自动定位的效果，请选中“使用自动滚动”",
     "use-auto-scroll": "使用自动滚动"
   },
+  "regexlint": {
+    "chinese-word-connector": "使用正确的中文连接号形态（《中文排版需求》5.1.8，《标点符号用法》4.13.3）",
+    "consecutive-spaces": "禁止出现连续多个空格",
+    "latin-dash": "使用正确形态的西文破折号",
+    "leading-trailing-spaces": "禁止在头尾出现空格",
+    "no-space-after-fullwidth-punct": "全角标点符号后不应有空格",
+    "no-space-around-ellipsis": "省略号两端不应有空格",
+    "no-space-around-latin-dash": "西文破折号两端不应有空格",
+    "no-space-before-fullwidth-punct": "全角标点符号前不应有空格",
+    "no-space-before-punct": "标点符号前不应有空格",
+    "non-preferred-ellipsis": "不推荐的省略号形态",
+    "space-after-latin-punct": "西文标点符号后应该恰好有一个空格",
+    "space-around-ellipsis": "省略号两端须有一个空格",
+    "space-around-fullwidth-punct": "全角标点两边不能出现空格",
+    "space-around-latin-dash": "西文破折号两端应有空格",
+    "use-fullwidth-punct": "中日韩文字符间要求使用全角标点",
+    "use-halfwidth-punct": "西文字符间要求使用半角标点"
+  },
+  "review": {
+    "auto-fix-problems": "自动修复了{m,select,0 {所有} other {}} {n} 个问题",
+    "n-problems-cannot-be-fixed-automatically": "（还有 {n} 个问题无法自动修复）",
+    "nothing-to-fix": "没有需要修复的问题"
+  },
   "richedit": {
     "override-styles": "覆盖样式"
   },
@@ -760,6 +852,10 @@
     "left": "左",
     "line-color": "轮廓颜色",
     "line-size": "轮廓粗细",
+    "lint-disabled": "已关闭",
+    "lint-edit": "编辑",
+    "lint-enabled": "已启用",
+    "lint-profile": "拼写检查",
     "margins": "边距",
     "more-styling": "更多格式选项",
     "name": "名称",
@@ -776,6 +872,7 @@
     "top-center": "顶部居中",
     "top-left": "左上",
     "top-right": "右上",
+    "usage-msg": "（{n}）",
     "validator": "验证条件",
     "wrap-balanced": "平衡",
     "wrap-greedy": "贪心（总是在最后换行）",
@@ -785,6 +882,7 @@
   "tab": {
     "properties": "属性",
     "references": "参考资料",
+    "review": "审阅",
     "search-replace": "查找/替换",
     "untimed-text": "无时间文本"
   },
@@ -792,6 +890,7 @@
     "add-column": "添加列",
     "edit-columns": "编辑列",
     "end": "结尾",
+    "lint-messages": "拼写检查报告：",
     "requirement-not-met": "未满足条件：",
     "start": "开始",
     "style": "样式",
@@ -846,10 +945,10 @@
       "search-failed-to-find-anything": "未发现模糊匹配",
       "snap-to-following-punctuation": "吸附到后面的标点符号",
       "snap-to-whole-words": "吸附到西文单词",
-      "syllable-cjk-character": "音节或CJK字符",
+      "syllable-cjk-character": "西文音节或中日韩文字符",
       "threshold": "模糊匹配阈值",
       "tokenizer": "分词方法",
-      "word-cjk-character": "单词或CJK字符"
+      "word-cjk-character": "西文单词或中日韩文字符"
     },
     "justify": "均匀排版",
     "lock": "锁定",

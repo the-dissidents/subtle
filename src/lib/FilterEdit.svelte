@@ -184,7 +184,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
         </label>
       {/if}
       {#if metric.description}
-        <Tooltip text={metric.description()} />
+        <Tooltip text={metric.description()} position="right" />
       {/if}
       <select value={f.metric}
         use:autoWidth

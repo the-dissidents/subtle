@@ -11,6 +11,7 @@ import { ZColor } from "./Serialization";
 import * as Color from "colorjs.io/fn";
 import type { RichText } from "./RichText";
 import { WrapStyle } from "../details/TextLayout";
+import { LintProfile } from "./LintProfile";
 
 export const ZStyleBase = z.object({
     name:                         z.string(),
@@ -35,7 +36,8 @@ export const ZStyleBase = z.object({
     }),
     alignment:         z._default(z.enum(AlignMode), AlignMode.BottomCenter),
     wrapStyle:         z._default(z.enum(WrapStyle), WrapStyle.Balanced),
-    validator:         z._default(z.nullable(z.unknown()), null)
+    validator:         z._default(z.nullable(z.unknown()), null),
+    lintProfile:       z._default(z.nullable(LintProfile), null)
 });
 
 export const ZMetadata = z.object({

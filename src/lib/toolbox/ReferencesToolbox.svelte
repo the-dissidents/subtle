@@ -42,11 +42,10 @@ KeybindingManager.register(SearchCommands);
 
 <script lang="ts">
 import { PencilLineIcon } from '@lucide/svelte';
-import { Collapsible } from "@the_dissidents/svelte-ui";
+import { Collapsible, ConfigRow, ConfigTable } from "@the_dissidents/svelte-ui";
 
 import { _ } from 'svelte-i18n';
 import * as z from 'zod/v4-mini';
-
 
 import { Reference, type ReferenceSource } from '../frontend/References';
 import { Frontend, guardAsync } from '../frontend/Frontend';
@@ -112,20 +111,15 @@ currentSourceName.subscribe((x) => {
   </div>
   {#if currentSource && currentSource.variables.length > 0}
   <Collapsible header={$_('refs.parameters')}>
-    <table class="config">
-      <tbody>
+    <ConfigTable>
       {#each currentSource.variables as {name, defaultValue} (name)}
-        <tr>
-          <td>{name}</td>
-          <td>
-            <input type='text'
-              value={params.has(name) ? params.get(name) : defaultValue}
-              oninput={(ev) => params.set(name, ev.currentTarget.value)} />
-          </td>
-        </tr>
+        <ConfigRow {name}>
+          <input type='text'
+            value={params.has(name) ? params.get(name) : defaultValue}
+            oninput={(ev) => params.set(name, ev.currentTarget.value)} />
+        </ConfigRow>
       {/each}
-      </tbody>
-    </table>
+    </ConfigTable>
   </Collapsible>
   {/if}
   <iframe sandbox="allow-same-origin" title="reference" class='flexgrow' bind:this={iframe}>

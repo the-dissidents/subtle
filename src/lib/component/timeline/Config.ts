@@ -145,7 +145,7 @@ export const TimelineCommands = {
             const end = Math.max(...selection.map((x) => x.end));
             const delta = end - Playback.position;
             selection.forEach((x) => {
-                x.end -= delta;
+                x.start -= delta;
                 x.end -= delta;
             });
             Source.markChanged(ChangeType.Times, $_('action.move-whole-end-time-to-cursor'));

@@ -1,7 +1,7 @@
 console.info('Source loading');
 
 import { Debug } from "../Debug";
-import { Subtitles, SubtitleStyle, type SerializedSubtitleStyle } from "../core/Subtitles.svelte";
+import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/SimpleFormats";
 import { InterfaceConfig } from "../config/Groups";
 import { Memorized } from "../config/MemorizedValue.svelte";
@@ -41,36 +41,11 @@ export enum ChangeType {
     Times,     // i.e. renderer needs to re-sort
     Order,
     Filter,
+    LintProfile,
     View,
     StyleDefinitions,
     General,   // TODO: this is unclear
     Metadata
-}
-
-class MemorizedStyles extends Memorized<SerializedSubtitleStyle[], SubtitleStyle[]> {
-  constructor(protected key: string) {
-    super(key, []);
-  }
-  protected get type(): string {
-    return 'MemorizedStyles';
-  }
-  protected serialize() {
-    return this.value.map((x) => SubtitleStyle.serialize(x));
-  }
-  protected deserialize(value: unknown): void {
-    if (!Array.isArray(value)) {
-      Debug.warn('unable to deserialize styles');
-      return;
-    }
-    this.value = value.flatMap((x) => {
-      try {
-        return [SubtitleStyle.deserializeWithoutValidator(x)];
-      } catch (e) {
-        Debug.warn('unable to deserialize style', x, e);
-        return [];
-      }
-    });
-  }
 }
 
 function readSnapshot(s: Snapshot, archive: string) {
@@ -111,7 +86,7 @@ async function doAutoSave() {
         Source.onSubtitleWillSave.dispatch(true);
         const text = Format.JSON.write(Source.subs).toString();
         await fs.writeTextFile(
-            await join('autosave', autoSaveName), text, 
+            await join('autosave', autoSaveName), text,
             { baseDir: fs.BaseDirectory.AppLocalData });
         changedSinceLastAutosave = false;
         Debug.info('autosaved', currentFile ?? '<untitled>');
@@ -134,7 +109,7 @@ async function cleanAutosave() {
             if (!isFile) return;
             const match = regex.exec(name);
             if (match && match[1] < old) {
-                await fs.remove(await join('autosave', name), 
+                await fs.remove(await join('autosave', name),
                     { baseDir: fs.BaseDirectory.AppLocalData });
                 Debug.trace('cleaned autosave:', name);
             }
@@ -143,19 +118,18 @@ async function cleanAutosave() {
 }
 
 const zFileSaveState = z.object({
-    name: z.string(), 
+    name: z.string(),
     video: z.optional(z.string()),
     audioStream: z.optional(z.int()),
 });
 
 const recentOpened = Memorized.$('recentOpened', z.array(zFileSaveState), []);
-const savedStyles = new MemorizedStyles('savedStyles');
 const currentFile = writable('');
-const fileChanged = writable(false);
+export const fileChanged = writable(false);
 
 let intervalId = 0;
-let changedSinceLastAutosave = false;
-let isEmpty = true;
+export let changedSinceLastAutosave = false;
+export let isEmpty = true;
 
 let undoStack = [] as Snapshot[];
 let redoStack = [] as Snapshot[];
@@ -179,7 +153,6 @@ export const Source = {
     get fileChanged() { return readonly(fileChanged); },
     get fileIsEmpty() { return isEmpty; },
     get recentOpened() { return recentOpened; },
-    get savedStyles() { return savedStyles; },
 
     onUndoBufferChanged: new EventHost(),
     onSubtitlesChanged: new EventHost<[type: ChangeType]>(),
@@ -263,7 +236,7 @@ export const Source = {
         Editing.clearSelection();
         Editing.focused.style.set(newSubs.defaultStyle);
         currentFile.set(
-            (newSubs.migrated !== 'none' 
+            (newSubs.migrated !== 'none'
                 && newSubs.migrated !== 'olderVersion') ? '' : path);
         fileChanged.set(newSubs.migrated == 'olderVersion');
         changedSinceLastAutosave = false;

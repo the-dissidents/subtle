@@ -14,8 +14,8 @@
   import { Popup } from "@the_dissidents/svelte-ui";
 
   import { PauseIcon, PlayIcon, Volume2Icon } from "@lucide/svelte";
-  import { z } from "zod/v4-mini";
   import { onMount } from "svelte";
+  import * as z from "zod/v4-mini";
 
   let volume = Memorized.$('playbackVolume', z.number().check(z.gt(0)).check(z.lt(1)), 0.8);
   volume.subscribe((x) => Playback.player?.setVolume(x));

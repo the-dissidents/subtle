@@ -125,11 +125,11 @@ function fromTransformed() {
       <tr>
         <td>{$_('transformdialog.fps-before-after')}</td>
         <td>
-          <NumberInput width="60px"
+          <NumberInput width="80px" step="any"
             bind:value={fpsBefore}
             onchange={() => toTransformed()}/>
           :
-          <NumberInput width="60px"
+          <NumberInput width="80px" step="any"
             bind:value={fpsAfter}
             onchange={() => toTransformed()}/>
         </td>

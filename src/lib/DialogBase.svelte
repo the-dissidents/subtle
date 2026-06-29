@@ -67,7 +67,7 @@ function startDrag(ev: MouseEvent) {
 let resolve: ((btn: string) => void) | undefined;
 
 export async function showModal() {
-  return new Promise((r) => {
+  return new Promise<string>((r) => {
     resolve = (btn) => {
       Debug.debug('dialog returning', btn);
       r(btn);

@@ -138,7 +138,7 @@ export const Debug: {
             return true;
         });
         window.addEventListener('unhandledrejection', async (ev) => {
-            ev.preventDefault();
+            // ev.preventDefault();
             if (!HasStacktrace.has(ev.reason)) {
                 Debug.error(`Unhandled rejection`, ev.reason);
             }
@@ -198,7 +198,7 @@ export const Debug: {
     early(file?: string, func?: string, line?: number): void {
         func ??= 'unknown';
         file ??= '?';
-        callLog(LogLevel.Info, `<${func}> returned early ` 
+        callLog(LogLevel.Info, `<${func}> returned early `
             + (line ? `at line ${line}` : '(no location info)'), file);
     },
     never(x?: never): never {
