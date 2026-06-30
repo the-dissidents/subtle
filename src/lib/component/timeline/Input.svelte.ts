@@ -314,11 +314,11 @@ class CreateEntry extends TimelineAction {
     entry: SubtitleEntry;
     style: SubtitleStyle;
 
-    constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, style_: SubtitleStyle) {
+    constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, style: SubtitleStyle) {
         super(self, layout, e0);
         const startPos = this.self.alignmentLine?.pos ?? this.origPos;
-        this.entry = Editing.insertAtTime(startPos, startPos, style_);
-        this.style = style_;
+        this.entry = Editing.insertAtTime(startPos, startPos, style);
+        this.style = style;
     }
 
     onDrag(offsetX: number, _offsetY: number): void {
@@ -331,6 +331,7 @@ class CreateEntry extends TimelineAction {
     async onDragEnd() {
         this.self.currentAction = undefined;
         if (this.entry.end == this.entry.start) {
+            // we assume this is a mistake and treat it like a cancelled action
             await this.onDragInterrupted();
         } else {
             if (get(Editing.useUntimedForNewEntires)) {
@@ -714,7 +715,8 @@ export class TimelineInput {
         return undefined;
     }
 
-    #initializeDrag(
+    // initiate various drag actions (move, resize, drag-seam)
+    #initiateDrag(
         e0: MouseEvent, afterEnd: () => Promise<void>, underMouse: SubtitleEntry[]
     ) {
         const sels = [...this.selection];
@@ -838,50 +840,42 @@ export class TimelineInput {
                     return true;
                 }
 
-                let afterEnd = async () => {};
                 // left-clicked on something
-                // renew selection
                 if (e0.getModifierState(Basic.ctrlKey)) {
-                    // multiple select. Only the first entry counts
                     if (!this.selection.has(underMouse[0])) {
+                        // add entry to multiple selection
                         this.selection.add(underMouse[0]);
-                        void this.dispatchSelectionChanged();
-                        this.manager.requestRender();
-                    } else afterEnd = async () => {
-                        // if hasn't dragged
+                    } else {
+                        // remove entry
                         this.selection.delete(underMouse[0]);
-                        await this.dispatchSelectionChanged();
-                        this.manager.requestRender();
                     }
+                    // maybe we should await here but we can't :(
+                    void this.dispatchSelectionChanged();
+                    this.manager.requestRender();
                     return false;
                 } else {
-                    // single select
-                    let selected = underMouse[0];
-                    if (this.selection.size > 1) {
-                        afterEnd = async () => {
-                            this.selection.clear();
-                            this.selection.add(selected);
-                            await Editing.selectEntry(selected,
-                                SelectMode.Single, ChangeCause.Timeline);
-                        };
-                    } else {
-                        // cycle through the overlapping entries under the cursor
-                        const one = [...this.selection][0];
-                        selected = underMouse[(underMouse.indexOf(one) + 1) % underMouse.length];
+                    const selected = underMouse[0];
+
+                    if (!this.selection.has(underMouse[0])) {
+                        // reset single select
                         this.selection.clear();
                         this.selection.add(selected);
+                        // maybe we should await here but we can't :(
                         void Editing.selectEntry(selected,
                             SelectMode.Single, ChangeCause.Timeline);
                     }
-                    this.manager.requestRender();
 
+                    // split
                     if (TimelineHandle.currentMode.get() == 'split') {
                         const split = SplitEntry.create(this, this.layout, e0, selected);
                         if (!split) return false;
                         this.currentAction = split;
                         return true;
                     }
-                    return this.#initializeDrag(e0, afterEnd, underMouse);
+                    // non-split
+                    // Currently we don't have any drag-end logic. There used to be a feature where, when there are multiple overlapping entries under the mouse position, clicking would cycle through them when single-selecting (this happens at drag-end if no other action such as dragging has happened). We removed it because it's tricky to make it coherent with other actions.
+                    this.manager.requestRender();
+                    return this.#initiateDrag(e0, async () => {}, underMouse);
                 }
             }
         }
