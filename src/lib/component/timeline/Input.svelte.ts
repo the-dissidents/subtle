@@ -623,29 +623,92 @@ export class TimelineInput {
         return this.alignmentLine?.pos ?? newPos;
     }
 
+    #hitTest(e: MouseEvent) {
+        const inLeftColumn = e.offsetX < this.layout.leftColumnWidth;
+        const inHeader = e.offsetY < TimelineLayout.HEADER_HEIGHT;
+
+        const underMouse = (inLeftColumn || inHeader) ? []
+            : this.layout.findEntriesByPosition(
+                e.offsetX + this.manager.scroll[0], e.offsetY + this.manager.scroll[1]);
+
+        if (inLeftColumn || inHeader || underMouse.length === 0) {
+            return {
+                inLeftColumn, inHeader,
+                underMouse: [] as SubtitleEntry[],
+                targetEntry: null as SubtitleEntry | null,
+                isOverSelected: false,
+                isMultiselect: false,
+                ctrlHeld: false,
+                singleDistL: NaN, singleDistR: NaN,
+                selDistL: NaN, selDistR: NaN,
+                seam: null as readonly [SubtitleEntry, SubtitleEntry] | null,
+                shouldCheckSeam: false,
+            };
+        }
+
+        const ctrlHeld = e.getModifierState(Basic.ctrlKey);
+        const targetEntry = underMouse.find((x) => this.selection.has(x)) ?? underMouse[0];
+        const isOverSelected = underMouse.some((x) => this.selection.has(x));
+        const isMultiselect = (this.selection.size > 1 || ctrlHeld) && isOverSelected;
+        const shouldCheckSeam = this.selection.size <= 2 || !isOverSelected;
+
+        const [w, x] = this.layout.getHorizontalPos(targetEntry, {local: true});
+        const singleDistL = e.offsetX - x;
+        const singleDistR = x + w - e.offsetX;
+
+        let selDistL = NaN, selDistR = NaN;
+        if (this.selection.size > 0) {
+            const origPos = this.convertX(e.offsetX);
+            const [first, last] = this.selectionFirstLast();
+            selDistL = (origPos - first.start) * this.layout.scale;
+            selDistR = (last.end - origPos) * this.layout.scale;
+        }
+
+        let seam: readonly [SubtitleEntry, SubtitleEntry] | null = null;
+        if (shouldCheckSeam) {
+            const seamArea = TimelineConfig.data.dragSeamArea;
+            if (singleDistL <= seamArea)
+                seam = this.#getConnected(e, targetEntry, 'start') ?? null;
+            if (!seam && singleDistR <= seamArea)
+                seam = this.#getConnected(e, targetEntry, 'end') ?? null;
+        }
+
+        return {
+            inLeftColumn, inHeader,
+            underMouse,
+            targetEntry,
+            isOverSelected,
+            isMultiselect,
+            ctrlHeld,
+            singleDistL, singleDistR,
+            selDistL, selDistR,
+            seam,
+            shouldCheckSeam,
+        };
+    }
+
     #onMouseMove(e: MouseEvent) {
         const canvas = this.manager.canvas;
         canvas.style.cursor = 'default';
 
-        if (e.offsetX < this.layout.leftColumnWidth)
-            return;
-
         if (this.currentAction?.onMouseMove(e))
             return;
 
-        if (e.offsetY < TimelineLayout.HEADER_HEIGHT) {
+        const h = this.#hitTest(e);
+
+        if (h.inLeftColumn)
+            return;
+
+        if (h.inHeader) {
             canvas.style.cursor = 'col-resize';
             return;
         }
-
-        const under = this.layout.findEntriesByPosition(
-            e.offsetX + this.manager.scroll[0], e.offsetY + this.manager.scroll[1]);
 
         if (TimelineHandle.currentMode.get() == 'split') {
             this.makeAlignmentLine(e.offsetX, {always: true});
             return;
         }
-        if (TimelineHandle.currentMode.get() == 'create' && under.length == 0) {
+        if (TimelineHandle.currentMode.get() == 'create' && h.underMouse.length == 0) {
             this.makeAlignmentLine(e.offsetX, {always: true, includeSelection: true});
             return;
         }
@@ -655,49 +718,28 @@ export class TimelineInput {
             this.manager.requestRender();
         }
 
-        if (under.length == 0)
+        if (h.underMouse.length == 0)
             return;
+
         canvas.style.cursor = 'move';
 
-        const multiselecting = Basic.ctrlKey == 'Meta' ? e.metaKey : e.ctrlKey;
         const resizeArea = TimelineConfig.data.dragResizeArea;
-        const seamArea = TimelineConfig.data.dragSeamArea;
+        const ent = h.targetEntry!;
 
-        const ent = under.find((x) => this.selection.has(x)) ?? under[0];
         if ((ent.end - ent.start) * this.layout.scale < resizeArea * 2)
-            return; // use move when entry is too small
+            return;
 
-        let distL: number, distR: number;
-        if ((this.selection.size > 1 || multiselecting)
-         && under.some((x) => this.selection.has(x)))
-        {
-            if (multiselecting) {
-                // only show move cursor
-                return;
-            } else {
-                const [first, last] = this.selectionFirstLast();
-                const [ _, x1] = this.layout.getHorizontalPos(first, {local: true});
-                const [w2, x2] = this.layout.getHorizontalPos(last, {local: true});
-                distL = under.includes(first) ? e.offsetX - x1 : Infinity;
-                distR = under.includes(last) ? x2 + w2 - e.offsetX : Infinity;
-            }
-        } else {
-            const [w, x] = this.layout.getHorizontalPos(ent, {local: true});
-            distL = e.offsetX - x;
-            distR = x + w - e.offsetX;
-            const seam =
-                    distL < seamArea ? this.#getConnected(e, ent, 'start')
-                : distR < seamArea ? this.#getConnected(e, ent, 'end')
-                : undefined;
-            if (seam) {
-                canvas.style.cursor = 'col-resize';
-                return;
-            }
+        if (h.isMultiselect && h.ctrlHeld)
+            return;
+
+        if (h.seam) {
+            canvas.style.cursor = 'col-resize';
+            return;
         }
 
-        if (distL < resizeArea)
+        if (h.selDistL <= resizeArea)
             canvas.style.cursor = 'e-resize';
-        else if (distR < resizeArea)
+        else if (h.selDistR <= resizeArea)
             canvas.style.cursor = 'w-resize';
     }
 
@@ -713,61 +755,6 @@ export class TimelineInput {
                 return [current, ent] as const;
         }
         return undefined;
-    }
-
-    // initiate various drag actions (move, resize, drag-seam)
-    #initiateDrag(
-        e0: MouseEvent, afterEnd: () => Promise<void>, underMouse: SubtitleEntry[]
-    ) {
-        const sels = [...this.selection];
-        if (sels.length == 0) return false;
-
-        // save original positions
-        const origPositions = new Map(
-            sels.map((x) => [x, { start: x.start, end: x.end }]));
-        const [first, last] = this.selectionFirstLast();
-        const origPos = this.convertX(e0.offsetX);
-
-        const ent = underMouse.find((x) => this.selection.has(x)) ?? underMouse[0];
-        if ((ent.end - ent.start) * this.layout.scale < TimelineConfig.data.dragResizeArea * 2) {
-            // use move when entry is too small
-            this.currentAction = new DragMove(this, this.layout, e0,
-                origPositions, afterEnd, underMouse);
-            return true;
-        }
-
-        // drag seam
-        if (sels.length <= 2 || !this.selection.has(ent)) {
-            const distL = (origPos - ent.start) * this.layout.scale,
-                  distR = (ent.end - origPos) * this.layout.scale;
-            const seams =
-                  distL <= TimelineConfig.data.dragSeamArea ? this.#getConnected(e0, ent, 'start')
-                : distR <= TimelineConfig.data.dragSeamArea ? this.#getConnected(e0, ent, 'end')
-                : undefined;
-            if (seams) {
-                // drag seam
-                void Editing.setSelection(seams);
-                this.currentAction = new DragSeam(this, this.layout, e0, seams[0], seams[1], afterEnd);
-                return true;
-            }
-        }
-
-        const distL = (origPos - first.start) * this.layout.scale,
-                    distR = (last.end - origPos) * this.layout.scale;
-        if (distL > TimelineConfig.data.dragResizeArea
-            && distR > TimelineConfig.data.dragResizeArea)
-        {
-            // drag-move
-            this.currentAction = new DragMove(this, this.layout, e0,
-                origPositions, afterEnd, underMouse);
-            return true;
-        } else {
-            // drag-resize
-            this.currentAction = new DragResize(this, this.layout, e0,
-                origPositions, afterEnd,
-                distL <= TimelineConfig.data.dragResizeArea ? 'start' : 'end');
-            return true;
-        }
     }
 
     #onMouseDown(e: MouseEvent) {
@@ -788,7 +775,9 @@ export class TimelineInput {
     }
 
     #canBeginDrag(e0: MouseEvent): boolean {
-        if (e0.offsetX < this.layout.leftColumnWidth)
+        const h = this.#hitTest(e0);
+
+        if (h.inLeftColumn)
             return false;
 
         if (this.currentAction !== undefined)
@@ -796,91 +785,117 @@ export class TimelineInput {
 
         this.#registerInterruptKey();
 
-        // select
-        if (e0.offsetY < TimelineLayout.HEADER_HEIGHT) {
+        if (h.inHeader) {
             this.currentAction = new MoveCursor(this, this.layout, e0);
             void this.#onDrag(e0.offsetX, e0.offsetY, e0);
             return true;
-        } else {
-            const underMouse = this.layout.findEntriesByPosition(
-                e0.offsetX + this.manager.scroll[0], e0.offsetY + this.manager.scroll[1]);
-            if (e0.button == 1) {
-                this.currentAction = new Scale(this, this.layout, e0);
-                return true;
-            } else if (e0.button == 2) {
-                // right-clicked on something
-                // clear selection and re-select only if it's not selected
-                void (async () => {
-                    if (!underMouse.some((x) => this.selection.has(x))) {
-                        await Editing.clearSelection(ChangeCause.Timeline);
-                        await Editing.selectEntry(underMouse[0],
-                            SelectMode.Single, ChangeCause.Action);
-                    }
-                    await contextMenu();
-                })();
-                return false;
-            } else if (e0.button == 0) {
-                // left-clicked on nothing
-                if (underMouse.length == 0) {
-                    if (!e0.getModifierState(Basic.ctrlKey)) {
-                        // clear selection
-                        void Editing.clearSelection(ChangeCause.Timeline);
-                        this.selection.clear();
-                        this.manager.requestRender();
-                    }
-                    if (TimelineHandle.currentMode.get() == 'create') {
-                        // create entry
-                        const style = this.layout.getChannelFromOffsetY(e0.offsetY);
-                        if (!style) return false;
-                        this.currentAction = new CreateEntry(this, this.layout, e0, style);
-                        return true;
-                    } else {
-                        this.currentAction = new BoxSelect(this, this.layout, e0);
-                    }
-                    return true;
-                }
-
-                // left-clicked on something
-                if (e0.getModifierState(Basic.ctrlKey)) {
-                    if (!this.selection.has(underMouse[0])) {
-                        // add entry to multiple selection
-                        this.selection.add(underMouse[0]);
-                    } else {
-                        // remove entry
-                        this.selection.delete(underMouse[0]);
-                    }
-                    // maybe we should await here but we can't :(
-                    void this.dispatchSelectionChanged();
-                    this.manager.requestRender();
-                    return false;
-                } else {
-                    const selected = underMouse[0];
-
-                    if (!this.selection.has(underMouse[0])) {
-                        // reset single select
-                        this.selection.clear();
-                        this.selection.add(selected);
-                        // maybe we should await here but we can't :(
-                        void Editing.selectEntry(selected,
-                            SelectMode.Single, ChangeCause.Timeline);
-                    }
-
-                    // split
-                    if (TimelineHandle.currentMode.get() == 'split') {
-                        const split = SplitEntry.create(this, this.layout, e0, selected);
-                        if (!split) return false;
-                        this.currentAction = split;
-                        return true;
-                    }
-                    // non-split
-                    // Currently we don't have any drag-end logic. There used to be a feature where, when there are multiple overlapping entries under the mouse position, clicking would cycle through them when single-selecting (this happens at drag-end if no other action such as dragging has happened). We removed it because it's tricky to make it coherent with other actions.
-                    this.manager.requestRender();
-                    return this.#initiateDrag(e0, async () => {}, underMouse);
-                }
-            }
         }
 
-        Debug.assert(false);
+        if (e0.button == 1) {
+            this.currentAction = new Scale(this, this.layout, e0);
+            return true;
+        }
+
+        if (e0.button == 2) {
+            void (async () => {
+                if (h.underMouse.length > 0
+                 && !h.underMouse.some((x) => this.selection.has(x)))
+                {
+                    await Editing.clearSelection(ChangeCause.Timeline);
+                    await Editing.selectEntry(h.underMouse[0],
+                        SelectMode.Single, ChangeCause.Action);
+                }
+                await contextMenu();
+            })();
+            return false;
+        }
+
+        if (e0.button != 0)
+            Debug.assert(false);
+
+        if (h.underMouse.length == 0) {
+            if (!e0.getModifierState(Basic.ctrlKey)) {
+                void Editing.clearSelection(ChangeCause.Timeline);
+                this.selection.clear();
+                this.manager.requestRender();
+            }
+            if (TimelineHandle.currentMode.get() == 'create') {
+                const style = this.layout.getChannelFromOffsetY(e0.offsetY);
+                if (!style) return false;
+                this.currentAction = new CreateEntry(this, this.layout, e0, style);
+            } else {
+                this.currentAction = new BoxSelect(this, this.layout, e0);
+            }
+            return true;
+        }
+
+        if (e0.getModifierState(Basic.ctrlKey)) {
+            if (!this.selection.has(h.underMouse[0]))
+                this.selection.add(h.underMouse[0]);
+            else
+                this.selection.delete(h.underMouse[0]);
+            void this.dispatchSelectionChanged();
+            this.manager.requestRender();
+            return false;
+        }
+
+        const selected = h.underMouse[0];
+
+        if (!this.selection.has(h.underMouse[0])) {
+            this.selection.clear();
+            this.selection.add(selected);
+            void Editing.selectEntry(selected,
+                SelectMode.Single, ChangeCause.Timeline);
+        }
+
+        if (TimelineHandle.currentMode.get() == 'split') {
+            const split = SplitEntry.create(this, this.layout, e0, selected);
+            if (!split) return false;
+            this.currentAction = split;
+            return true;
+        }
+
+        this.manager.requestRender();
+
+        // Currently we don't have any drag-end logic. There used to be a feature where,
+        // when there are multiple overlapping entries under the mouse position, clicking
+        // would cycle through them when single-selecting (this happens at drag-end if no
+        // other action such as dragging has happened). We removed it because it's tricky
+        // to make it coherent with other actions.
+
+        const sels = [...this.selection];
+        if (sels.length == 0) return false;
+
+        const origPositions = new Map(
+            sels.map((x) => [x, { start: x.start, end: x.end }]));
+        const afterEnd = async () => {};
+
+        if ((h.targetEntry!.end - h.targetEntry!.start) * this.layout.scale
+         < TimelineConfig.data.dragResizeArea * 2)
+        {
+            this.currentAction = new DragMove(this, this.layout, e0,
+                origPositions, afterEnd, h.underMouse);
+            return true;
+        }
+
+        if (h.seam) {
+            void Editing.setSelection(h.seam);
+            this.currentAction = new DragSeam(this, this.layout, e0,
+                h.seam[0], h.seam[1], afterEnd);
+            return true;
+        }
+
+        if (h.selDistL > TimelineConfig.data.dragResizeArea
+            && h.selDistR > TimelineConfig.data.dragResizeArea)
+        {
+            this.currentAction = new DragMove(this, this.layout, e0,
+                origPositions, afterEnd, h.underMouse);
+        } else {
+            this.currentAction = new DragResize(this, this.layout, e0,
+                origPositions, afterEnd,
+                h.selDistL <= TimelineConfig.data.dragResizeArea ? 'start' : 'end');
+        }
+        return true;
     }
 
     async #onDrag(offsetX: number, offsetY: number, ev: MouseEvent) {
