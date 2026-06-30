@@ -696,7 +696,7 @@ export class TimelineInput {
     }
 
     #onMouseMove(e: MouseEvent) {
-        this.#setCursor('help');
+        this.#setCursor('default');
 
         if (this.currentAction?.onMouseMove(e))
             return;
