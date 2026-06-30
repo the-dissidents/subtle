@@ -163,13 +163,17 @@ export namespace RichText {
         const left = str.length - str.trimStart().length;
         const right = str.length - str.trimEnd().length;
         if (left == 0 && right == 0) return rt;
-        return RichText.substring(rt, left, str.length - left - right);
+        const start = left;
+        const end = str.length - right;
+        if (start >= end) return "";
+        return RichText.substring(rt, start, end);
     }
 
     export function trimStart(rt: RichText) {
         const str = RichText.toString(rt);
         const left = str.length - str.trimStart().length;
         if (left == 0) return rt;
+        if (left >= str.length) return "";
         return RichText.substring(rt, left);
     }
 
@@ -177,6 +181,7 @@ export namespace RichText {
         const str = RichText.toString(rt);
         const right = str.length - str.trimEnd().length;
         if (right == 0) return rt;
+        if (right >= str.length) return "";
         return RichText.substring(rt, 0, str.length - right);
     }
 
@@ -198,7 +203,7 @@ export namespace RichText {
                 if (typeof last === 'object' && sameAttrs(last.attrs, x.attrs))
                     last.content += x.content;
                 else
-                    result.push(x);
+                    result.push({ ...x });
             }
         });
         return result.length == 0 ? '' : result;
@@ -219,10 +224,12 @@ export namespace RichText {
     }
 
     export function edit(rt: RichText, index: number, deleteCount: number, insert: RichText = "") {
+        const totalLength = RichText.length(rt);
+        const end = Math.min(index + deleteCount, totalLength);
         return RichText.concat(
             RichText.substring(rt, 0, index),
             insert,
-            RichText.substring(rt, index + deleteCount)
+            RichText.substring(rt, end)
         );
     }
 
