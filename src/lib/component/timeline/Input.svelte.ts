@@ -627,26 +627,18 @@ export class TimelineInput {
         const inLeftColumn = e.offsetX < this.layout.leftColumnWidth;
         const inHeader = e.offsetY < TimelineLayout.HEADER_HEIGHT;
 
+        const ctrlHeld = e.getModifierState(Basic.ctrlKey);
         const underMouse = (inLeftColumn || inHeader) ? []
             : this.layout.findEntriesByPosition(
                 e.offsetX + this.manager.scroll[0], e.offsetY + this.manager.scroll[1]);
 
         if (inLeftColumn || inHeader || underMouse.length === 0) {
             return {
-                inLeftColumn, inHeader,
-                underMouse: [] as SubtitleEntry[],
-                targetEntry: null as SubtitleEntry | null,
-                isOverSelected: false,
-                isMultiselect: false,
-                ctrlHeld: false,
-                singleDistL: NaN, singleDistR: NaN,
-                selDistL: NaN, selDistR: NaN,
-                seam: null as readonly [SubtitleEntry, SubtitleEntry] | null,
-                shouldCheckSeam: false,
+                inLeftColumn, inHeader, ctrlHeld,
+                hover: undefined
             };
         }
 
-        const ctrlHeld = e.getModifierState(Basic.ctrlKey);
         const targetEntry = underMouse.find((x) => this.selection.has(x)) ?? underMouse[0];
         const isOverSelected = underMouse.some((x) => this.selection.has(x));
         const isMultiselect = (this.selection.size > 1 || ctrlHeld) && isOverSelected;
@@ -656,12 +648,15 @@ export class TimelineInput {
         const singleDistL = e.offsetX - x;
         const singleDistR = x + w - e.offsetX;
 
-        let selDistL = NaN, selDistR = NaN;
-        if (this.selection.size > 0) {
-            const origPos = this.convertX(e.offsetX);
+        let selDistL: number, selDistR: number;
+        const origPos = this.convertX(e.offsetX);
+        if (isOverSelected) {
             const [first, last] = this.selectionFirstLast();
             selDistL = (origPos - first.start) * this.layout.scale;
             selDistR = (last.end - origPos) * this.layout.scale;
+        } else {
+            selDistL = (origPos - targetEntry.start) * this.layout.scale;
+            selDistR = (targetEntry.end - origPos) * this.layout.scale;
         }
 
         let seam: readonly [SubtitleEntry, SubtitleEntry] | null = null;
@@ -674,22 +669,34 @@ export class TimelineInput {
         }
 
         return {
-            inLeftColumn, inHeader,
-            underMouse,
-            targetEntry,
-            isOverSelected,
-            isMultiselect,
-            ctrlHeld,
-            singleDistL, singleDistR,
-            selDistL, selDistR,
-            seam,
-            shouldCheckSeam,
+            inLeftColumn, inHeader, ctrlHeld,
+            hover: {
+                underMouse,
+                targetEntry,
+                isOverSelected,
+                isMultiselect,
+                singleDistL, singleDistR,
+                selDistL, selDistR,
+                seam,
+                shouldCheckSeam,
+            }
         };
     }
 
+    #targetCursor: string | undefined;
+    #setCursor(c: string) {
+        if (this.#targetCursor === undefined) {
+            requestAnimationFrame(() => {
+                Debug.assert(this.#targetCursor !== undefined);
+                this.manager.canvas.style.cursor = this.#targetCursor;
+                this.#targetCursor = undefined;
+            });
+        }
+        this.#targetCursor = c;
+    }
+
     #onMouseMove(e: MouseEvent) {
-        const canvas = this.manager.canvas;
-        canvas.style.cursor = 'default';
+        this.#setCursor('help');
 
         if (this.currentAction?.onMouseMove(e))
             return;
@@ -700,7 +707,7 @@ export class TimelineInput {
             return;
 
         if (h.inHeader) {
-            canvas.style.cursor = 'col-resize';
+            this.#setCursor('col-resize');
             return;
         }
 
@@ -708,7 +715,8 @@ export class TimelineInput {
             this.makeAlignmentLine(e.offsetX, {always: true});
             return;
         }
-        if (TimelineHandle.currentMode.get() == 'create' && h.underMouse.length == 0) {
+        if (TimelineHandle.currentMode.get() == 'create' && !h.hover) {
+            this.#setCursor('crosshair');
             this.makeAlignmentLine(e.offsetX, {always: true, includeSelection: true});
             return;
         }
@@ -718,29 +726,28 @@ export class TimelineInput {
             this.manager.requestRender();
         }
 
-        if (h.underMouse.length == 0)
+        if (!h.hover)
             return;
 
-        canvas.style.cursor = 'move';
+        this.#setCursor('wait');
 
         const resizeArea = TimelineConfig.data.dragResizeArea;
-        const ent = h.targetEntry!;
+        if (h.hover.selDistL > resizeArea && h.hover.selDistR > resizeArea)
+            this.#setCursor('move');
+        else this.#setCursor(h.hover.selDistL <= TimelineConfig.data.dragResizeArea
+            ? 'e-resize' : 'w-resize');
 
-        if ((ent.end - ent.start) * this.layout.scale < resizeArea * 2)
+        // const ent = h.hover.targetEntry;
+        // if ((ent.end - ent.start) * this.layout.scale < resizeArea * 2)
+        //     return;
+
+        if (h.hover.isMultiselect && h.ctrlHeld)
             return;
 
-        if (h.isMultiselect && h.ctrlHeld)
-            return;
-
-        if (h.seam) {
-            canvas.style.cursor = 'col-resize';
+        if (h.hover.seam) {
+            this.#setCursor('col-resize');
             return;
         }
-
-        if (h.selDistL <= resizeArea)
-            canvas.style.cursor = 'e-resize';
-        else if (h.selDistR <= resizeArea)
-            canvas.style.cursor = 'w-resize';
     }
 
     #getConnected(e0: MouseEvent, current: SubtitleEntry, pos: 'start' | 'end') {
@@ -798,11 +805,11 @@ export class TimelineInput {
 
         if (e0.button == 2) {
             void (async () => {
-                if (h.underMouse.length > 0
-                 && !h.underMouse.some((x) => this.selection.has(x)))
+                if (h.hover
+                 && !h.hover.underMouse.some((x) => this.selection.has(x)))
                 {
                     await Editing.clearSelection(ChangeCause.Timeline);
-                    await Editing.selectEntry(h.underMouse[0],
+                    await Editing.selectEntry(h.hover.underMouse[0],
                         SelectMode.Single, ChangeCause.Action);
                 }
                 await contextMenu();
@@ -813,7 +820,7 @@ export class TimelineInput {
         if (e0.button != 0)
             Debug.assert(false);
 
-        if (h.underMouse.length == 0) {
+        if (!h.hover) {
             if (!e0.getModifierState(Basic.ctrlKey)) {
                 void Editing.clearSelection(ChangeCause.Timeline);
                 this.selection.clear();
@@ -829,27 +836,27 @@ export class TimelineInput {
             return true;
         }
 
-        if (e0.getModifierState(Basic.ctrlKey)) {
-            if (!this.selection.has(h.underMouse[0]))
-                this.selection.add(h.underMouse[0]);
+        const target = h.hover.targetEntry;
+
+        if (h.ctrlHeld) {
+            if (!this.selection.has(target))
+                this.selection.add(target);
             else
-                this.selection.delete(h.underMouse[0]);
+                this.selection.delete(target);
             void this.dispatchSelectionChanged();
             this.manager.requestRender();
             return false;
         }
 
-        const selected = h.underMouse[0];
-
-        if (!this.selection.has(h.underMouse[0])) {
+        if (!h.hover.isOverSelected) {
             this.selection.clear();
-            this.selection.add(selected);
-            void Editing.selectEntry(selected,
+            this.selection.add(target);
+            void Editing.selectEntry(target,
                 SelectMode.Single, ChangeCause.Timeline);
         }
 
         if (TimelineHandle.currentMode.get() == 'split') {
-            const split = SplitEntry.create(this, this.layout, e0, selected);
+            const split = SplitEntry.create(this, this.layout, e0, target);
             if (!split) return false;
             this.currentAction = split;
             return true;
@@ -870,30 +877,30 @@ export class TimelineInput {
             sels.map((x) => [x, { start: x.start, end: x.end }]));
         const afterEnd = async () => {};
 
-        if ((h.targetEntry!.end - h.targetEntry!.start) * this.layout.scale
+        if ((target.end - target.start) * this.layout.scale
          < TimelineConfig.data.dragResizeArea * 2)
         {
             this.currentAction = new DragMove(this, this.layout, e0,
-                origPositions, afterEnd, h.underMouse);
+                origPositions, afterEnd, h.hover.underMouse);
             return true;
         }
 
-        if (h.seam) {
-            void Editing.setSelection(h.seam);
+        if (h.hover.seam) {
+            void Editing.setSelection(h.hover.seam);
             this.currentAction = new DragSeam(this, this.layout, e0,
-                h.seam[0], h.seam[1], afterEnd);
+                h.hover.seam[0], h.hover.seam[1], afterEnd);
             return true;
         }
 
-        if (h.selDistL > TimelineConfig.data.dragResizeArea
-            && h.selDistR > TimelineConfig.data.dragResizeArea)
+        if (h.hover.selDistL > TimelineConfig.data.dragResizeArea
+            && h.hover.selDistR > TimelineConfig.data.dragResizeArea)
         {
             this.currentAction = new DragMove(this, this.layout, e0,
-                origPositions, afterEnd, h.underMouse);
+                origPositions, afterEnd, h.hover.underMouse);
         } else {
             this.currentAction = new DragResize(this, this.layout, e0,
                 origPositions, afterEnd,
-                h.selDistL <= TimelineConfig.data.dragResizeArea ? 'start' : 'end');
+                h.hover.selDistL <= TimelineConfig.data.dragResizeArea ? 'start' : 'end');
         }
         return true;
     }

@@ -188,6 +188,7 @@ h5 {
   display: block;
   user-select: none; -webkit-user-select: none;
   -moz-user-select: none; -ms-user-select: none;
+  -webkit-user-drag: none;
 }
 
 .button-container {

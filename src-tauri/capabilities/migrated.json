@@ -16,6 +16,7 @@
     "core:window:allow-set-size",
     "core:window:allow-set-position",
     "core:window:allow-set-theme",
+    "core:window:allow-set-cursor-icon",
     "os:default",
     "fs:default",
     "clipboard-manager:allow-read-text",
