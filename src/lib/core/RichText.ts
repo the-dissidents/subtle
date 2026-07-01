@@ -118,16 +118,14 @@ export namespace RichText {
 
     export function substring(rt: RichText, start: number, end?: number): RichText {
         if (typeof rt === 'string')
-            return [rt.substring(start, end)];
+            return rt.substring(start, end);
 
         Debug.assert(!Number.isNaN(start) && start >= 0);
 
         const totalLength = RichText.length(rt);
         end = end ?? totalLength;
         Debug.assert(!Number.isNaN(end) && end >= 0);
-        Debug.assert(start <= end);
-
-        if (start === end) return "";
+        if (start >= end) return "";
 
         const result: RichTextNode[] = [];
         let currentPos = 0;

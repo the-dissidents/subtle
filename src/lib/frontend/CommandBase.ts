@@ -170,8 +170,7 @@ export class UICommand<TState = void> {
 
     async start(key: KeyBinding | null = null) {
         // don't start if already running
-        if (this.activated)
-            return Debug.early(`already running: ${this.name}`);
+        if (this.activated) return Debug.early();
         if (!this.isApplicable) return false;
 
         await Debug.trace('executing command', this.name);

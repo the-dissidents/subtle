@@ -401,7 +401,7 @@ class SplitEntry extends TimelineAction {
         const textLength = RichText.length(target.texts.get(style)!);
         const x = (split.breakPosition - this.self.convertX(offsetX)) / (target.end - target.start)
             + this.baseProportion;
-        const pos = Math.max(1, Math.min(textLength - 1, Math.floor(x * textLength)));
+        const pos = Math.max(0, Math.min(textLength, Math.floor(x * textLength)));
         split.positions.set(style, pos);
         this.layout.manager.requestRender();
     }
@@ -712,6 +712,7 @@ export class TimelineInput {
         }
 
         if (TimelineHandle.currentMode.get() == 'split') {
+            if (h.hover) this.#setCursor('text');
             this.makeAlignmentLine(e.offsetX, {always: true});
             return;
         }

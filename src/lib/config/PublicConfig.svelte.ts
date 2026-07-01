@@ -111,7 +111,7 @@ export class PublicConfig {
     constructor(public readonly name: string) {}
 
     addGroup(name: string, group: PublicConfigGroup<PublicConfigGroupDefinition>) {
-        Debug.assert(!this.#initialized);
+        if (this.#initialized) return Debug.early();
         Debug.assert(this.groups[name] === undefined, `config group ${name} already exists`);
         this.groups[name] = group;
     }
