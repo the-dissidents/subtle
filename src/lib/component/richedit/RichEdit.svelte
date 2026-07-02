@@ -20,6 +20,7 @@
   import { Popup } from "@the_dissidents/svelte-ui";
   import type { Diagnostic } from "../../linter/Common";
   import { ArrowRightIcon } from "@lucide/svelte";
+  import { Basic } from "../../Basic";
 
   type DIV = SvelteHTMLElements['div'];
 
@@ -93,9 +94,10 @@
   const italic = toggleMark(RichTextSchema.marks.italic);
   const underline = toggleMark(RichTextSchema.marks.underline);
 
-  const lintTask = new RestartableTask(([linter]: [CompiledLintProfile]) => {
+  const lintTask = new RestartableTask(async ([linter]: [CompiledLintProfile]) => {
     if (!view) return;
     const diagnostics = linter.check(RichText.toString(text));
+    await Basic.wait(0); // prevent nested transaction
     view.dispatch(view.state.tr.setMeta(LinterKey, diagnostics));
   }, { debounceMs: 0 });
 
