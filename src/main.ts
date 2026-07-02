@@ -1,4 +1,4 @@
-import "./ochu.css";
+import "./uchu.css";
 import "./styles.scss";
 import "./prosemirror.css";
 import App from "./App.svelte";

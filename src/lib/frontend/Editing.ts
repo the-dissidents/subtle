@@ -143,10 +143,10 @@ export const Editing = {
     },
 
     insertAtTime(start: number, end: number, style: SubtitleStyle) {
-        let index = Source.subs.entries.length;
+        let index = 0;
         let beforeTime = -Infinity;
         Source.subs.entries.forEach((ent, i) => {
-            if (ent.texts.has(style) && ent.end <= start && ent.end >= beforeTime) {
+            if (ent.end <= start && ent.end >= beforeTime) {
                 beforeTime = ent.end;
                 index = i + 1;
             }

@@ -727,23 +727,21 @@ export class TimelineInput {
             this.manager.requestRender();
         }
 
-        if (!h.hover)
+        if (!h.hover || h.ctrlHeld)
             return;
 
-        this.#setCursor('wait');
-
+        const ent = h.hover.targetEntry;
         const resizeArea = TimelineConfig.data.dragResizeArea;
+
+        if ((ent.end - ent.start) * this.layout.scale < resizeArea * 2) {
+            this.#setCursor('move');
+            return;
+        }
+
         if (h.hover.selDistL > resizeArea && h.hover.selDistR > resizeArea)
             this.#setCursor('move');
         else this.#setCursor(h.hover.selDistL <= TimelineConfig.data.dragResizeArea
             ? 'e-resize' : 'w-resize');
-
-        // const ent = h.hover.targetEntry;
-        // if ((ent.end - ent.start) * this.layout.scale < resizeArea * 2)
-        //     return;
-
-        if (h.hover.isMultiselect && h.ctrlHeld)
-            return;
 
         if (h.hover.seam) {
             this.#setCursor('col-resize');
