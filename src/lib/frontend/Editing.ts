@@ -74,7 +74,6 @@ function updateFocusedStyle() {
             : Source.subs.styles.find((x) => focused.texts.has(x));
         Debug.assert(first !== undefined);
         Editing.focused.style.set(first);
-        void Debug.debug('changed focused style to', first.name);
         return first;
     }
     return style;

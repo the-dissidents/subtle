@@ -12,8 +12,7 @@ import { TimelineHandle } from "./Input.svelte";
 import { get } from "svelte/store";
 import { RichText } from "../../core/RichText";
 
-const PRELOAD_MARGIN = 3;
-const PRELOAD_MARGIN_FACTOR = 0.1;
+const PRELOAD_MARGIN = 10;
 const CURSOR_SAFE_AREA_RIGHT_MARGIN = 50;
 
 export type Box = {
@@ -321,12 +320,12 @@ export class TimelineLayout {
 
     const left = this.offset;
     const right = this.offset + this.width / this.scale;
-    const preload = Math.min(PRELOAD_MARGIN, (right - left) * PRELOAD_MARGIN_FACTOR);
     if (s.isSampling) {
-      if (s.sampleProgress + preload < left)
+      if (s.sampleProgress + PRELOAD_MARGIN < left) {
+        void Debug.trace('cancelling', s.sampleProgress);
         s.tryCancelSampling();
-      else
-        s.changeSamplingEnd(Math.min(s.sampleEnd, right + preload))
+      } else
+        s.changeSamplingEnd(Math.min(s.sampleEnd, right + PRELOAD_MARGIN))
       return;
     }
 
@@ -346,7 +345,7 @@ export class TimelineLayout {
     let start = (gapStart + i) / resolution + s.startTime;
     let end = gapEnd > 0
       ? (gapEnd + i) / resolution + s.startTime
-      : right + preload;
+      : right + PRELOAD_MARGIN;
 
     if (start < s.startTime)
       start = s.startTime;

@@ -13,6 +13,7 @@ import { TimelineRenderer } from "./Render.svelte";
 import { AlignCenterVerticalIcon, FrameIcon, MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
 
 import { Popup, Tooltip } from '@the_dissidents/svelte-ui';
+  import { Basic } from '../../Basic';
 
 let currentMode = TimelineHandle.currentMode;
 let useSnap = TimelineHandle.useSnap;
@@ -75,7 +76,10 @@ function updateSnapOverride(ev: KeyboardEvent) {
       <label>
         <input type="checkbox" class="button"
           checked={$currentMode == 'select'}
-          onclick={() => $currentMode = 'select'} />
+          onclick={(e) => {
+            e.preventDefault();
+            void Basic.wait(0).then(() => $currentMode = 'select');
+          }} />
         <MousePointerIcon />
       </label>
     </Tooltip>
@@ -83,7 +87,10 @@ function updateSnapOverride(ev: KeyboardEvent) {
       <label>
         <input type="checkbox" class="button"
           checked={$currentMode == 'create'}
-          onclick={() => $currentMode = 'create'} />
+          onclick={(e) => {
+            e.preventDefault();
+            void Basic.wait(0).then(() => $currentMode = 'create');
+          }} />
         <PlusSquareIcon />
       </label>
     </Tooltip>
@@ -91,7 +98,10 @@ function updateSnapOverride(ev: KeyboardEvent) {
       <label>
         <input type="checkbox" class="button"
           checked={$currentMode == 'split'}
-          onclick={() => $currentMode = 'split'} />
+          onclick={(e) => {
+            e.preventDefault();
+            void Basic.wait(0).then(() => $currentMode = 'split');
+          }} />
         <ScissorsIcon />
       </label>
     </Tooltip>

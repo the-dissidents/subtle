@@ -262,7 +262,7 @@ export class MMedia {
         this.#outSize = [width, height];
     }
 
-    async sampleAutomatic(targetWorkingTimeMs: number) {
+    async sampleAutomatic(targetWorkingTimeMs: number): Promise<SampleResult> {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
         let channel: Channel<MediaEvent> | undefined;

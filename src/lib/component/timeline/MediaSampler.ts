@@ -1,5 +1,5 @@
 import { OrderedMap } from "@js-sdsl/ordered-map";
-import { MMedia } from "../../API";
+import { MMedia, type SampleResult } from "../../API";
 import { InterfaceConfig } from "../../config/Groups";
 import { Debug } from "../../Debug";
 import { AggregationTree } from "../../details/AggregationTree";
@@ -158,7 +158,13 @@ export class MediaSampler {
 
         const doSampling = async () => {
             const ok = await this.#mutex.use(async () => {
-                const result = await this.media.sampleAutomatic(20);
+                let result: SampleResult;
+                try {
+                    result = await this.media.sampleAutomatic(20);
+                } catch (e) {
+                    await Debug.warn('sampling call failed, will retry:', e);
+                    return true;
+                }
                 if (result.audio) {
                     this.#sampleProgress = result.audio.endTime;
                     this.#intensity.set(result.audio.intensity, result.audio.startIndex);

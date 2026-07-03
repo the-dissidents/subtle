@@ -275,7 +275,6 @@ export class CanvasManager {
             const handlerMove = (ev: MouseEvent) => void this.#onDrag(ev);
             const handlerUp = (ev: MouseEvent) => void this.#endDrag!(ev);
             this.#endDrag = async (ev) => {
-                await Debug.info('ending drag');
                 if (!ev)
                     await this.onDragInterrupted.dispatchAndAwaitAll();
                 else if (this.#dragType == 'custom') {
@@ -298,7 +297,6 @@ export class CanvasManager {
 
             if (this.#dragType == 'custom') {
                 await this.onMouseDown.dispatchAndAwaitAll(ev, true);
-                await Debug.info('starting drag');
             }
         }
 

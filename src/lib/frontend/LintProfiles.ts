@@ -8,21 +8,13 @@ const defaultLintProfiles: [string, LintProfile][] = [
         bracketGroups: ['curlyQuotes', 'fullwidthParentheses'],
         regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useChineseWordConnector', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
-        dashes: {
-            dialog: { type: 'emDash', spaces: true, separateLines: false },
-            dash: { type: 'emDash', spaces: false, endOnly: false },
-            cjkDash: { type: 'standard' }
-        }
+        dashes: undefined
     }],
     ['简体中文（方引号）', {
         bracketGroups: ['cornerQuotes', 'fullwidthParentheses'],
         regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useChineseWordConnector', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
-        dashes: {
-            dialog: { type: 'emDash', spaces: true, separateLines: false },
-            dash: { type: 'emDash', spaces: false, endOnly: false },
-            cjkDash: { type: 'standard' }
-        }
+        dashes: undefined
     }],
     ['English (US)', {
         bracketGroups: ['curlyQuotes', 'halfwidthParentheses'],
