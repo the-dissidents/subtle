@@ -56,19 +56,13 @@ function Import-VsDevEnvironment {
         [string]$vcvars64Path
     )
 
-    $vsDir = Split-Path -Path $vcvars64Path -Parent
-    Push-Location $vsDir
-    try {
-        & cmd.exe /c "call vcvars64.bat & set" | ForEach-Object {
-            if ($_ -match '=') {
-                $pair = $_.Split('=', 2)
-                if ($pair.Length -eq 2) {
-                    Set-Item -Force -Path ("ENV:{0}" -f $pair[0]) -Value $pair[1]
-                }
+    & cmd.exe /c "call `"$vcvars64Path`" && set" | ForEach-Object {
+        if ($_ -match '=') {
+            $pair = $_.Split('=', 2)
+            if ($pair.Length -eq 2) {
+                Set-Item -Force -Path ("ENV:{0}" -f $pair[0]) -Value $pair[1]
             }
         }
-    } finally {
-        Pop-Location
     }
 
     Write-Host "`nVisual Studio developer environment variables set." -ForegroundColor Yellow
@@ -112,6 +106,77 @@ function Find-Msys2Installation {
     return $null
 }
 
+function Ensure-Msys2Packages {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Msys2Path
+    )
+
+    $pacman = Join-Path $Msys2Path 'usr\bin\pacman.exe'
+    if (-not (Test-Path $pacman)) {
+        Write-Warning "pacman not found at $pacman; skipping MSYS2 package check."
+        return
+    }
+
+    $required = [ordered]@{
+        'make'       = 'make'
+        'nasm'       = 'nasm'
+        'diff'       = 'diffutils'
+        'pkg-config' = 'pkgconf'
+    }
+
+    $missing = @()
+    foreach ($tool in $required.Keys) {
+        if (-not (Test-Path (Join-Path $Msys2Path "usr\bin\$tool.exe"))) {
+            $missing += $required[$tool]
+        }
+    }
+
+    if ($missing.Count -gt 0) {
+        $pkgs = @($missing | Select-Object -Unique)
+        Write-Host "Installing missing MSYS2 packages: $($pkgs -join ', ')" -ForegroundColor Yellow
+        Invoke-CheckedCommand -Command { & $pacman -S --needed --noconfirm @pkgs } `
+            -ErrorMessage "Error: Failed to install required MSYS2 packages ($($pkgs -join ', ')). Run '$pacman -Syu' once, then retry."
+    } else {
+        Write-Host "All required MSYS2 build tools are present." -ForegroundColor Green
+    }
+}
+
+function Set-LibClangPath {
+    [CmdletBinding()]
+    param()
+
+    if ($env:LIBCLANG_PATH -and (Test-Path (Join-Path $env:LIBCLANG_PATH 'libclang.dll'))) {
+        Write-Host "libclang found via LIBCLANG_PATH: $env:LIBCLANG_PATH" -ForegroundColor Green
+        return
+    }
+
+
+    $candidates = @(
+        (Join-Path $env:ProgramFiles 'LLVM\bin'),
+        (Join-Path ${env:ProgramFiles(x86)} 'LLVM\bin')
+    )
+
+    if ($env:VSINSTALLDIR) {
+        $candidates += (Join-Path $env:VSINSTALLDIR 'VC\Tools\Llvm\x64\bin')
+        $candidates += (Join-Path $env:VSINSTALLDIR 'VC\Tools\Llvm\bin')
+    }
+
+    foreach ($c in $candidates) {
+        if ($c -and (Test-Path (Join-Path $c 'libclang.dll'))) {
+            $env:LIBCLANG_PATH = $c
+            if (($env:PATH -split ';') -notcontains $c) {
+                $env:PATH = "$env:PATH;$c"
+            }
+            Write-Host "Using libclang at: $c" -ForegroundColor Green
+            return
+        }
+    }
+
+    throw "Error: libclang.dll not found. ffmpeg-sys-next uses bindgen, which requires LLVM. Install it via 'winget install LLVM.LLVM' (or https://releases.llvm.org), then restart your shell."
+}
+
 function Invoke-CheckedCommand {
     [CmdletBinding()]
     param(
@@ -132,25 +197,27 @@ try {
     $scriptDir = Split-Path -Path $PSCommandPath -Parent
     Push-Location $scriptDir
 
-    & node --version 2>$null
-    $nodeAvailable = $LASTEXITCODE -eq 0
-
-    if (-not $nodeAvailable) {
-        $fnmCommand = Get-Command fnm -ErrorAction SilentlyContinue
-        if (-not $fnmCommand) {
-            throw "Error: Node.js is not available in the current environment, and fnm was not found. Install Node.js or fnm (https://github.com/Schniz/fnm#installation)."
-        }
-
+    $fnmCommand = Get-Command fnm -ErrorAction SilentlyContinue
+    if ($fnmCommand) {
         try {
             fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
+            $nodeVersionFile = Join-Path $scriptDir '.node-version'
+            if (Test-Path $nodeVersionFile) {
+                $wantedNode = (Get-Content $nodeVersionFile -Raw).Trim()
+                if ($wantedNode) {
+                    Write-Host "Activating Node $wantedNode via fnm (from .node-version)..." -ForegroundColor Yellow
+                    & fnm install $wantedNode *>$null
+                    & fnm use $wantedNode *>$null
+                }
+            }
         } catch {
-            throw "Error: Failed to evaluate fnm environment. $_"
+            Write-Warning "fnm environment setup failed: $_"
         }
+    }
 
-        & node --version 2>$null
-        if ($LASTEXITCODE -ne 0) {
-            throw "Error: Node.js still unavailable after initializing fnm environment."
-        }
+    & node --version 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Error: Node.js is not available. Install the version in .node-version, or install fnm (https://github.com/Schniz/fnm#installation) to manage it automatically."
     }
 
     $msys2Path = Find-Msys2Installation
@@ -159,6 +226,7 @@ try {
         if (Test-Path $msysUsrBin) {
             $env:PATH = "$msysUsrBin;$env:PATH"
             Write-Host "Added MSYS2 environment from $msysUsrBin to PATH." -ForegroundColor Green
+            Ensure-Msys2Packages -Msys2Path $msys2Path
         } else {
             Write-Warning "MSYS2 installation found but 'usr\bin' was not located at $msysUsrBin."
         }
@@ -171,33 +239,48 @@ try {
 
     Import-VsDevEnvironment -vcvars64Path $vcvars64
 
+    Set-LibClangPath
+
+    if (-not ($env:RC -and (Test-Path $env:RC))) {
+        $rcCmd = Get-Command rc.exe -ErrorAction SilentlyContinue
+        if ($rcCmd) {
+            $env:RC = $rcCmd.Source
+        } elseif ($env:WindowsSdkVerBinPath -and (Test-Path (Join-Path $env:WindowsSdkVerBinPath 'x64\rc.exe'))) {
+            $env:RC = Join-Path $env:WindowsSdkVerBinPath 'x64\rc.exe'
+        } elseif ($env:WindowsSdkDir) {
+            $sdkRc = Get-ChildItem (Join-Path $env:WindowsSdkDir 'bin\*\x64\rc.exe') -ErrorAction SilentlyContinue |
+                Sort-Object FullName -Descending | Select-Object -First 1
+            if ($sdkRc) { $env:RC = $sdkRc.FullName }
+        }
+    }
+    if ($env:RC) {
+        Write-Host "Using resource compiler (rc.exe): $env:RC" -ForegroundColor Green
+    } else {
+        Write-Warning "rc.exe (Windows SDK Resource Compiler) not found. Install the 'Windows 10/11 SDK' component in Visual Studio; tauri-winres will fail without it."
+    }
+
     $cargoVersion = & cargo --version 2>$null
     if ($LASTEXITCODE -ne 0) {
-        throw "Error: Unable to execute cargo. Ensure Rust is installed correctly and restart your shell."
+        throw "Error: Unable to execute cargo. Install Rust via 'winget install Rustlang.Rustup' (or https://rustup.rs, MSVC host), run 'rustup default stable', then restart your shell."
     }
     Write-Host "Detected $cargoVersion" -ForegroundColor Green
 
-    & cargo tauri --version 2>$null
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    & pnpm --version 2>$null | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "cargo-tauri not found. Installing tauri-cli..." -ForegroundColor Yellow
-        try {
-            Invoke-CheckedCommand -Command { & cargo install tauri-cli --version '^2.0.0' --locked } -ErrorMessage "Error: Failed to install tauri-cli. Ensure the C++ Build Tools workload is installed in Visual Studio."
-        } catch {
-            throw $_
-        }
-
-        & cargo tauri --version 2>$null
+        Write-Host "pnpm not found. Attempting to enable it via corepack..." -ForegroundColor Yellow
+        & corepack enable pnpm 2>$null | Out-Null
+        & pnpm --version 2>$null | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            throw "Error: cargo-tauri still unavailable after installation. Confirm Visual C++ build tools are installed and accessible."
+            Write-Host "corepack unavailable; installing pnpm via npm..." -ForegroundColor Yellow
+            & npm install -g pnpm 2>$null | Out-Null
         }
     }
-
-    $cargoTauriVersion = & cargo tauri --version 2>$null
-    Write-Host "Using $cargoTauriVersion" -ForegroundColor Green
-
+    $ErrorActionPreference = $prevEap
     $pnpmVersion = & pnpm --version 2>$null
     if ($LASTEXITCODE -ne 0) {
-        throw "Error: Unable to execute pnpm. Ensure pnpm is installed correctly and restart your shell."
+        throw "Error: pnpm is unavailable and could not be enabled via corepack or npm. Install pnpm (https://pnpm.io/installation) and restart your shell."
     }
     Write-Host "Using pnpm $pnpmVersion" -ForegroundColor Green
 
@@ -212,13 +295,15 @@ try {
         throw "Error: Could not find `src-tauri` directory at $tauriDir"
     }
 
-    Push-Location $tauriDir
-    try {
-        Write-Host "Building Tauri application for Windows..." -ForegroundColor Cyan
-        Invoke-CheckedCommand -Command { & cargo tauri build --no-bundle } -ErrorMessage "Error: Tauri build failed."
-    } finally {
-        Pop-Location
-    }
+    Write-Host "Installing frontend dependencies (pnpm install)..." -ForegroundColor Cyan
+    Invoke-CheckedCommand -Command { & pnpm install --frozen-lockfile --ignore-scripts } -ErrorMessage "Error: 'pnpm install' failed."
+
+    $env:npm_config_verify_deps_before_run = 'false'
+
+    $env:CARGO_NET_GIT_FETCH_WITH_CLI = 'true'
+
+    Write-Host "Building Tauri application for Windows..." -ForegroundColor Cyan
+    Invoke-CheckedCommand -Command { & pnpm exec tauri build --no-bundle } -ErrorMessage "Error: Tauri build failed."
 
     Write-Host "Build completed successfully!" -ForegroundColor Green
 
