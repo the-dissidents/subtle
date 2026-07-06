@@ -159,7 +159,7 @@ export class MediaPlayer {
             audioStatus = await media.openAudio(audioId);
             await Debug.debug('VideoPlayer: opened media');
         } catch (e) {
-            await media.close();
+            if (!media.isClosed) await media.close();
             await Debug.error(e);
             throw e;
         }
@@ -177,7 +177,8 @@ export class MediaPlayer {
             this.#closed = true;
             await Debug.info('closing media player');
             await this.audio.close();
-            await this.media.close();
+            if (!this.media.isClosed)
+                await this.media.close();
         });
     }
 

@@ -65,17 +65,17 @@ function updateFocusedStyle() {
     const focused = Editing.getFocusedEntry();
     Debug.assert(focused instanceof SubtitleEntry);
     const style = get(Editing.focused.style);
-    if (style === null
-        || !Editing.styleToEditor.has(style)
-        || !focused.texts.has(style)
+    if (style === null || !focused.texts.has(style)
     ) {
         const first = focused.texts.has(Source.subs.defaultStyle)
             ? Source.subs.defaultStyle
             : Source.subs.styles.find((x) => focused.texts.has(x));
         Debug.assert(first !== undefined);
         Editing.focused.style.set(first);
+        // void Debug.trace('focused style', style?.name, '->', first.name);
         return first;
     }
+    // void Debug.trace('focused style is', style.name);
     return style;
 }
 
@@ -86,7 +86,7 @@ const focusState: WritableFocusState = {
     get control() { return __control; },
     set control(x) {
         __control = x;
-        void Debug.info('focus.control -> ', x ? RichText.toString(x.getText()) : 'none');
+        console.log('focused control ->', x);
     },
     style: writable(null)
 };
@@ -157,6 +157,7 @@ export const Editing = {
         styles: Iterable<SubtitleStyle> | undefined,
         start: number, end: number, index: number
     ) {
+        void Debug.trace('insertEntry', start, end, index);
         const entry = new SubtitleEntry(start, end);
         if (!styles) styles = [Source.subs.defaultStyle];
         for (const s of styles)
@@ -198,7 +199,7 @@ export const Editing = {
         // focus on the new entry
         await this.clearSelection();
         await this.selectEntry(entry, SelectMode.Single);
-        updateFocusedStyle();
+        // updateFocusedStyle();
         setTimeout(() => {
             this.onKeepEntryInView.dispatch(entry);
             this.startEditingFocusedEntry();
@@ -290,12 +291,12 @@ export const Editing = {
 
     async offsetFocus(n: number, mode: SelectMode, keepType = KeepInViewMode.KeepInSight) {
         const focused = this.getFocusedEntry();
-        if (focused == 'virtual' && mode == SelectMode.Single) {
-            if (n == -1 && Source.subs.entries.length > 0) {
-                await this.selectEntry(
-                    Source.subs.entries.at(-1)!, mode, ChangeCause.UIList, keepType);
-                return;
-            }
+        if (focused == 'virtual' && mode == SelectMode.Single && n == -1
+         && Source.subs.entries.length > 0)
+        {
+            await this.selectEntry(
+                Source.subs.entries.at(-1)!, mode, ChangeCause.UIList, keepType);
+            return;
         }
 
         if (!(focused instanceof SubtitleEntry)) return;

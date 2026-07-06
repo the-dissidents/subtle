@@ -67,9 +67,11 @@ export class TimelineLayout {
       try {
         Playback.sampler = await this.#makeSampler(audio);
       } catch (e) {
-        await Debug.forwardError(e);
-        await this.#samplerMedia.close();
+        await Playback.sampler?.close();
+        if (!this.#samplerMedia.isClosed)
+            await this.#samplerMedia.close();
         this.#samplerMedia = undefined;
+        await Debug.forwardError(e);
       }
     });
 

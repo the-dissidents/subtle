@@ -275,6 +275,7 @@ function applyEditForm() {
               Debug.assert(!!self);
               $uiFocus = 'EditingField';
               Editing.focused.style.set(style);
+              // void Debug.trace('focused style set to', style.name);
               Editing.focused.control = self;
             }}
             onBlur={async (text) => {

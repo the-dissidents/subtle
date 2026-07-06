@@ -437,9 +437,9 @@ export const BasicCommands: Record<string, AnyUICommand> = {
             const index = ent ? Source.subs.entries.indexOf(ent) + 1 : Source.subs.entries.length;
             Debug.assert(index >= 0);
 
-            const pos = Playback.loaded ? Playback.position : Infinity;
             let start: number, end: number;
             if (index == Source.subs.entries.length) {
+                const pos = Playback.loaded ? Playback.position : 0;
                 const last = Source.subs.entries.at(-1);
                 start = Math.max(pos, last?.end ?? 0);
                 end = start + 2;
@@ -447,6 +447,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 Debug.assert(ent !== null);
                 const next = Source.subs.entries[index];
                 if (next.start >= ent.end) {
+                    const pos = Playback.loaded ? Playback.position : Infinity;
                     start = Math.max(Math.min(next.start, pos), ent.end);
                     end = Math.min(start + 2, next.start);
                 } else {

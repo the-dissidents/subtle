@@ -159,6 +159,7 @@
       ]
     });
     view = new EditorView(container!, { state });
+    if (linter) void lintTask.request(linter);
   });
 
   onDestroy(() => {
