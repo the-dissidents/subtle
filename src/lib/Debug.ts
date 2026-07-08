@@ -141,7 +141,9 @@ export const Debug: {
         window.addEventListener('unhandledrejection', (ev) => {
             // ev.preventDefault();
             if (!HasStacktrace.has(ev.reason)) {
-                void Debug.error(`Unhandled rejection`, ev.reason);
+                const reason = ev.reason instanceof Error && ev.reason.stack
+                    ? ev.reason.stack : ev.reason;
+                void Debug.error(`Unhandled rejection`, reason);
             }
         });
     },

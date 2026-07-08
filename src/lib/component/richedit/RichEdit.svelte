@@ -71,6 +71,12 @@
   let container: HTMLDivElement | undefined;
   let view: EditorView | undefined;
 
+  // Meta flag marking a transaction as a programmatic sync from the `text` prop
+  // rather than a user edit. We must not write reactive state back for these,
+  // both because it is redundant and because it happens while Svelte is still
+  // evaluating the prop-driven update, which triggers `state_unsafe_mutation`.
+  const externalSync = 'subtle/richedit/externalSync';
+
   let selStart = $state(0);
   let selEnd = $state(0);
   let update = $state(0);
@@ -84,7 +90,10 @@
     const doc = fromRichText(x);
     if (doc.eq(view.state.doc)) return;
 
-    view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, doc));
+    view.dispatch(view.state.tr
+      .replaceWith(0, view.state.doc.content.size, doc)
+      .setMeta(externalSync, true));
+    if (linter) untrack(() => void lintTask.request(linter));
   });
 
   const backspace = chainCommands(deleteSelection, joinBackward, selectNodeBackward);
@@ -127,12 +136,16 @@
           "Mod-u": underline,
         }),
         new Plugin({
-          appendTransaction(tr, oldState, newState) {
+          appendTransaction(trs, oldState, newState) {
             if (!oldState.selection.eq(newState.selection)) {
               selStart = newState.selection.from;
               selEnd = newState.selection.to;
             }
-            if (tr.find((x) => x.docChanged)) {
+            // Skip write-back for programmatic syncs from the `text` prop:
+            // it is redundant and would mutate reactive state during Svelte's
+            // prop-driven update, spuriously marking the entry as edited.
+            const isExternal = trs.some((x) => x.getMeta(externalSync));
+            if (!isExternal && trs.some((x) => x.docChanged)) {
               update++;
               text = toRichText(newState.doc);
               if (linter)
