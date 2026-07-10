@@ -279,10 +279,15 @@ function applyEditForm() {
               Editing.focused.control = self;
             }}
             onBlur={async (text) => {
-              if ($uiFocus === 'EditingField')
-                $uiFocus = 'Other';
               if (Editing.editChanged)
                 await Editing.submitEntry(focused, style, text);
+
+              if ($uiFocus === 'EditingField') {
+                const entry = Editing.getFocusedEntry();
+                await tick();
+                if (Editing.getFocusedEntry() === entry)
+                  $uiFocus = 'Other';
+              }
             }}
             onInput={() => {
               $uiFocus = 'EditingField';

@@ -84,7 +84,8 @@ export class TableLayout {
         this.manager.onDisplaySizeChanged.bind(this, () => {
             this.manager.requestRender();
         });
-        this.manager.canBeginDrag = (ev) => ev.offsetY > this.headerHeight / this.manager.scale;
+        this.manager.canBeginDrag = (ev) =>
+            ev.button == 0 && ev.offsetY > this.headerHeight / this.manager.scale;
 
         MainConfig.hook(
             () => [InterfaceConfig.data.fontSize, InterfaceConfig.data.fontFamily],

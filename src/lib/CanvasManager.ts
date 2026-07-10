@@ -255,6 +255,11 @@ export class CanvasManager {
     }
 
     async #onMouseDown(ev: MouseEvent) {
+        // A previous drag may have leaked its listeners if its mouseup was never
+        // delivered to the webview (e.g. swallowed by a native context menu).
+        // Clean it up before starting a new interaction to avoid a stuck drag.
+        if (this.#endDrag) await this.#endDrag(undefined);
+
         this.#dragType = 'none';
         if (ev.button == 0) {
             const [hasH, hasW] = this.hasScrollers;
@@ -273,8 +278,10 @@ export class CanvasManager {
             [this.#dragStartScrollX, this.#dragStartScrollY] = [this.#scrollX, this.#scrollY];
 
             const handlerMove = (ev: MouseEvent) => void this.#onDrag(ev);
-            const handlerUp = (ev: MouseEvent) => void this.#endDrag!(ev);
+            const handlerUp = (ev: MouseEvent) => void this.#endDrag?.(ev);
             this.#endDrag = async (ev) => {
+                this.#endDrag = undefined;
+
                 if (!ev)
                     await this.onDragInterrupted.dispatchAndAwaitAll();
                 else if (this.#dragType == 'custom') {
