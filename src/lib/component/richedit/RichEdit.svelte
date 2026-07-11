@@ -52,7 +52,7 @@
   }
 
   export function blur() {
-    container?.blur();
+    view?.dom.blur();
   }
 
   export function focus() {

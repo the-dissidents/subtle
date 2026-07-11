@@ -91,6 +91,13 @@ const focusState: WritableFocusState = {
     style: writable(null)
 };
 
+// Blur the rich text editor whenever UI focus leaves the editing field, because this doesn't automatically happen if the selection didn't change.
+// idk if this is the correct place for this logic
+Frontend.uiFocus.subscribe((focus) => {
+    if (focus !== 'EditingField')
+        focusState.control?.blur();
+});
+
 export const Editing = {
     selection: {
         submitted: new Set(),

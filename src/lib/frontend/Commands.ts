@@ -159,10 +159,8 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.focus-on-table'),
         call() {
-            if (Editing.focused.control) {
-                Editing.focused.control.blur();
+            if (Editing.focused.control)
                 Frontend.uiFocus.set('Table');
-            }
         }
     }),
 

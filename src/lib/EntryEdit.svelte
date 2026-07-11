@@ -285,7 +285,7 @@ function applyEditForm() {
               if ($uiFocus === 'EditingField') {
                 const entry = Editing.getFocusedEntry();
                 await tick();
-                if (Editing.getFocusedEntry() === entry)
+                if ($uiFocus === 'EditingField' && Editing.getFocusedEntry() === entry)
                   $uiFocus = 'Other';
               }
             }}

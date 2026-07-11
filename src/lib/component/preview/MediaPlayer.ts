@@ -304,7 +304,7 @@ export class MediaPlayer {
         const imgData = new ImageData(frame.content.data, frame.stride);
         let rescaled = false;
         if (ow !== dw || oh !== dh) {
-            const bitmap = await createImageBitmap(imgData);
+            const bitmap = await createImageBitmap(imgData, 0, 0, ow, oh);
             ctx.drawImage(bitmap, dx, dy, dw, dh);
             bitmap.close();
             rescaled = true;
