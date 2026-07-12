@@ -437,6 +437,8 @@
     "not-directly-available-on-macos": "Not directly available on macOS",
     "not-directly-available-on-windows": "Not directly available on Windows",
     "remove-embedding": "remove embedding",
+    "unspecified": "unspecified font",
+    "unspecified-list": "The following styles do not specify any font: ",
     "working": "Working..."
   },
   "exportdialog": {

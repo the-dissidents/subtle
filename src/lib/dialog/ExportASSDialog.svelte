@@ -37,22 +37,21 @@ onMount(async () => {
     (x) => ({style: x, count: map.get(x.name) ?? 0, use: true}));
 
   fonts.clear();
-  for (const s of styles)
-    if (s.style.font) {
-      if (fonts.has(s.style.font)) {
-        fonts.get(s.style.font)!.styles.add(s.style.name);
-      } else {
-        const obj = $state({
-          used: true,
-          face: (await Fonts.getFamily(s.style.font))?.[0] ?? undefined,
-          styles: new Set([s.style.name]),
-          subset: {
-            type: 'none'
-          }
-        } satisfies FontSetting);
-        fonts.set(s.style.font, obj);
-      }
+  for (const s of styles) if (s.style.font) {
+    if (fonts.has(s.style.font)) {
+      fonts.get(s.style.font)!.styles.add(s.style.name);
+    } else {
+      const obj = $state({
+        used: true,
+        face: (await Fonts.getFamily(s.style.font))?.[0] ?? undefined,
+        styles: new Set([s.style.name]),
+        subset: {
+          type: 'none'
+        }
+      } satisfies FontSetting);
+      fonts.set(s.style.font, obj);
     }
+  }
   update();
 
   const btn = await inner!.showModal!();
@@ -172,16 +171,37 @@ async function handleSubsetButton(setting: FontSetting) {
     <div class='vlayout rightpane'>
       <h5>{$_('exportassdialog.fonts')}</h5>
       <ul class="ass-export-fonts">
-      {#each fonts as [name, setting]}
-      {#if setting.used}
-      {@const w = Fonts.windowsAvailability(name)}
-      {@const m = Fonts.macosAvailability(name)}
+        {#if styles.find((x) => x.use && !x.style.font)}
+        <li>
+          {$_('exportassdialog.unspecified')}
+          <ul>
+            <li class="warn">
+              <CircleAlertIcon />
+              {$_('exportassdialog.unspecified-list')}{
+                styles
+                  .filter((x) => x.use && !x.style.font)
+                  .map((x) => x.style.name).join('  ')
+              }
+            </li>
+          </ul>
+        </li>
+        <hr/>
+        <li class="info-group">
+          {$_('exportassdialog.unspecified-d')}
+        </li>
+        <br>
+        {/if}
+
+        {#if [...fonts].find((x) => x[1].used)}
+        {#each [...fonts].filter((x) => x[1].used) as [name, setting]}
+        {@const w = Fonts.windowsAvailability(name)}
+        {@const m = Fonts.macosAvailability(name)}
         <li>
           <div class='fontname'>
             <span class='flexgrow'>{name}</span>
             <span><label>
               <input type='checkbox' class="button"
-                disabled={!setting.face}
+                disabled={!setting.face || setting.subset.type == 'working'}
                 checked={setting.subset.type == 'ok'}
                 onchange={() => handleSubsetButton(setting)}/>
 
@@ -270,13 +290,12 @@ async function handleSubsetButton(setting: FontSetting) {
             {/if}
           </ul>
         </li>
-      {/if}
-      {/each}
-
+        {/each}
         <hr/>
         <li class="info-group">
           {$_('exportassdialog.font-d')}
         </li>
+        {/if}
       </ul>
     </div>
   </div>
@@ -307,44 +326,43 @@ async function handleSubsetButton(setting: FontSetting) {
     margin: 0;
     list-style: none;
     padding: 0px;
+
     & > li {
       margin: 5px 0px;
       font-weight: bold;
+
+      &.info-group {
+        font-weight: normal;
+        padding: 0 0.2em 0 0.2em;
+        font-size: 90%;
+        color: gray;
+        line-height: 1.5;
+        text-align: justify;
+      }
     }
-  }
 
-  ul.ass-export-fonts ul {
-    padding: 3px 0 0 3em;
-    list-style-type: none;
-    font-weight: normal;
-    & > li {
-      padding: 2px 0 0 0;
-      font-size: 95%;
+    ul {
+      padding: 3px 0 0 0;
+      list-style-type: none;
+      font-weight: normal;
+      & > li {
+        padding: 2px 0 0 0;
+        font-size: 95%;
+      }
     }
-  }
 
-  li.info-group {
-    font-weight: normal;
-    padding: 0 0.2em 0 0.2em;
-    font-size: 90%;
-    color: gray;
-    line-height: 1.5;
-    text-align: justify;
-  }
-
-  :global(.ass-export-fonts .lucide) {
-    display: inline;
-    color: var(--uchu-orange-6);
-    vertical-align: text-bottom;
-    max-height: 1.2em;
-    stroke-width: 1.5px;
-  }
-
-  :global(.ass-export-fonts .error .lucide) {
-    color: red;
-  }
-
-  :global(.ass-export-fonts .ok .lucide) {
-    color: green;
+    :global(.lucide) {
+      display: inline;
+      color: var(--uchu-orange-6);
+      vertical-align: text-bottom;
+      max-height: 1.2em;
+      stroke-width: 1.5px;
+    }
+    :global(.error .lucide) {
+      color: red;
+    }
+    :global(.ok .lucide) {
+      color: green;
+    }
   }
 </style>

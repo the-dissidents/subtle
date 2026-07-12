@@ -437,6 +437,9 @@
     "not-directly-available-on-macos": "macOS默认不包含该字体",
     "not-directly-available-on-windows": "Windows默认不包含该字体",
     "remove-embedding": "取消嵌入",
+    "unspecified": "未指定字体",
+    "unspecified-d": "如果不为样式指定字体，在不同设备或不同播放器上产生的效果可能非常不同，字体大小也可能显得很不一样。",
+    "unspecified-list": "以下样式未指定任何字体：",
     "working": "正在嵌入……"
   },
   "exportdialog": {
