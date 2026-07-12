@@ -945,6 +945,8 @@
     "display": "设置",
     "fill-in": {
       "already-has-style-msg": "你选择的区域有 {a} 个条目已经包含样式 {b}，确认继续？",
+      "double-newline": "使用双换行作为分隔符",
+      "enable-for-new-entries": "启用（每次一行）",
       "existing-entries": "填充到已有条目",
       "header": "填充",
       "new-entries": "填充到画出的新条目",

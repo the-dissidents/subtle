@@ -230,11 +230,18 @@
     margin: 2px;
     border-radius: 3px;
     border: 1px solid var(--uchu-gray-4);
-    min-width: none;
     overflow-x: scroll;
+
+    flex-shrink: 0;
+    min-width: 0;
+    scrollbar-width: thin;
 
     @media (prefers-color-scheme: dark) {
       border-color: var(--uchu-yin-7);
+    }
+
+    & * {
+      flex-shrink: 0;
     }
 
     & label {

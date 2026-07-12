@@ -162,7 +162,7 @@ Editing.onSelectionChanged.bind(me, () => {
   fuzzyMatch();
 });
 
-async function markChanged() {
+async function checkChanged() {
   if (!changed) return;
   changed = false;
   fuzzy.engine = null;
@@ -255,17 +255,21 @@ function setSelectionAndScroll(selectionStart: number, selectionEnd: number) {
 }
 
 async function paste() {
-  let text = await clipboard.readText();
-  if (text.length > 500000 && !await dialog.confirm(
-    'The text in your clipboard is very long. Proceed to import?',
-    {kind: 'warning'})) return;
-  Source.subs.metadata.special.untimedText = text;
-  await markChanged();
+  try {
+    let text = await clipboard.readText();
+    if (text.length > 500000 && !await dialog.confirm(
+      'The text in your clipboard is very long. Proceed to import?',
+      {kind: 'warning'})) return;
+    Source.subs.metadata.special.untimedText = text;
+    await checkChanged();
+  } catch {
+    // clipboard is empty
+  }
 }
 
 async function clear() {
   Source.subs.metadata.special.untimedText = '';
-  await markChanged();
+  await checkChanged();
 }
 </script>
 
@@ -285,7 +289,7 @@ async function clear() {
       changed = true;
       Source.markChangedNonSaving();
     }}
-    onblur={() => markChanged()}
+    onblur={() => checkChanged()}
     bind:value={subs.metadata.special.untimedText}
     bind:this={textarea}></textarea>
   <Collapsible header={$_('untimed.display')}>
@@ -300,11 +304,11 @@ async function clear() {
   </Collapsible>
   <Collapsible header={$_('untimed.fill-in.header')}>
     <label>
-      <input type='checkbox' bind:checked={$useDoubleNewline}/>使用双换行作为分隔符
+      <input type='checkbox' bind:checked={$useDoubleNewline}/>{$_('untimed.fill-in.double-newline')}
     </label>
     <h5>{$_('untimed.fill-in.new-entries')}</h5>
     <label>
-      <input id='just' type='checkbox' bind:checked={$useForNew}/>启用（每次一行）
+      <input id='just' type='checkbox' bind:checked={$useForNew}/>{$_('untimed.fill-in.enable-for-new-entries')}
     </label>
     <br />
     <h5>{$_('untimed.fill-in.existing-entries')}</h5>
@@ -363,25 +367,16 @@ async function clear() {
         </ConfigRow>
       </ConfigTable>
     </fieldset>
-    <!-- <i></i> -->
   </Collapsible>
 </div>
 
 <style lang='scss'>
-  @media (prefers-color-scheme: light) {
-    textarea[readonly] {
-      background-color: var(--uchu-gray-1);
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    textarea[readonly] {
-      background-color: var(--uchu-yin-6);
-    }
-  }
-
   textarea {
     resize: none;
+    user-select: auto;
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
   }
   input[type='number'] {
     width: 100%;
