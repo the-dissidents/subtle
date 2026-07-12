@@ -23,7 +23,7 @@ import { LintProfile } from "./LintProfile";
  *                   positioning and alignment in entry
  *  - 000706 (minor) styles have lint profiles
  */
-export const SubtitleFormatVersion = '000706';
+export const SubtitleFormatVersion = '000707';
 export const SubtitleCompatibleVersion = '000700';
 
 export type JSONParseMessage = {
@@ -210,7 +210,7 @@ export class JSONParser implements SubtitleParser {
 
             try {
                 if (x.lintProfile)
-                    s.lintProfile = z.parse(LintProfile, s.lintProfile);
+                    s.lintProfile = z.parse(LintProfile, x.lintProfile);
             } catch {
                 this.#messages.push({ type: 'incompatible-linter', category: 'incompatible', name: x.name });
             }

@@ -148,7 +148,8 @@ const result = $derived<LintProfile>({
   {/each}
 {/snippet}
 
-<DialogBase bind:this={inner}>
+<DialogBase bind:this={inner} maxWidth="60em">
+
 {#snippet header()}
   <h3>{$_('lint.edit-lint-profile')}</h3>
 {/snippet}
@@ -158,37 +159,26 @@ const result = $derived<LintProfile>({
     onChange={(x) => x ? load(x) : {}} allowManage={true} />
   <button onclick={() => resetSavedLintProfiles()}>{$_('lint.reset-presets')}</button>
 </div>
-
   <div class="hlayout">
-    <fieldset>
-      <legend>{$_('lint.bracket-checking')}</legend>
-      <div class="list">
-        {@render bracketBoxes([
-          ['curlyQuotes', $_('lint.curly-quotes')],
-          ['invertedCurlyQuotes', $_('lint.inverted-curly-quotes')],
-          ['cornerQuotes', $_('lint.corner-quotes')],
-          ['frenchGuillemetQuotes', $_('lint.french-guillemet')],
-        ])}
-        <hr>
-        {@render bracketBoxes([
-          ['halfwidthParentheses', $_('lint.halfwidth-parens')],
-          ['fullwidthParentheses', $_('lint.fullwidth-parens')],
-        ])}
-      </div>
-    </fieldset>
-
     <div class="vlayout">
       <fieldset>
-        <legend>{$_('lint.spaces-and-punct')}</legend>
+        <legend>{$_('lint.quotes')}</legend>
         <div class="list">
-          {@render regexCheckboxes([
-            ['noConsecutiveSpaces', $_('regexlint.consecutive-spaces')],
-            ['noLeadingTrailingSpaces', $_('regexlint.leading-trailing-spaces')],
-            ['noSpaceBeforePunctuation', $_('regexlint.no-space-before-punct')],
-            ['spaceAfterLatinPunctuation', $_('regexlint.space-after-latin-punct')],
-            ['noSpaceAroundFullwidthPunctuation', $_('regexlint.space-around-fullwidth-punct')],
-            ['useFullwidthPunctuationInCJK', $_('regexlint.use-fullwidth-punct')],
-            ['useHalfwidthPunctuationInLatin', $_('regexlint.use-halfwidth-punct')],
+          {@render bracketBoxes([
+            ['curlyQuotes', $_('lint.curly-quotes')],
+            ['invertedCurlyQuotes', $_('lint.inverted-curly-quotes')],
+            ['cornerQuotes', $_('lint.corner-quotes')],
+            ['frenchGuillemetQuotes', $_('lint.french-guillemet')],
+          ])}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>{$_('lint.brackets')}</legend>
+        <div class="list">
+          {@render bracketBoxes([
+            ['halfwidthParentheses', $_('lint.halfwidth-parens')],
+            ['fullwidthParentheses', $_('lint.fullwidth-parens')],
           ])}
         </div>
       </fieldset>
@@ -211,6 +201,27 @@ const result = $derived<LintProfile>({
         </div>
       </fieldset>
     </div>
+
+    <fieldset>
+      <legend>{$_('lint.spaces-and-punct')}</legend>
+      <div class="list">
+        {@render regexCheckboxes([
+          ['noConsecutiveSpaces', $_('regexlint.consecutive-spaces')],
+          ['noLeadingTrailingSpaces', $_('regexlint.leading-trailing-spaces')],
+          ['noSpaceBeforePunctuation', $_('regexlint.no-space-before-punct')],
+          ['spaceAfterLatinPunctuation', $_('regexlint.space-after-latin-punct')],
+          ['noSpaceAroundFullwidthPunctuation', $_('regexlint.space-around-fullwidth-punct')],
+          ['useFullwidthPunctuationInCJK', $_('regexlint.use-fullwidth-punct')],
+          ['useHalfwidthPunctuationInLatin', $_('regexlint.use-halfwidth-punct')],
+        ])}
+        <hr>
+        <h5>{$_('lint.latin-inside-cjk')}</h5>
+        {@render regexRadios([
+          ['spaceBetweenCJKAndNarrow', $_('regexlint.space-around-ellipsis')],
+          ['noSpaceBetweenCJKAndNarrow', $_('regexlint.no-space-around-ellipsis')],
+        ])}
+      </div>
+    </fieldset>
   </div>
 
   <fieldset disabled={!dashes}>

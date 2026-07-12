@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 const defaultLintProfiles: [string, LintProfile][] = [
     ['简体中文（一般引号）', {
         bracketGroups: ['curlyQuotes', 'fullwidthParentheses'],
-        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
+        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'spaceBetweenCJKAndNarrow', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
         dashes: {
             dialog: { type: 'horizontalBar', spaces: true, separateLines: false },
@@ -16,7 +16,7 @@ const defaultLintProfiles: [string, LintProfile][] = [
     }],
     ['简体中文（方引号）', {
         bracketGroups: ['cornerQuotes', 'fullwidthParentheses'],
-        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
+        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'spaceBetweenCJKAndNarrow', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
         dashes: {
             dialog: { type: 'horizontalBar', spaces: true, separateLines: false },
