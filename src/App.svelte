@@ -351,10 +351,12 @@ observer.observe({ type: 'paint', buffered: true });
             {#snippet header()}{$_('tab.review')}{/snippet}
             <ReviewToolbox/>
           </TabPage>
-          <TabPage id='test'>
-            {#snippet header()}Test{/snippet}
-            <TestToolbox/>
-          </TabPage>
+          {#if DebugConfig.data.showTestToolbox}
+            <TabPage id='test'>
+              {#snippet header()}Test{/snippet}
+              <TestToolbox/>
+            </TabPage>
+          {/if}
         </TabView>
       </div>
     </div>

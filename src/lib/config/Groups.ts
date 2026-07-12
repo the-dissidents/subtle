@@ -184,6 +184,11 @@ export const DebugConfig = new PublicConfigGroup(
     () => $_('config.debug'),
     () => $_('config.debug-d'), 10,
     {
+        showTestToolbox: {
+            localizedName: () => 'show test toolbox',
+            type: 'boolean',
+            default: false
+        },
         persistentLogLevel: {
             localizedName: () => 'persistent log level',
             type: 'dropdown',

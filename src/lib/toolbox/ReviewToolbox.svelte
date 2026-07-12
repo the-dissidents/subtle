@@ -1,4 +1,5 @@
 <script lang="ts">
+import { Memorized } from "../config/MemorizedValue.svelte";
 import { CompiledLintProfile } from "../core/LintProfile";
 import { RichText } from "../core/RichText";
 import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
@@ -8,7 +9,9 @@ import { Frontend } from "../frontend/Frontend";
 import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 import { Diagnostic } from "../linter/Common";
 
+import { ConfigRow, ConfigTable } from "@the_dissidents/svelte-ui";
 import { _ } from 'svelte-i18n';
+import * as z from 'zod/mini';
 
 function getLinters() {
   return new Map(Source.subs.styles.map((x) =>
@@ -59,6 +62,9 @@ async function fixAll() {
   }
 }
 
+let checkLint = Memorized.$('review-goto-lint', z.boolean(), true);
+let checkFilter = Memorized.$('review-goto-filter', z.boolean(), true);
+
 let focusedEntry = Editing.focused.entry;
 
 async function gotoProblem(dir: 1 | -1) {
@@ -90,12 +96,31 @@ async function gotoProblem(dir: 1 | -1) {
 </script>
 
 <div class='vlayout fill'>
+  <h5>导航</h5>
+  <ConfigTable>
+    <ConfigRow name=''>
+      <label>
+        <input type='checkbox' bind:checked={$checkLint}>
+        拼写检查问题
+      </label>
+      <br>
+      <label>
+        <input type='checkbox' bind:checked={$checkFilter}>
+        不符合验证条件的条目
+      </label>
+    </ConfigRow>
+    <ConfigRow name='前往'>
+      <div>
+        <button disabled={!($focusedEntry instanceof SubtitleEntry)}
+          onclick={() => gotoProblem(-1)}>上一个</button>
+        <button disabled={!($focusedEntry instanceof SubtitleEntry)}
+          onclick={() => gotoProblem(1)}>下一个</button>
+      </div>
+    </ConfigRow>
+  </ConfigTable>
+
   <h5>拼写检查</h5>
   <div>
-    <button disabled={!($focusedEntry instanceof SubtitleEntry)}
-      onclick={() => gotoProblem(-1)}>上一个问题</button>
-    <button disabled={!($focusedEntry instanceof SubtitleEntry)}
-      onclick={() => gotoProblem(1)}>下一个问题</button>
-    <button onclick={() => fixAll()}>尝试修复所有问题</button>
+    <button onclick={() => fixAll()}>尝试修复所有拼写问题</button>
   </div>
 </div>
