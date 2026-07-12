@@ -7,6 +7,7 @@ import { SvelteSet } from "svelte/reactivity";
 
 import * as z from "zod/v4-mini";
 import { ZRichText } from "./RichText";
+import { LintProfile } from "./LintProfile";
 
 /**
  * Version details:
@@ -30,6 +31,14 @@ export type JSONParseMessage = {
     category: 'fixed',
     name: string,
     occurrence: number
+} | {
+    type: 'incompatible-filter',
+    category: 'incompatible',
+    name: string,
+} | {
+    type: 'incompatible-linter',
+    category: 'incompatible',
+    name: string,
 } | {
     type: 'migrated-older',
     category: 'migrated',
@@ -176,24 +185,35 @@ export class JSONParser implements SubtitleParser {
     }
 
     #parseStyles() {
-        const styles = this.#obj.styles;
-        const defaultStyle = this.#obj.defaultStyle;
+        const parsedStyles = this.#obj.styles;
+        const defaultStyleName = this.#obj.defaultStyle;
 
-        this.#subs.styles = styles.map((x) => {
-            const style = $state({...x, validator: null});
+        this.#subs.styles = parsedStyles.map((x) => {
+            const style = $state({ ...x, validator: null, lintProfile: null });
             return style;
         });
-        const def = this.#subs.styles.find((x) => x.name == defaultStyle);
+        const def = this.#subs.styles.find((x) => x.name == defaultStyleName);
         if (def === undefined)
             throw new DeserializationError('invalid default style name');
         this.#subs.defaultStyle = def;
 
         // now go back and add validators
         // since parsing filters requires access to all the styles
-        styles.forEach((x) => {
-            if (!x.validator) return;
-            this.#subs.styles.find((y) => x.name == y.name)!.validator =
-                Filter.deserialize(x.validator, this.#subs);
+        parsedStyles.forEach((x) => {
+            const s = this.#subs.styles.find((y) => x.name == y.name)!;
+            try {
+                if (x.validator)
+                    s.validator = Filter.deserialize(x.validator, this.#subs);
+            } catch {
+                this.#messages.push({ type: 'incompatible-filter', category: 'incompatible', name: x.name });
+            }
+
+            try {
+                if (x.lintProfile)
+                    s.lintProfile = z.parse(LintProfile, s.lintProfile);
+            } catch {
+                this.#messages.push({ type: 'incompatible-linter', category: 'incompatible', name: x.name });
+            }
         });
     }
 

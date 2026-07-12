@@ -6,15 +6,23 @@ import * as z from "zod/v4-mini";
 const defaultLintProfiles: [string, LintProfile][] = [
     ['简体中文（一般引号）', {
         bracketGroups: ['curlyQuotes', 'fullwidthParentheses'],
-        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useChineseWordConnector', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
+        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
-        dashes: undefined
+        dashes: {
+            dialog: { type: 'horizontalBar', spaces: true, separateLines: false },
+            dash: { type: 'emDash', spaces: false, endOnly: false },
+            cjkDash: { type: 'standard', wordConnectors: true }
+        },
     }],
     ['简体中文（方引号）', {
         bracketGroups: ['cornerQuotes', 'fullwidthParentheses'],
-        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useChineseWordConnector', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
+        regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
-        dashes: undefined
+        dashes: {
+            dialog: { type: 'horizontalBar', spaces: true, separateLines: false },
+            dash: { type: 'emDash', spaces: false, endOnly: false },
+            cjkDash: { type: 'standard', wordConnectors: true }
+        },
     }],
     ['English (US)', {
         bracketGroups: ['curlyQuotes', 'halfwidthParentheses'],

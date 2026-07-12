@@ -72,7 +72,7 @@ function parse() {
       {#if categories}
       {#each Object.entries(categories) as [k, v] (k)}
       {@const groups = groupBy(v as SubtitleParseMessage[], 'type')}
-      {@const info = format.categoryDescription(k)}
+      {@const description = format.categoryDescription(k)}
         {#each Object.entries(groups) as [type, msgs] (type)}
         <!-- eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -->
         {@const f = format.formatMessage(type, msgs as never)}
@@ -91,10 +91,10 @@ function parse() {
           <li class="info">{f.description}</li>
           {/if}
         {/each}
-        {#if info}
+        {#if description}
         <hr/>
         <li class="info-group">
-          {info}
+          {description}
         </li>
         {/if}
       {:else}

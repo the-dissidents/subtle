@@ -18,7 +18,9 @@ export const ZDashType = z.enum(Object.keys(DashType) as DashType[]);
 
 export const CJKDashType = {
     standard: '——',
-    unicode: '⸺'
+    unicode: '⸺',
+    // 'forbidden' disables long CJK dashes entirely: any long CJK dash is reported.
+    forbidden: ''
 };
 
 export type CJKDashType = keyof typeof CJKDashType;
@@ -37,10 +39,21 @@ export const DashesConfig = z.object({
     }),
     cjkDash: z.optional(z.object({
         type: ZCJKDashType,
+        // whether to check CJK word connectors (hyphens inside foreign names / technical
+        // terms, which should be en-dashes); when off, unspaced short dashes in CJK
+        // contexts are treated as dialog dashes instead.
+        wordConnectors: z._default(z.boolean(), false),
     }))
 });
 
 export type DashesConfig = z.infer<typeof DashesConfig>;
+
+// The en-dash is the correct form of a CJK word connector.
+const CJK_WORD_CONNECTOR = DashType.enDash;
+
+// Wide CJK punctuations that subsume a following space, so a dash right after them is
+// effectively spaced and no missing space should be reported there.
+const SPACE_SUBSUMING = '、，。；：！？';
 
 export class DashLinter {
     constructor(private config: DashesConfig) {}
@@ -51,6 +64,7 @@ export class DashLinter {
         return (
             (code >= 0x4E00 && code <= 0x9FFF) || // CJK Unified Ideographs
             (code >= 0x3400 && code <= 0x4DBF) || // CJK Extension A
+            (code >= 0x3000 && code <= 0x303F) || // CJK Symbols and Punctuation (、。《》 etc.)
             (code >= 0x3040 && code <= 0x309F) || // Hiragana
             (code >= 0x30A0 && code <= 0x30FF) || // Katakana
             (code >= 0xAC00 && code <= 0xD7A3) || // Hangul Syllables
@@ -58,18 +72,52 @@ export class DashLinter {
         );
     }
 
+    // Emit a dialog-dash diagnostic, normalizing the dash form and its surrounding spaces.
+    // A left space is never added at the start of a line or right after a space-subsuming
+    // punctuation (it is unavoidable/subsumed); likewise no right space at the end of a line.
+    private emitDialog(
+        diagnostics: Diagnostic[],
+        start: number, to: number, fullMatch: string,
+        isStartOfLine: boolean, isEndOfLine: boolean, leftSubsumed: boolean,
+        confident: boolean
+    ): void {
+        // Only nag about newlines when we are sure this is a dialog dash, to avoid false
+        // positives on ambiguous CJK guesses (which might actually be word connectors).
+        if (confident && this.config.dialog.separateLines && !isStartOfLine) diagnostics.push({
+            start, to, type: 'format',
+            description: $_('dashlint.dialog-dashes-should-begin-on-a-new-line')
+        });
+
+        const expectedChar = DashType[this.config.dialog.type];
+        const spaces = this.config.dialog.spaces;
+
+        const expLeftSpace = (isStartOfLine || leftSubsumed) ? '' : (spaces ? ' ' : '');
+        const expRightSpace = isEndOfLine ? '' : (spaces ? ' ' : '');
+        const expectedSub = expLeftSpace + expectedChar + expRightSpace;
+
+        if (fullMatch !== expectedSub) diagnostics.push({
+            start, to,
+            type: 'punctuation',
+            description: $_('dashlint.wrong-dialog-dash'),
+            fix: { substitute: expectedSub, confident }
+        });
+    }
+
     check(entry: string): Diagnostic[] {
-        // correct non-preferred dash forms to the preferred one, fix spaces around them, and warn if a dash is not allowed (because of `endOnly`)
-        // - to avoid false positives, we give up checking hyphens and en-dashes if there is no space around them (they can be legitimate hyphens and en-dashes)
-        // - don't add spaces at the beginning or end of a line if a dash appears there
+        // Classify each dash sequence as a dialog dash, a Latin dash, a (long) CJK dash, or
+        // a CJK word connector, then normalize its form and surrounding spaces.
+        //
+        // - A dash is a *Latin* dash only if both of its (across-whitespace) neighbors are
+        //   non-CJK. Otherwise, in a profile that checks CJK dashes, it lives in a CJK context.
+        // - Real CJK dashes are always long (never a single em-dash) and never spaced; a short
+        //   or spaced dash in a CJK context is therefore a dialog dash, not a broken CJK dash.
+        // - Start of line, and (as spacing) right after a space-subsuming punctuation, count the
+        //   same as being spaced. End of line does not (a trailing dash can be a real CJK dash).
+        // - Unspaced short dashes in a CJK context are ambiguous between dialog dashes and word
+        //   connectors; the `wordConnectors` option decides, and neither is reported confidently.
+        // - When `cjkDash` is undefined, no CJK logic applies: everything is plain non-CJK text.
 
-        // if a dash appears at the start of a line (possibly with spaces), it is a dialog-dash.
-        // occasionally, dialog-dashes appear in the middle of a line; if it is after a sentence-final punctuation (with optionally spaces) and before a capital letter it is likely a dialog-dash.
-        // otherwise, assume a regular dash.
-
-        // CJK dashes are two em-dashes in a row, or rarely the Unicode 'two-em dash". No spaces are allowed around them. Incorrect forms include two or more hyphens.
-        // We check CJK dashes only around fullwidth characters and if the option is enabled.
-
+        const cjk = this.config.cjkDash;
         const diagnostics: Diagnostic[] = [];
         const dashRegex = /([ \t]*)([-－⸺\u2010-\u2015]+)([ \t]*)/g;
         let match;
@@ -83,16 +131,87 @@ export class DashLinter {
             const rightContext = entry.substring(to);
 
             const isStartOfLine = leftContext.length === 0 || leftContext.endsWith('\n');
-            const isEndOfLine = rightContext.length === 0 || rightContext.startsWith('\n') || rightContext.startsWith('\r');
+            const isEndOfLine = rightContext.length === 0
+                || rightContext.startsWith('\n') || rightContext.startsWith('\r');
+
+            // Nearest non-space neighbors (leftSpaces/rightSpaces already consumed the spaces).
+            const leftChar = leftContext.slice(-1);
+            const rightChar = rightContext.slice(0, 1);
+
+            const leftSubsumed = leftChar !== '' && SPACE_SUBSUMING.includes(leftChar);
+            // Start of line and subsumed punctuation act like spacing on the left; a bare end
+            // of line does not count as spacing (trailing CJK dashes are legitimate).
+            const spacedLeft = leftSpaces.length > 0 || isStartOfLine || leftSubsumed;
+            const spacedRight = rightSpaces.length > 0;
+            const spaced = spacedLeft || spacedRight;
+
+            const isLong = dashChars === '⸺' || dashChars.length >= 2;
+
+            const cjkContext = cjk !== undefined && (
+                this.isCJKChar(leftChar) || this.isCJKChar(rightChar)
+                || dashChars === '——' || dashChars === '⸺');
+
+            if (cjkContext) {
+                // A dash at the start of a line is a dialog dash.
+                if (isStartOfLine) {
+                    this.emitDialog(diagnostics, start, to, fullMatch,
+                        isStartOfLine, isEndOfLine, leftSubsumed, true);
+                    continue;
+                }
+
+                // Unspaced dashes: could be a real CJK dash (long) or a word connector (short).
+                if (!spaced) {
+                    if (isLong) {
+                        if (cjk.type === 'forbidden') {
+                            diagnostics.push({
+                                start, to, type: 'punctuation',
+                                description: $_('dashlint.cjk-dashes-forbidden')
+                            });
+                        } else {
+                            const preferred = CJKDashType[cjk.type];
+                            if (dashChars !== preferred) diagnostics.push({
+                                start, to, type: 'punctuation',
+                                description: $_('dashlint.wrong-cjk-dashes', { values: { preferred } }),
+                                fix: { substitute: preferred, confident: true }
+                            });
+                        }
+                        continue;
+                    }
+
+                    // Short and unspaced: a word connector if enabled, else a dialog dash.
+                    // Either way we cannot be sure, so do not report confidently.
+                    if (cjk.wordConnectors) {
+                        if (dashChars !== CJK_WORD_CONNECTOR) diagnostics.push({
+                            start, to, type: 'punctuation',
+                            description: $_('regexlint.chinese-word-connector'),
+                            fix: { substitute: CJK_WORD_CONNECTOR, confident: false }
+                        });
+                    } else {
+                        this.emitDialog(diagnostics, start, to, fullMatch,
+                            isStartOfLine, isEndOfLine, leftSubsumed, false);
+                    }
+                    continue;
+                }
+
+                // Spaced dashes in a CJK context are dialog dashes. If it is both short and
+                // spaced it certainly cannot be a CJK dash, so we can report it confidently;
+                // otherwise (spaced but long) we only guess.
+                this.emitDialog(diagnostics, start, to, fullMatch,
+                    isStartOfLine, isEndOfLine, leftSubsumed, !isLong);
+                continue;
+            }
+
+            // Non-CJK (Latin) context below.
 
             // Skip hyphenated words and standard ranges to avoid false positives.
-            // Note: Does not skip double-hyphens (--), as they are strictly non-standard for intra-word usage.
+            // Note: Does not skip double-hyphens (--), as they are strictly non-standard for
+            // intra-word usage.
             if ((dashChars === '-' || dashChars === '–')
              && leftSpaces === '' && rightSpaces === ''
              && !isStartOfLine && !isEndOfLine
             ) continue;
 
-            // try to determine if the sequence is a dialog dash
+            // Determine if the sequence is a dialog dash.
             let isDialog = isStartOfLine;
             if (!isDialog) {
                 const sentenceFinal = /[.?!]["'”’]*[ \t]*$/.test(leftContext);
@@ -102,17 +221,21 @@ export class DashLinter {
                 }
             }
 
-            // dialog dashes
             if (isDialog) {
-                if (this.config.dialog.separateLines && !isStartOfLine) diagnostics.push({
-                    start, to, type: 'format',
-                    description: $_('dashlint.dialog-dashes-should-begin-on-a-new-line')
-                });
+                this.emitDialog(diagnostics, start, to, fullMatch,
+                    isStartOfLine, isEndOfLine, leftSubsumed, true);
+                continue;
+            }
 
-                const expectedChar = DashType[this.config.dialog.type];
-                const spaces = this.config.dialog.spaces;
+            // Regular Latin dashes.
+            if (this.config.dash.endOnly && !isEndOfLine) diagnostics.push({
+                start, to,
+                type: 'punctuation',
+                description: $_('dashlint.no-midline-dashes')
+            }); else {
+                const expectedChar = DashType[this.config.dash.type];
+                const spaces = this.config.dash.spaces;
 
-                // Do not prepend/append space if adjacent to line boundaries
                 const expLeftSpace = isStartOfLine ? '' : (spaces ? ' ' : '');
                 const expRightSpace = isEndOfLine ? '' : (spaces ? ' ' : '');
                 const expectedSub = expLeftSpace + expectedChar + expRightSpace;
@@ -120,51 +243,9 @@ export class DashLinter {
                 if (fullMatch !== expectedSub) diagnostics.push({
                     start, to,
                     type: 'punctuation',
-                    description: $_('dashlint.wrong-dialog-dash'),
+                    description: $_('dashlint.wrong-dash'),
                     fix: { substitute: expectedSub, confident: true }
                 });
-                continue;
-            }
-
-            // CJK dashes
-            if (this.config.cjkDash !== undefined
-            && (this.isCJKChar(leftContext.trim().slice(-1)) ||
-                this.isCJKChar(rightContext.trim().charAt(0)) ||
-                dashChars === '——' || dashChars === '⸺')
-            ) {
-                const preferred = CJKDashType[this.config.cjkDash.type];
-                if (dashChars !== preferred || leftSpaces.length > 0 || rightSpaces.length > 0) {
-                    diagnostics.push({
-                        start, to,
-                        type: 'punctuation',
-                        description: $_('dashlint.wrong-cjk-dashes', { values: { preferred } }),
-                        fix: { substitute: preferred, confident: true }
-                    });
-                }
-                continue;
-            }
-
-            // regular dashes
-            {
-                if (this.config.dash.endOnly && !isEndOfLine) diagnostics.push({
-                    start, to,
-                    type: 'punctuation',
-                    description: $_('dashlint.no-midline-dashes')
-                }); else {
-                    const expectedChar = DashType[this.config.dash.type];
-                    const spaces = this.config.dash.spaces;
-
-                    const expLeftSpace = isStartOfLine ? '' : (spaces ? ' ' : '');
-                    const expRightSpace = isEndOfLine ? '' : (spaces ? ' ' : '');
-                    const expectedSub = expLeftSpace + expectedChar + expRightSpace;
-
-                    if (fullMatch !== expectedSub) diagnostics.push({
-                        start, to,
-                        type: 'punctuation',
-                        description: $_('dashlint.wrong-dash'),
-                        fix: { substitute: expectedSub, confident: true }
-                    });
-                }
             }
         }
         return diagnostics;

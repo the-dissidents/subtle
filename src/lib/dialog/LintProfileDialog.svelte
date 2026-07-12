@@ -157,6 +157,7 @@ const result = $derived<LintProfile>({
   <LintProfileSelect value={result}
     onChange={(x) => x ? load(x) : {}} allowManage={true} />
   <button onclick={() => resetSavedLintProfiles()}>{$_('lint.reset-presets')}</button>
+</div>
 
   <div class="hlayout">
     <fieldset>
@@ -178,6 +179,21 @@ const result = $derived<LintProfile>({
 
     <div class="vlayout">
       <fieldset>
+        <legend>{$_('lint.spaces-and-punct')}</legend>
+        <div class="list">
+          {@render regexCheckboxes([
+            ['noConsecutiveSpaces', $_('regexlint.consecutive-spaces')],
+            ['noLeadingTrailingSpaces', $_('regexlint.leading-trailing-spaces')],
+            ['noSpaceBeforePunctuation', $_('regexlint.no-space-before-punct')],
+            ['spaceAfterLatinPunctuation', $_('regexlint.space-after-latin-punct')],
+            ['noSpaceAroundFullwidthPunctuation', $_('regexlint.space-around-fullwidth-punct')],
+            ['useFullwidthPunctuationInCJK', $_('regexlint.use-fullwidth-punct')],
+            ['useHalfwidthPunctuationInLatin', $_('regexlint.use-halfwidth-punct')],
+          ])}
+        </div>
+      </fieldset>
+
+      <fieldset>
         <legend>{$_('lint.ellipsis')}</legend>
         <div class="hlayout">
           <div class="list flexgrow">
@@ -192,22 +208,6 @@ const result = $derived<LintProfile>({
               ['noSpaceAroundEllipsis', $_('regexlint.no-space-around-ellipsis')],
             ])}
           </div>
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>{$_('lint.spaces-and-punct')}</legend>
-        <div class="list">
-          {@render regexCheckboxes([
-            ['noConsecutiveSpaces', $_('regexlint.consecutive-spaces')],
-            ['noLeadingTrailingSpaces', $_('regexlint.leading-trailing-spaces')],
-            ['noSpaceBeforePunctuation', $_('regexlint.no-space-before-punct')],
-            ['spaceAfterLatinPunctuation', $_('regexlint.space-after-latin-punct')],
-            ['noSpaceAroundFullwidthPunctuation', $_('regexlint.space-around-fullwidth-punct')],
-            ['useChineseWordConnector', $_('regexlint.chinese-word-connector')],
-            ['useFullwidthPunctuationInCJK', $_('regexlint.use-fullwidth-punct')],
-            ['useHalfwidthPunctuationInLatin', $_('regexlint.use-halfwidth-punct')],
-          ])}
         </div>
       </fieldset>
     </div>
@@ -261,24 +261,54 @@ const result = $derived<LintProfile>({
         </label>
       </div>
       <div class="list flexgrow">
-        <h5>CJK破折号</h5>
+        <h5>{$_('lint.cjk-settings')}</h5>
         <label>
-          <input type='radio' checked={!dashes?.cjkDash}
+          <input type='checkbox' checked={!!dashes?.cjkDash}
             onchange={(e) => e.currentTarget.checked
-              ? (dashes!.cjkDash = undefined) : {}}>
-          {$_('lint.unchecked')}
+              ? (dashes!.cjkDash = { type: 'standard', wordConnectors: false })
+              : (dashes!.cjkDash = undefined)}>
+          {$_('lint.enabled')}
         </label>
         <label>
-          <input type='radio' checked={dashes?.cjkDash?.type == 'standard'}
+          <input type='checkbox' disabled={!dashes?.cjkDash} checked={
+            dashes?.cjkDash?.wordConnectors ?? false}
+            onchange={(e) => {
+              if (dashes?.cjkDash) dashes.cjkDash.wordConnectors = e.currentTarget.checked;
+            }}>
+          {$_('lint.dashes-cjk-word-connectors')}
+        </label>
+
+        <hr>
+        <h5>{$_('lint.cjk-dashes')}</h5>
+        <label>
+          <input type='radio' disabled={!dashes?.cjkDash}
+            checked={dashes?.cjkDash?.type == 'standard'}
             onchange={(e) => e.currentTarget.checked
-              ? (dashes!.cjkDash = { type: 'standard' }) : {}}>
+              ? (dashes!.cjkDash = {
+                  type: 'standard',
+                  wordConnectors: dashes!.cjkDash?.wordConnectors ?? false
+                }) : {}}>
           {$_('lint.dashes-normal')}
         </label>
         <label>
-          <input type='radio' checked={dashes?.cjkDash?.type == 'unicode'}
+          <input type='radio' disabled={!dashes?.cjkDash}
+            checked={dashes?.cjkDash?.type == 'unicode'}
             onchange={(e) => e.currentTarget.checked
-              ? (dashes!.cjkDash = { type: 'unicode' }) : {}}>
+              ? (dashes!.cjkDash = {
+                  type: 'unicode',
+                  wordConnectors: dashes!.cjkDash?.wordConnectors ?? false
+                }) : {}}>
           {$_('lint.dashes-unicode')}
+        </label>
+        <label>
+          <input type='radio' disabled={!dashes?.cjkDash}
+            checked={dashes?.cjkDash?.type == 'forbidden'}
+            onchange={(e) => e.currentTarget.checked
+              ? (dashes!.cjkDash = {
+                  type: 'forbidden',
+                  wordConnectors: dashes!.cjkDash?.wordConnectors ?? false
+                }) : {}}>
+          {$_('lint.dashes-forbidden')}
         </label>
       </div>
     </div>
@@ -292,7 +322,7 @@ const result = $derived<LintProfile>({
       </ConfigRow>
     </ConfigTable>
   </fieldset>
-</div>
+
 </DialogBase>
 
 <style>

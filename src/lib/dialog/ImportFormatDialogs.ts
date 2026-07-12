@@ -41,6 +41,14 @@ export const ImportFormatDialogs = {
                     items: map<'fixed-style'>((x) =>
                         $_('jsonimport.fixed-style-item', {values: {a: x.name, b: x.occurrence}}))
                 };
+                case 'incompatible-filter': return {
+                    heading: $_('jsonimport.incompatible-filter'),
+                    items: map<'incompatible-filter'>((x) => $_('jsonimport.in-style') + x.name)
+                };
+                case 'incompatible-linter': return {
+                    heading: $_('jsonimport.incompatible-linter'),
+                    items: map<'incompatible-filter'>((x) => $_('jsonimport.in-style') + x.name)
+                };
                 case 'migrated-newer': return {
                     heading: $_('jsonimport.migrated-newer-from',
                         {values: {from: one<'migrated-newer'>((x) => x.from)}}),
@@ -53,7 +61,9 @@ export const ImportFormatDialogs = {
                 };
             }
         },
-        categoryDescription: () => undefined,
+        categoryDescription: (x) =>
+            x == 'incompatible' ? $_('jsonimport.incompatible')
+            : undefined,
     }),
 
     SRT: (p: SRTParser, skippable = false) => show(p, skippable, {

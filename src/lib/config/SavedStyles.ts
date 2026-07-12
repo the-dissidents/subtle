@@ -19,7 +19,7 @@ class MemorizedStyles extends Memorized<SerializedSubtitleStyle[], SubtitleStyle
         }
         this.value = value.flatMap((x) => {
             try {
-                return [SubtitleStyle.deserializeWithoutValidator(x)];
+                return [SubtitleStyle.deserializeWithoutSpecial(x)];
             } catch (e) {
                 void Debug.warn('unable to deserialize style', x, e);
                 return [];

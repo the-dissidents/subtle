@@ -389,6 +389,8 @@
     "hyphenMinus": "連字元"
   },
   "dashlint": {
+    "cjk-dashes-forbidden": "此處不允許使用中日韓文破折號",
+    "cjk-word-connector": "中日韓文連接號應使用連接號（en-dash）形態",
     "dialog-dashes-should-begin-on-a-new-line": "對話應另起一行",
     "no-midline-dashes": "只允許在行尾出現破折號；考慮使用省略號",
     "wrong-cjk-dashes": "不建議的中日韓文破折號形態",
@@ -566,6 +568,8 @@
     "curly-quotes": "彎引號（外雙內單）",
     "custom": "自訂",
     "dashes": "破折號",
+    "dashes-cjk-word-connectors": "檢查中日韓文連接號",
+    "dashes-forbidden": "禁用",
     "dashes-line-end-only": "限制只能出現在行尾",
     "dashes-need-spaces-around": "周圍需要空格",
     "dashes-normal": "正常",

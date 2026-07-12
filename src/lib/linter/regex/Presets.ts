@@ -36,7 +36,7 @@ export const RegexLintPresets = {
     }],
     useFullwidthPunctuationInCJK: [{
         type: 'punctuation',
-        pattern: /(?<=\p{Script=Han})[ ]*[,:;?!][ ]*(?=\p{Script=Han})/mug,
+        pattern: /(?<=\p{Script=Han})[ ]*[.,:;?!][ ]*(?=\p{Script=Han})/mug,
         description: () => $_('regexlint.use-fullwidth-punct'),
     }],
     useHalfwidthPunctuationInLatin: [{
@@ -46,7 +46,7 @@ export const RegexLintPresets = {
     }],
     noSpaceAroundFullwidthPunctuation: [{
         type: 'format',
-        pattern: /([\u3000-\u303F\uFF00-\uFF5A]|——|……)[ ]+/mug,
+        pattern: /([\u3000-\u303F\uFF00-\uFF5A])[ ]+(?![-－⸺\u2010-\u2015])/mug,
         description: () => $_('regexlint.no-space-after-fullwidth-punct'),
         fix: (m) => `${m[1]}`,
 
@@ -59,15 +59,9 @@ export const RegexLintPresets = {
 
         id: 'noSpaceAroundFullwidthPunctuation2',
     }],
-    useChineseWordConnector: [{
-        type: 'punctuation',
-        pattern: /(?<=\p{Script=Han})(-)(?=\p{Script=Han})/mug,
-        description: () => $_('regexlint.chinese-word-connector'),
-        fix: () => `–`,
-    }],
     spaceAroundEllipsis: [{
         type: 'format',
-        pattern: /(?<!^|\s)…+/mug,
+        pattern: /(?<!^|[、，。；：？！]|\s)…+/mug,
         description: () => $_('regexlint.space-around-ellipsis'),
         fix: () => ` …`,
     }, {
@@ -78,7 +72,7 @@ export const RegexLintPresets = {
     }],
     noSpaceAroundEllipsis: [{
         type: 'format',
-        pattern: /\s+…+\s*|\s*…+\s+/mug,
+        pattern: /\s+…+\s*|\s*…+\s+(?![-－⸺\u2010-\u2015])/mug,
         description: () => $_('regexlint.no-space-around-ellipsis'),
         fix: (m) => m[0].trim(),
 

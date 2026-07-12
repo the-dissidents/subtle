@@ -36,8 +36,12 @@ export const ZStyleBase = z.object({
     }),
     alignment:         z._default(z.enum(AlignMode), AlignMode.BottomCenter),
     wrapStyle:         z._default(z.enum(WrapStyle), WrapStyle.Balanced),
+
+    // Special members.
+    // We allow the value these two properties to be incompatible with the
+    // current version when deserializing
     validator:         z._default(z.nullable(z.unknown()), null),
-    lintProfile:       z._default(z.nullable(LintProfile), null)
+    lintProfile:       z._default(z.nullable(z.unknown()), null),
 });
 
 export const ZMetadata = z.object({
@@ -56,8 +60,11 @@ export const ZMetadata = z.object({
     }),
 });
 
-export type SubtitleStyle = Omit<z.infer<typeof ZStyleBase>, 'validator'> & {
-    validator: MetricFilter | null
+const ZStyleBaseWithoutSpecial = z.omit(ZStyleBase, { validator: true, lintProfile: true });
+
+export type SubtitleStyle = z.infer<typeof ZStyleBaseWithoutSpecial> & {
+    validator: MetricFilter | null,
+    lintProfile: LintProfile | null,
 };
 
 export type SerializedSubtitleStyle = ReturnType<typeof SubtitleStyle.serialize>;
@@ -65,24 +72,26 @@ export type SerializedSubtitleStyle = ReturnType<typeof SubtitleStyle.serialize>
 export const SubtitleStyle = {
     serialize(s: SubtitleStyle) {
         return {
-            ...z.encode(ZStyleBase, s),
-            validator: s.validator ? Filter.serialize(s.validator) : null
+            ...z.encode(ZStyleBaseWithoutSpecial, s),
+            validator: s.validator ? Filter.serialize(s.validator) : null,
+            lintProfile: s.lintProfile ? z.encode(LintProfile, s.lintProfile) : null,
         }
     },
-    deserializeWithoutValidator(obj: unknown) {
-        const base = parseObjectZ(obj, ZStyleBase, "ZStyleBase");
-        return { ...base, validator: null };
+    deserializeWithoutSpecial(obj: unknown) {
+        const base = parseObjectZ(obj, ZStyleBaseWithoutSpecial, "ZStyleBase");
+        return { ...base, validator: null, lintProfile: null };
     },
     clone(s: SubtitleStyle) {
         // is this structuredClone unnecessary?
-        const x = structuredClone(z.encode(ZStyleBase, s));
+        const x = structuredClone(z.encode(ZStyleBaseWithoutSpecial, s));
         return {
-            ...z.decode(ZStyleBase, x),
-            validator: s.validator ? Filter.clone(s.validator) : null
+            ...z.decode(ZStyleBaseWithoutSpecial, x),
+            validator: s.validator ? Filter.clone(s.validator) : null,
+            lintProfile: s.lintProfile,
         };
     },
     new(name: string) {
-        return SubtitleStyle.deserializeWithoutValidator({ name, styles: {}, margin: {} });
+        return SubtitleStyle.deserializeWithoutSpecial({ name, styles: {}, margin: {} });
     }
 };
 
