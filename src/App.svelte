@@ -74,7 +74,6 @@ let timelineCanvasContainer: HTMLDivElement | undefined = $state();
 let statusTwinkling = $state(false);
 
 let status = Frontend.status;
-let uiFocus = Frontend.uiFocus;
 let toolboxFocus = Frontend.toolboxFocus;
 let loadState = Playback.loadState;
 let filenameDisplay =
@@ -229,11 +228,9 @@ observer.observe({ type: 'paint', buffered: true });
   onbeforeunload={(ev) => {
     if (get(Source.fileChanged)) ev.preventDefault();
   }}
-  onfocusin={() => {
-    // TODO: this works but looks like nonsense
-    if ($uiFocus != 'EditingField')
-      $uiFocus = 'Other';
-  }}/>
+  onfocusin={(e) => console.log('focusin', e.target, e.relatedTarget)}
+  onfocusout={(e) => console.log('focusout', e.target, e.relatedTarget)}
+/>
 
 {#if $isLoading}
 <!-- loading locales -->

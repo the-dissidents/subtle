@@ -1,10 +1,12 @@
 console.info('Frontend loading');
 
+import { tick } from "svelte";
 import { DebugConfig, InputConfig } from "../config/Groups";
 import { Format } from "../core/SimpleFormats";
 import { Subtitles, type SubtitleFormat } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
 import { get, readonly, writable } from "svelte/store";
+import type { Attachment } from "svelte/attachments";
 
 export type TranslatedWheelEvent = {
     isZoom: true;
@@ -108,7 +110,28 @@ export const Frontend = {
     getUIFocus(): UIFocus {
         return get(this.uiFocus);
     },
+
+    cancelUIFocus(f: UIFocus) {
+        if (this.getUIFocus() !== f) return Debug.early();
+        void tick().then(() => {
+            if (this.getUIFocus() === f)
+                this.uiFocus.set('Other');
+        });
+    }
 }
+
+export function focusablePanel(focus: UIFocus): Attachment {
+    return (e) => {
+        const el = e as HTMLElement;
+        el.tabIndex = -1;
+        el.addEventListener('focusin', () => Frontend.uiFocus.set(focus));
+        el.addEventListener('focusout', (e) => {
+            if (e.relatedTarget && el.contains(e.relatedTarget as Node)) return;
+            Frontend.cancelUIFocus(focus);
+        });
+    };
+}
+
 export async function guardAsync(x: () => Promise<void>, msg: string): Promise<void>;
 export async function guardAsync<T>(x: () => Promise<T>, msg: string, fallback: T): Promise<T>;
 

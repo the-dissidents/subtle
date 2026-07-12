@@ -214,6 +214,7 @@
     min-height: 1lh;
     white-space: pre-wrap;
     font-synthesis: style;
+    cursor: text;
 
     :global(.virtual-selection) {
       background-color: gainsboro;

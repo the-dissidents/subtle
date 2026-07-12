@@ -183,15 +183,15 @@ export class CanvasManager {
         void this.#updateSize();
 
         eventReceiver.addEventListener('mousedown', (ev) => {
-            ev.preventDefault();
+            // ev.preventDefault();
             void this.#onMouseDown(ev);
         });
         eventReceiver.addEventListener('mouseup', (ev) => {
-            ev.preventDefault();
+            // ev.preventDefault();
             void this.#onMouseUp(ev);
         });
         eventReceiver.addEventListener('mousemove', (ev) => {
-            ev.preventDefault();
+            // ev.preventDefault();
             void this.#onMouseMove(ev);
         });
         eventReceiver.addEventListener('wheel', (ev) => void this.#onMouseWheel(ev));

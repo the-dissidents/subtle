@@ -2,7 +2,7 @@
 import { Debug } from "../../Debug";
 import { EventHost } from "../../details/EventHost";
 import { Metrics, type MetricContext } from "../../core/Filter";
-import { Frontend } from "../../frontend/Frontend";
+import { Frontend, focusablePanel } from "../../frontend/Frontend";
 
 import { TableLayout, type Column } from "./Layout.svelte";
 import { TableRenderer } from "./Render.svelte";
@@ -38,7 +38,9 @@ onMount(() => {
 
 </script>
 
-<div class="container">
+<div class="container"
+  {@attach focusablePanel('Table')}
+>
   <button onclick={(ev) => {
     const rect = ev.currentTarget.getBoundingClientRect();
     columnPopup.open(rect);
@@ -49,6 +51,24 @@ onMount(() => {
     class="area"
     class:focused={$uiFocus === 'Table'}
   ></canvas>
+
+  <Popup bind:this={columnPopup} position="left">
+    {#if layout !== undefined}
+    {#key $locale}
+    <div class="form">
+      <h5>
+        {$_('table.edit-columns')}
+      </h5>
+      {@render metricList({list: layout.entryColumns}, ['entry'])}
+      <hr>
+      {@render metricList({list: layout.channelColumns}, ['style', 'channel'])}
+    </div>
+    {/key}
+    {/if}
+  </Popup>
+
+  <MessagePopup bind:this={popup}>
+  </MessagePopup>
 </div>
 
 {#snippet metricList(opt: {list: Column[]}, category: MetricContext[])}
@@ -91,24 +111,6 @@ onMount(() => {
     {/snippet}
   </OrderableList>
 {/snippet}
-
-<Popup bind:this={columnPopup} position="left">
-  {#if layout !== undefined}
-  {#key $locale}
-  <div class="form">
-    <h5>
-      {$_('table.edit-columns')}
-    </h5>
-    {@render metricList({list: layout.entryColumns}, ['entry'])}
-    <hr>
-    {@render metricList({list: layout.channelColumns}, ['style', 'channel'])}
-  </div>
-  {/key}
-  {/if}
-</Popup>
-
-<MessagePopup bind:this={popup}>
-</MessagePopup>
 
 <style lang='scss'>
   @media (prefers-color-scheme: dark) {

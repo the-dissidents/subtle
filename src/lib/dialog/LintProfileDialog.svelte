@@ -375,10 +375,4 @@ const result = $derived<LintProfile>({
       margin-right: 5px;
     }
   }
-
-  /* .vr {
-    border-left: 1px solid var(--separator-light);
-    width: 1px;
-    height: 100%;
-  } */
 </style>

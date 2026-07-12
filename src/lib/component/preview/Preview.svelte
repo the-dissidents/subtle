@@ -3,7 +3,7 @@
 
   import { Memorized } from "../../config/MemorizedValue.svelte";
   import { Playback } from "../../frontend/Playback";
-  import { Frontend } from "../../frontend/Frontend";
+  import { Frontend, focusablePanel } from "../../frontend/Frontend";
 
   import { PreviewLayout } from "./Layout";
   import { MediaPlayerInterface } from "./MediaPlayer";
@@ -67,10 +67,9 @@
     oninput={(x) => $volume = x.currentTarget.valueAsNumber}/>
 </Popup>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="vlayout fill area" class:focused={$uiFocus == 'Preview'}
-  onclick={() => $uiFocus = 'Preview'}
+<div class="vlayout fill area"
+  class:focused={$uiFocus == 'Preview'}
+  {@attach focusablePanel('Preview')}
 >
   <div class='player-container fixminsize'>
     <canvas class="fill" bind:this={canvas}></canvas>

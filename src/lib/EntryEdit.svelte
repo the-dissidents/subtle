@@ -281,13 +281,7 @@ function applyEditForm() {
             onBlur={async (text) => {
               if (Editing.editChanged)
                 await Editing.submitEntry(focused, style, text);
-
-              if ($uiFocus === 'EditingField') {
-                const entry = Editing.getFocusedEntry();
-                await tick();
-                if ($uiFocus === 'EditingField' && Editing.getFocusedEntry() === entry)
-                  $uiFocus = 'Other';
-              }
+              Frontend.cancelUIFocus('EditingField');
             }}
             onInput={() => {
               $uiFocus = 'EditingField';

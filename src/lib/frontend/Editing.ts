@@ -86,7 +86,6 @@ const focusState: WritableFocusState = {
     get control() { return __control; },
     set control(x) {
         __control = x;
-        console.log('focused control ->', x);
     },
     style: writable(null)
 };

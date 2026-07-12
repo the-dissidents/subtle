@@ -84,8 +84,8 @@
             -webkit-text-stroke-width: ${outline}px;
             -webkit-text-stroke-color: ${outlineColor};`
           : `color: ${color};`}
-        {shadow > 0 
-          ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${shadowColor});` 
+        {shadow > 0
+          ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${shadowColor});`
           : ''}
       ">
         {@render line(box.line)}

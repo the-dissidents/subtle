@@ -88,7 +88,7 @@ async function manageSavedStyles() {
 
 <div class="vlayout">
   <ConfigTable>
-    <ConfigRow name={$_('ppty.title')}>
+    <ConfigRow name={$_('ppty.title')} style='display: flex; flex-direction: row;'>
       <input type="text" class='txt' bind:value={metadata.title}
         onchange={markMetadataChange} />
     </ConfigRow>
@@ -149,7 +149,7 @@ async function manageSavedStyles() {
 </div>
 
 <style lang='scss'>
-.txt {
-  width: 100%;
-}
+  .txt {
+    width: 100%;
+  }
 </style>

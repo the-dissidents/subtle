@@ -267,7 +267,6 @@ let updateCounter = $state(0);
 
 function processEntry(ent: SubtitleEntry) {
   let lines = RichText.split([...ent.texts.values()][0], '\n');
-  console.log([...ent.texts.values()][0], lines);
   if (reversed)
     lines = lines.reverse();
   if (removeEmptyLines)
@@ -291,7 +290,6 @@ function processEntry(ent: SubtitleEntry) {
   {#snippet header()}
   <h4>{$_('splitbylinedialog.header')}</h4>
   {/snippet}
-  <div class="vlayout">
   <p>{$_('splitbylinedialog.explanation-0')}</p>
   <table class='data'>
     <thead>
@@ -382,7 +380,7 @@ function processEntry(ent: SubtitleEntry) {
     </tbody>
   </table>
 
-  <div class="hlayout">
+  <div class="hlayout fixminheight">
     <div class="settings">
       <h5>{$_('splitbylinedialog.settings')}</h5>
       <label>
@@ -421,15 +419,14 @@ function processEntry(ent: SubtitleEntry) {
           bind:value={markLessThan.label} />
       </label>
     </div>
-    <div class="preview">
+    <div class="preview vlayout">
       <h5>{$_('splitbylinedialog.preview')}</h5>
-      <ol tabindex="0" role="listbox">
+      <ol tabindex="0" role="listbox" class="flexgrow">
         {#each previewLines as line}
           <li>{line}</li>
         {/each}
       </ol>
     </div>
-  </div>
   </div>
 </DialogBase>
 
@@ -452,5 +449,9 @@ function processEntry(ent: SubtitleEntry) {
   .preview {
     max-width: 30em;
     flex: 1 0;
+    height: auto;
+  }
+  .fixminheight {
+    min-height: 0;
   }
 </style>

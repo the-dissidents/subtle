@@ -2,7 +2,7 @@
 import { _ } from 'svelte-i18n';
 
 import { ChangeType, Source } from "../../frontend/Source";
-import { Frontend } from '../../frontend/Frontend';
+import { Frontend, focusablePanel } from '../../frontend/Frontend';
 import { Playback } from '../../frontend/Playback';
 import { hook } from '../../details/Hook.svelte';
 
@@ -70,7 +70,10 @@ function updateSnapOverride(ev: KeyboardEvent) {
   on:keydown={updateSnapOverride}
   on:keyup={updateSnapOverride}/>
 
-<div class="hlayout container area" class:focused={$uiFocus === 'Timeline'}>
+<div class="hlayout container area"
+  class:focused={$uiFocus === 'Timeline'}
+  {@attach focusablePanel('Timeline')}
+>
   <div class="vlayout toolbox">
     <Tooltip text={$_('timeline.select-tool')} position="right">
       <label>
@@ -130,10 +133,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
     </Tooltip>
   </div>
 
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="overlay-container"
-      onclick={() => $uiFocus = 'Timeline'}>
+  <div class="overlay-container">
     <div class="button-container"
         style:width="{buttonPosX}px">
       <button aria-label='edit'
@@ -149,33 +149,33 @@ function updateSnapOverride(ev: KeyboardEvent) {
     <canvas class="timeline fill" use:setup>
     </canvas>
   </div>
-</div>
 
-<Popup bind:this={rowPopup} position="right">
-  <div class="vlayout">
-    <h5>
-      {$_('timeline.filter-styles')}
-    </h5>
-    {#key styleRefreshCounter}
-    {@const exclude = Source.subs.view.timelineExcludeStyles}
-    {#each Source.subs.styles as style (style.name)}
-      <label>
-        <input type="checkbox"
-          checked={!exclude.has(style)}
-          onchange={async (ev) => {
-            if (ev.currentTarget.checked)
-              exclude.delete(style);
-            else
-              exclude.add(style);
-            layout!.requestedLayout = true;
-            await Source.markChanged(ChangeType.View, $_('c.timeline-row-view'));
-          }} />
-        {style.name}
-      </label>
-    {/each}
-    {/key}
-  </div>
-</Popup>
+  <Popup bind:this={rowPopup} position="right">
+    <div class="vlayout">
+      <h5>
+        {$_('timeline.filter-styles')}
+      </h5>
+      {#key styleRefreshCounter}
+      {@const exclude = Source.subs.view.timelineExcludeStyles}
+      {#each Source.subs.styles as style (style.name)}
+        <label>
+          <input type="checkbox"
+            checked={!exclude.has(style)}
+            onchange={async (ev) => {
+              if (ev.currentTarget.checked)
+                exclude.delete(style);
+              else
+                exclude.add(style);
+              layout!.requestedLayout = true;
+              await Source.markChanged(ChangeType.View, $_('c.timeline-row-view'));
+            }} />
+          {style.name}
+        </label>
+      {/each}
+      {/key}
+    </div>
+  </Popup>
+</div>
 
 <style lang='scss'>
 @media (prefers-color-scheme: light) {
