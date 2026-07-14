@@ -185,7 +185,6 @@
     disabled={!target}
     onchange={(x) => {
       const s = x.currentTarget.valueAsNumber;
-      console.log(s);
       if (s <= 0 || isNaN(s)) {
         x.currentTarget.value = `${currentSize ?? ''}`;
         return;

@@ -281,7 +281,6 @@ export class ASSParser implements SubtitleParser {
         const getStyleOrCreate = (styleName: string) => {
             let style = nameToStyle.get(styleName);
             if (!style) {
-                console.log(styleName);
                 this.#invalid({ type: 'undefined-style', name: styleName });
                 const newStyle = $state(SubtitleStyle.new(styleName));
                 style = newStyle;

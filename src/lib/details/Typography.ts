@@ -17,12 +17,10 @@ export const Typography = {
         const testString = 'Mgjpq';
         ctx.font = `${testPxSize}px "${fontFamily}"`;
         const metrics = ctx.measureText(testString);
-        const result = testPxSize / 
+        const result = testPxSize /
             (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent);
         RealDims.set(fontFamily, result);
 
-        console.log(fontFamily, result);
-        
         return result;
     }
 }

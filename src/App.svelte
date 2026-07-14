@@ -1,5 +1,5 @@
 <script lang="ts">
-console.info('App loading');
+console.info('App loading', performance.now());
 
 import { derived, get } from 'svelte/store';
 import { _, locale, isLoading } from 'svelte-i18n';
@@ -8,10 +8,6 @@ import * as i18n from 'svelte-i18n';
 i18n.register('en', () => import('./locales/en.json'));
 i18n.register('zh-cn', () => import('./locales/zh-cn.json'));
 i18n.register('zh-tw', () => import('./locales/zh-tw.json'));
-
-void (async () => {
-  await i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' });
-})();
 
 import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
 import { TableConfig } from "./lib/component/subtitleTable/Config";
@@ -23,21 +19,23 @@ MainConfig.addGroup('timeline', TimelineConfig);
 MainConfig.addGroup('media', MediaConfig);
 MainConfig.addGroup('table', TableConfig);
 
+import { initWindowMenu } from './lib/WindowMenu';
 import EntryEdit from './lib/EntryEdit.svelte';
 import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
 import Timeline from './lib/component/timeline/Timeline.svelte';
 import Preview from './lib/component/preview/Preview.svelte';
 
 import { Resizer, TabPage, TabView, Tooltip, Banner } from '@the_dissidents/svelte-ui';
+import { BugIcon, CommandIcon, FilmIcon, Redo2Icon, SettingsIcon, TriangleAlertIcon, Undo2Icon } from '@lucide/svelte';
 
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
 import TestToolbox from './lib/toolbox/TestToolbox.svelte';
 import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
 import ReferencesToolbox from './lib/toolbox/ReferencesToolbox.svelte';
+import ReviewToolbox from './lib/toolbox/ReviewToolbox.svelte';
 
-import { Basic } from './lib/Basic';
-
+import * as z from "zod/v4-mini";
 import { onMount } from 'svelte';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -51,18 +49,12 @@ import { Source, SourceCommands } from './lib/frontend/Source';
 import { KeybindingManager } from './lib/frontend/Keybinding';
 import { Frontend } from './lib/frontend/Frontend';
 
-import { BugIcon, CommandIcon, FilmIcon, Redo2Icon, SettingsIcon, TriangleAlertIcon, Undo2Icon } from '@lucide/svelte';
+import { Basic } from './lib/Basic';
 import { Debug, GetLevelFilter } from './lib/Debug';
 import { MAPI } from './lib/API';
 import { Fonts } from './lib/Fonts';
 import { Dialog } from './lib/dialog';
 import DialogOutlet, { openDialog } from './lib/DialogOutlet.svelte';
-
-import * as z from "zod/v4-mini";
-import { initWindowMenu } from './lib/WindowMenu';
-  import ReviewToolbox from './lib/toolbox/ReviewToolbox.svelte';
-
-void Debug.init();
 
 const appWindow = getCurrentWebviewWindow();
 
@@ -145,13 +137,6 @@ MainConfig.hook(() => InterfaceConfig.data.theme, async (theme) => {
   await Debug.debug('changed theme', InterfaceConfig.data.theme);
 });
 
-void MainConfig.init();
-void KeybindingManager.init();
-void Fonts.init();
-
-void getVersion().then((x) =>
-  appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`));
-
 void appWindow.onCloseRequested(async (ev) => {
   if (!await Interface.warnIfNotSaved()) {
     ev.preventDefault();
@@ -187,7 +172,6 @@ let timelineH = Memorized.$('timelineH', z.number(), 150);
 let leftPaneW = Memorized.$('leftPaneW', z.number(), 300);
 let videoH = Memorized.$('videoH', z.number(), 200);
 
-void Memorized.init();
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 Memorized.onInitialize(async () => {
   await restoreStateCurrent(StateFlags.ALL);
@@ -196,6 +180,21 @@ Memorized.onInitialize(async () => {
   editTable!.style.height = `${$editorH}px`;
   leftPane!.style.width = `${$leftPaneW}px`;
 });
+
+async function init() {
+  await Promise.all([
+    i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' }),
+    Debug.init(),
+    MainConfig.init(),
+    KeybindingManager.init(),
+    Fonts.init(),
+    Memorized.init(),
+    getVersion().then((x) =>
+      appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`)),
+  ]);
+  await Debug.info('ending init', performance.now());
+}
+void init();
 
 let errorBanner = $state({open: false});
 Debug.onError.bind({}, (origin, _msg) => {
@@ -228,8 +227,6 @@ observer.observe({ type: 'paint', buffered: true });
   onbeforeunload={(ev) => {
     if (get(Source.fileChanged)) ev.preventDefault();
   }}
-  onfocusin={(e) => console.log('focusin', e.target, e.relatedTarget)}
-  onfocusout={(e) => console.log('focusout', e.target, e.relatedTarget)}
 />
 
 {#if $isLoading}

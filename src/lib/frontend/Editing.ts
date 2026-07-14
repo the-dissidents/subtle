@@ -357,7 +357,6 @@ export const Editing = {
                 } else {
                     const a = Source.subs.entries.indexOf(this.selection.focused);
                     const b = Source.subs.entries.indexOf(ent);
-                    console.log(a, b, ent);
                     Debug.assert(a >= 0 && b >= 0);
                     this.selection.currentGroup = new Set(
                         Source.subs.entries.slice(Math.min(a, b), Math.max(a, b) + 1));

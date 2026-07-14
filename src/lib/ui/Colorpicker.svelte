@@ -40,7 +40,6 @@
   type ColorMode = keyof typeof modes;
 
   function convertMode(to: ColorMode) {
-    console.log('converting to', to, mode);
     const newColor = Color.to(
       Color.parse(modes[mode].expr(value0, value1, value2)), to, { inGamut: true });
     newColor.alpha = alpha;
