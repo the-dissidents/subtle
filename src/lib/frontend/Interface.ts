@@ -78,21 +78,15 @@ export const Interface = {
         return guardAsync(async () => {
             if (JSONSubtitles.detect(text)) {
                 const parser = JSONSubtitles.parse(text);
-                if (!await ImportFormatDialogs.JSON(parser, skippable))
-                    return null;
-                return parser.done();
+                return await ImportFormatDialogs.JSON(parser, skippable);
             }
             if (ASSSubtitles.detect(text)) {
                 const parser = ASSSubtitles.parse(text);
-                if (!await ImportFormatDialogs.ASS(parser, skippable))
-                    return null;
-                return parser.done();
+                return await ImportFormatDialogs.ASS(parser, skippable);
             }
             if (SRTSubtitles.detect(text) !== false) {
                 const parser = SRTSubtitles.parse(text);
-                if (!await ImportFormatDialogs.SRT(parser, skippable))
-                    return null;
-                return parser.done();
+                return await ImportFormatDialogs.SRT(parser, skippable);
             }
             throw Error();
         }, $_('msg.failed-to-parse-as-subtitles-path', {values: {path}}), null);

@@ -271,7 +271,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         items: () => forEachStyle(async (style) => {
             const source = await clipboard.readText();
             if (!source) return;
-            const portion = parseSubtitleSource(source);
+            const portion = await parseSubtitleSource(source);
             if (!portion) {
                 Frontend.setStatus($_('msg.failed-to-parse-clipboard-data-as-subtitles'), 'error');
                 return;
@@ -305,7 +305,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         async call() {
             const source = await clipboard.readText();
             if (!source) return;
-            const portion = parseSubtitleSource(source);
+            const portion = await parseSubtitleSource(source);
             if (!portion) {
                 Frontend.setStatus($_('msg.failed-to-parse-clipboard-data-as-subtitles'), 'error');
                 return;

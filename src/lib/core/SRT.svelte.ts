@@ -39,24 +39,17 @@ export type SRTParseMessage = {
 } ;
 
 export class SRTParser implements SubtitleParser {
-    #subs: Subtitles;
-    #messages: SRTParseMessage[] = [];
     #ignoredCoords = 0;
-    #parsed = false;
 
-    constructor(private source: string) {
-        this.#subs = new Subtitles();
-    }
+    constructor(private source: string) { }
 
     /**
      * This is an exact clone of the algorithm in `srtdec.c`, in libavformat.
      * Reference: https://ffmpeg.org/doxygen/6.1/libavformat_2srtdec_8c_source.html
      */
-    update() {
-        this.#subs = new Subtitles();
+    decode() {
+        const subs = new Subtitles();
         this.#ignoredCoords = 0;
-        this.#messages = [];
-        this.#parsed = true;
 
         let buffer = '';
         let line_cache = '';
@@ -74,9 +67,9 @@ export class SRTParser implements SubtitleParser {
                 buffer = buffer.substring(0, buffer.length - 1);
             if (buffer.length > 0) {
                 const entry = new SubtitleEntry(start, end);
-                const parsed = HTMLString.parse(buffer, this.#subs.defaultStyle, warnings);
-                entry.texts.set(this.#subs.defaultStyle, parsed);
-                this.#subs.entries.push(entry);
+                const parsed = HTMLString.parse(buffer, subs.defaultStyle, warnings);
+                entry.texts.set(subs.defaultStyle, parsed);
+                subs.entries.push(entry);
                 buffer = '';
             }
         };
@@ -122,36 +115,30 @@ export class SRTParser implements SubtitleParser {
             throw new DeserializationError('invalid or empty SRT');
         }
 
-        this.#subs.migrated = 'text';
-        if (this.#ignoredCoords > 0) this.#messages.push({
+        const messages: SRTParseMessage[] = [];
+        subs.migrated = 'text';
+        if (this.#ignoredCoords > 0) messages.push({
             type: 'ignored-coordinates',
             category: 'ignored',
             occurrence: this.#ignoredCoords
         });
-        if (warnings.invalidColor > 0) this.#messages.push({
+        if (warnings.invalidColor > 0) messages.push({
             type: 'invalid-color-name',
             category: 'ignored',
             occurrence: warnings.invalidColor
         });
-        for (const [name, occurrence] of warnings.ignoredTags) this.#messages.push({
+        for (const [name, occurrence] of warnings.ignoredTags) messages.push({
             type: 'ignored-format-tag',
             category: 'ignored',
             name, occurrence
         });
-        for (const [name, occurrence] of warnings.ignoredSpecialCharacter) this.#messages.push({
+        for (const [name, occurrence] of warnings.ignoredSpecialCharacter) messages.push({
             type: 'ignored-special-character',
             category: 'ignored',
             name, occurrence
         });
-    }
 
-    done() {
-        if (!this.#parsed) this.update();
-        return this.#subs;
-    }
-
-    get messages() {
-        return this.#messages;
+        return { messages, subs };
     }
 }
 

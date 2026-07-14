@@ -110,10 +110,6 @@ export class JSONParser implements SubtitleParser {
 
     #duplicatedStyles = new Map<SubtitleStyle, SubtitleStyle[]>();
 
-    get messages() {
-        return this.#messages;
-    }
-
     constructor(source: string) {
         const jsonObj = JSON.parse(source);
         this.#obj = parseObjectZ(jsonObj, ZDocument, 'JSON document');
@@ -155,11 +151,9 @@ export class JSONParser implements SubtitleParser {
             });
     }
 
-    done(): Subtitles {
-        return this.#subs;
+    decode() {
+        return { messages: this.#messages, subs: this.#subs };
     }
-
-    update(): void { }
 
     #parseView() {
         if (!this.#obj.view) return;

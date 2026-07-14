@@ -12,9 +12,9 @@ const $_ = unwrapFunctionStore(_);
 async function show<P extends SubtitleParser>(
     parser: P, skippable: boolean, format: ImportFormat<P>
 ) {
-    parser.update();
-    if (parser.messages.length == 0 && skippable)
-        return parser.done();
+    const ret = await parser.decode();
+    if (ret.messages.length == 0 && skippable)
+        return ret.subs;
 
     return await openDialog(
         (await import('./ImportFormatDialog.svelte')).default<P>, parser, format);
@@ -69,8 +69,8 @@ export const ImportFormatDialogs = {
     SRT: (p: SRTParser, skippable = false) => show(p, skippable, {
         header: $_('srtimport.header'),
         formatMessage(type, group) {
-            const map = <Ty extends ASSParseMessage['type']>(
-                f: (x: Extract<ASSParseMessage, { type: Ty; }>) => string
+            const map = <Ty extends SRTParseMessage['type']>(
+                f: (x: Extract<SRTParseMessage, { type: Ty; }>) => string
             ) => // @ts-expect-error -- ...
                 group.map(f);
 

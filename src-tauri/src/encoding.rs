@@ -31,7 +31,7 @@ pub fn decode_file_as(path: String, encoding: Option<String>) -> DecodeResult {
     let encoding = match encoding {
         Some(e) => match encoding_rs::Encoding::for_label(e.as_bytes()) {
             Some(x) => x,
-            None => return  DecodeResult::Error("invalid encoding".to_string())
+            None => return DecodeResult::Error("invalid encoding".to_string())
         },
         None => encoding_rs::UTF_8
     };

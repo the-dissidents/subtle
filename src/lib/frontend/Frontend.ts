@@ -3,7 +3,7 @@ console.info('Frontend loading');
 import { tick } from "svelte";
 import { DebugConfig, InputConfig } from "../config/Groups";
 import { Format } from "../core/SimpleFormats";
-import { Subtitles, type SubtitleFormat } from "../core/Subtitles.svelte";
+import { type SubtitleFormat } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
 import { get, readonly, writable } from "svelte/store";
 import type { Attachment } from "svelte/attachments";
@@ -19,22 +19,26 @@ export type TranslatedWheelEvent = {
     isTrackpad: boolean
 };
 
-export function parseSubtitleSource(source: string): Subtitles | null {
-    const formats = [Format.JSON, Format.ASS, Format.SRT];
+async function parse(f: SubtitleFormat, s: string) {
+    return (await (await f.parse(s)).decode()).subs;
+}
+
+export async function parseSubtitleSource(source: string) {
+    const formats: SubtitleFormat[] = [Format.JSON, Format.ASS, Format.SRT];
     const possible: SubtitleFormat[] = [];
     for (const f of formats) {
         const d = f.detect(source);
         if (d === null) possible.push(f);
-        if (d === true) return f.parse(source).done();
+        if (d === true) return await parse(f, source);
     }
     if (possible.length == 1)
-        return possible[0].parse(source).done();
+        return await parse(possible[0], source);
     for (const f of possible) {
         try {
-            return f.parse(source).done();
+            return await parse(f, source);
         } catch (e) {
             // pass
-            void Debug.debug(e);
+            await Debug.debug(e);
         }
     }
     void Debug.debug('no recognized format');

@@ -84,7 +84,7 @@ export class ASSParser implements SubtitleParser {
         this.#parseScriptInfo();
     }
 
-    update() {
+    decode() {
         if (this.#parsed) {
             this.#warnings = [];
             this.#subs = new Subtitles();
@@ -95,12 +95,7 @@ export class ASSParser implements SubtitleParser {
         this.#parseFonts();
         this.#subs.migrated = 'ASS';
         this.#parsed = true;
-        return this;
-    }
-
-    done(): Subtitles {
-        if (!this.#parsed) this.update();
-        return this.#subs;
+        return { messages: this.#warnings, subs: this.#subs };
     }
 
     get messages(): readonly ASSParseMessage[] {

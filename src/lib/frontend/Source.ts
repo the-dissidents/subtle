@@ -49,7 +49,7 @@ export enum ChangeType {
 }
 
 async function readSnapshot(s: Snapshot, archive: string) {
-    Source.subs = Format.JSON.parse(archive).done();
+    Source.subs = Format.JSON.parse(archive).decode().subs;
 
     await Editing.clearFocus(false);
     await Editing.clearSelection();

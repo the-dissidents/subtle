@@ -13,18 +13,20 @@ export type FormatImportOption<P extends SubtitleParser> = {
   setValue: (p: P, v: boolean) => void
 };
 
+type ParserMessage<P extends SubtitleParser> = Awaited<ReturnType<P['decode']>>['messages'][0];
+
 export type ImportFormat<P extends SubtitleParser> = {
   header: string,
-  formatMessage<T extends P['messages'][0]['type']>(
-    type: T, group: OneGroup<P['messages'][0], 'type', T>): MessageGroupFormat;
-  categoryDescription(category: P['messages'][0]['category']): string | undefined;
+  formatMessage<T extends ParserMessage<P>['type']>(
+    type: T, group: OneGroup<ParserMessage<P>, 'type', T>): MessageGroupFormat;
+  categoryDescription(category: ParserMessage<P>['category']): string | undefined;
   options?: FormatImportOption<P>[];
 };
 </script>
 
 <script lang="ts" generics="P extends SubtitleParser">
 import { Debug } from '../Debug';
-import type { SubtitleParseMessage, SubtitleParser } from '../core/Subtitles.svelte';
+import type { SubtitleParseMessage, SubtitleParser, Subtitles } from '../core/Subtitles.svelte';
 import { groupBy, type GroupedBy, type OneGroup } from '../details/GroupBy';
 
 import { CircleAlertIcon, CircleCheckIcon } from '@lucide/svelte';
@@ -36,7 +38,7 @@ import { Tooltip } from '@the_dissidents/svelte-ui';
 
 interface Props {
   args: [P, ImportFormat<P>];
-  close: (ret: boolean) => void;
+  close: (ret: Subtitles | null) => void;
 }
 
 let {
@@ -47,18 +49,20 @@ let {
 let [parser, format] = $state(args);
 
 let inner: DialogBase;
-let categories = $state<GroupedBy<P['messages'][0], 'category'>>();
+let categories = $state<GroupedBy<ParserMessage<P>, 'category'>>();
+let subs: Subtitles | null = null;
 
 onMount(async () => {
-  parse();
+  await parse();
   let btn = await inner.showModal!();
-  return close(btn == 'ok');
+  return close(btn == 'ok' ? subs : null);
 });
 
-function parse() {
+async function parse() {
   Debug.assert(parser !== undefined);
-  parser.update();
-  categories = groupBy(parser.messages, 'category');
+  const ret = await parser.decode();
+  subs = ret.subs;
+  categories = groupBy(ret.messages, 'category');
 }
 </script>
 
@@ -115,7 +119,10 @@ function parse() {
         {#if opt.type == 'boolean'}
           <label>
             <input type="checkbox" checked={opt.getValue(parser)}
-              onchange={(x) => {opt.setValue(parser, x.currentTarget.checked); parse()}}/>
+              onchange={async (x) => {
+                opt.setValue(parser, x.currentTarget.checked);
+                await parse();
+              }}/>
             {opt.name}
             {#if opt.description}
               <Tooltip text={opt.description} />

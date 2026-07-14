@@ -217,15 +217,25 @@ export interface SubtitleParsableFormat {
      * Detects if a source string is of this format. Returns `null` if uncertain.
      */
     detect(source: string): boolean | null;
-    parse(source: string): SubtitleParser;
+
+    /**
+     * Attempt to create a parser for the source. If a fatal error occurs while parsing a subtitle, throws an error.
+     */
+    parse(source: string): SubtitleParser | Promise<SubtitleParser>;
 }
 
 export type SubtitleFormat = SubtitleWritableFormat & SubtitleParsableFormat;
 
+/**
+ * Upon creation by `SubtitleParsableFormat.parse(source)`, a SubtitleParser should load a subtitle file but not necessarily decode all of it. It may provide fields or methods to change its settings, since `parse` doesn't provide any options. Call `decode` to decode the file and get any parse messages.
+ */
 export interface SubtitleParser {
-    done(): Subtitles;
-    update(): void;
-    messages: readonly SubtitleParseMessage[];
+    decode(): SubtitleParseResult | Promise<SubtitleParseResult>;
+}
+
+interface SubtitleParseResult {
+    messages: SubtitleParseMessage[],
+    subs: Subtitles;
 }
 
 export interface SubtitleWriter {
