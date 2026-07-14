@@ -87,7 +87,8 @@
     } else
       normalized = Color.toGamut(c);
 
-    [value0, value1, value2] = modes[mode].fromColorIo(...normalized.coords);
+    const nc0 = normalized.coords[0] ?? 0, nc1 = normalized.coords[1] ?? 0, nc2 = normalized.coords[2] ?? 0;
+    [value0, value1, value2] = modes[mode].fromColorIo(nc0, nc1, nc2);
     alpha = c.alpha ?? 1;
 
     if (Number.isNaN(value0) || value0 === null) value0 = 0;
@@ -103,7 +104,7 @@
     let srgb = Color.to(color, Color.sRGB);
     outOfGamut = !Color.inGamut(srgb);
     srgb = Color.toGamut(srgb);
-    const [r, g, b] = srgb.coords;
+    const r = srgb.coords[0] ?? 0, g = srgb.coords[1] ?? 0, b = srgb.coords[2] ?? 0;
     hex = `#${
       Math.round(r * 255).toString(16).padStart(2, '0')}${
       Math.round(g * 255).toString(16).padStart(2, '0')}${

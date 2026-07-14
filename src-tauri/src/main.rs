@@ -18,6 +18,7 @@ use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri_plugin_log::TimezoneStrategy;
+use time::macros::format_description;
 
 #[allow(clippy::too_many_lines)]
 fn main() {
@@ -40,10 +41,8 @@ fn main() {
         log::error!("!! FATAL !! backend panicked ({message}) at {location}");
     }));
 
-    let time_format = time::format_description::parse(
-        "[year]-[month]-[day]@[hour]:[minute]:[second].[subsecond digits:3]",
-    )
-    .unwrap();
+    let time_format = format_description!(version = 3,
+        "[year]-[month]-[day]@[hour]:[minute]:[second].[subsecond digits:3]");
 
     let ctx = tauri::generate_context!();
     tauri::Builder::default()

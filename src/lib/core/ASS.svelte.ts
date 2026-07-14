@@ -521,7 +521,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
 // &HAABBGGRR
 export function toASSColor(original: Color.ColorTypes) {
     const c = Color.to(original, 'srgb', { inGamut: true });
-    const [r, g, b] = c.coords;
+    const r = c.coords[0] ?? 0, g = c.coords[1] ?? 0, b = c.coords[2] ?? 0;
     return '&H'
         + ((1 - (c.alpha ?? 1)) * 255).toString(16).toUpperCase().padStart(2, '0')
         + (b * 255).toString(16).toUpperCase().padStart(2, '0')
