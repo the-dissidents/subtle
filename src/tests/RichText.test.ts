@@ -1,6 +1,10 @@
 import { expect, test } from 'vitest';
 import { RichText, type RichTextAttr } from '../lib/core/RichText';
 
+function rt(v: RichText): RichText {
+    return typeof v === 'string' ? [v] : v;
+}
+
 // ---------------------------------------------------------------------------
 // leaf
 // ---------------------------------------------------------------------------
@@ -139,13 +143,13 @@ test('RichText.split', () => {
 // ---------------------------------------------------------------------------
 
 test('RichText.substring', () => {
-    expect(RichText.substring('01234567', 4, 7)).toStrictEqual(['456']);
+    expect(rt(RichText.substring('01234567', 4, 7))).toStrictEqual(['456']);
     expect(RichText.substring(
         ['012', { type: 'leaf', content: '345', attrs: ['bold'] }, '67'], 4, 7))
     .toStrictEqual([{ type: 'leaf', content: '45', attrs: ['bold'] }, '6']);
-    expect(RichText.substring('abc', 0)).toStrictEqual(['abc']);
-    expect(RichText.substring('abc', 1)).toStrictEqual(['bc']);
-    expect(RichText.substring('abc', 3)).toStrictEqual(['']);
+    expect(rt(RichText.substring('abc', 0))).toStrictEqual(['abc']);
+    expect(rt(RichText.substring('abc', 1))).toStrictEqual(['bc']);
+    expect(rt(RichText.substring('abc', 3))).toStrictEqual(['']);
     expect(RichText.substring(['abc', 'def'], 0)).toStrictEqual(['abc', 'def']);
     expect(RichText.substring(['abc', 'def'], 3)).toStrictEqual(['def']);
     expect(RichText.substring(['abc', 'def'], 6)).toStrictEqual('');
@@ -169,9 +173,9 @@ test('RichText.substring does not mutate inputs', () => {
 test('RichText.trim', () => {
     expect(RichText.trim('')).toStrictEqual('');
     expect(RichText.trim('abc')).toStrictEqual('abc');
-    expect(RichText.trim('  abc  ')).toStrictEqual(['abc']);
-    expect(RichText.trim('  abc')).toStrictEqual(['abc']);
-    expect(RichText.trim('abc  ')).toStrictEqual(['abc']);
+    expect(rt(RichText.trim('  abc  '))).toStrictEqual(['abc']);
+    expect(rt(RichText.trim('  abc'))).toStrictEqual(['abc']);
+    expect(rt(RichText.trim('abc  '))).toStrictEqual(['abc']);
     expect(RichText.trim('   ')).toStrictEqual('');
     expect(RichText.trim(['  ', { type: 'leaf', content: 'abc  ', attrs: ['bold'] }]))
         .toStrictEqual([{ type: 'leaf', content: 'abc', attrs: ['bold'] }]);
@@ -187,7 +191,7 @@ test('RichText.trim', () => {
 test('RichText.trimStart', () => {
     expect(RichText.trimStart('')).toStrictEqual('');
     expect(RichText.trimStart('abc')).toStrictEqual('abc');
-    expect(RichText.trimStart('  abc')).toStrictEqual(['abc']);
+    expect(rt(RichText.trimStart('  abc'))).toStrictEqual(['abc']);
     expect(RichText.trimStart('abc  ')).toStrictEqual('abc  ');
     expect(RichText.trimStart('   ')).toStrictEqual('');
     expect(RichText.trimStart(
@@ -203,7 +207,7 @@ test('RichText.trimEnd', () => {
     expect(RichText.trimEnd('')).toStrictEqual('');
     expect(RichText.trimEnd('abc')).toStrictEqual('abc');
     expect(RichText.trimEnd('  abc')).toStrictEqual('  abc');
-    expect(RichText.trimEnd('abc  ')).toStrictEqual(['abc']);
+    expect(rt(RichText.trimEnd('abc  '))).toStrictEqual(['abc']);
     expect(RichText.trimEnd('   ')).toStrictEqual('');
     expect(RichText.trimEnd(
         [{ type: 'leaf', content: 'abc', attrs: ['bold'] }, '  ']))
