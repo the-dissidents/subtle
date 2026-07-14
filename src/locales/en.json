@@ -485,6 +485,7 @@
     "number-equals": "=",
     "srt-subtitles": "SRT subtitles",
     "ssa-subtitles": "SSA subtitles",
+    "stl-subtitles": "STL subtitles",
     "subtitle-file": "subtitle file",
     "subtle-archive": "subtle archive",
     "video-file": "video file",
@@ -853,6 +854,13 @@
     "ignored-format-tags": "ignored HTML format tags",
     "info": "Some players support HTML format tags in SRT subtitles. This is nonstandard. If the \"preserve format tags\" option is enabled, such tags will be retained, although subtle cannot display them correctly.",
     "invalid-color": "invalid color name"
+  },
+  "stlimport": {
+    "header": "import STL",
+    "ignored-color-code": "ignored color code",
+    "info-unsupported": "{n,plural,one{This warning means} other{These warnings mean}} the STL file uses features that subtle does not yet support. They will be skipped during import.",
+    "unknown-control-byte": "unknown control byte",
+    "user-data-block": "user data block"
   },
   "style": {
     "alignment": "alignment:",

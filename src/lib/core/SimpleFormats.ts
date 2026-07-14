@@ -2,6 +2,7 @@ import { Basic } from "../Basic";
 import { ASSSubtitles } from "./ASS.svelte";
 import { JSONSubtitles } from "./JSON.svelte";
 import { SRTSubtitles } from "./SRT.svelte";
+import { STLSubtitles } from "./STL.svelte";
 import { SubtitleEntry, Subtitles, type SubtitleWritableFormat, type SubtitleWriter } from "./Subtitles.svelte";
 import { LinearFormatCombineStrategy, SubtitleUtil, type FormatOption, type LinearEntry } from "./SubtitleUtil.svelte";
 
@@ -61,6 +62,7 @@ const tabDelimited = {
 export const Format = {
     ASS: ASSSubtitles,
     SRT: SRTSubtitles,
+    STL: STLSubtitles,
     JSON: JSONSubtitles,
     plaintext,
     tabDelimited

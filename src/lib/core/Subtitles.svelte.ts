@@ -214,14 +214,14 @@ export interface SubtitleParseMessage {
 
 export interface SubtitleParsableFormat {
     /**
-     * Detects if a source string is of this format. Returns `null` if uncertain.
+     * Detects if a source is of this format. Returns `null` if uncertain.
      */
-    detect(source: string): boolean | null;
+    detect(source: string | Uint8Array): boolean | null;
 
     /**
      * Attempt to create a parser for the source. If a fatal error occurs while parsing a subtitle, throws an error.
      */
-    parse(source: string): SubtitleParser | Promise<SubtitleParser>;
+    parse(source: string | Uint8Array): SubtitleParser | Promise<SubtitleParser>;
 }
 
 export type SubtitleFormat = SubtitleWritableFormat & SubtitleParsableFormat;

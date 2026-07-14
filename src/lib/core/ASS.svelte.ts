@@ -10,6 +10,7 @@ import { WrapStyle } from "../details/TextLayout";
 
 export const ASSSubtitles = {
     detect(source) {
+        if (typeof source !== 'string') return false;
         try {
             new ASSParser(source);
             return true;
@@ -17,7 +18,7 @@ export const ASSSubtitles = {
             return false;
         }
     },
-    parse: (source) => new ASSParser(source),
+    parse: (source) => new ASSParser(source as string),
     write: (subs) => new ASSWriter(subs)
 } satisfies SubtitleFormat;
 

@@ -25,6 +25,7 @@ import { ASSSubtitles } from "../core/ASS.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { ImportFormatDialogs } from "../dialog/ImportFormatDialogs";
 import { SRTSubtitles } from "../core/SRT.svelte";
+import { STLSubtitles } from "../core/STL.svelte";
 import { JSONSubtitles } from "../core/JSON.svelte";
 import { openDialog } from "../DialogOutlet.svelte";
 import { Dialog } from "../dialog";
@@ -32,17 +33,18 @@ import { Dialog } from "../dialog";
 const $_ = unwrapFunctionStore(_);
 
 const IMPORT_FILTERS = () => [
-    { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', /*'vtt',*/ 'ssa', 'ass'] },
+    { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', /*'vtt',*/ 'ssa', 'ass', 'stl'] },
     { name: $_('filter.srt-subtitles'), extensions: ['srt'] },
     // { name: $_('filter.vtt-subtitles'), extensions: ['vtt'] },
     { name: $_('filter.ssa-subtitles'), extensions: ['ssa', 'ass'] },
+    { name: $_('filter.stl-subtitles'), extensions: ['stl'] },
     { name: $_('filter.subtle-archive'), extensions: ['json'] }
 ];
 
 export const MEDIA_EXTENSIONS =
     ['avi', 'mp4', 'm4v', 'mpg', 'mpv', 'ts', 'mts', 'm2ts', 'flv', 'webm', 'mkv', 'mov', 'rmvb'];
 
-async function readTextFile(path: string) {
+async function readFile(path: string) {
     try {
         const stats = await fs.stat(path);
         if (!stats.isFile) {
@@ -56,26 +58,37 @@ async function readTextFile(path: string) {
         return null;
     }
     return guardAsync(async () => {
-        const file = await fs.readFile(path);
-        const decode = await MAPI.detectOrDecodeFile(path);
-        if (decode !== null) {
-            const decoded = await MAPI.decodeFile(path, null);
-            return Basic.normalizeNewlines(decoded);
-        } else {
-            const result = (await import('chardet')).analyse(file);
-            const out = await openDialog(Dialog.encoding, path, file, result);
-            if (!out) return null;
-            return Basic.normalizeNewlines(out.decoded);
-        }
+        return await fs.readFile(path);
     }, $_('msg.unable-to-read-file-path', {values: {path}}), null);
+}
+
+async function decodeTextFile(path: string, file: Uint8Array) {
+    const decode = await MAPI.detectOrDecodeFile(path);
+    if (decode !== null) {
+        const decoded = await MAPI.decodeFile(path, null);
+        return Basic.normalizeNewlines(decoded);
+    } else {
+        const result = (await import('chardet')).analyse(file);
+        const out = await openDialog(Dialog.encoding, path, file, result);
+        if (!out) return null;
+        return Basic.normalizeNewlines(out.decoded);
+    }
 }
 
 export const Interface = {
     async parseSubtitleSourceInteractive(path: string, skippable?: boolean) {
-        const text = await readTextFile(path);
-        if (!text) return null;
+        const bytes = await readFile(path);
+        if (!bytes) return null;
 
         return guardAsync(async () => {
+            if (STLSubtitles.detect(bytes)) {
+                const parser = STLSubtitles.parse(bytes);
+                return await ImportFormatDialogs.STL(parser, skippable);
+            }
+
+            const text = await decodeTextFile(path, bytes);
+            if (!text) return null;
+
             if (JSONSubtitles.detect(text)) {
                 const parser = JSONSubtitles.parse(text);
                 return await ImportFormatDialogs.JSON(parser, skippable);

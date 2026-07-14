@@ -144,9 +144,10 @@ export class SRTParser implements SubtitleParser {
 
 export const SRTSubtitles = {
     detect(source) {
+        if (typeof source !== 'string') return false;
         return timeRegex.test(source) ? null : false;
     },
-    parse: (source) => new SRTParser(source),
+    parse: (source) => new SRTParser(source as string),
 
     // TODO: emit a warning if any text line contains timeRegex
     write: (subs) => new SubtitleLinearFormatWriter(subs,

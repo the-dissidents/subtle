@@ -3,6 +3,7 @@ import type { WrapStyle } from "../details/TextLayout";
 import type { AlignMode } from "./Labels";
 import type { RichText, RichTextAttr, RichTextNode } from "./RichText";
 import type { Positioning, SubtitleStyle } from "./Subtitles.svelte";
+import { FormattingStateMachine } from "./FormattingStateMachine";
 
 export type ASSStringWarnings = {
     ignoredTags: Map<string, number>,
@@ -10,11 +11,7 @@ export type ASSStringWarnings = {
     ignoredSpecialCharacter: Map<string, number>,
 };
 
-class ASSState {
-    #italic = false;
-    #bold = 0;
-    #underline = false;
-    #strikeout = false;
+class ASSState extends FormattingStateMachine {
     #fontsize?: number;
     #pos: Positioning = null;
     #align: AlignMode | null = null;
@@ -31,7 +28,9 @@ class ASSState {
         ignoredTags: new Map<string, number>(),
         ignoredDrawing: 0,
         ignoredSpecialCharacter: new Map<string, number>(),
-    }) { }
+    }) {
+        super();
+    }
 
     static fromGlobals(opts: { pos?: Positioning }) {
         const obj = new ASSState();
@@ -50,10 +49,10 @@ class ASSState {
 
         attrs.forEach((x) => {
             if (typeof x === 'string') switch (x) {
-                case "bold":          state.#bold = 1; break;
-                case "italic":        state.#italic = true; break;
-                case "underline":     state.#underline = true; break;
-                case "strikethrough": state.#strikeout = true; break;
+                case "bold":          state._bold = 1; break;
+                case "italic":        state._italic = true; break;
+                case "underline":     state._underline = true; break;
+                case "strikethrough": state._strikethrough = true; break;
                 default: Debug.never(x);
             } else switch (x.type) {
                 case 'size':
@@ -76,10 +75,10 @@ class ASSState {
 
     static emitDifference(before: ASSState, after: ASSState, base?: SubtitleStyle): string {
         let result = '';
-        if (before.#italic !== after.#italic)       result += `\\i${after.#italic ? 1 : 0}`;
-        if (before.#underline !== after.#underline) result += `\\u${after.#underline ? 1 : 0}`;
-        if (before.#strikeout !== after.#strikeout) result += `\\s${after.#strikeout ? 1 : 0}`;
-        if (before.#bold !== after.#bold)           result += `\\b${after.#bold}`;
+        if (before._italic !== after._italic)       result += `\\i${after._italic ? 1 : 0}`;
+        if (before._underline !== after._underline) result += `\\u${after._underline ? 1 : 0}`;
+        if (before._strikethrough !== after._strikethrough) result += `\\s${after._strikethrough ? 1 : 0}`;
+        if (before._bold !== after._bold)           result += `\\b${after._bold}`;
 
         if (base) {
             const f0 = before.#fontsize == base.size ? undefined : before.#fontsize;
@@ -90,12 +89,8 @@ class ASSState {
         return result.length > 0 ? `{${result}}` : '';
     }
 
-    #toAttrs(base: SubtitleStyle): RichTextAttr[] {
-        const result: RichTextAttr[] = [];
-        if (this.#bold)      result.push('bold');
-        if (this.#italic)    result.push('italic');
-        if (this.#underline) result.push('underline');
-        if (this.#strikeout) result.push('strikethrough');
+    toAttrsWithBase(base: SubtitleStyle): RichTextAttr[] {
+        const result = super.toAttrs();
         if (this.#fontsize && this.#fontsize !== base.size) result.push({
             type: 'size',
             value: this.#fontsize / base.size
@@ -103,8 +98,8 @@ class ASSState {
         return result;
     }
 
-    formatRichText(s: string, base: SubtitleStyle): RichTextNode {
-        const attrs = this.#toAttrs(base);
+    formatRichTextWithBase(s: string, base: SubtitleStyle): RichTextNode {
+        const attrs = this.toAttrsWithBase(base);
         if (attrs.length == 0) return s;
         return {
             type: 'leaf',
@@ -129,10 +124,10 @@ class ASSState {
             if (s.length == 0) return;
 
             let m: RegExpExecArray | null;
-                 if ((m = /^i\s*(1|0)?$/.exec(s)))  this.#italic = m[1] == '1';
-            else if ((m = /^u\s*(1|0)?$/.exec(s)))  this.#underline = m[1] == '1';
-            else if ((m = /^s\s*(1|0)?$/.exec(s)))  this.#strikeout = m[1] == '1';
-            else if ((m = /^b\s*(\d+)?$/.exec(s)))  this.#bold = Number.parseInt(m[1] ?? '0');
+                 if ((m = /^i\s*(1|0)?$/.exec(s)))  this._italic = m[1] == '1';
+            else if ((m = /^u\s*(1|0)?$/.exec(s)))  this._underline = m[1] == '1';
+            else if ((m = /^s\s*(1|0)?$/.exec(s)))  this._strikethrough = m[1] == '1';
+            else if ((m = /^b\s*(\d+)?$/.exec(s)))  this._bold = Number.parseInt(m[1] ?? '0');
             else if ((m = /^fs\s*(\d+)?$/.exec(s)))
                 this.#fontsize = m[1] ? Number.parseInt(m[1]) : undefined;
             else if ((m = /pos\((\d+),(\d+)\)/.exec(s)))
@@ -208,7 +203,7 @@ export namespace ASSString {
 
         function submit(e?: string) {
             if (lastWord.length > 0)
-                result.push(state.formatRichText(lastWord, base));
+                result.push(state.formatRichTextWithBase(lastWord, base));
             if (e)
                 state.processElement(e);
             lastWord = '';

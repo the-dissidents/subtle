@@ -5,6 +5,7 @@ import { Debug } from "../Debug";
 
 import type { SRTParseMessage, SRTParser } from "../core/SRT.svelte";
 import type { JSONParseMessage, JSONParser } from "../core/JSON.svelte";
+import { STLParser, type STLParseMessage } from "../core/STL.svelte";
 import { openDialog } from "../DialogOutlet.svelte";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
@@ -192,6 +193,48 @@ export const ImportFormatDialogs = {
                     return $_('assimport.info-invalid');
                 case "unsupported":
                     return $_('assimport.info-ignored');
+            }
+        },
+    }),
+
+    STL: (p: STLParser, skippable = false) => show(p, skippable, {
+        header: $_('stlimport.header'),
+        formatMessage(type, group) {
+            const map = <Ty extends STLParseMessage['type']>(
+                f: (x: Extract<STLParseMessage, { type: Ty; }>) => string
+            ) => // @ts-expect-error -- ...
+                group.map(f);
+
+            const one = <Ty extends STLParseMessage['type']>(
+                f: (x: Extract<STLParseMessage, { type: Ty; }>) => string
+            ) => // @ts-expect-error -- ...
+                f(group[0]);
+
+            switch (type) {
+                case 'unknown-control-byte': return {
+                    heading: $_('stlimport.unknown-control-byte'),
+                    items: map<'unknown-control-byte'>((x) =>
+                        `0x${x.byte.toString(16).toUpperCase().padStart(2, '0')} `
+                        + $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                };
+                case 'ignored-color-code': return {
+                    heading: $_('stlimport.ignored-color-code') + ' '
+                        + one<'ignored-color-code'>((x) =>
+                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                };
+                case 'user-data-block': return {
+                    heading: $_('stlimport.user-data-block') + ' '
+                        + one<'user-data-block'>((x) =>
+                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                };
+                default:
+                    Debug.never(type);
+            }
+        },
+        categoryDescription(category) {
+            switch (category) {
+                case "unsupported":
+                    return $_('stlimport.info-unsupported');
             }
         },
     })

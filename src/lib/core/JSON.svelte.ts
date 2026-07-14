@@ -260,6 +260,7 @@ export class JSONParser implements SubtitleParser {
 
 export const JSONSubtitles = {
     detect(source) {
+        if (typeof source !== 'string') return false;
         try {
             JSON.parse(source);
             return true;
@@ -269,7 +270,7 @@ export const JSONSubtitles = {
     },
 
     parse(source) {
-        return new JSONParser(source);
+        return new JSONParser(source as string);
     },
 
     write(subs) {
