@@ -18,6 +18,7 @@ let {
   args, close
 }: Props = $props();
 
+// svelte-ignore state_referenced_locally
 let [hasStyles, subs] = args;
 let inner: DialogBase;
 

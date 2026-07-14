@@ -306,8 +306,8 @@ function processEntry(ent: SubtitleEntry) {
     <tbody>
     {#key updateCounter}
     {#each usages as usage, i}
-      {@const lineIndex = data.findIndex((x) => x.rowIndex == i)}
-      {@const line = lineIndex < 0 ? undefined : data.at(lineIndex)}
+      {const lineIndex = data.findIndex((x) => x.rowIndex == i)}
+      {const line = lineIndex < 0 ? undefined : data.at(lineIndex)}
 
       <tr onclick={() => {
             selectedRow = i;

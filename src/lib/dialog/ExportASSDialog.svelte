@@ -194,8 +194,8 @@ async function handleSubsetButton(setting: FontSetting) {
 
         {#if [...fonts].find((x) => x[1].used)}
         {#each [...fonts].filter((x) => x[1].used) as [name, setting]}
-        {@const w = Fonts.windowsAvailability(name)}
-        {@const m = Fonts.macosAvailability(name)}
+        {const w = Fonts.windowsAvailability(name)}
+        {const m = Fonts.macosAvailability(name)}
         <li>
           <div class='fontname'>
             <span class='flexgrow'>{name}</span>
@@ -219,7 +219,7 @@ async function handleSubsetButton(setting: FontSetting) {
           </div>
           <ul>
             {#if setting.subset.type == 'ok'}
-            {@const result = setting.subset.result}
+            {const result = setting.subset.result}
               <li class="ok">
                 <CircleCheckIcon />
                 {$_('exportassdialog.embedded')}

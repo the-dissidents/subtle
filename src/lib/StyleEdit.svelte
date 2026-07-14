@@ -35,6 +35,7 @@ let wrapSelector: HTMLSelectElement | undefined = $state();
 let duplicateWarning = $state(false);
 
 // todo: why?
+// svelte-ignore state_referenced_locally
 let style = writable(_style);
 
 function isDuplicate(name: string) {
@@ -159,8 +160,9 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 
 {#snippet header()}
   {#key update}
-  {@const n = subtitles.entries.filter((x) => x.texts.has($style)).length}
-    {$style.name} <span class="usage">{$_('style.usage-msg', {values: { n }})}</span>
+    {$style.name} <span class="usage">{$_('style.usage-msg', {values: {
+      n: subtitles.entries.filter((x) => x.texts.has($style)).length
+    }})}</span>
   {/key}
 {/snippet}
 

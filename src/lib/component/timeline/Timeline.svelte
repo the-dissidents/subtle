@@ -155,8 +155,8 @@ function updateSnapOverride(ev: KeyboardEvent) {
       <h5>
         {$_('timeline.filter-styles')}
       </h5>
+      {const exclude = Source.subs.view.timelineExcludeStyles}
       {#key styleRefreshCounter}
-      {@const exclude = Source.subs.view.timelineExcludeStyles}
       {#each Source.subs.styles as style (style.name)}
         <label>
           <input type="checkbox"

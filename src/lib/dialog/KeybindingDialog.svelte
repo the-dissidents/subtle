@@ -72,9 +72,9 @@ locale.subscribe(() => refresh = !refresh);
         </td>
       </tr>
       {#each cmds as cmd (cmd)}
-        {@const lines = cmd.bindings.length}
+        {const lines = cmd.bindings.length}
         {#snippet row(binding: CommandBinding)}
-          {@const error = KeybindingManager.findConflict(binding, cmd).length > 0}
+          {const error = KeybindingManager.findConflict(binding, cmd).length > 0}
           <!-- keybinding -->
           <td>
             <button onclick={async () => {

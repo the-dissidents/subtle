@@ -108,8 +108,8 @@
     <Tooltip text={describeAvailability(value)} style="whitespace:nowrap">
       <span class="hlayout"><InfoIcon /></span>
       {#snippet content()}
-        {@const w = Fonts.windowsAvailability(value)}
-        {@const m = Fonts.macosAvailability(value)}
+        {const w = Fonts.windowsAvailability(value)}
+        {const m = Fonts.macosAvailability(value)}
         {w.status
           ? (w.supplement
             ? $_('exportassdialog.available-on-windows-through-supplement', {values: {s: w.supplement}})
@@ -138,7 +138,7 @@
               {#if searchValue == ''}
                 {entry.name}
               {:else}
-              {@const pos = entry.name.toLowerCase().indexOf(searchValue.toLowerCase())}
+              {const pos = entry.name.toLowerCase().indexOf(searchValue.toLowerCase())}
                 {entry.name.slice(0, pos)}<b>{entry.name.slice(pos, pos + searchValue.length)}</b>{entry.name.slice(pos + searchValue.length)}
               {/if}
             </span>

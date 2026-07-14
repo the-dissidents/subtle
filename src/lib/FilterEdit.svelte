@@ -89,8 +89,8 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
 </script>
 
 {#snippet makeParameter(f: SimpleMetricFilter, i: number)}
-  {@const method = MetricFilterMethods[f.method]}
-  {@const type = method.parameters[i]}
+  {const method = MetricFilterMethods[f.method]}
+  {const type = method.parameters[i]}
   {#if type == 'string' || type == 'number'}
     <input type='text' size='2' value={f.parameters[i]}
       onchange={(ev) => {
@@ -171,7 +171,6 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
       </ul>
     </fieldset>
   {:else}
-  {@const metric = Metrics[f.metric]}
     <div class="hlayout flexgrow line">
       {#if f.negated}
         <label>
@@ -183,6 +182,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
           {$_('filteredit.not')}
         </label>
       {/if}
+      {const metric = Metrics[f.metric]}
       {#if metric.description}
         <Tooltip text={metric.description()} position="right" />
       {/if}

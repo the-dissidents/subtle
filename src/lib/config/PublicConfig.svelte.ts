@@ -6,7 +6,7 @@ import * as fs from "@tauri-apps/plugin-fs";
 import { Debug } from "../Debug";
 import { Basic } from "../Basic";
 import { tick } from "svelte";
-import { hook } from "../details/Hook.svelte";
+import { hook, type Snapshot } from "../details/Hook.svelte";
 import * as z from "zod/v4-mini";
 
 export type PublicConfigItem = {
@@ -167,7 +167,7 @@ export class PublicConfig {
     }
 
     // see details/Hook.svelte.ts
-    hook<T>(track: () => T, action: (value: $state.Snapshot<T>) => void) {
+    hook<T>(track: () => T, action: (value: Snapshot<T>) => void) {
         this.onInitialized(() => action($state.snapshot(track())));
 
         hook(track, (value) => {

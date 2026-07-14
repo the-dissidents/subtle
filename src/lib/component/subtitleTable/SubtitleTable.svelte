@@ -72,7 +72,7 @@ onMount(() => {
 </div>
 
 {#snippet metricList(opt: {list: Column[]}, category: MetricContext[])}
-{@const MetricsList = Object.entries(Metrics)}
+{const MetricsList = Object.entries(Metrics)}
   <OrderableList list={opt.list} style='width: 100%' onsubmit={() => layout!.changeColumns()}>
     {#snippet row(col, i)}
       <select bind:value={col.metric} onchange={() => layout!.changeColumns()}>
@@ -92,8 +92,8 @@ onMount(() => {
     {/snippet}
 
     {#snippet footer()}
-    {@const used = new Set(opt.list.map((x) => x.metric))}
-    {@const unused = MetricsList.filter(
+    {const used = new Set(opt.list.map((x) => x.metric))}
+    {const unused = MetricsList.filter(
         ([x, y]) => category.includes(y.context) && !used.has(x))}
       <button disabled={unused.length == 0} class="hlayout"
         onclick={async () =>

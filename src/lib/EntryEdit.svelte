@@ -213,7 +213,7 @@ function applyEditForm() {
     onAction={() => Editing.submitFocusedEntry()} />
 
   {#if $focusedEntry instanceof SubtitleEntry}
-  {@const focused = $focusedEntry}
+  {const focused = $focusedEntry}
   <table class='fields'>
     <tbody>
       {#each Source.subs.styles as style (style.name)}

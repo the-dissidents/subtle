@@ -43,6 +43,7 @@ let {
   args, close
 }: Props = $props();
 
+// svelte-ignore state_referenced_locally
 let [parser, format] = $state(args);
 
 let inner: DialogBase;
@@ -71,11 +72,11 @@ function parse() {
       <ul class="ass-import-warnings">
       {#if categories}
       {#each Object.entries(categories) as [k, v] (k)}
-      {@const groups = groupBy(v as SubtitleParseMessage[], 'type')}
-      {@const description = format.categoryDescription(k)}
+      {const groups = groupBy(v as SubtitleParseMessage[], 'type')}
+      {const description = format.categoryDescription(k)}
         {#each Object.entries(groups) as [type, msgs] (type)}
         <!-- eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -->
-        {@const f = format.formatMessage(type, msgs as never)}
+        {const f = format.formatMessage(type, msgs as never)}
           <li>
             <CircleAlertIcon />
             {f.heading}
