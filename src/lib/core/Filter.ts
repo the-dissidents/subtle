@@ -9,7 +9,7 @@ import * as z from "zod/v4-mini";
 import wcwidth from "wcwidth";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
-import { DeserializationError } from "../Serialization";
+import { DeserializationError } from "./Serialization";
 import { RichText, ZRichText } from "./RichText";
 const $_ = unwrapFunctionStore(_);
 

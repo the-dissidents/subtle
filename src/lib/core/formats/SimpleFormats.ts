@@ -1,10 +1,11 @@
-import { Basic } from "../Basic";
+import { Basic } from "../../Basic";
 import { ASSSubtitles } from "./ASS.svelte";
-import { JSONSubtitles } from "./JSON.svelte";
+import { JSONSubtitles } from "../JSON.svelte";
 import { SRTSubtitles } from "./SRT.svelte";
 import { STLSubtitles } from "./STL.svelte";
-import { SubtitleEntry, Subtitles, type SubtitleWritableFormat, type SubtitleWriter } from "./Subtitles.svelte";
-import { LinearFormatCombineStrategy, SubtitleUtil, type FormatOption, type LinearEntry } from "./SubtitleUtil.svelte";
+import { SubtitleEntry, Subtitles } from "../Subtitles.svelte";
+import { type SubtitleWritableFormat, type SubtitleWriter } from "./Format";
+import { LinearFormatCombineStrategy, SubtitleUtil, type FormatOption, type LinearEntry } from "../SubtitleUtil.svelte";
 
 export class SubtitleLinearFormatWriter implements SubtitleWriter {
     #strategy = LinearFormatCombineStrategy.KeepOrder;
@@ -12,7 +13,7 @@ export class SubtitleLinearFormatWriter implements SubtitleWriter {
     #format: FormatOption = 'html';
 
     constructor(
-        private source: Subtitles, 
+        private source: Subtitles,
         private generate: (x: LinearEntry[]) => string) {}
 
     strategy(s: LinearFormatCombineStrategy) {
@@ -31,20 +32,20 @@ export class SubtitleLinearFormatWriter implements SubtitleWriter {
     }
 
     toString(): string {
-        const linear = SubtitleUtil.combineToLinear(this.source, 
-            this.#useEntries ?? this.source.entries, 
+        const linear = SubtitleUtil.combineToLinear(this.source,
+            this.#useEntries ?? this.source.entries,
             this.#strategy, this.#format);
         return this.generate(linear);
     }
 }
 
 const plaintext = {
-    write: (x) => new SubtitleLinearFormatWriter(x, 
+    write: (x) => new SubtitleLinearFormatWriter(x,
         (linear) => linear.map((x) => x.text).join('\n'))
 } satisfies SubtitleWritableFormat;
 
 const tabDelimited = {
-    write: (x) => new SubtitleLinearFormatWriter(x, 
+    write: (x) => new SubtitleLinearFormatWriter(x,
         (linear) => {
             let result = '';
             for (const entry of linear) {

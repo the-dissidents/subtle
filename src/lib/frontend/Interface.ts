@@ -6,7 +6,7 @@ import * as dialog from "@tauri-apps/plugin-dialog";
 import * as fs from "@tauri-apps/plugin-fs";
 
 import { Subtitles } from "../core/Subtitles.svelte";
-import { Format } from "../core/SimpleFormats";
+import { Format } from "../core/formats/SimpleFormats";
 
 import { ChangeType, Source } from "./Source";
 import { Editing } from "./Editing";
@@ -21,14 +21,15 @@ import { Debug } from "../Debug";
 import { MAPI } from "../API";
 import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
-import { ASSSubtitles } from "../core/ASS.svelte";
+import { ASSSubtitles } from "../core/formats/ASS.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { ImportFormatDialogs } from "../dialog/ImportFormatDialogs";
-import { SRTSubtitles } from "../core/SRT.svelte";
-import { STLSubtitles } from "../core/STL.svelte";
+import { SRTSubtitles } from "../core/formats/SRT.svelte";
+import { STLSubtitles } from "../core/formats/STL.svelte";
 import { JSONSubtitles } from "../core/JSON.svelte";
 import { openDialog } from "../DialogOutlet.svelte";
 import { Dialog } from "../dialog";
+import { path } from "@tauri-apps/api";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -111,20 +112,21 @@ export const Interface = {
         Frontend.setStatus($_('msg.created-new-file'));
     },
 
-    async openFile(path: string) {
-        await Debug.debug('parsing file', path);
-        const newSubs = await this.parseSubtitleSourceInteractive(path);
+    async openFile(file: string) {
+        const name = await path.basename(file);
+        await Debug.debug('parsing file', name);
+        const newSubs = await this.parseSubtitleSourceInteractive(file);
         if (!newSubs) return;
 
         const previouslyIsEmpty = Source.fileIsEmpty;
         await Debug.debug('opening document');
-        await Source.openDocument(newSubs, path);
-        const data = Source.recentOpened.get().find((x) => x.name == path);
+        await Source.openDocument(newSubs, file);
+        const data = Source.recentOpened.get().find((x) => x.name == file);
         if (data?.video) {
             await this.openVideo(data.video, data.audioStream);
         } else if (Playback.loaded && !previouslyIsEmpty)
             await Playback.close();
-        Frontend.setStatus($_('msg.opened-path', {values: {path}}));
+        Frontend.setStatus($_('msg.opened-path', {values: {path: name}}));
     },
 
     async openVideo(path: string, audio?: number) {

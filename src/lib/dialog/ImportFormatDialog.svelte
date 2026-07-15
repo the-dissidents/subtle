@@ -26,7 +26,8 @@ export type ImportFormat<P extends SubtitleParser> = {
 
 <script lang="ts" generics="P extends SubtitleParser">
 import { Debug } from '../Debug';
-import type { SubtitleParseMessage, SubtitleParser, Subtitles } from '../core/Subtitles.svelte';
+import type { Subtitles } from '../core/Subtitles.svelte';
+import type { SubtitleParseMessage, SubtitleParser } from '../core/formats/Format';
 import { groupBy, type GroupedBy, type OneGroup } from '../details/GroupBy';
 
 import { CircleAlertIcon, CircleCheckIcon } from '@lucide/svelte';

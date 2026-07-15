@@ -1,4 +1,4 @@
-import type { RichTextAttr, RichTextNode } from "./RichText";
+import type { RichTextAttr, RichTextNode } from "../RichText";
 
 export class FormattingStateMachine {
     protected _italic = false;

@@ -12,7 +12,7 @@ import { MAPI } from '../API';
 
 import { Subtitles, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { RichText } from '../core/RichText';
-import { Format } from "../core/SimpleFormats";
+import { Format } from "../core/formats/SimpleFormats";
 import { LinearFormatCombineStrategy } from "../core/SubtitleUtil.svelte";
 import { Interface } from '../frontend/Interface';
 import { Source } from '../frontend/Source';

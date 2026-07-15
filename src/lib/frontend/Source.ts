@@ -2,7 +2,7 @@ console.info('Source loading');
 
 import { Debug } from "../Debug";
 import { Subtitles } from "../core/Subtitles.svelte";
-import { Format } from "../core/SimpleFormats";
+import { Format } from "../core/formats/SimpleFormats";
 import { InterfaceConfig } from "../config/Groups";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { EventHost } from "../details/EventHost";

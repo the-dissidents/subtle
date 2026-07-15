@@ -1,8 +1,9 @@
-import { Basic } from "../Basic";
+import { Basic } from "../../Basic";
 import { DeserializationError } from "../Serialization";
 import { HTMLString, type HTMLStringWarnings } from "./HTMLString";
 import { SubtitleLinearFormatWriter } from "./SimpleFormats";
-import { SubtitleEntry, Subtitles, type SubtitleFormat, type SubtitleParser } from "./Subtitles.svelte";
+import { SubtitleEntry, Subtitles } from "../Subtitles.svelte";
+import { type SubtitleFormat, type SubtitleParser } from "./Format";
 
 function getTime(h: string, m: string, s: string, ms: string) {
     return Number.parseInt(h) * 3600

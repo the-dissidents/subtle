@@ -1,7 +1,7 @@
 <script lang="ts">
 import { SubtitleEntry, type SubtitleStyle } from '../core/Subtitles.svelte';
 import { LinearFormatCombineStrategy, type FormatOption } from '../core/SubtitleUtil.svelte';
-import { Format } from '../core/SimpleFormats';
+import { Format } from '../core/formats/SimpleFormats';
 
 import { Source } from '../frontend/Source';
 import { Frontend } from '../frontend/Frontend';

@@ -1,7 +1,8 @@
 import { Debug } from "../Debug";
-import { SubtitleEntry, Subtitles, SubtitleStyle, ZMetadata, type SubtitleFormat, type SubtitleParser, ZStyleBase, ZPositioning } from "./Subtitles.svelte";
+import { SubtitleEntry, Subtitles, SubtitleStyle, ZMetadata, ZStyleBase, ZPositioning } from "./Subtitles.svelte";
+import { type SubtitleFormat, type SubtitleParser } from "./formats/Format";
 import { AlignMode, LABEL_TYPES } from "./Labels";
-import { DeserializationError, parseObjectZ } from "../Serialization";
+import { DeserializationError, parseObjectZ } from "./Serialization";
 import { Filter, Metrics } from "./Filter";
 import { SvelteSet } from "svelte/reactivity";
 

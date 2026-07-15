@@ -2,7 +2,7 @@
 import type { ResolvedFontFace } from '../bindings/ResolvedFontFace';
 import type { SubsetResult } from '../bindings/SubsetResult';
 import { type SubtitleStyle } from '../core/Subtitles.svelte';
-import { ASSWriter } from '../core/ASS.svelte';
+import { ASSWriter } from '../core/formats/ASS.svelte';
 import { Source } from '../frontend/Source';
 import { Interface } from '../frontend/Interface';
 
@@ -13,7 +13,7 @@ import { Debug } from '../Debug';
 import DialogBase from '../DialogBase.svelte';
 import { Tooltip } from '@the_dissidents/svelte-ui';
 
-import { CircleAlertIcon, CircleCheckIcon, CircleHelpIcon, CircleXIcon, InfoIcon, MessageSquareMoreIcon,  } from '@lucide/svelte';
+import { CircleAlertIcon, CircleCheckIcon, CircleQuestionMarkIcon, CircleXIcon, InfoIcon, MessageSquareMoreIcon,  } from '@lucide/svelte';
 import { onMount } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { _ } from 'svelte-i18n';
@@ -231,7 +231,7 @@ async function handleSubsetButton(setting: FontSetting) {
               </li>
               {#if result.missing.length > 0}
                 <li class="warn">
-                  <CircleHelpIcon />
+                  <CircleQuestionMarkIcon />
                   {$_('exportassdialog.glyphs-not-found', {values: { n: result.missing.length }})}
                   <Tooltip text={result.missing.length > 100
                     ? result.missing.slice(0, 100) + ' [...]'
@@ -253,7 +253,7 @@ async function handleSubsetButton(setting: FontSetting) {
               {#if w.status}
                 {#if w.supplement}
                   <li class="warn">
-                    <CircleHelpIcon />
+                    <CircleQuestionMarkIcon />
                     {$_('exportassdialog.available-on-windows-through-supplement', {values: {s: w.supplement}})}
                   </li>
                 {:else}
@@ -272,7 +272,7 @@ async function handleSubsetButton(setting: FontSetting) {
               {#if m.status}
                 {#if m.supplement}
                   <li class="warn">
-                    <CircleHelpIcon />
+                    <CircleQuestionMarkIcon />
                     {$_('exportassdialog.downloadable-on-macos-but-not-necessarily-built-in')}
                   </li>
                 {:else}

@@ -10,7 +10,7 @@ import { Utils } from "./Utils";
 
 import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { LinearFormatCombineStrategy, SubtitleUtil } from "../core/SubtitleUtil.svelte";
-import { Format } from "../core/SimpleFormats";
+import { Format } from "../core/formats/SimpleFormats";
 import { LABEL_TYPES } from "../core/Labels";
 import { RichText } from "../core/RichText";
 

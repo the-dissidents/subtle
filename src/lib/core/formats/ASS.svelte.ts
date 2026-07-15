@@ -1,12 +1,13 @@
 import * as Color from "colorjs.io/fn";
-import { Basic } from "../Basic";
-import { Debug } from "../Debug";
+import { Basic } from "../../Basic";
+import { Debug } from "../../Debug";
 import { DeserializationError } from "../Serialization";
-import { SubtitleEntry, Subtitles, SubtitleStyle, type SubtitleFormat, type SubtitleParser, type SubtitleWriter } from "./Subtitles.svelte";
-import { AlignMode } from "./Labels";
-import { SubtitleTools } from "./SubtitleUtil.svelte";
+import { SubtitleEntry, Subtitles, SubtitleStyle } from "../Subtitles.svelte";
+import { type SubtitleFormat, type SubtitleParser, type SubtitleWriter } from "./Format";
+import { AlignMode } from "../Labels";
+import { SubtitleTools } from "../SubtitleUtil.svelte";
 import { ASSString, type ASSStringWarnings } from "./ASSString";
-import { WrapStyle } from "../details/TextLayout";
+import { WrapStyle } from "../../details/TextLayout";
 
 export const ASSSubtitles = {
     detect(source) {

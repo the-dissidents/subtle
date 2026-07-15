@@ -1,11 +1,11 @@
-import { type ImportFormat } from "./ImportFormatDialog.svelte";
-import type { SubtitleParser } from "../core/Subtitles.svelte";
-import { ASSParser, type ASSParseMessage } from "../core/ASS.svelte";
+import type { ImportFormat } from "./ImportFormatDialog.svelte";
+import type { SubtitleParser } from "../core/formats/Format";
+import { ASSParser, type ASSParseMessage } from "../core/formats/ASS.svelte";
+import type { SRTParseMessage, SRTParser } from "../core/formats/SRT.svelte";
+import { STLParser, type STLParseMessage } from "../core/formats/STL.svelte";
 import { Debug } from "../Debug";
 
-import type { SRTParseMessage, SRTParser } from "../core/SRT.svelte";
 import type { JSONParseMessage, JSONParser } from "../core/JSON.svelte";
-import { STLParser, type STLParseMessage } from "../core/STL.svelte";
 import { openDialog } from "../DialogOutlet.svelte";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);

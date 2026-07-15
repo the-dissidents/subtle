@@ -1,9 +1,9 @@
 import * as Color from "colorjs.io/fn";
-import { Debug } from "../Debug";
+import { Debug } from "../../Debug";
 import { toASSColor } from "./ASS.svelte";
-import type { SubtitleStyle } from "./Subtitles.svelte";
+import type { SubtitleStyle } from "../Subtitles.svelte";
 import { ASSString, type ASSStringWarnings } from "./ASSString";
-import { RichText, type RichTextAttr } from "./RichText";
+import { RichText, type RichTextAttr } from "../RichText";
 
 export type HTMLStringWarnings = {
     ignoredTags: Map<string, number>,

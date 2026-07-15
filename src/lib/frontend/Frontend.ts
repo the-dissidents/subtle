@@ -2,8 +2,8 @@ console.info('Frontend loading');
 
 import { tick } from "svelte";
 import { DebugConfig, InputConfig } from "../config/Groups";
-import { Format } from "../core/SimpleFormats";
-import { type SubtitleParsableFormat } from "../core/Subtitles.svelte";
+import { Format } from "../core/formats/SimpleFormats";
+import { type SubtitleParsableFormat } from "../core/formats/Format";
 import { Debug } from "../Debug";
 import { get, readonly, writable } from "svelte/store";
 import type { Attachment } from "svelte/attachments";

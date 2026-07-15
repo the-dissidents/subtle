@@ -1,10 +1,12 @@
 // Mostly written by DeepSeek 4
 
 import { DeserializationError } from "../Serialization";
-import { SubtitleEntry, Subtitles, type SubtitleParser } from "./Subtitles.svelte";
-import { RichText } from "./RichText";
+import { SubtitleEntry, Subtitles } from "../Subtitles.svelte";
+import { type SubtitleParser } from "./Format";
+import { RichText } from "../RichText";
 import { FormattingStateMachine } from "./FormattingStateMachine";
-import { ISO6937Decoder } from "../details/ISO6937";
+import { ISO6937Decoder } from "../../details/ISO6937";
+import { Debug } from "../../Debug";
 
 // ---------------------------------------------------------------------------
 // Enums / constants
@@ -18,6 +20,7 @@ const TF_SIZE = 112;
 const GSI_CPN = 0;       // offset 0, length 3
 const GSI_DFC = 3;       // offset 3, length 8
 const GSI_CCT = 12;      // offset 12, length 2
+const GSI_LC = 14;       // offset 14, length 2
 const GSI_TNB = 238;     // offset 238, length 5
 const GSI_TCS = 255;     // offset 255, length 1
 const GSI_TCP = 256;     // offset 256, length 8
@@ -213,18 +216,23 @@ function decodeTimecode(h: number, m: number, s: number, f: number, fps: number)
 // GSI header parsing
 // ---------------------------------------------------------------------------
 
+function readField(data: Uint8Array, pos: number, len: number) {
+    return String.fromCharCode(...data.subarray(pos, pos + len));
+}
+
 function readGSI(data: Uint8Array) {
     if (data.length < GSI_SIZE)
         throw new DeserializationError('file too small for STL GSI header');
 
-    const cpn = String.fromCharCode(data[GSI_CPN], data[GSI_CPN + 1], data[GSI_CPN + 2]);
-    const dfc = String.fromCharCode(...Array.from(data.subarray(GSI_DFC, GSI_DFC + 8)));
-    const cct = String.fromCharCode(data[GSI_CCT], data[GSI_CCT + 1]);
-    const tnb = parseInt(
-        String.fromCharCode(...Array.from(data.subarray(GSI_TNB, GSI_TNB + 5))).trim(),
-        10
-    );
+    const cpn = readField(data, GSI_CPN, 3);
+    const dfc = readField(data, GSI_DFC, 8);
+    const cct = readField(data, GSI_CCT, 2);
+    const lc  = readField(data, GSI_LC, 2);
+    const tnb = parseInt(readField(data, GSI_TNB, 5), 10);
     const tcs = String.fromCharCode(data[GSI_TCS]);
+
+    if (!isFinite(tnb) || tnb < 0)
+        throw new DeserializationError(`invalid TNB`);
 
     let fps: number;
     if (dfc.startsWith('STL24')) fps = 24;
@@ -232,16 +240,16 @@ function readGSI(data: Uint8Array) {
     else if (dfc.startsWith('STL30')) fps = 30;
     else throw new DeserializationError(`unknown STL DFC: ${dfc}`);
 
-    const isAvid = String.fromCharCode(
-        data[GSI_CCT], data[GSI_CCT + 1], data[GSI_CCT + 2], data[GSI_CCT + 3]
-    ) === '0009';
+    const isAvid = cpn == '850' && cct === '00' && lc == '09';
+    if (isAvid) void Debug.debug('STL: Avid detected');
 
     const encoding = getEncoding(cct, isAvid);
-    const startTime = tcs === '1'
-        ? decodeBCDTimecode(data.subarray(GSI_TCP, GSI_TCP + 8), fps)
-        : 0;
+    void Debug.debug(`STL: encoding is`, encoding);
 
-    return { cpn, dfc, fps, cct, tnb, encoding, startTime, isAvid };
+    const startTime = tcs === '1'
+        ? decodeBCDTimecode(data.subarray(GSI_TCP, GSI_TCP + 8), fps) : 0;
+
+    return { cpn, dfc, fps, cct, lc, tnb, encoding, startTime, isAvid };
 }
 
 // ---------------------------------------------------------------------------
@@ -324,7 +332,7 @@ export const STLSubtitles = {
 // ---------------------------------------------------------------------------
 
 export class STLParser implements SubtitleParser {
-    #data: Uint8Array;
+    #language: string;
     #fps: number;
     #encoding: STLEncoding;
     #startTime: number;
@@ -334,23 +342,21 @@ export class STLParser implements SubtitleParser {
     #cachedResult: { messages: STLParseMessage[], subs: Subtitles } | null = null;
 
     constructor(source: Uint8Array) {
-        this.#data = source;
-
         const gsi = readGSI(source);
+        this.#language = this.#languageFromLC(gsi.lc);
         this.#fps = gsi.fps;
         this.#encoding = gsi.encoding;
         this.#startTime = gsi.startTime;
+        void Debug.debug(`STL: fps=${gsi.fps}, starttime=${gsi.startTime}, code page=${gsi.cpn}`);
 
         const expectedSize = GSI_SIZE + gsi.tnb * TTI_SIZE;
         if (source.length < expectedSize)
             throw new DeserializationError(
                 `STL file too small: expected ${expectedSize} bytes, got ${source.length}`);
 
-        // Parse all TTI blocks upfront
         this.#ttis = [];
-        for (let i = 0; i < gsi.tnb; i++) {
+        for (let i = 0; i < gsi.tnb; i++)
             this.#ttis.push(readTTI(source, GSI_SIZE + i * TTI_SIZE));
-        }
     }
 
     decode() {
@@ -358,7 +364,7 @@ export class STLParser implements SubtitleParser {
 
         const subs = new Subtitles();
         subs.migrated = 'text';
-        subs.metadata.language = this.#languageFromLC();
+        subs.metadata.language = this.#language;
 
         const processor = new STLTextProcessor(this.#encoding);
         let currentStart: number | null = null;
@@ -405,8 +411,6 @@ export class STLParser implements SubtitleParser {
                 currentText = [];
             }
         }
-
-        // Finalize if the last block forgot to mark end
         finishEntry();
 
         this.#buildMessages();
@@ -414,8 +418,7 @@ export class STLParser implements SubtitleParser {
         return this.#cachedResult;
     }
 
-    #languageFromLC(): string {
-        const lc = String.fromCharCode(this.#data[14], this.#data[15]);
+    #languageFromLC(lc: string): string {
         switch (lc) {
             case '01': return 'sq';
             case '02': return 'bs';

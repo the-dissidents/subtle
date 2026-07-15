@@ -1,8 +1,8 @@
-import { Debug } from "../Debug";
-import type { WrapStyle } from "../details/TextLayout";
-import type { AlignMode } from "./Labels";
-import type { RichText, RichTextAttr, RichTextNode } from "./RichText";
-import type { Positioning, SubtitleStyle } from "./Subtitles.svelte";
+import { Debug } from "../../Debug";
+import type { WrapStyle } from "../../details/TextLayout";
+import type { AlignMode } from "../Labels";
+import type { RichText, RichTextAttr, RichTextNode } from "../RichText";
+import type { Positioning, SubtitleStyle } from "../Subtitles.svelte";
 import { FormattingStateMachine } from "./FormattingStateMachine";
 
 export type ASSStringWarnings = {
