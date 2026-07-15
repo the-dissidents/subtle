@@ -1,6 +1,6 @@
 import { Basic } from "../../Basic";
 import { DeserializationError } from "../Serialization";
-import { HTMLString, type HTMLStringWarnings } from "./HTMLString";
+import { HTMLString, type HTMLStringWarnings } from "./SRT_HTML";
 import { SubtitleLinearFormatWriter } from "./SimpleFormats";
 import { SubtitleEntry, Subtitles } from "../Subtitles.svelte";
 import { type SubtitleFormat, type SubtitleParser } from "./Format";

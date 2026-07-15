@@ -861,10 +861,15 @@
     "info": "某些播放器支持使用HTML标签修改SRT字幕文本的格式，但这是非标准的。如果选中右侧的“保留格式标签”选项，字幕块中的格式标签（如<i>）将得到保留，虽然subtle无法正确显示它们。",
     "invalid-color": "无效的颜色名"
   },
+  "stilimport": {
+    "shift-1h": "时间码减去 1 小时"
+  },
   "stlimport": {
     "header": "导入 STL 字幕",
     "ignored-color-code": "忽略了颜色代码",
     "info-unsupported": "{n,plural,one{此警告表示} other{这些警告表示}}此STL文件使用了subtle暂不支持的特性，它们将在导入时被跳过。",
+    "timecode-starts-at": "第一条字幕的时间码为",
+    "timecode-starts-at-d": "许多 STL 字幕从 1 小时而不是 0 小时开始计算时间。如果需要匹配的视频并非如此，可以勾选右侧的选项，将时间码统一前移一小时",
     "unknown-control-byte": "未知控制字节",
     "user-data-block": "用户数据块"
   },

@@ -9,6 +9,7 @@ export type FormatImportOption<P extends SubtitleParser> = {
   type: 'boolean',
   name: string,
   description?: string,
+  disabled?: (p: P) => boolean,
   getValue: (p: P) => boolean,
   setValue: (p: P, v: boolean) => void
 };
@@ -119,7 +120,9 @@ async function parse() {
       {#each format.options as opt (opt)}
         {#if opt.type == 'boolean'}
           <label>
-            <input type="checkbox" checked={opt.getValue(parser)}
+            <input type="checkbox"
+              checked={opt.getValue(parser)}
+              disabled={opt.disabled?.(parser)}
               onchange={async (x) => {
                 opt.setValue(parser, x.currentTarget.checked);
                 await parse();

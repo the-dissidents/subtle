@@ -8,6 +8,7 @@ import { Debug } from "../Debug";
 import type { JSONParseMessage, JSONParser } from "../core/JSON.svelte";
 import { openDialog } from "../DialogOutlet.svelte";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
+import { Basic } from "../Basic";
 const $_ = unwrapFunctionStore(_);
 
 async function show<P extends SubtitleParser>(
@@ -113,7 +114,6 @@ export const ImportFormatDialogs = {
             }
         },
         categoryDescription: () => undefined,
-        options: []
     }),
 
     ASS: (p: ASSParser, skippable = false) => show(p, skippable, {
@@ -227,6 +227,12 @@ export const ImportFormatDialogs = {
                         + one<'user-data-block'>((x) =>
                             $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
+                case 'timecode-starts-at-1h': return {
+                    heading: $_('stlimport.timecode-starts-at') + ' '
+                        + one<'timecode-starts-at-1h'>((x) =>
+                            Basic.formatTimestamp(x.start, 0, '.')),
+                    description: $_('stlimport.timecode-starts-at-d')
+                }
                 default:
                     Debug.never(type);
             }
@@ -237,5 +243,14 @@ export const ImportFormatDialogs = {
                     return $_('stlimport.info-unsupported');
             }
         },
+        options: [
+            {
+                type: 'boolean',
+                name: $_('stilimport.shift-1h'),
+                disabled: (p) => !p.canShift1h,
+                getValue: (p) => p.isShift1h,
+                setValue: (p, v) => p.shift1h(v)
+            }
+        ]
     })
 };

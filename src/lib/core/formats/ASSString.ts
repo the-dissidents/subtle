@@ -3,7 +3,7 @@ import type { WrapStyle } from "../../details/TextLayout";
 import type { AlignMode } from "../Labels";
 import type { RichText, RichTextAttr, RichTextNode } from "../RichText";
 import type { Positioning, SubtitleStyle } from "../Subtitles.svelte";
-import { FormattingStateMachine } from "./FormattingStateMachine";
+import { Formatter } from "./Formatter";
 
 export type ASSStringWarnings = {
     ignoredTags: Map<string, number>,
@@ -11,7 +11,7 @@ export type ASSStringWarnings = {
     ignoredSpecialCharacter: Map<string, number>,
 };
 
-class ASSState extends FormattingStateMachine {
+class ASSState extends Formatter {
     #fontsize?: number;
     #pos: Positioning = null;
     #align: AlignMode | null = null;

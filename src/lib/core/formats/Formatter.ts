@@ -1,6 +1,6 @@
 import type { RichTextAttr, RichTextNode } from "../RichText";
 
-export class FormattingStateMachine {
+export class Formatter {
     protected _italic = false;
     protected _bold = 0;
     protected _underline = false;

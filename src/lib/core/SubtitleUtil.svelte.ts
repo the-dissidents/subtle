@@ -3,7 +3,7 @@ import { Debug } from "../Debug";
 import { SubtitleEntry, Subtitles, SubtitleStyle } from "./Subtitles.svelte";
 import { RichText } from "./RichText";
 import { ASSString } from "./formats/ASSString";
-import { HTMLString } from "./formats/HTMLString";
+import { HTMLString } from "./formats/SRT_HTML";
 import { InputConfig } from "../config/Groups";
 
 export type FormatOption = 'none' | 'html' | 'ass';

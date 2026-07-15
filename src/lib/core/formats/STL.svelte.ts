@@ -4,7 +4,7 @@ import { DeserializationError } from "../Serialization";
 import { SubtitleEntry, Subtitles } from "../Subtitles.svelte";
 import { type SubtitleParser } from "./Format";
 import { RichText } from "../RichText";
-import { FormattingStateMachine } from "./FormattingStateMachine";
+import { Formatter } from "./Formatter";
 import { ISO6937Decoder } from "../../details/ISO6937";
 import { Debug } from "../../Debug";
 
@@ -51,19 +51,24 @@ const KNOWN_CONTROL_BYTES = new Set([
 // Message types
 // ---------------------------------------------------------------------------
 
-export type STLParseUnsupportedMessage = {
+export type STLParseMessage = {
     type: 'unknown-control-byte',
+    category: 'unsupported',
     byte: number,
     occurrence: number
 } | {
     type: 'ignored-color-code',
+    category: 'unsupported',
     occurrence: number
 } | {
     type: 'user-data-block',
+    category: 'unsupported',
     occurrence: number
+} | {
+    type: 'timecode-starts-at-1h',
+    category: 'info',
+    start: number
 };
-
-export type STLParseMessage = { category: 'unsupported' } & STLParseUnsupportedMessage;
 
 // ---------------------------------------------------------------------------
 // Text encoding
@@ -89,7 +94,7 @@ function getEncoding(cct: string, isAvid: boolean): STLEncoding {
 // Text field processor
 // ---------------------------------------------------------------------------
 
-class STLTextProcessor extends FormattingStateMachine {
+class STLTextProcessor extends Formatter {
     #byteBuf: number[] = [];
     #result: RichText[] = [];
     readonly #decoder: ISO6937Decoder | TextDecoder;
@@ -261,39 +266,36 @@ interface TTIFields {
     sn: number;
     ebn: number;
     cs: number;
-    tciH: number;
-    tciM: number;
-    tciS: number;
-    tciF: number;
-    tcoH: number;
-    tcoM: number;
-    tcoS: number;
-    tcoF: number;
+    tci: number;
+    tco: number;
     vp: number;
     jc: number;
     cf: number;
     tf: Uint8Array;
 }
 
-function readTTI(data: Uint8Array, offset: number): TTIFields {
+function readTTI(data: Uint8Array, offset: number, fps: number): TTIFields {
     const view = new DataView(data.buffer, data.byteOffset + offset, TTI_SIZE);
+    const sgn =  view.getUint8(0);
+    const sn =   view.getUint16(1, true);
+    const ebn =  view.getUint8(3);
+    const cs =   view.getUint8(4);
+    const tciH = view.getUint8(5);
+    const tciM = view.getUint8(6);
+    const tciS = view.getUint8(7);
+    const tciF = view.getUint8(8);
+    const tcoH = view.getUint8(9);
+    const tcoM = view.getUint8(10);
+    const tcoS = view.getUint8(11);
+    const tcoF = view.getUint8(12);
+    const vp =   view.getUint8(13);
+    const jc =   view.getUint8(14);
+    const cf =   view.getUint8(15);
+    const tf =   data.subarray(offset + 16, offset + 16 + TF_SIZE);
     return {
-        sgn:  view.getUint8(0),
-        sn:   view.getUint16(1, true),
-        ebn:  view.getUint8(3),
-        cs:   view.getUint8(4),
-        tciH: view.getUint8(5),
-        tciM: view.getUint8(6),
-        tciS: view.getUint8(7),
-        tciF: view.getUint8(8),
-        tcoH: view.getUint8(9),
-        tcoM: view.getUint8(10),
-        tcoS: view.getUint8(11),
-        tcoF: view.getUint8(12),
-        vp:   view.getUint8(13),
-        jc:   view.getUint8(14),
-        cf:   view.getUint8(15),
-        tf:   data.subarray(offset + 16, offset + 16 + TF_SIZE),
+        sgn, sn, ebn, cs, vp, jc, cf, tf,
+        tci: decodeTimecode(tciH, tciM, tciS, tciF, fps),
+        tco: decodeTimecode(tcoH, tcoM, tcoS, tcoF, fps),
     };
 }
 
@@ -341,6 +343,9 @@ export class STLParser implements SubtitleParser {
     #allWarnings: STLParseMessage[] = [];
     #cachedResult: { messages: STLParseMessage[], subs: Subtitles } | null = null;
 
+    #shift1h = false;
+    #canShift1h: boolean = false;
+
     constructor(source: Uint8Array) {
         const gsi = readGSI(source);
         this.#language = this.#languageFromLC(gsi.lc);
@@ -356,12 +361,31 @@ export class STLParser implements SubtitleParser {
 
         this.#ttis = [];
         for (let i = 0; i < gsi.tnb; i++)
-            this.#ttis.push(readTTI(source, GSI_SIZE + i * TTI_SIZE));
+            this.#ttis.push(readTTI(source, GSI_SIZE + i * TTI_SIZE, this.#fps));
+
+        // evaluate canShift1h
+        this.decode();
+    }
+
+    get canShift1h() {
+        return this.#canShift1h;
+    }
+
+    get isShift1h() {
+        return this.#shift1h;
+    }
+
+    shift1h(v: boolean) {
+        if (v) Debug.assert(this.#canShift1h);
+        this.#shift1h = v;
+        this.#cachedResult = null;
+        return this;
     }
 
     decode() {
         if (this.#cachedResult) return this.#cachedResult;
 
+        let firstTimecode: number | null = null;
         const subs = new Subtitles();
         subs.migrated = 'text';
         subs.metadata.language = this.#language;
@@ -372,17 +396,22 @@ export class STLParser implements SubtitleParser {
         let currentText: RichText[] = [];
 
         const finishEntry = () => {
-            if (currentStart === null) return;
-            if (currentText.length === 0) return;
+            if (currentStart === null || currentEnd === null) return;
+            const rt = RichText.concat(...currentText);
+            if (RichText.length(rt) === 0) return;
 
+            if (firstTimecode === null)
+                firstTimecode = currentStart;
+
+            if (this.#shift1h) {
+                currentStart -= 3600;
+                currentEnd -= 3600;
+            }
             const entry = new SubtitleEntry(
                 Math.max(0, currentStart),
-                Math.max(0, currentEnd!)
+                Math.max(0, currentEnd)
             );
-            const rt = RichText.concat(...currentText);
-            if (rt !== '')
-                entry.texts.set(subs.defaultStyle, rt);
-
+            entry.texts.set(subs.defaultStyle, rt);
             subs.entries.push(entry);
         };
 
@@ -396,8 +425,10 @@ export class STLParser implements SubtitleParser {
 
             const isFirstOfGroup = currentStart === null;
             if (isFirstOfGroup) {
-                currentStart = decodeTimecode(tti.tciH, tti.tciM, tti.tciS, tti.tciF, this.#fps) - this.#startTime;
-                currentEnd   = decodeTimecode(tti.tcoH, tti.tcoM, tti.tcoS, tti.tcoF, this.#fps) - this.#startTime;
+                currentStart = tti.tci - this.#startTime;
+                currentEnd   = tti.tco - this.#startTime;
+                if (currentStart < 3600)
+                    this.#canShift1h = false;
             }
 
             const { richText, warnings } = processor.processTF(tti.tf);
@@ -413,7 +444,20 @@ export class STLParser implements SubtitleParser {
         }
         finishEntry();
 
-        this.#buildMessages();
+        if (this.#userDataBlocks > 0) this.#allWarnings.unshift({
+            type: 'user-data-block',
+            category: 'unsupported',
+            occurrence: this.#userDataBlocks
+        });
+        if (firstTimecode && firstTimecode > 3600) {
+            this.#canShift1h = true;
+            this.#allWarnings.unshift({
+                type: 'timecode-starts-at-1h',
+                category: 'info',
+                start: firstTimecode
+            });
+        }
+
         this.#cachedResult = { messages: this.#allWarnings, subs };
         return this.#cachedResult;
     }
@@ -459,13 +503,5 @@ export class STLParser implements SubtitleParser {
             case '38': return 'uk';
             default:  return '';
         }
-    }
-
-    #buildMessages() {
-        if (this.#userDataBlocks > 0) this.#allWarnings.unshift({
-            type: 'user-data-block',
-            category: 'unsupported',
-            occurrence: this.#userDataBlocks
-        });
     }
 }
