@@ -499,10 +499,6 @@ async function execute(type: SearchAction, option: SearchOption) {
     width: 100%;
   }
 
-  table td {
-    padding: 0;
-  }
-
   .gapped {
     gap: 10px;
   }

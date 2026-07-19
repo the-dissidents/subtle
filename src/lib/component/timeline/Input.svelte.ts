@@ -472,13 +472,15 @@ export class TimelineInput {
     selectBox: Box | null = null;
     selection = new SvelteSet<SubtitleEntry>;
     alignmentLine: { pos: number, rows: Set<number> } | null = null;
+    currentAction: TimelineAction | undefined;
+
+    // ad-hoc, for rendering
     splitting: null | {
         target: SubtitleEntry,
         breakPosition: number,
         positions: Map<SubtitleStyle, number>,
         current: SubtitleStyle
     } = null;
-    currentAction: TimelineAction | undefined;
 
     constructor(private layout: TimelineLayout) {
         this.manager = layout.manager;
@@ -522,11 +524,11 @@ export class TimelineInput {
     }
 
     /**
-     * Suppose there is a ruler on the number axis, which has a set of `points` on it and can be
-     * moved around by dragging a point at the `reference` location. The goal is to move the reference
-     * point slightly (no further than `minDist`) so that one of the `points` aligns with the
-     * `target`. If this can't be done, keep the reference point at its original location. Returns the
-     * modified reference point and the minimal distance required to move it.
+     * Suppose there is a ruler on the number axis which has a set of `points` on it and can be
+     * moved around by dragging a point at the `reference` location. The goal is to move the
+     * reference point slightly (no further than `minDist`) so that one of the `points` aligns with
+     * the `target`. If this can't be done, keep the reference point at its original location.
+     * Returns the modified reference point and the minimal distance required to move it.
      */
     trySnap(
         data: {minDist: number, reference: number, oldReference?: number},
@@ -905,7 +907,12 @@ export class TimelineInput {
         }
 
         if (h.hover.seam) {
-            void Editing.setSelection(h.hover.seam);
+            // manually set selection, avoiding the async Editing.setSelection
+            this.selection = new SvelteSet(h.hover.seam);
+            Editing.selection.submitted = new Set(h.hover.seam);
+            Editing.selection.focused = h.hover.seam[0];
+            Editing.selection.currentGroup = new Set([h.hover.seam[0]]);
+            Editing.onSelectionChanged.dispatch(ChangeCause.Timeline);
             this.currentAction = new DragSeam(this, this.layout, e0,
                 h.hover.seam[0], h.hover.seam[1], afterEnd);
             return true;
