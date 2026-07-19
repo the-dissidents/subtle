@@ -3,7 +3,7 @@
   import * as Color from "colorjs.io/fn";
 
   import type { CanvasManager } from "../../CanvasManager";
-  import { EventHost } from "../../details/EventHost";
+  import { AsyncEventHost, EventHost } from "@the_dissidents/svelte-ui";
   import { MediaConfig } from "./Config";
   import type { LineBox } from "./SubtitleRenderer";
   import { toCSSStyle, type Line } from "../../details/TextLayout";
@@ -34,6 +34,7 @@
 
   onMount(() => () => {
     EventHost.unbind(me);
+    AsyncEventHost.unbind(me);
   });
 
   function updateTransform() {

@@ -88,6 +88,13 @@ let bracketResult = $state('');
 let forbidDeepNesting = $state(true);
 </script>
 
+<button onclick={async () => {
+  for (const f of Fonts.families) {
+    const family = await Fonts.getFamily(f);
+    if (family) family.forEach((x) =>
+      void Debug.trace(x.familyName, x.fullName, x.postscriptName, x.url));
+  }
+}}>get all font paths</button>
 
 <button onclick={async (e) => {
   const input = await showConfirmationPopup(e.currentTarget, 'xyzzy?');

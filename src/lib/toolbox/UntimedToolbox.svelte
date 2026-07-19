@@ -103,7 +103,7 @@ import { Debug } from "../Debug";
 import { SubtitleEntry } from "../core/Subtitles.svelte";
 import { RichText } from "../core/RichText";
 import * as fuzzyAlgorithm from "../details/Fuzzy";
-import { EventHost } from "../details/EventHost";
+import { EventHost } from "@the_dissidents/svelte-ui";
 
 import { Editing, SelectMode } from "../frontend/Editing";
 import { Frontend } from "../frontend/Frontend";

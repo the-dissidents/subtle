@@ -89,6 +89,9 @@ importers:
       wcwidth:
         specifier: ^1.0.1
         version: 1.0.1
+      webvtt-parser:
+        specifier: ^2.2.0
+        version: 2.2.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -132,6 +135,9 @@ importers:
       '@types/wcwidth':
         specifier: ^1.0.2
         version: 1.0.2
+      '@types/webvtt-parser':
+        specifier: ^2.2.0
+        version: 2.2.0
       eslint:
         specifier: ^10.7.0
         version: 10.7.0
@@ -1227,6 +1233,9 @@ packages:
 
   '@types/wcwidth@1.0.2':
     resolution: {integrity: sha512-flVlIrTSL6Z0RS2/IQYP0sUDajwuZ21FQAdOjzitcraVAarBFBwBpixtvxMno56vzFvLAbaGZEhkmMVYmWVUQA==}
+
+  '@types/webvtt-parser@2.2.0':
+    resolution: {integrity: sha512-T8n08m3VWAOCVDHWPOtEehnLcVSyQaUmyjIvGCERWRPMyVooUjqWaDsvKD3bcwQSU8TLBW19YTSRx9UxBNfckA==}
 
   '@typescript-eslint/eslint-plugin@8.64.0':
     resolution: {integrity: sha512-CGvQPBxN3wZLu6Rz2kFUpZeoCm78xUic92ck39KPePkO1NPOwjCqdQnm5Q87tpWw9vcBvW8XLrDXjH9PWYtJ3Q==}
@@ -2581,6 +2590,9 @@ packages:
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
 
+  webvtt-parser@2.2.0:
+    resolution: {integrity: sha512-FzmaED+jZyt8SCJPTKbSsimrrnQU8ELlViE1wuF3x1pgiQUM8Llj5XWj2j/s6Tlk71ucPfGSMFqZWBtKn/0uEA==}
+
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
@@ -3446,6 +3458,8 @@ snapshots:
   '@types/trusted-types@2.0.7': {}
 
   '@types/wcwidth@1.0.2': {}
+
+  '@types/webvtt-parser@2.2.0': {}
 
   '@typescript-eslint/eslint-plugin@8.64.0(@typescript-eslint/parser@8.64.0(eslint@10.7.0)(typescript@5.9.3))(eslint@10.7.0)(typescript@5.9.3)':
     dependencies:
@@ -4810,6 +4824,8 @@ snapshots:
   wcwidth@1.0.1:
     dependencies:
       defaults: 1.0.4
+
+  webvtt-parser@2.2.0: {}
 
   which@2.0.2:
     dependencies:

@@ -5,7 +5,7 @@ import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/formats/SimpleFormats";
 import { InterfaceConfig } from "../config/Groups";
 import { Memorized } from "../config/MemorizedValue.svelte";
-import { EventHost } from "../details/EventHost";
+import { EventHost } from "@the_dissidents/svelte-ui";
 
 import { Editing } from "./Editing";
 import { Frontend, guardAsync } from "./Frontend";

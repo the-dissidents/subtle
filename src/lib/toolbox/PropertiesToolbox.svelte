@@ -6,7 +6,7 @@ import { SubtitleTools } from '../core/SubtitleUtil.svelte';
 import { ConfigRow, ConfigTable, NumberInput, Tooltip } from "@the_dissidents/svelte-ui";
 import StyleEdit from '../StyleEdit.svelte';
 
-import { EventHost } from '../details/EventHost';
+import { EventHost } from '@the_dissidents/svelte-ui';
 import { Playback } from '../frontend/Playback';
 import { ChangeType, Source } from '../frontend/Source';
 

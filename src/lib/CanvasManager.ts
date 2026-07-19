@@ -1,9 +1,8 @@
 import { InterfaceConfig } from "./config/Groups";
 import { Debug } from "./Debug";
 import { translateWheelEvent, type TranslatedWheelEvent } from "./frontend/Frontend";
-import { EventHost } from "./details/EventHost";
 import { theme } from "./Theming.svelte";
-import { AsyncEventHost } from "@the_dissidents/svelte-ui";
+import { EventHost, AsyncEventHost } from "@the_dissidents/svelte-ui";
 
 const scrollerColorRgb = () => theme.isDark ? '255 255 255' : '0 0 0';
 

@@ -622,6 +622,7 @@
     "open": "open",
     "open-video": "open video",
     "redo": "redo",
+    "save": "save",
     "save-as": "save as",
     "select-audio-stream": "select audio",
     "undo": "undo"
@@ -806,6 +807,7 @@
     "found-n-lines": "found {n} {n,plural,one{line} other{lines}}",
     "found-nothing": "found nothing",
     "next": "next",
+    "only-replace-styles": "only replace styles",
     "only-styles": "only styles",
     "options": "options",
     "pattern": {

@@ -6,7 +6,7 @@ import { Debug } from "../../Debug";
 import { Playback } from "../../frontend/Playback";
 import { DebugConfig, InterfaceConfig } from "../../config/Groups";
 import { TimelineConfig } from "./Config";
-import { EventHost } from "../../details/EventHost";
+import { EventHost } from "@the_dissidents/svelte-ui";
 import { MediaSampler } from "./MediaSampler";
 import { TimelineHandle } from "./Input.svelte";
 import { get } from "svelte/store";

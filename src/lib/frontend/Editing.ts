@@ -7,7 +7,7 @@ import { Frontend } from "./Frontend";
 
 import type RichEdit from "../component/richedit/RichEdit.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
-import { EventHost } from "../details/EventHost";
+import { EventHost } from "@the_dissidents/svelte-ui";
 
 import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { MetricDefinition, Metrics } from "../core/Filter";

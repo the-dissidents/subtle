@@ -1,7 +1,7 @@
 import type { CanvasManager } from "../../CanvasManager";
 import { type Positioning, SubtitleEntry, type SubtitleStyle, Subtitles } from "../../core/Subtitles.svelte";
 import { AlignMode } from "../../core/Labels";
-import { EventHost } from "../../details/EventHost";
+import { EventHost } from "@the_dissidents/svelte-ui";
 import { Typography } from "../../details/Typography";
 import { layoutText, type EvaluatedStyle, type Line } from "../../details/TextLayout";
 

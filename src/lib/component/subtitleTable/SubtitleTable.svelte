@@ -1,6 +1,5 @@
 <script lang="ts">
 import { Debug } from "../../Debug";
-import { EventHost } from "../../details/EventHost";
 import { Metrics, type MetricContext } from "../../core/Filter";
 import { Frontend, focusablePanel } from "../../frontend/Frontend";
 
@@ -12,7 +11,7 @@ import { Popup, OrderableList } from "@the_dissidents/svelte-ui";
 
 import { Menu } from "@tauri-apps/api/menu";
 import { DeleteIcon, PenLineIcon, PlusIcon } from "@lucide/svelte";
-import { onDestroy, onMount } from "svelte";
+import { onMount } from "svelte";
 import { _, locale } from 'svelte-i18n';
   import MessagePopup from "./MessagePopup.svelte";
 
@@ -24,9 +23,6 @@ let _input: TableInput | undefined = $state();
 
 let popup: MessagePopup;
 let columnPopup: Popup;
-
-const me = {};
-onDestroy(() => EventHost.unbind(me));
 
 onMount(() => {
   Debug.assert(canvas !== undefined);
@@ -92,8 +88,8 @@ onMount(() => {
     {/snippet}
 
     {#snippet footer()}
-    {const used = new Set(opt.list.map((x) => x.metric))}
-    {const unused = MetricsList.filter(
+    {@const used = new Set(opt.list.map((x) => x.metric))}
+    {@const unused = MetricsList.filter(
         ([x, y]) => category.includes(y.context) && !used.has(x))}
       <button disabled={unused.length == 0} class="hlayout"
         onclick={async () =>
@@ -141,7 +137,7 @@ onMount(() => {
     width: 100%;
     height: 100%;
   }
-  .container button {
+  .container > button {
     position: absolute;
     top: 0;
     right: 0;

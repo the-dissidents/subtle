@@ -5,7 +5,7 @@ import { UICommand } from '../../frontend/CommandBase';
 import { Editing } from '../../frontend/Editing';
 import { CommandBinding, KeybindingManager } from '../../frontend/Keybinding';
 import { Debug } from '../../Debug';
-import { EventHost } from '../../details/EventHost';
+import { EventHost } from '@the_dissidents/svelte-ui';
 import { Playback } from '../../frontend/Playback';
 import { ChangeType, Source } from '../../frontend/Source';
 

@@ -26,7 +26,7 @@ import Timeline from './lib/component/timeline/Timeline.svelte';
 import Preview from './lib/component/preview/Preview.svelte';
 
 import { Resizer, TabPage, TabView, Tooltip, Banner } from '@the_dissidents/svelte-ui';
-import { BugIcon, CommandIcon, FilmIcon, Redo2Icon, SettingsIcon, TriangleAlertIcon, Undo2Icon } from '@lucide/svelte';
+import { BugIcon, CommandIcon, DownloadIcon, FilePlusCornerIcon, FilmIcon, FolderOpenIcon, Redo2Icon, SaveIcon, SavePlusIcon, SettingsIcon, TriangleAlertIcon, Undo2Icon, UploadIcon } from '@lucide/svelte';
 
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
@@ -255,19 +255,67 @@ observer.observe({ type: 'paint', buffered: true });
   <!-- toolbar -->
   <header>
     <ul class='menu'>
-      <li><button onclick={() => InterfaceCommands.newFile.menu()}>{$_('menu.new-file')}</button></li>
-      <li><button onclick={() => InterfaceCommands.openMenu.menu()}>{$_('menu.open')}</button></li>
-      <li><button onclick={() => InterfaceCommands.saveAs.menu()}>{$_('menu.save-as')}</button></li>
-      <li><button onclick={() => InterfaceCommands.import.menu()}>{$_('menu.import')}</button></li>
-      <li><button onclick={() => InterfaceCommands.exportMenu.menu()}>{$_('menu.export')}</button></li>
+      <li>
+        <Tooltip text={$_('menu.new-file')} position="bottom">
+          <button onclick={() => InterfaceCommands.newFile.menu()}>
+            <FilePlusCornerIcon />
+          </button>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip text={$_('menu.open')} position="bottom">
+          <button onclick={() => InterfaceCommands.openMenu.menu()}>
+            <FolderOpenIcon />
+          </button>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip text={$_('menu.save')} position="bottom">
+          <button onclick={() => InterfaceCommands.save.menu()}>
+            <SaveIcon />
+          </button>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip text={$_('menu.save-as')} position="bottom">
+          <button onclick={() => InterfaceCommands.saveAs.menu()}>
+            <SavePlusIcon />
+          </button>
+        </Tooltip>
+      </li>
+      <li class='separator'></li>
+      <li>
+        <Tooltip text={$_('menu.import')} position="bottom">
+          <button onclick={() => InterfaceCommands.import.menu()}>
+            <DownloadIcon />
+          </button>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip text={$_('menu.export')} position="bottom">
+          <button onclick={() => InterfaceCommands.exportMenu.menu()}>
+            <UploadIcon />
+          </button>
+        </Tooltip>
+      </li>
       <li class='separator'></li>
       {#key undoRedoUpdateCounter}
-      <li><button
-        onclick={() => SourceCommands.undo.call()}
-        disabled={!Source.canUndo()}><Undo2Icon /></button></li>
-      <li><button
-        onclick={() => SourceCommands.redo.call()}
-        disabled={!Source.canRedo()}><Redo2Icon /></button></li>
+      <li>
+        <Tooltip text={$_('menu.undo')} position="bottom">
+          <button
+            onclick={() => SourceCommands.undo.call()}
+            disabled={!Source.canUndo()}><Undo2Icon />
+          </button>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip text={$_('menu.redo')} position="bottom">
+          <button
+            onclick={() => SourceCommands.redo.call()}
+            disabled={!Source.canRedo()}><Redo2Icon />
+          </button>
+        </Tooltip>
+      </li>
       {/key}
       <li class='separator'></li>
       <li><button onclick={() => InterfaceCommands.openVideo.call()}>

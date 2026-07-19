@@ -62,7 +62,7 @@ import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 import FilterEdit from '../FilterEdit.svelte';
 import StyleSelect from '../StyleSelect.svelte';
 
-import { Collapsible, Tooltip } from "@the_dissidents/svelte-ui";
+import { Collapsible, ConfigRow, ConfigTable, Tooltip } from "@the_dissidents/svelte-ui";
 
 import { _ } from 'svelte-i18n';
 import * as z from "zod/v4-mini";
@@ -77,17 +77,18 @@ handler.focus = () => {
 
 let termInput = $state<HTMLInputElement>();
 
-let term            = Memorized.$('search-term', z.string(), ''),
-    replaceTerm     = Memorized.$('search-replaceTerm', z.string(), ''),
-    useRegex        = Memorized.$('search-useRegex', z.boolean(), false),
-    useEscape       = Memorized.$('search-useEscape', z.boolean(), true),
-    caseSensitive   = Memorized.$('search-caseSensitive', z.boolean(), true),
-    replaceStyle    = $state(Source.subs.defaultStyle);
+let term             = Memorized.$('search-term', z.string(), ''),
+    replaceTerm      = Memorized.$('search-replaceTerm', z.string(), ''),
+    useRegex         = Memorized.$('search-useRegex', z.boolean(), false),
+    useEscape        = Memorized.$('search-useEscape', z.boolean(), true),
+    caseSensitive    = Memorized.$('search-caseSensitive', z.boolean(), true),
+    useReplaceStyle  = Memorized.$('use-replace-style', z.boolean(), false),
+    onlyReplaceStyle = Memorized.$('only-replace-style', z.boolean(), false),
+    replaceStyle     = $state(Source.subs.defaultStyle);
 
 // condition (simple)
 let selectionOnly   = Memorized.$('search-selectionOnly', z.boolean(), false),
     useStyle        = $state(false),
-    useReplaceStyle = $state(false),
     useLabel        = $state(false);
 
 let searchStyle  = $state(Source.subs.defaultStyle);
@@ -276,7 +277,7 @@ async function execute(type: SearchAction, option: SearchOption) {
 
     let newStyle = style;
     if (newType == "replaceStyles"
-      || (useReplaceStyle && newType == "replace"))
+      || ($useReplaceStyle && newType == "replace"))
     {
       // FIXME: should warn when overwriting? or add an option
       entry.texts.delete(style);
@@ -385,67 +386,72 @@ async function execute(type: SearchAction, option: SearchOption) {
     ]}).then((x) => x.popup());
   }}>...</button> -->
 </div>
-<table class="wfill">
-  <tbody>
-    <tr>
-      <td>
-        <button class="left wfill" disabled>{$_('search.find')}</button>
-      </td>
-      <td class="hlayout">
-        <button class="middle"
-          onclick={() => execute("select", "next")}
-        >{$_('search.next')}</button>
-        <button class="middle"
-          onclick={() => execute("select", "previous")}
-        >{$_('search.previous')}</button>
-        <button class="right flexgrow"
-          onclick={() => execute("select", "all")}
-        >{$_('search.all')}</button>
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <button class="left wfill" disabled>{$_('search.replace')}</button>
-      </td>
-      <td class="hlayout">
-        <button class="middle"
-          onclick={() => execute("replace", "next")}
-        >{$_('search.next')}</button>
-        <button class="middle"
-          onclick={() => execute("replace", "previous")}
-        >{$_('search.previous')}</button>
-        <button class="middle"
-          onclick={() => execute("replace", "all")}
-        >{$_('search.all')}</button>
-        <button class="right flexgrow"
-          onclick={() => execute("replaceStyles", "all")}
-        >{$_('search.only-styles')}</button>
-      </td>
-    </tr>
-  </tbody>
-</table>
+<ConfigTable>
+  <ConfigRow name={$_('search.find')}>
+  <div class="hlayout">
+    <button class="left"
+      onclick={() => execute("select", "next")}
+    >{$_('search.next')}</button>
+    <button class="middle"
+      onclick={() => execute("select", "previous")}
+    >{$_('search.previous')}</button>
+    <button class="right flexgrow"
+      onclick={() => execute("select", "all")}
+    >{$_('search.all')}</button>
+  </div>
+  </ConfigRow>
+
+  <ConfigRow name={$_('search.replace')}>
+  <div class="hlayout">
+    {const cmd = $derived($useReplaceStyle && $onlyReplaceStyle ? 'replaceStyles' : 'replace')}
+    <button class="left"
+      onclick={() => execute(cmd, "next")}
+    >{$_('search.next')}</button>
+    <button class="middle"
+      onclick={() => execute(cmd, "previous")}
+    >{$_('search.previous')}</button>
+    <button class="right flexgrow"
+      onclick={() => execute(cmd, "all")}
+    >{$_('search.all')}</button>
+  </div>
+  </ConfigRow>
+</ConfigTable>
 
 <div class='form vlayout'>
   <h5>{$_('search.options')}</h5>
-  <label>
-    <input type='checkbox' bind:checked={$useRegex}/>
-    {$_('search.use-regular-expressions')}
-    <Tooltip text={$_('search.regex-help')} />
-  </label>
-  <label>
-    <input type='checkbox' bind:checked={$useEscape}/>
-    {$_('search.use-escape-sequences-in-replacement')}
-    <Tooltip text={$_('search.escape-sequence-help')} />
-  </label>
-  <label><input type='checkbox' bind:checked={$caseSensitive}/>
-    {$_('search.case-sensitive')}
-  </label>
-  <label><input type='checkbox' bind:checked={useReplaceStyle}/>
-    {$_('search.replace-by-style')}
-    <StyleSelect
-      onsubmit={() => useReplaceStyle = true}
-      bind:currentStyle={replaceStyle}/>
-  </label>
+  <div class="hlayout gapped">
+    <div class="vlayout">
+      <label>
+        <input type='checkbox' bind:checked={$useRegex}/>
+        {$_('search.use-regular-expressions')}
+        <Tooltip text={$_('search.regex-help')} />
+      </label>
+      <label>
+        <input type='checkbox' bind:checked={$useEscape}/>
+        {$_('search.use-escape-sequences-in-replacement')}
+        <Tooltip text={$_('search.escape-sequence-help')} />
+      </label>
+      <label><input type='checkbox' bind:checked={$caseSensitive}/>
+        {$_('search.case-sensitive')}
+      </label>
+    </div>
+    <div class="vlayout">
+      <label><input type='checkbox' bind:checked={$useReplaceStyle}/>
+        {$_('search.replace-by-style')}
+        <StyleSelect
+          onsubmit={() => $useReplaceStyle = true}
+          bind:currentStyle={replaceStyle}/>
+      </label>
+      <label><input type='checkbox'
+          disabled={!$useReplaceStyle}
+          bind:checked={
+            () => $onlyReplaceStyle && $useReplaceStyle,
+            (v) => { if (v) $useReplaceStyle = true; $onlyReplaceStyle = v; }
+          }/>
+        {$_('search.only-replace-styles')}
+      </label>
+    </div>
+  </div>
 
   <h5>{$_('search.range')}</h5>
   <Collapsible header={$_('search.simple')}
@@ -495,5 +501,9 @@ async function execute(type: SearchAction, option: SearchOption) {
 
   table td {
     padding: 0;
+  }
+
+  .gapped {
+    gap: 10px;
   }
 </style>

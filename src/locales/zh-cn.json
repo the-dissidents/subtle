@@ -624,6 +624,7 @@
     "open": "打开",
     "open-video": "打开视频",
     "redo": "重做",
+    "save": "保存",
     "save-as": "另存为",
     "select-audio-stream": "选择音轨",
     "undo": "撤消"
@@ -812,6 +813,7 @@
     "found-n-lines": "找到 {n} 行",
     "found-nothing": "什么也没找到",
     "next": "下一个",
+    "only-replace-styles": "仅替换样式",
     "only-styles": "仅样式",
     "options": "选项",
     "pattern": {
@@ -854,11 +856,11 @@
     "with-lines-more-than": "多于"
   },
   "srtimport": {
-    "coordinates-info": "subtle暂不支持对字幕条进行单独定位，这些数据将不被导入。",
+    "coordinates-info": "subtle暂不支持SRT字幕条的单独定位，这些数据将不被导入。",
     "header": "导入 SRT 字幕",
     "ignored-coordinates": "忽略了坐标定位",
     "ignored-format-tags": "忽略了HTML格式标签",
-    "info": "某些播放器支持使用HTML标签修改SRT字幕文本的格式，但这是非标准的。如果选中右侧的“保留格式标签”选项，字幕块中的格式标签（如<i>）将得到保留，虽然subtle无法正确显示它们。",
+    "info": "某些播放器支持使用HTML标签修改SRT字幕文本的格式，但这是非标准的。",
     "invalid-color": "无效的颜色名"
   },
   "stilimport": {

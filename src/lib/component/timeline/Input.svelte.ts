@@ -60,16 +60,22 @@ abstract class TimelineAction {
 
 class Scale extends TimelineAction {
     private origScale: number;
+    private deregister: () => void;
 
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent) {
         super(self, layout, e0);
         this.origScale = this.layout.scale;
+        this.deregister = self.registerInterruptKey();
     }
 
     async onDrag(_offsetX: number, _offsetY: number, ev: MouseEvent) {
         await this.layout.setScale(this.origScale /
             Math.pow(1.03, (this.e0.clientX - ev.clientX)));
         await this.layout.setOffset(this.origPos - this.e0.offsetX / this.layout.scale);
+    }
+
+    onDragEnd(_offsetX: number, _offsetY: number, _ev: MouseEvent): Promise<void> | void {
+        this.deregister();
     }
 }
 
@@ -94,11 +100,14 @@ class BoxSelect extends TimelineAction {
     x1: number;
     y1: number;
 
+    private deregister: () => void;
+
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent) {
         super(self, layout, e0);
         this.origSelection = Editing.getSelection();
         this.x1 = e0.offsetX + this.layout.manager.scroll[0];
         this.y1 = e0.offsetY + this.layout.manager.scroll[1];
+        this.deregister = self.registerInterruptKey();
     }
 
     async onDrag(offsetX: number, offsetY: number) {
@@ -121,6 +130,7 @@ class BoxSelect extends TimelineAction {
     }
 
     onDragEnd(): void {
+        this.deregister();
         this.self.currentAction = undefined;
         this.self.selectBox = null;
         this.layout.manager.requestRender();
@@ -138,15 +148,19 @@ class BoxSelect extends TimelineAction {
 abstract class MoveResizeBase extends TimelineAction {
     changed = false;
 
+    private deregister: () => void;
+
     constructor(
         self: TimelineInput, layout: TimelineLayout, e0: MouseEvent,
         protected origPositions: Map<SubtitleEntry, { start: number; end: number; }>,
         private afterEnd: () => void
     ) {
         super(self, layout, e0);
+        this.deregister = self.registerInterruptKey();
     }
 
     async onDragEnd() {
+        this.deregister();
         this.self.currentAction = undefined;
         this.self.alignmentLine = null;
         this.layout.manager.requestRender();
@@ -314,11 +328,14 @@ class CreateEntry extends TimelineAction {
     entry: SubtitleEntry;
     style: SubtitleStyle;
 
+    private deregister: () => void;
+
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, style: SubtitleStyle) {
         super(self, layout, e0);
         const startPos = this.self.alignmentLine?.pos ?? this.origPos;
         this.entry = Editing.insertAtTime(startPos, startPos, style);
         this.style = style;
+        this.deregister = self.registerInterruptKey();
     }
 
     onDrag(offsetX: number, _offsetY: number): void {
@@ -329,6 +346,7 @@ class CreateEntry extends TimelineAction {
     }
 
     async onDragEnd() {
+        this.deregister();
         this.self.currentAction = undefined;
         if (this.entry.end == this.entry.start) {
             // we assume this is a mistake and treat it like a cancelled action
@@ -351,6 +369,8 @@ class CreateEntry extends TimelineAction {
 }
 
 class SplitEntry extends TimelineAction {
+    private deregister: () => void;
+
     static create(
         self: TimelineInput, layout: TimelineLayout,
         e0: MouseEvent, target: SubtitleEntry
@@ -381,6 +401,7 @@ class SplitEntry extends TimelineAction {
     ) {
         super(self, layout, e0);
         this.onDrag(e0.offsetX);
+        this.deregister = self.registerInterruptKey();
     }
 
     override onMouseMove(): boolean {
@@ -419,6 +440,7 @@ class SplitEntry extends TimelineAction {
 
         if (this.styles.length == 0) {
             // all done, do split
+            this.deregister();
             const target = this.self.splitting.target;
             const index = Source.subs.entries.indexOf(target);
             if (index < 0) return Debug.early();
@@ -789,8 +811,6 @@ export class TimelineInput {
         if (this.currentAction !== undefined)
             return this.currentAction.canBeginDrag(e0);
 
-        this.#registerInterruptKey();
-
         if (h.inHeader) {
             this.currentAction = new MoveCursor(this, this.layout, e0);
             void this.#onDrag(e0.offsetX, e0.offsetY, e0);
@@ -909,22 +929,23 @@ export class TimelineInput {
         await this.currentAction.onDrag(offsetX, offsetY, ev);
     }
 
-    #registerInterruptKey() {
+    registerInterruptKey() {
         // TODO: maybe make it a command ('interrupt timeline operation') instead?
         const f = async (ev: KeyboardEvent) => {
             if (ev.key == 'Escape') {
-                await this.manager.interruptDrag();
+                if (this.manager.dragType == 'custom')
+                    await this.manager.interruptDrag();
+                else
+                    await TimelineHandle.interruptAction();
                 this.manager.requestRender();
             }
         };
 
-        this.manager.onDragEnd.bind(this, () => {
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            document.removeEventListener('keydown', f);
-        }, { once: true });
-
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         document.addEventListener('keydown', f, { once: true });
+
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        return () => document.removeEventListener('keydown', f);
     };
 
     async #onDragEnd(offsetX: number, _offsetY: number, ev: MouseEvent) {

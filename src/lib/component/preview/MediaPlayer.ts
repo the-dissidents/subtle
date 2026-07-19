@@ -4,12 +4,12 @@ import type { CanvasManager } from "../../CanvasManager";
 import { InterfaceConfig } from "../../config/Groups";
 import { Debug } from "../../Debug";
 import { SlabBuffer } from "../../details/SlabBuffer";
-import { EventHost } from "../../details/EventHost";
 import { Mutex } from "../../details/Mutex";
 import { RestartableTask } from "../../details/RestartableTask";
 import { Playback } from "../../frontend/Playback";
 import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
+import { AsyncEventHost, EventHost } from "@the_dissidents/svelte-ui";
 
 const DAMPING = 0.5;
 const FETCH_TIME_N = 30;
@@ -170,6 +170,7 @@ export class MediaPlayer {
 
     async close() {
         EventHost.unbind(this);
+        AsyncEventHost.unbind(this);
 
         await this.#mutex.use(async () => {
             if (this.#closed) return;

@@ -3,7 +3,7 @@ console.info('Playback loading');
 import { tick } from "svelte";
 import { get, writable, type Readable } from "svelte/store";
 import { Debug } from "../Debug";
-import { AsyncEventHost, EventHost } from "../details/EventHost";
+import { AsyncEventHost, EventHost } from "@the_dissidents/svelte-ui";
 import { Overridable } from "../details/Overridable.svelte";
 import type { MediaSampler } from "../component/timeline/MediaSampler";
 import { InputConfig } from "../config/Groups";

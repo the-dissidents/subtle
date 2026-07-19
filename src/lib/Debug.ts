@@ -4,7 +4,7 @@ console.info('Debug loading');
 import { invoke } from "@tauri-apps/api/core";
 import * as log from "@tauri-apps/plugin-log"
 import inspect from "object-inspect";
-import { EventHost } from "./details/EventHost";
+import { EventHost } from "@the_dissidents/svelte-ui";
 
 /** Strangely tauri's log plugin does not export this enum, so it is recreated here */
 export enum LogLevel {
