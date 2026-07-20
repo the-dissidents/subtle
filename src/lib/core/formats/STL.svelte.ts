@@ -91,6 +91,61 @@ function getEncoding(cct: string, isAvid: boolean): STLEncoding {
 }
 
 // ---------------------------------------------------------------------------
+// FAB subtitle format support
+// ---------------------------------------------------------------------------
+// The FABst blocks are produced by FAB Subtitler (F.A. Bernhardt GmbH), a
+// professional subtitling tool. Per the vendor documentation at
+// https://kb.fab-online.com/0090-fabsubtitler-files/00010-stlfiles/, these
+// blocks are internal metadata not intended for external parsers.
+//
+// However, the EBU STL text encoding (iso-6937) cannot represent CJK
+// characters, so when creating Chinese subtitles, FAB Subtitler writes the
+// actual text into its proprietary FABst blocks (EBN=0xFE) using UTF-16LE,
+// while the standard EBU text blocks (EBN=0xFF) end up with only spaces and
+// punctuation. We are therefore forced to parse the FABst blocks to recover
+// the subtitle text.
+//
+// The text is UTF-16LE encoded and structured as:
+//   "FABst" [04] [subnum_hi] [subnum_lo] [00] [data_len] [04] [UTF-16LE text] [trailing_byte]
+
+function detectFAB(ttis: TTIFields[]): boolean {
+    for (const tti of ttis) {
+        if (tti.ebn === 0xFE) {
+            if (tti.tf.length >= 5
+                && tti.tf[0] === 0x46 // F
+                && tti.tf[1] === 0x41 // A
+                && tti.tf[2] === 0x42 // B
+                && tti.tf[3] === 0x73 // s
+                && tti.tf[4] === 0x74 // t
+            ) return true;
+            return false;
+        }
+    }
+    return false;
+}
+
+function decodeFABText(tf: Uint8Array): RichText | null {
+    if (tf.length < 10) return null;
+    if (tf[0] !== 0x46 || tf[1] !== 0x41 || tf[2] !== 0x42 || tf[3] !== 0x73 || tf[4] !== 0x74)
+        return null;
+
+    const dataLen = tf[9];
+    const fieldEnd = 10 + dataLen;
+    if (fieldEnd > tf.length) return null;
+
+    const fieldData = tf.subarray(10, fieldEnd);
+    if (fieldData.length < 2 || fieldData[0] !== 0x04) return null;
+
+    const textBytes = fieldData.subarray(1);
+    const evenBytes = textBytes.length % 2 === 0 ? textBytes : textBytes.subarray(0, textBytes.length - 1);
+    const text = new TextDecoder('utf-16le').decode(evenBytes)
+        .replace(/\0+$/, '')
+        .replace(/\u2028/g, '\n');
+    if (text.length === 0) return null;
+    return text;
+}
+
+// ---------------------------------------------------------------------------
 // Text field processor
 // ---------------------------------------------------------------------------
 
@@ -339,6 +394,7 @@ export class STLParser implements SubtitleParser {
     #encoding: STLEncoding;
     #startTime: number;
     #ttis: TTIFields[];
+    #isFab: boolean;
     #userDataBlocks = 0;
     #allWarnings: STLParseMessage[] = [];
     #cachedResult: { messages: STLParseMessage[], subs: Subtitles } | null = null;
@@ -362,6 +418,9 @@ export class STLParser implements SubtitleParser {
         this.#ttis = [];
         for (let i = 0; i < gsi.tnb; i++)
             this.#ttis.push(readTTI(source, GSI_SIZE + i * TTI_SIZE, this.#fps));
+
+        this.#isFab = detectFAB(this.#ttis);
+        if (this.#isFab) void Debug.debug('STL: FAB format detected');
 
         // evaluate canShift1h
         this.decode();
@@ -418,7 +477,23 @@ export class STLParser implements SubtitleParser {
         for (const tti of this.#ttis) {
             if (tti.cf > 0) continue;
 
+            if (this.#isFab && tti.ebn === 0xFE) {
+                const isFirstOfGroup = currentStart === null;
+                if (isFirstOfGroup) {
+                    currentStart = tti.tci - this.#startTime;
+                    currentEnd   = tti.tco - this.#startTime;
+                    if (currentStart < 3600)
+                        this.#canShift1h = false;
+                }
+
+                const fabText = decodeFABText(tti.tf);
+                if (fabText !== null)
+                    currentText.push(fabText);
+                continue;
+            }
+
             if (tti.ebn === 254) {
+                if (this.#isFab) continue; // already handled above
                 this.#userDataBlocks++;
                 continue;
             }
@@ -429,6 +504,14 @@ export class STLParser implements SubtitleParser {
                 currentEnd   = tti.tco - this.#startTime;
                 if (currentStart < 3600)
                     this.#canShift1h = false;
+            }
+
+            if (this.#isFab && tti.ebn === 0xFF) {
+                finishEntry();
+                currentStart = null;
+                currentEnd = null;
+                currentText = [];
+                continue;
             }
 
             const { richText, warnings } = processor.processTF(tti.tf);
@@ -501,6 +584,7 @@ export class STLParser implements SubtitleParser {
             case '36': return 'sv';
             case '37': return 'tr';
             case '38': return 'uk';
+            case '75': return 'zh';
             default:  return '';
         }
     }
