@@ -396,12 +396,16 @@ export class MediaPlayer {
 
         // if not playing, just display the current frame
         if (!this.#playing) {
+            // If a seek was triggered by the stop (e.g. playArea.end reached),
+            // the buffer will have been cleared or is about to be cleared.
+            // Don't try to render a frame whose content may already be freed.
+            if (this.#seeking !== undefined || this.#videoBuffer.length === 0) return -1;
+
             let frame = this.#videoBuffer.at(0);
             if (this.#playEOF) {
                 Debug.assert(this.#lastFrame !== undefined);
                 frame = this.#lastFrame;
             }
-            // if no frames in buffer, wait for it to get populated
             if (!frame) return 0;
 
             if (frame.time !== this.#timestamp) {
