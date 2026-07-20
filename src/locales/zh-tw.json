@@ -844,6 +844,7 @@
   "stlimport": {
     "header": "匯入 STL 字幕",
     "ignored-color-code": "忽略了顏色代碼",
+    "ignored-boxing-code": "忽略了邊框代碼",
     "info-unsupported": "{n,plural,one{此警告表示} other{這些警告表示}}此 STL 檔案使用了 subtle 暫不支援的特性，它們將在匯入時被跳過。",
     "unknown-control-byte": "未知控制位元組",
     "user-data-block": "使用者資料區塊"

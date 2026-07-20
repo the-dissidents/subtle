@@ -869,6 +869,7 @@
   "stlimport": {
     "header": "导入 STL 字幕",
     "ignored-color-code": "忽略了颜色代码",
+    "ignored-boxing-code": "忽略了边框代码",
     "info-unsupported": "{n,plural,one{此警告表示} other{这些警告表示}}此STL文件使用了subtle暂不支持的特性，它们将在导入时被跳过。",
     "timecode-starts-at": "第一条字幕的时间码为",
     "timecode-starts-at-d": "许多 STL 字幕从 1 小时而不是 0 小时开始计算时间。如果需要匹配的视频并非如此，可以勾选右侧的选项，将时间码统一前移一小时",

@@ -863,6 +863,7 @@
   "stlimport": {
     "header": "import STL",
     "ignored-color-code": "ignored color code",
+    "ignored-boxing-code": "ignored boxing code",
     "info-unsupported": "{n,plural,one{This warning means} other{These warnings mean}} the STL file uses features that subtle does not yet support. They will be skipped during import.",
     "timecode-starts-at": "Timecode starts at",
     "unknown-control-byte": "unknown control byte",

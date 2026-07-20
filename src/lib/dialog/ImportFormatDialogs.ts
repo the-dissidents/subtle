@@ -222,6 +222,11 @@ export const ImportFormatDialogs = {
                         + one<'ignored-color-code'>((x) =>
                             $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
                 };
+                case 'ignored-boxing-code': return {
+                    heading: $_('stlimport.ignored-boxing-code') + ' '
+                        + one<'ignored-boxing-code'>((x) =>
+                            $_('assimport.occurred-n-times', {values: {n: x.occurrence}})),
+                };
                 case 'user-data-block': return {
                     heading: $_('stlimport.user-data-block') + ' '
                         + one<'user-data-block'>((x) =>
