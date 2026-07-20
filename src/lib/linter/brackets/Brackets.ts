@@ -224,6 +224,7 @@ export class BracketLinter {
 
     private disambiguate(text: string, tokens: Token[], diagnostics: Diagnostic[]) {
         const isBoundary = (c?: string) => !c || /[\s]/u.test(c);
+        const alternationState = new Map<string, 'open' | 'close'>();
 
         for (const token of tokens) {
             const { config } = token;
@@ -238,6 +239,16 @@ export class BracketLinter {
                 else if (left && !right) deducedDirection = 'close';
                 else if (leftIsBoundary && !rightIsBoundary) deducedDirection = 'open';
                 else if (!leftIsBoundary && rightIsBoundary) deducedDirection = 'close';
+                else if (config.intrinsicDirection === 'identical') {
+                    const prev = alternationState.get(token.char);
+                    if (!prev || prev === 'close') {
+                        deducedDirection = 'open';
+                    } else {
+                        deducedDirection = 'close';
+                    }
+                }
+
+                alternationState.set(token.char, deducedDirection);
 
                 if (config.intrinsicDirection !== 'identical' && deducedDirection !== config.intrinsicDirection) {
                     diagnostics.push({
@@ -275,23 +286,41 @@ export class BracketLinter {
                     ? 'secondary' : 'primary';
 
                 if (config.level !== expectedLevel && !tooDeep) {
-                    const expectedChar = expectedLevel === 'primary'
-                        ? config.preferredPrimary[0]
-                        : config.preferredSecondary![0];
-
-                    diagnostics.push({
-                        start: index, to: index + 1, type: 'punctuation',
-                        description: expectedLevel === 'primary'
-                            ? $_('brackets.expected-primary-opening')
-                            : $_('brackets.expected-secondary-opening'),
-                        fix: { substitute: expectedChar, confident: true }
-                    });
-                    hasFix = true;
+                    let matchIndex = -1;
+                    for (let i = stack.length - 1; i >= 0; i--) {
+                        const stackToken = stack[i];
+                        if (stackToken.config.groupId === config.groupId
+                         && stackToken.config.level === config.level
+                        ) {
+                            matchIndex = i;
+                            break;
+                        }
+                    }
+                    if (matchIndex !== -1) {
+                        token.activeDirection = 'close';
+                    }
                 }
-                stack.push(token);
-            } else {
-                // met a closing bracket
 
+                if (token.activeDirection === 'open') {
+                    if (config.level !== expectedLevel && !tooDeep) {
+                        const expectedChar = expectedLevel === 'primary'
+                            ? config.preferredPrimary[0]
+                            : config.preferredSecondary![0];
+
+                        diagnostics.push({
+                            start: index, to: index + 1, type: 'punctuation',
+                            description: expectedLevel === 'primary'
+                                ? $_('brackets.expected-primary-opening')
+                                : $_('brackets.expected-secondary-opening'),
+                            fix: { substitute: expectedChar, confident: true }
+                        });
+                        hasFix = true;
+                    }
+                    stack.push(token);
+                }
+            }
+
+            if (token.activeDirection === 'close') {
                 let matchIndex = -1;
                 for (let i = stack.length - 1; i >= 0; i--) {
                     const stackToken = stack[i];
@@ -332,7 +361,6 @@ export class BracketLinter {
                         hasFix = true;
                     }
 
-                    // Unwind interruptions
                     for (let i = stack.length - 1; i > matchIndex; i--) {
                         const unclosed = stack.pop()!;
                         diagnostics.push({
