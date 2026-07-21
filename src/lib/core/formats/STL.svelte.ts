@@ -115,8 +115,11 @@ function getEncoding(cct: string, isAvid: boolean): STLEncoding {
 // punctuation. We are therefore forced to parse the FABst blocks to recover
 // the subtitle text.
 //
-// The text is UTF-16LE encoded and structured as:
+// The text is UTF-16LE encoded. Primary blocks use the format:
 //   "FABst" [04] [subnum_hi] [subnum_lo] [00] [data_len] [04] [UTF-16LE text] [trailing_byte]
+// When text exceeds the 112-byte TF field, continuation blocks are inserted:
+//   "FABst" [data_len] [04] [UTF-16LE text] [trailing_byte]
+// Continuation blocks share the same SN as their primary block.
 
 function detectFAB(ttis: TTIFields[]): boolean {
     for (const tti of ttis) {
@@ -135,17 +138,33 @@ function detectFAB(ttis: TTIFields[]): boolean {
 }
 
 function decodeFABText(tf: Uint8Array): RichText | null {
-    if (tf.length < 10) return null;
+    if (tf.length < 7) return null;
     if (tf[0] !== 0x46 || tf[1] !== 0x41 || tf[2] !== 0x42 || tf[3] !== 0x73 || tf[4] !== 0x74)
         return null;
 
-    const dataLen = tf[9];
-    const fieldEnd = 10 + dataLen;
+    if (tf[5] === 0x04) {
+        // Primary block: "FABst" [04] [subnum_hi] [subnum_lo] [00] [data_len] [04] [text...]
+        if (tf.length < 10) return null;
+        const dataLen = tf[9];
+        const fieldEnd = 10 + dataLen;
+        if (fieldEnd > tf.length) return null;
+        const fieldData = tf.subarray(10, fieldEnd);
+        if (fieldData.length < 2 || fieldData[0] !== 0x04) return null;
+        const textBytes = fieldData.subarray(1);
+        const evenBytes = textBytes.length % 2 === 0 ? textBytes : textBytes.subarray(0, textBytes.length - 1);
+        const text = new TextDecoder('utf-16le').decode(evenBytes)
+            .replace(/\0+$/, '')
+            .replace(/\u2028/g, '\n');
+        if (text.length === 0) return null;
+        return text;
+    }
+
+    // Continuation block: "FABst" [data_len] [04] [text...]
+    const dataLen = tf[5];
+    const fieldEnd = 6 + dataLen;
     if (fieldEnd > tf.length) return null;
-
-    const fieldData = tf.subarray(10, fieldEnd);
+    const fieldData = tf.subarray(6, fieldEnd);
     if (fieldData.length < 2 || fieldData[0] !== 0x04) return null;
-
     const textBytes = fieldData.subarray(1);
     const evenBytes = textBytes.length % 2 === 0 ? textBytes : textBytes.subarray(0, textBytes.length - 1);
     const text = new TextDecoder('utf-16le').decode(evenBytes)
