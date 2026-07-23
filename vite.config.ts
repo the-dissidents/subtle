@@ -4,6 +4,7 @@ import { visualizer } from "rollup-plugin-visualizer";
 import inspect from 'vite-plugin-inspect'
 import debugInfoSvelte from './vite-plugins/DebugInfoSvelte';
 import debugInfoTS from './vite-plugins/DebugInfoTS';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
@@ -35,5 +36,10 @@ export default defineConfig(() => ({
     supported: {
       'top-level-await': false //browsers can handle top-level-await features
     },
-  }
+  },
+  resolve: {
+    alias: {
+      '$lib': path.resolve(__dirname, './src/lib')
+    }
+  },
 }));
