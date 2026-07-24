@@ -30,7 +30,8 @@ export class MediaPlayer3 {
 
     #diag = {
         latencySquared: 0,
-        fetchTimes: [] as number[]
+        delay: 0,
+        waitForAudio: 0,
     }
 
     get source() { return this.rawurl; }
@@ -79,7 +80,7 @@ export class MediaPlayer3 {
         void this.#startPresenting();
     }
 
-    #updateOutputSize() {
+    async #updateOutputSize() {
         Debug.assert(this.#intent !== 'closed');
         Debug.assert(this.#buffer.media.video !== undefined);
 
@@ -106,6 +107,8 @@ export class MediaPlayer3 {
             ow = Math.max(1, Math.round(ow));
             oh = Math.max(1, Math.round(oh));
         }
+
+        await this.stop();
         return this.#buffer.resize(ow, oh);
     }
 
@@ -148,8 +151,6 @@ export class MediaPlayer3 {
 
     async #drawFrame(frame: ReadonlyVideoFrameData) {
         const ctx = this.#bufCtx;
-        const start = performance.now();
-
         const [w, h] = this.manager.physicalSize;
         const [ow, oh] = frame.size;
         const [dw, dh] = this.#displaySize;
@@ -185,7 +186,7 @@ export class MediaPlayer3 {
             latencyStr = 'n/a!';
         }
 
-        ctx.fillStyle = 'green';
+        ctx.fillStyle = 'cyan';
         ctx.font = `${window.devicePixelRatio * 10}px Courier`;
         ctx.textBaseline = 'top';
         ctx.textAlign = 'left'
@@ -197,7 +198,7 @@ export class MediaPlayer3 {
         ctx.fillText(`VTi ${frame.time.toFixed(3)} s`, x, 40);
         ctx.fillText(`LAT${latencyStr.padStart(5)}`.padEnd(10)
                    + `STS ${Math.sqrt(this.#diag.latencySquared).toFixed(1).padStart(4)}`, x, 60);
-        ctx.fillText(`DRW ${(performance.now() - start).toFixed(1)}`, x, 80);
+        ctx.fillText(`DEL ${this.#diag.delay.toFixed(1).padStart(4)}`, x, 80);
         ctx.fillText(`VBL ${this.#buffer.videoBufferLength}`.padEnd(9)
                    + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 100);
         ctx.fillText(`ABL ${this.#buffer.audio.bufferLength}`.padEnd(9)
@@ -205,12 +206,14 @@ export class MediaPlayer3 {
         ctx.fillText(rescaled
             ? `RES ${ow}x${oh} -> ${dw}x${dh}`
             : `RES ${ow}x${oh}`, x, 140);
+        ctx.fillText(`WAT ${this.#diag.waitForAudio}`, x, 160);
+        ctx.fillText(`AFL ${this.#buffer.audio.lastFrameLength}`, x, 180);
 
         const lo = Math.floor(MediaConfig.data.preloadWorkTime);
         const hi = lo + 25;
         const bins: number[] = [];
         let _small = 0, big = 0;
-        this.#diag.fetchTimes.forEach((x) => {
+        this.#buffer.fetchTimes.forEach((x) => {
             const i = Math.floor(x);
             if (i < lo) _small++;
             else if (i > hi) big++;
@@ -266,6 +269,7 @@ export class MediaPlayer3 {
                     void this.stop();
                     return -1;
                 case "waiting_for_clock":
+                    this.#diag.waitForAudio += 1;
                     return data.earliest - clock;
                 case "ok": {
                     const frame = data.frame;
@@ -292,6 +296,7 @@ export class MediaPlayer3 {
         this.#presenting = true;
         while (true) {
             const delay = await this.#mutex.use(() => this.#presentNextLocked());
+            this.#diag.delay = delay * 1000;
             if (delay < 0) break;
             await Basic.wait(delay * 1000);
         }

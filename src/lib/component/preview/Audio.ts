@@ -18,6 +18,7 @@ export class Audio {
         isPlaying: false,
         bufferLength: 0,
         bufferSize: 0,
+        frameLength: undefined,
         headTime: undefined,
         tailTime: undefined
     };
@@ -32,6 +33,10 @@ export class Audio {
 
     get bufferSize() {
         return this.#feedback.bufferSize;
+    }
+
+    get lastFrameLength() {
+        return this.#feedback.frameLength;
     }
 
     get head() {

@@ -10,7 +10,7 @@ import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
 import { type SetPositionOptions } from "./MediaPlayer";
 
-export const FETCH_TIME_N = 30;
+export const FETCH_TIME_N = 20;
 
 export type SeekOptions = {
     imprecise?: boolean;
@@ -57,6 +57,10 @@ export class PlayerBuffer {
         this.#audio = audio;
         this.#pool = this.#reallocatePool();
         void this.#startBuffering();
+    }
+
+    get fetchTimes() {
+        return this.#diag.fetchTimes as readonly number[];
     }
 
     get videoBufferLength() {
@@ -180,19 +184,27 @@ export class PlayerBuffer {
     }
 
     async resize(w: number, h: number) {
+        return this.#resize.request(w, h);
+    }
+
+    #resize = new RestartableTask<[w: number, h: number]>(async ([w, h], tok) => {
         const pos = await this.waitForPlayPosition();
         await this.#mutex.use(async () => {
-            if (this.state === 'closed') return Debug.early();
+            if (this.state === 'closed') return;
+            if (tok.isCancelled) return;
             await this.media.setVideoSize(w, h);
+            if (tok.isCancelled) return;
             await this.#clearBufferLocked();
+            if (tok.isCancelled) return;
             void this.#seek.request(pos)
         });
-    }
+    }, { deduplicator: ([a, b], [c, d]) => a == c && b == d })
 
     async waitForPlayPosition() {
         while (true) {
             const pos = await this.#mutex.use(() => this.#playPosition);
             if (pos !== undefined) return pos;
+            if (this.#state == 'closed') return -1;
             await Debug.trace('waiting for play position');
             Debug.assert(this.#state == 'buffering');
         }
