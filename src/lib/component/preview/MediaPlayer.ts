@@ -12,7 +12,7 @@ import { MediaConfig } from "./Config";
 import { AsyncEventHost, EventHost } from "@the_dissidents/svelte-ui";
 
 const DAMPING = 0.5;
-const FETCH_TIME_N = 30;
+export const FETCH_TIME_N = 30;
 
 export type SetPositionOptions = {
     imprecise?: boolean;
@@ -99,7 +99,7 @@ export class MediaPlayer {
         });
 
         this.#updateOutputSize();
-        void this.#tryDecoding();
+        void this.#startDecoding(false);
     }
 
     #reallocatePool() {
@@ -172,10 +172,11 @@ export class MediaPlayer {
         EventHost.unbind(this);
         AsyncEventHost.unbind(this);
 
+        this.#closed = true;
+
         await this.#mutex.use(async () => {
             if (this.#closed) return;
-            await this.#clearCache();
-            this.#closed = true;
+            await this.#clearCacheLocked();
             await Debug.info('closing media player');
             await this.audio.close();
             if (!this.media.isClosed)
@@ -191,8 +192,7 @@ export class MediaPlayer {
         await this.#mutex.use(() => this.audio.setVolume(value));
     }
 
-    // Must be called while locked
-    async #clearCache() {
+    async #clearCacheLocked() {
         Debug.assert(!this.#closed);
         this.#preloadEOF = false;
         this.#playEOF = false;
@@ -210,11 +210,10 @@ export class MediaPlayer {
         void Debug.debug(`seekDone: seeked to [${frame.time.toFixed(3)}]`);
     }
 
-    // Must be called while locked
-    async #receiveAudioFrame(frame: AudioFrameData) {
+    async #receiveAudioFrameLocked(frame: AudioFrameData) {
         if (this.audio.tail !== undefined && this.audio.tail > frame.time) {
             await Debug.warn(`receiveAudioFrame: abnormal ordering: ${frame.time} < ${this.audio.tail}`);
-            await this.#clearCache();
+            await this.#clearCacheLocked();
             return;
         }
         if (this.#seeking !== undefined && this.#videoBuffer.length > 0)
@@ -222,11 +221,10 @@ export class MediaPlayer {
         await this.audio.pushFrame(frame);
     }
 
-    // Must be called while locked
-    async #receiveVideoFrame(frame: VideoFrameData) {
+    async #receiveVideoFrameLocked(frame: VideoFrameData) {
         if (this.#videoBuffer.length > 0 && this.#videoBuffer.at(-1)!.time > frame.time) {
             await Debug.warn(`receiveVideoFrame: abnormal ordering: ${frame.time} < ${this.#videoBuffer.at(-1)!.time}`);
-            await this.#clearCache();
+            await this.#clearCacheLocked();
             return;
         }
         if (this.#lastFrame && this.#lastFrame !== this.#videoBuffer.at(-1))
@@ -243,41 +241,66 @@ export class MediaPlayer {
         }
     }
 
-    // Must be called while locked
-    async #receiveFrames(result: DecodeResult) {
+    async #receiveFramesLocked(result: DecodeResult) {
         if (result.audio.length == 0 && result.video.length == 0) {
             this.#preloadEOF = true;
             return false;
         }
         Debug.assert(!this.#preloadEOF);
         for (const frame of result.audio)
-            await this.#receiveAudioFrame(frame);
+            await this.#receiveAudioFrameLocked(frame);
         for (const frame of result.video)
-            await this.#receiveVideoFrame(frame);
+            await this.#receiveVideoFrameLocked(frame);
         return true;
     }
 
-    async #tryDecoding() {
-        if (this.#preloadEOF || this.#closed) return;
+    decodingRunning = false;
+
+    async #tryDecodeLocked() {
         if (this.#videoBuffer.length >= MediaConfig.data.videoCacheSize
          && this.audio.tail! - this.audio.head! >= MediaConfig.data.audioPreloadAmount)
         {
             if (this.audio.tail === undefined)
-                await Debug.warn('ensurePopulating: video cache full but audio cache empty');
+                await Debug.warn('tryDecoding: video cache full but audio cache empty');
+            // enough frames preloaded
+            // update the debug info about buffer lengths
             if (!this.#presenting) void this.#present();
-            return;
+            return 'buffer_full';
         }
 
-        await this.#mutex.useIfIdle(async () => {
-            const start = performance.now();
-            const targetTime = MediaConfig.data.preloadWorkTime;
-            const frames = await this.media.decodeAutomatic(targetTime, this.#pool);
-            const time = performance.now() - start;
-            this.#diag.fetchTimes.push(time);
-            if (this.#diag.fetchTimes.length > FETCH_TIME_N)
-                this.#diag.fetchTimes.shift();
-            await this.#receiveFrames(frames);
-        });
+        const start = performance.now();
+        const targetTime = MediaConfig.data.preloadWorkTime;
+        const frames = await this.media.decodeAutomatic(targetTime, this.#pool);
+        const time = performance.now() - start;
+        this.#diag.fetchTimes.push(time);
+        if (this.#diag.fetchTimes.length > FETCH_TIME_N)
+            this.#diag.fetchTimes.shift();
+        const received = await this.#receiveFramesLocked(frames);
+        if (!received) return 'eof';
+        return 'ok';
+    }
+
+    async #startDecoding(force: boolean) {
+        if (this.#preloadEOF || this.#closed) return;
+        if (this.decodingRunning) return;
+        this.decodingRunning = true;
+
+        try {
+            while (!this.#preloadEOF && !this.#closed) {
+                const result = force
+                    ? await this.#mutex.use(() => this.#tryDecodeLocked())
+                    : await this.#mutex.useIfIdle(() => this.#tryDecodeLocked());
+                if (result !== 'ok' && result !== undefined)
+                    break;
+                force = false;
+                // await Promise.resolve();
+                await Basic.wait(0);
+            }
+        } catch (e) {
+            await Debug.forwardError(e);
+        } finally {
+            this.decodingRunning = false;
+        }
     }
 
     async #drawFrame(frame: VideoFrameData, debugVideoLengths?: number[]) {
@@ -332,27 +355,19 @@ export class MediaPlayer {
         ctx.textAlign = 'left'
 
         const x = dx;
-        ctx.fillText(
-            `FPS ${this.frameRate.toFixed(3)} SPR ${this.media.audio!.sampleRate}`, x, 0);
-        ctx.fillText(
-            `ATi ${audioTime} s`, x, 20);
-        ctx.fillText(
-            `VTi ${frame.time.toFixed(3)} s`, x, 40);
-        ctx.fillText(
-            `LAT${latencyStr.padStart(5)}`.padEnd(10)
-          + `STS ${Math.sqrt(this.#diag.latencySquared).toFixed(1).padStart(4)}`, x, 60);
-        ctx.fillText(
-            `DRW ${(performance.now() - start).toFixed(1)}`, x, 80);
-        ctx.fillText(
-            `VBL ${this.#videoBuffer.length}`.padEnd(9)
-            + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 100);
-        ctx.fillText(
-            `ABL ${this.audio.bufferLength}`.padEnd(9)
-            + `(${(audioSize / 1024).toFixed(0)}KB)`, x, 120);
-        if (rescaled)
-            ctx.fillText(`RES ${ow}x${oh} -> ${dw}x${dh}`, x, 140);
-        else
-            ctx.fillText(`RES ${ow}x${oh}`, x, 140);
+        ctx.fillText(`FPS ${this.frameRate.toFixed(3)} SPR ${this.media.audio!.sampleRate}`, x, 0);
+        ctx.fillText(`ATi ${audioTime} s`, x, 20);
+        ctx.fillText(`VTi ${frame.time.toFixed(3)} s`, x, 40);
+        ctx.fillText(`LAT${latencyStr.padStart(5)}`.padEnd(10)
+                   + `STS ${Math.sqrt(this.#diag.latencySquared).toFixed(1).padStart(4)}`, x, 60);
+        ctx.fillText(`DRW ${(performance.now() - start).toFixed(1)}`, x, 80);
+        ctx.fillText(`VBL ${this.#videoBuffer.length}`.padEnd(9)
+                   + `(${(videoSize / 1024 / 1024).toFixed(2)}MB)`, x, 100);
+        ctx.fillText(`ABL ${this.audio.bufferLength}`.padEnd(9)
+                   + `(${(audioSize / 1024).toFixed(0)}KB)`, x, 120);
+        ctx.fillText(rescaled
+            ? `RES ${ow}x${oh} -> ${dw}x${dh}`
+            : `RES ${ow}x${oh}`, x, 140);
 
         const lo = Math.floor(MediaConfig.data.preloadWorkTime);
         const hi = lo + 25;
@@ -426,7 +441,7 @@ export class MediaPlayer {
                 return 0; // render one more time
             }
             // or the buffer is empty
-            void this.#tryDecoding();
+            void this.#startDecoding(false);
             return 0;
         }
 
@@ -448,7 +463,7 @@ export class MediaPlayer {
             frame.content.delete();
         this.manager.requestRender();
 
-        void this.#tryDecoding();
+        void this.#startDecoding(false);
         const targetTime = (this.#videoBuffer.at(0) ?? frame).time;
         return Math.max(0, Math.min(targetTime - clock, 2 / this.media.video!.framerate));
     }
@@ -539,9 +554,9 @@ export class MediaPlayer {
                 this.#internalTimestamp = frame.time;
                 this.#timestamp = frame.time;
                 MediaPlayerInterface.onPlayback.dispatch(frame.time);
-                await Debug.debug(`seek: [${frame.time.toFixed(3)}] inside cache`);
+                await Debug.trace(`seek: [${frame.time.toFixed(3)}] inside cache`);
             } else {
-                await this.#clearCache();
+                await this.#clearCacheLocked();
                 if (tok.isCancelled) return;
 
                 const realTarget = Math.max(target, this.startTime);
@@ -557,9 +572,9 @@ export class MediaPlayer {
                     this.#internalTimestamp = undefined;
 
                     await this.media.seekVideo(realTarget);
-                    await Debug.debug(`seek: [${target.toFixed(3)}] by time (${realTarget.toFixed(3)})`);
+                    await Debug.trace(`seek: [${target.toFixed(3)}] by time (${realTarget.toFixed(3)})`);
                     if (lastKeyframe)
-                        await Debug.debug(`seek: info: last keyframe is`, lastKeyframe);
+                        await Debug.trace(`seek: info: last keyframe is`, lastKeyframe);
 
                     // if (!lastKeyframe || lastKeyframe.bytePos < 0) {
                     // } else {
@@ -569,7 +584,7 @@ export class MediaPlayer {
                 } else {
                     // no need to seek
                     this.#seeking = {target, skippedAudio: 0, skippedVideo: 0};
-                    await Debug.debug(`seek: [${target.toFixed(3)}] not seeked`);
+                    await Debug.trace(`seek: [${target.toFixed(3)}] not seeked`);
                 }
 
                 if (!(opt?.imprecise)) {
@@ -582,15 +597,15 @@ export class MediaPlayer {
                         i++;
                         const newTarget = realTarget - i;
                         if (newTarget < this.startTime) break;
-                        await this.#clearCache();
+                        await this.#clearCacheLocked();
                         if (tok.isCancelled) return;
                         await this.media.seekVideo(newTarget);
                         frames = await this.media.skipUntil(target, this.#pool);
                     }
                     if (i > 0)
-                        await Debug.debug(`seek: retried ${i} time[s]`);
+                        await Debug.trace(`seek: retried ${i} time[s]`);
 
-                    await this.#receiveFrames(frames);
+                    await this.#receiveFramesLocked(frames);
                 }
             }
             if (!this.#presenting) void this.#present();
@@ -634,7 +649,7 @@ export class MediaPlayer {
                 this.audio = await Audio.create(status.sampleRate);
             }
 
-            await this.#clearCache();
+            await this.#clearCacheLocked();
             void this.#seekTask.request(this.#timestamp);
         });
     }

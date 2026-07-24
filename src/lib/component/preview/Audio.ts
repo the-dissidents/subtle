@@ -68,8 +68,9 @@ export class Audio {
 
     async close() {
         Debug.assert(!this.#closed);
-        await this.#mutex.acquire();
+        await this.#mutex.acquire(); // never release
         this.#closed = true;
+        await this.stop();
         await this.ctx.close();
     }
 

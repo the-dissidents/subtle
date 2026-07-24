@@ -3,6 +3,10 @@ import { Debug } from "../Debug";
 
 const GROW_FACTOR = 1.5;
 
+export type ReadonlyBufferHandle<T extends TypedArray> = {
+    get data(): T
+};
+
 export type BufferHandle<T extends TypedArray> = {
     get data(): T,
     delete(): void

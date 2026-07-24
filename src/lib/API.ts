@@ -5,7 +5,7 @@ import type { MediaEvent } from './bindings/MediaEvent';
 import type { StreamDescription } from './bindings/StreamDescription';
 import type { ResolvedFontFamily } from './bindings/ResolvedFontFamily';
 import type { SubsetResult } from './bindings/SubsetResult';
-import type { BufferHandle, SlabBuffer } from './details/SlabBuffer';
+import type { BufferHandle, ReadonlyBufferHandle, SlabBuffer } from './details/SlabBuffer';
 import type { DiffEntry } from './bindings/DiffEntry';
 import type { EntryScorer } from './bindings/EntryScorer';
 import type { MatchResult } from './bindings/MatchResult';
@@ -57,12 +57,21 @@ function createChannel(
 }
 
 export type VideoFrameData = {
-    pktpos: number,
-    time: number,
-    stride: number,
-    length: number,
-    size: [width: number, height: number],
-    content: BufferHandle<ImageDataArray>
+    readonly pktpos: number,
+    readonly time: number,
+    readonly stride: number,
+    readonly length: number,
+    readonly size: readonly [width: number, height: number],
+    readonly content: BufferHandle<ImageDataArray>
+};
+
+export type ReadonlyVideoFrameData = {
+    readonly pktpos: number,
+    readonly time: number,
+    readonly stride: number,
+    readonly length: number,
+    readonly size: readonly [width: number, height: number],
+    readonly content: ReadonlyBufferHandle<ImageDataArray>
 };
 
 export type AudioFrameData = {

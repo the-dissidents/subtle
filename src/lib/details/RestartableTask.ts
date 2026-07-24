@@ -21,7 +21,7 @@ type State<Arg> = {
 } | {
     type: 'cancelling';
     current: Request<Arg>;
-    new: Request<Arg>;
+    new?: Request<Arg>;
 } | {
     type: 'idle';
 };
@@ -42,7 +42,7 @@ export class RestartableTask<Arg extends unknown[]> {
     async request(...arg: Arg) {
         const old = this.state.type == 'running' ? this.state.current.arg
                 : this.state.type == 'scheduled' ? this.state.current.arg
-                : this.state.type == 'cancelling' ? this.state.new.arg
+                : this.state.type == 'cancelling' ? this.state.new?.arg
                 : this.state.type == 'idle' ? undefined
                 : Debug.never(this.state);
 
@@ -69,7 +69,7 @@ export class RestartableTask<Arg extends unknown[]> {
                 this.#schedule(request);
             } else {
                 if (this.state.type == 'cancelling')
-                    this.state.new.onDone(); // destroy the unused promise
+                    this.state.new?.onDone(); // destroy the unused promise
 
                 this.state = {
                     type: 'cancelling',
@@ -102,7 +102,7 @@ export class RestartableTask<Arg extends unknown[]> {
             request.onReject(e);
         } finally {
             const state = this.state as State<Arg>;
-            if (state.type === 'cancelling')
+            if (state.type === 'cancelling' && state.new)
                 await this.#execute(state.new);
             else
                 this.state = { type: 'idle' };

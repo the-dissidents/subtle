@@ -23,8 +23,8 @@ export class Mutex {
             return;
         }
         return new Promise<void>((resolve) => {
-            const id = this.timeout <= 0 
-                ? undefined 
+            const id = this.timeout <= 0
+                ? undefined
                 : setTimeout(() => Debug.warn(
                     `mutex ${this.debugName} has been waiting for ~${this.timeout}ms`),
                     this.timeout);
@@ -32,7 +32,7 @@ export class Mutex {
                 this.#busy = true;
                 clearTimeout(id);
                 resolve();
-            })
+            });
         });
     }
 
