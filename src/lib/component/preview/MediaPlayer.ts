@@ -17,7 +17,7 @@ export const MediaPlayerInterface = {
     onPlayStateChanged: new EventHost<[]>(),
 };
 
-export class MediaPlayer3 {
+export class MediaPlayer {
     readonly #buffer: PlayerBuffer;
 
     #intent: 'playing' | 'paused' | 'closed' = 'paused';
@@ -125,7 +125,7 @@ export class MediaPlayer3 {
             throw e;
         }
         const audio = await Audio.create(audioStatus.sampleRate);
-        const player = new MediaPlayer3(media, audio, manager, rawurl);
+        const player = new MediaPlayer(media, audio, manager, rawurl);
         return player;
     }
 

@@ -7,7 +7,7 @@ import { SubtitleRenderer } from "./SubtitleRenderer";
 import { MediaConfig } from "./Config";
 
 import { unwrapFunctionStore, _ } from "svelte-i18n";
-import { MediaPlayer3 } from "./MediaPlayer3";
+import { MediaPlayer } from "./MediaPlayer";
 const $_ = unwrapFunctionStore(_);
 
 export class PreviewLayout {
@@ -66,7 +66,7 @@ export class PreviewLayout {
         });
 
         Playback.onLoad.bind(this, async (rawurl, id) => {
-            Playback.player = await MediaPlayer3.create(this.#manager, rawurl, id);
+            Playback.player = await MediaPlayer.create(this.#manager, rawurl, id);
         });
         Playback.onClose.bind(this, async () => {
             await Playback.player!.close();

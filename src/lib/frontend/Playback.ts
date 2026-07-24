@@ -11,7 +11,7 @@ import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { unwrapFunctionStore, _ } from "svelte-i18n";
 import { guardAsync } from "./Frontend";
-import { MediaPlayerInterface, type MediaPlayer3 } from "$lib/component/preview/MediaPlayer3";
+import { MediaPlayerInterface, type MediaPlayer } from "$lib/component/preview/MediaPlayer";
 import type { SeekOptions } from "$lib/component/preview/PlayerBuffer";
 
 const $_ = unwrapFunctionStore(_);
@@ -54,7 +54,7 @@ export const Playback = {
     get loadState(): Readable<LoadState> { return loadState; },
     get isPlaying() { return this.player?.isPlaying ?? false; },
 
-    player: null as MediaPlayer3 | null,
+    player: null as MediaPlayer | null,
     sampler: null as MediaSampler | null,
 
     playArea: new Overridable<PlayArea>({

@@ -6,7 +6,7 @@
   import { Frontend, focusablePanel } from "../../frontend/Frontend";
 
   import { PreviewLayout } from "./Layout";
-  import { MediaPlayerInterface } from "./MediaPlayer3";
+  import { MediaPlayerInterface } from "./MediaPlayer";
   import type { LineBox } from "./SubtitleRenderer";
 
   import SubtitleView from "./SubtitleView.svelte";
