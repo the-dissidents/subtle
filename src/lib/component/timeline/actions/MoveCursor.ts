@@ -1,6 +1,7 @@
 import { Playback } from "$lib/frontend/Playback";
-import { TimelineAction, TimelineInput } from "../Input.svelte";
+import { TimelineInput } from "../Input.svelte";
 import type { TimelineLayout } from "../Layout";
+import { TimelineAction } from "./TimelineAction";
 
 export class MoveCursor extends TimelineAction {
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent) {

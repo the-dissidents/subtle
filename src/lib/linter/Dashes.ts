@@ -53,7 +53,7 @@ const CJK_WORD_CONNECTOR = DashType.enDash;
 
 // Wide CJK punctuations that subsume a following space, so a dash right after them is
 // effectively spaced and no missing space should be reported there.
-const SPACE_SUBSUMING = '、，。；：！？';
+const SPACE_SUBSUMING = '、，。；：！？」』';
 
 export class DashLinter {
     constructor(private config: DashesConfig) {}

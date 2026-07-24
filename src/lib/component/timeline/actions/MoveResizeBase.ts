@@ -2,8 +2,9 @@ import type { SubtitleEntry } from "$lib/core/Subtitles.svelte";
 import { Source, ChangeType } from "$lib/frontend/Source";
 import { _ } from "svelte-i18n";
 import { get } from "svelte/store";
-import { TimelineAction, TimelineInput } from "../Input.svelte";
+import { TimelineInput } from "../Input.svelte";
 import type { TimelineLayout } from "../Layout";
+import { TimelineAction } from "./TimelineAction";
 
 export abstract class MoveResizeBase extends TimelineAction {
     changed = false;

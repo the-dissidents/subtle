@@ -1,5 +1,6 @@
-import { TimelineAction, TimelineInput } from "../Input.svelte";
+import { TimelineInput } from "../Input.svelte";
 import type { TimelineLayout } from "../Layout";
+import { TimelineAction } from "./TimelineAction";
 
 export class Scale extends TimelineAction {
     private origScale: number;

@@ -1,8 +1,9 @@
 import type { SubtitleEntry } from "$lib/core/Subtitles.svelte";
 import { Editing } from "$lib/frontend/Editing";
 import { SvelteSet } from "svelte/reactivity";
-import { TimelineAction, TimelineInput } from "../Input.svelte";
+import { TimelineInput } from "../Input.svelte";
 import type { TimelineLayout, Box } from "../Layout";
+import { TimelineAction } from "./TimelineAction";
 
 export class BoxSelect extends TimelineAction {
     origSelection: SubtitleEntry[];

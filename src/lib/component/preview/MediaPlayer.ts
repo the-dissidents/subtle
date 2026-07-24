@@ -99,7 +99,7 @@ export class MediaPlayer {
         });
 
         this.#updateOutputSize();
-        void this.#populateBuffer();
+        void this.#tryDecoding();
     }
 
     #reallocatePool() {
@@ -197,9 +197,9 @@ export class MediaPlayer {
         this.#preloadEOF = false;
         this.#playEOF = false;
         for (const frame of this.#videoBuffer)
-            if (frame !== this.#lastFrame)
-                frame.content.delete();
+            frame.content.delete();
         this.#videoBuffer = [];
+        this.#lastFrame = undefined;
         await this.audio.clearBuffer();
         await Debug.trace('cache cleared');
     }
@@ -257,21 +257,18 @@ export class MediaPlayer {
         return true;
     }
 
-    async #doDecode() {
-        if (this.#preloadEOF || this.#closed)
-            return false;
+    async #tryDecoding() {
+        if (this.#preloadEOF || this.#closed) return;
         if (this.#videoBuffer.length >= MediaConfig.data.videoCacheSize
          && this.audio.tail! - this.audio.head! >= MediaConfig.data.audioPreloadAmount)
         {
             if (this.audio.tail === undefined)
-                await Debug.warn('doDecode: video cache full but audio cache empty');
-            // enough frames preloaded
-            // update the debug info about buffer lengths
+                await Debug.warn('ensurePopulating: video cache full but audio cache empty');
             if (!this.#presenting) void this.#present();
-            return false;
+            return;
         }
 
-        return await this.#mutex.use(async () => {
+        await this.#mutex.useIfIdle(async () => {
             const start = performance.now();
             const targetTime = MediaConfig.data.preloadWorkTime;
             const frames = await this.media.decodeAutomatic(targetTime, this.#pool);
@@ -279,20 +276,11 @@ export class MediaPlayer {
             this.#diag.fetchTimes.push(time);
             if (this.#diag.fetchTimes.length > FETCH_TIME_N)
                 this.#diag.fetchTimes.shift();
-            return await this.#receiveFrames(frames);
-        }) ?? true;
+            await this.#receiveFrames(frames);
+        });
     }
 
-    #populateBufferRunning = false;
-    async #populateBuffer() {
-        Debug.assert(!this.#populateBufferRunning);
-        this.#populateBufferRunning = true;
-        while (await this.#doDecode())
-            await Basic.wait(0);
-        this.#populateBufferRunning = false;
-    }
-
-    async #drawFrame(frame: VideoFrameData) {
+    async #drawFrame(frame: VideoFrameData, debugVideoLengths?: number[]) {
         const ctx = this.#bufCtx;
         const start = performance.now();
 
@@ -314,9 +302,15 @@ export class MediaPlayer {
         }
 
         if (!MediaConfig.data.showDebug) return;
-        const videoSize = this.#videoBuffer
-            .map((x) => x.content.data.length)
-            .reduce((a, b) => a + b, 0);
+        const videoSize = debugVideoLengths
+            ? debugVideoLengths.reduce((a, b) => a + b, 0)
+            : (() => {
+                try {
+                    return this.#videoBuffer.reduce((a, f) => a + f.content.data.length, 0);
+                } catch {
+                    return 0;
+                }
+            })();
         const audioSize = this.audio.bufferSize;
 
         let audioTime: string, latencyStr: string;
@@ -432,8 +426,7 @@ export class MediaPlayer {
                 return 0; // render one more time
             }
             // or the buffer is empty
-            if (!this.#populateBufferRunning)
-                void this.#populateBuffer();
+            void this.#tryDecoding();
             return 0;
         }
 
@@ -455,11 +448,7 @@ export class MediaPlayer {
             frame.content.delete();
         this.manager.requestRender();
 
-        // ensure the buffer is refilling since we're consuming frames
-        if (!this.#populateBufferRunning)
-            void this.#populateBuffer();
-
-        // get next frame's time as target or fall back to this frame
+        void this.#tryDecoding();
         const targetTime = (this.#videoBuffer.at(0) ?? frame).time;
         return Math.max(0, Math.min(targetTime - clock, 2 / this.media.video!.framerate));
     }
@@ -604,7 +593,6 @@ export class MediaPlayer {
                     await this.#receiveFrames(frames);
                 }
             }
-            if (!this.#populateBufferRunning) void this.#populateBuffer();
             if (!this.#presenting) void this.#present();
         }),
         { deduplicator: ([a, b], [c, d]) => a === c && b === d }

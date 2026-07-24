@@ -1,8 +1,9 @@
 import { SubtitleEntry, type SubtitleStyle } from "$lib/core/Subtitles.svelte";
 import { ChangeType, Source } from "$lib/frontend/Source";
-import { TimelineAction, TimelineInput } from "../Input.svelte";
+import { TimelineInput } from "../Input.svelte";
 import type { TimelineLayout } from "../Layout";
 import { RichText } from "$lib/core/RichText";
+import { TimelineAction } from "./TimelineAction";
 import { Debug } from "$lib/Debug";
 import { _ } from "svelte-i18n";
 import { get } from "svelte/store";
@@ -54,10 +55,14 @@ export class SplitEntry extends TimelineAction {
     }
 
     override onDrag(offsetX: number) {
+        if (this.styles.length == 0)
+            return Debug.early();
+
         Debug.assert(this.self.splitting !== null);
         const split = this.self.splitting;
         const target = split.target;
         const style = this.styles[0];
+        Debug.assert(target.texts.has(style));
         const textLength = RichText.length(target.texts.get(style)!);
         const x = (split.breakPosition - this.self.convertX(offsetX)) / (target.end - target.start)
             + this.baseProportion;

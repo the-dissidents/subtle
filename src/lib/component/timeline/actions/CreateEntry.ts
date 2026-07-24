@@ -3,8 +3,9 @@ import { Debug } from "$lib/Debug";
 import { Editing } from "$lib/frontend/Editing";
 import { ChangeType, Source } from "$lib/frontend/Source";
 import { get } from "svelte/store";
-import { TimelineAction, TimelineInput } from "../Input.svelte";
+import { TimelineInput } from "../Input.svelte";
 import type { TimelineLayout } from "../Layout";
+import { TimelineAction } from "./TimelineAction";
 import { _ } from "svelte-i18n";
 
 export class CreateEntry extends TimelineAction {

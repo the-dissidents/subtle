@@ -28,6 +28,7 @@ import { DragSeam } from "./actions/DragSeam";
 import { DragResize } from "./actions/DragResize";
 import { CreateEntry } from "./actions/CreateEntry";
 import { SplitEntry } from "./actions/SplitEntry";
+import type { TimelineAction } from "./actions/TimelineAction";
 
 export const TimelineHandle = {
     lockCursor: Memorized.$('lockCursor', z.boolean(), false),
@@ -37,33 +38,7 @@ export const TimelineHandle = {
         z.union([z.literal('select'), z.literal('create'), z.literal('split')]), 'select'),
     isDuringAction: () => false,
     interruptAction: async (): Promise<void> => {},
-}
-
-export abstract class TimelineAction {
-    readonly origPos: number;
-
-    constructor(public self: TimelineInput, public layout: TimelineLayout, public e0: MouseEvent) {
-        this.origPos = this.self.convertX(e0.offsetX);
-    }
-
-    onMouseMove(_e: MouseEvent): boolean { return false; }
-    onMouseDown(_e: MouseEvent): boolean { return false; }
-    canBeginDrag(_e0: MouseEvent): boolean { return false; }
-
-    onDrag(_offsetX: number, _offsetY: number, _ev: MouseEvent): Promise<void> | void {}
-
-    onDragEnd(_offsetX: number, _offsetY: number, _ev: MouseEvent): Promise<void> | void {
-        return this.interrupt();
-    }
-
-    onDragInterrupted(): Promise<void> | void {
-        return this.interrupt();
-    }
-
-    interrupt(): Promise<void> | void {
-        this.self.currentAction = undefined;
-    }
-}
+};
 
 export class TimelineInput {
     private readonly manager: CanvasManager;

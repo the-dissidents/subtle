@@ -1,4 +1,5 @@
 <script lang="ts">
+import { Filter } from "$lib/core/Filter";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { CompiledLintProfile } from "../core/LintProfile";
 import { RichText } from "../core/RichText";
@@ -78,9 +79,15 @@ async function gotoProblem(dir: 1 | -1) {
     const ent = Source.subs.entries[i];
     const hasProblem = [...ent.texts.entries()].find(
       ([style, text]) => {
-        const linter = linters.get(style);
-        if (!linter) return false;
-        return linter.check(RichText.toString(text)).length > 0;
+        if ($checkFilter && style.validator
+         && Filter.evaluate(style.validator, ent, style).failed.length > 0)
+          return true;
+        if ($checkLint) {
+          const linter = linters.get(style);
+          if (linter && linter.check(RichText.toString(text)).length > 0)
+            return true;
+        }
+        return false;
       });
     if (hasProblem) {
       await Editing.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
