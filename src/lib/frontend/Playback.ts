@@ -11,7 +11,8 @@ import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { unwrapFunctionStore, _ } from "svelte-i18n";
 import { guardAsync } from "./Frontend";
-import { MediaPlayerInterface, type MediaPlayer, type SetPositionOptions } from "../component/preview/MediaPlayer";
+import { MediaPlayerInterface, type MediaPlayer3 } from "$lib/component/preview/MediaPlayer3";
+import type { SeekOptions } from "$lib/component/preview/PlayerBuffer";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -53,7 +54,7 @@ export const Playback = {
     get loadState(): Readable<LoadState> { return loadState; },
     get isPlaying() { return this.player?.isPlaying ?? false; },
 
-    player: null as MediaPlayer | null,
+    player: null as MediaPlayer3 | null,
     sampler: null as MediaSampler | null,
 
     playArea: new Overridable<PlayArea>({
@@ -125,7 +126,7 @@ export const Playback = {
         }
     },
 
-    async setPosition(pos: number, opt?: SetPositionOptions) {
+    async setPosition(pos: number, opt?: SeekOptions) {
         if (this.player === null)
             await this.forceSetPosition(pos);
         else

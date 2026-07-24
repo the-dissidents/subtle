@@ -5,9 +5,10 @@ import { Mutex } from "$lib/details/Mutex";
 import { RestartableTask } from "$lib/details/RestartableTask";
 import { SlabBuffer } from "$lib/details/SlabBuffer";
 import { Playback } from "$lib/frontend/Playback";
+import { EventHost } from "@the_dissidents/svelte-ui";
 import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
-import { MediaPlayerInterface, type SetPositionOptions } from "./MediaPlayer";
+import { type SetPositionOptions } from "./MediaPlayer";
 
 export const FETCH_TIME_N = 30;
 
@@ -15,8 +16,20 @@ export type SeekOptions = {
     imprecise?: boolean;
 };
 
+type State = 'buffering' | 'buffer_full' | 'eof' | 'buffer_eof' | 'closed' | 'suspended';
+
+export type ConsumedFrame = {
+    type: 'ok',
+    frame: ReadonlyVideoFrameData
+} | {
+    type: 'buffering' | 'eof'
+} | {
+    type: 'waiting_for_clock',
+    earliest: number
+};
+
 export class PlayerBuffer {
-    #state: 'buffering' | 'buffer_full' | 'eof' | 'buffer_eof' | 'closed' | 'suspended' = 'buffering';
+    #state: State = 'buffering';
     #mutex = new Mutex(1000, 'PlayerBuffer');
     #audio: Audio;
 
@@ -32,9 +45,10 @@ export class PlayerBuffer {
     #videoBuffer: VideoFrameData[] = [];
 
     #diag = {
-        latencySquared: 0,
         fetchTimes: [] as number[]
     }
+
+    onArrive = new EventHost<[time: number]>();
 
     constructor(
         readonly media: MMedia,
@@ -67,6 +81,13 @@ export class PlayerBuffer {
         return this.#state;
     }
 
+    #setState(s: State) {
+        if (s !== this.#state) {
+            this.#state = s;
+            // void Debug.trace('state ->', s);
+        }
+    }
+
     async setAudioStream(id: number) {
         if (this.state === 'closed') return Debug.early();
         if (id == this.media.audio!.index) return Debug.early();
@@ -91,7 +112,7 @@ export class PlayerBuffer {
         await this.#mutex.use(async () => {
             if (this.state === 'closed') return Debug.early();
             await this.#clearBufferLocked();
-            this.#state = 'closed';
+            this.#setState('closed');
             await this.media.close();
             await this.audio.close();
         });
@@ -103,30 +124,44 @@ export class PlayerBuffer {
     }
 
     async consumeVideoFrame<T>(
-        fn: (frame: ReadonlyVideoFrameData | 'buffering' | 'eof') => T | Promise<T>,
-        opt?: { discardBefore?: number }
+        fn: (frame: ConsumedFrame) => T | Promise<T>,
+        opt?: { clock?: number }
     ): Promise<T> {
-        const frame = await this.#mutex.use(() => {
-            const index = opt?.discardBefore
-                ? this.#videoBuffer.findLastIndex((v) => v.time <= opt.discardBefore!)
-                : 0;
-            const f = this.#videoBuffer.at(index);
-            if (f) {
-                this.#playPosition = f.time;
-                // free earlier frames
-                for (let i = 0; i < index; i++)
-                    this.#videoBuffer.shift()!.content.delete();
-                // remove this frame from buffer but only delete later
-                this.#videoBuffer.shift();
+        const frame: ConsumedFrame = await this.#mutex.use(() => {
+            if (this.#state == 'eof') return { type: 'eof' };
+
+            if (this.#videoBuffer.length == 0) {
+                // no buffer
+                void this.#startBuffering();
+                return { type: 'buffering' };
             }
 
-            if (this.#state == 'eof') return 'eof';
-            else if (this.#videoBuffer.length === 0 && this.#state == 'buffer_eof')
-                this.#state = 'eof';
-            else if (this.needBuffering())
-                void this.#startBuffering();
+            // find last frame whose timestamp is before the clock
+            const index = opt?.clock
+                ? this.#videoBuffer.findLastIndex((v) => v.time <= opt.clock!)
+                : 0;
+            if (index < 0) {
+                // if not found, all frames are after the clock timestamp
+                return { type: 'waiting_for_clock', earliest: this.#videoBuffer[0].time };
+            }
 
-            return f || 'buffering';
+            // found the frame to consume
+            const f = this.#videoBuffer[index];
+            Debug.assert(!!f);
+            this.#playPosition = f.time;
+
+            // free earlier frames
+            if (index > 0) void Debug.trace(`skipping ${index} frames`);
+            for (let i = 0; i < index; i++)
+                this.#videoBuffer.shift()!.content.delete();
+            // remove this frame from buffer but delete only later
+            this.#videoBuffer.shift();
+
+            if (this.#videoBuffer.length === 0 && this.#state == 'buffer_eof')
+                this.#setState('eof');
+            if (this.needBuffering())
+                void this.#startBuffering();
+            return { type: 'ok', frame: f };
         });
 
         try {
@@ -135,8 +170,8 @@ export class PlayerBuffer {
             await Debug.forwardError(e);
             throw e;
         } finally {
-            if (typeof frame === 'object')
-                frame.content.delete();
+            if (frame.type == 'ok')
+                (frame.frame as VideoFrameData).content.delete();
         }
     }
 
@@ -158,12 +193,13 @@ export class PlayerBuffer {
         while (true) {
             const pos = await this.#mutex.use(() => this.#playPosition);
             if (pos !== undefined) return pos;
+            await Debug.trace('waiting for play position');
             Debug.assert(this.#state == 'buffering');
         }
     }
 
     async #clearBufferLocked() {
-        this.#state = 'suspended';
+        this.#setState('suspended');
         this.#videoBuffer.forEach((x) => x.content.delete());
         this.#videoBuffer = [];
         await this.audio.clearBuffer();
@@ -203,13 +239,15 @@ export class PlayerBuffer {
         }
         this.#videoBuffer.push(frame);
         this.#readVideoPosition = frame.time;
-        if (this.#videoBuffer.length == 1)
+        if (this.#videoBuffer.length == 1) {
             this.#playPosition = frame.time;
+            this.onArrive.dispatch(frame.time);
+        }
     }
 
     async #receiveLocked(result: DecodeResult) {
         if (result.audio.length == 0 && result.video.length == 0) {
-            this.#state = 'buffer_eof';
+            this.#setState('buffer_eof');
         } else {
             for (const frame of result.audio)
                 await this.#receiveAudioFrameLocked(frame);
@@ -229,11 +267,9 @@ export class PlayerBuffer {
 
     async #decodeLocked() {
         Debug.assert(this.state !== 'closed');
-        if (this.needBuffering()) {
-            if (this.audio.tail === undefined)
-                await Debug.warn('tryDecoding: video cache full but audio cache empty');
+        if (!this.needBuffering()) {
             // enough frames preloaded
-            this.#state = 'buffer_full';
+            this.#setState('buffer_full');
             return;
         }
 
@@ -245,6 +281,7 @@ export class PlayerBuffer {
         if (this.#diag.fetchTimes.length > FETCH_TIME_N)
             this.#diag.fetchTimes.shift();
 
+        // await Debug.trace(`decodeLocked: ${result.audio.length}, ${result.video.length}`);
         await this.#receiveLocked(result);
     }
 
@@ -253,10 +290,13 @@ export class PlayerBuffer {
         Debug.assert(this.state !== 'closed');
         if (this.#bufferingRunning) return;
 
-        this.#state = 'buffering';
+        this.#setState('buffering');
         this.#bufferingRunning = true;
         while (true) {
             const result = await this.#mutex.useIfIdle(async () => {
+                if (this.state == 'suspended') {
+                    this.#setState('buffering');
+                }
                 if (this.#state !== 'buffering' && this.#state !== 'suspended') {
                     this.#bufferingRunning = false;
                     return false;
@@ -273,6 +313,8 @@ export class PlayerBuffer {
         async ([target, opt], _tok) => await this.#mutex.use(async () => {
             if (this.state === 'closed') return Debug.early();
 
+            await Debug.trace('seek: start');
+
             if (this.#videoBuffer.length >= 2
              && target >= this.#videoBuffer[0].time
              && target <= this.#videoBuffer.at(-1)!.time)
@@ -282,11 +324,13 @@ export class PlayerBuffer {
                     const frame = this.#videoBuffer.shift();
                     frame?.content.delete();
                 }
+
                 await this.audio.shiftUntil(target);
+
                 Debug.assert(this.#videoBuffer.length > 0);
                 const frame = this.#videoBuffer[0];
                 this.#playPosition = frame.time;
-                MediaPlayerInterface.onPlayback.dispatch(frame.time);
+                this.onArrive.dispatch(frame.time);
                 await Debug.trace(`seek: [${frame.time.toFixed(3)}] inside cache`);
 
                 if (this.needBuffering())

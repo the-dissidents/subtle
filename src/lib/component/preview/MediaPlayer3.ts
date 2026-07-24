@@ -34,7 +34,7 @@ export class MediaPlayer3 {
     }
 
     get source() { return this.rawurl; }
-    get isPlaying() { return this.#intent = 'playing'; }
+    get isPlaying() { return this.#intent == 'playing'; }
 
     get duration() { return this.#buffer.media.duration; }
     get streams() { return this.#buffer.media.streams; }
@@ -70,7 +70,13 @@ export class MediaPlayer3 {
         });
 
         this.#buffer = new PlayerBuffer(media, audio);
+        this.#buffer.onArrive.bind(this, (t) => {
+            void Debug.trace('arrive', t);
+            if (!this.#presenting) void this.#startPresenting();
+            MediaPlayerInterface.onPlayback.dispatch(t);
+        });
         void this.#updateOutputSize();
+        void this.#startPresenting();
     }
 
     #updateOutputSize() {
@@ -168,7 +174,7 @@ export class MediaPlayer3 {
 
         let audioTime: string, latencyStr: string;
         if (audioHead !== undefined) {
-            const latency = (frame.time - audioHead) * 1000;
+            const latency = (audioHead - frame.time) * 1000;
             this.#diag.latencySquared = this.#diag.latencySquared * DAMPING
                 + (latency * latency * (1 - DAMPING));
 
@@ -249,26 +255,35 @@ export class MediaPlayer3 {
         const clock = this.#buffer.audio.head;
         if (clock === undefined) return 0;
 
-        return await this.#buffer.consumeVideoFrame(async (frame) => {
-            if (frame == 'buffering') return 0;
-            if (frame == 'eof') {
-                void this.stop();
-                return -1;
-            }
+        // consume a frame
+        return await this.#buffer.consumeVideoFrame(async (data) => {
+            switch (data.type) {
+                case "buffering":
+                    await Debug.warn('presentNextLocked: buffer is empty');
+                    return 0;
+                case "eof":
+                    await Debug.debug('presentNextLocked: at EOF');
+                    void this.stop();
+                    return -1;
+                case "waiting_for_clock":
+                    return data.earliest - clock;
+                case "ok": {
+                    const frame = data.frame;
+                    MediaPlayerInterface.onPlayback.dispatch(frame.time);
+                    await this.#drawFrame(frame);
+                    this.manager.requestRender();
 
-            MediaPlayerInterface.onPlayback.dispatch(frame.time);
-            await this.#drawFrame(frame);
-            this.manager.requestRender();
-
-            const targetTime = (this.#buffer.peekVideoFrame() ?? frame).time;
-            const framerate = this.#buffer.media.video!.framerate;
-            let delay = Math.max(0, targetTime - clock);
-            if (delay > 2 / framerate) {
-                await Debug.warn(`presentNext: delay too long:`, delay);
-                delay = 2 / framerate;
+                    const targetTime = (this.#buffer.peekVideoFrame() ?? frame).time;
+                    const framerate = this.#buffer.media.video!.framerate;
+                    let delay = Math.max(0, targetTime - clock);
+                    if (delay > 2 / framerate) {
+                        await Debug.warn(`presentNext: delay too long:`, delay);
+                        delay = 2 / framerate;
+                    }
+                    return delay;
+                }
             }
-            return delay;
-        }, { discardBefore: clock });
+        }, { clock: clock });
     }
 
     #presenting = false;
@@ -293,7 +308,7 @@ export class MediaPlayer3 {
             this.#intent = 'playing';
             await Debug.trace('starting playback');
             await this.#buffer.audio.play();
-            void this.#startPresenting();
+            if (!this.#presenting) void this.#startPresenting();
         });
         MediaPlayerInterface.onPlayStateChanged.dispatch();
     }
