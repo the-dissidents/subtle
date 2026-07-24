@@ -8,7 +8,6 @@ import { Playback } from "$lib/frontend/Playback";
 import { EventHost } from "@the_dissidents/svelte-ui";
 import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
-import { type SetPositionOptions } from "./MediaPlayer";
 
 export const FETCH_TIME_N = 20;
 
@@ -179,7 +178,7 @@ export class PlayerBuffer {
         }
     }
 
-    async seek(target: number, opt?: SetPositionOptions) {
+    async seek(target: number, opt?: SeekOptions) {
         return this.#seek.request(target, opt);
     }
 
@@ -321,7 +320,7 @@ export class PlayerBuffer {
         }
     }
 
-    #seek = new RestartableTask<[target: number, opt?: SetPositionOptions]>(
+    #seek = new RestartableTask<[target: number, opt?: SeekOptions]>(
         async ([target, opt], _tok) => await this.#mutex.use(async () => {
             if (this.state === 'closed') return Debug.early();
 

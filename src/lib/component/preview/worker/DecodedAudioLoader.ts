@@ -106,7 +106,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                         .subarray(newCurrentPosition, Math.min(content.length, end))
                         .map((x) => x * this.#volume);
                     channel.set(part, fillPosition);
-                    fillPosition += end - newCurrentPosition;
+                    fillPosition += part.length;
                     if (end < content.length) {
                         newCurrentPosition = end;
                         break;

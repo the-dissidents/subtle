@@ -1,4 +1,3 @@
-
 import { get } from "svelte/store";
 import { PublicConfigGroup } from '../../config/PublicConfig.svelte';
 import { UICommand } from '../../frontend/CommandBase';
@@ -12,7 +11,7 @@ import { ChangeType, Source } from '../../frontend/Source';
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { SubtitleEntry, type SubtitleStyle } from "../../core/Subtitles.svelte";
 import { TimelineHandle } from "./Input.svelte";
-import { MediaPlayerInterface } from "../preview/MediaPlayer";
+import { MediaPlayerInterface } from "../preview/MediaPlayer3";
 const $_ = unwrapFunctionStore(_);
 
 export const TimelineConfig = new PublicConfigGroup(
