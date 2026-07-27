@@ -48,24 +48,24 @@ impl Decoder {
         let mut decoder_ctx = codec::Context::new_with_codec(codec).decoder();
         let thread_count = num_cpus::get().min(16);
 
-        decoder_ctx.set_threading(codec::threading::Config { 
-            kind: codec::threading::Type::Frame, 
+        decoder_ctx.set_threading(codec::threading::Config {
+            kind: codec::threading::Type::Frame,
             count: thread_count
         });
 
         debug!(
-            "video::Decoder::create: codec = {:?}, using {} threads (num_cpus={})", 
+            "video::Decoder::create: codec = {:?}, using {} threads (num_cpus={})",
             decoder_ctx.codec().map(|x| x.id()),
             thread_count,
             num_cpus::get()
         );
 
-        let accelerator_name = 
+        let accelerator_name =
             if !accel { "" }
             else if cfg!(windows) { "d3d11va" }
             else if cfg!(target_os = "macos") { "videotoolbox" }
             else { "" };
-        let accelerator = 
+        let accelerator =
             if accel::HardwareDecoder::available_types()
                 .iter().any(|x| x == accelerator_name)
             {
@@ -80,7 +80,7 @@ impl Decoder {
                     }
                 }
             } else { None };
-        
+
         check!(decoder_ctx.set_parameters(stream.parameters()))?; // avcodec_parameters_to_context
         let decoder = check!(decoder_ctx.video())?;            // avcodec_open2
 
@@ -336,7 +336,7 @@ impl VideoSink for Sampler {
         if frame.meta.time > sd.end_time {
             sd.end_time = frame.meta.time;
             self.known_range.add(
-                Timestamp::from_seconds(sd.start_time, DEFAULT_TIMEBASE), 
+                Timestamp::from_seconds(sd.start_time, DEFAULT_TIMEBASE),
                 timestamp
             );
         }
@@ -361,7 +361,7 @@ impl Sampler {
 
     pub fn get_keyframe_before(&self, time: Seconds) -> Option<(Seconds, isize)> {
         let timestamp = Timestamp::from_seconds(time, DEFAULT_TIMEBASE);
-        if let Some((&t, &pos)) = 
+        if let Some((&t, &pos)) =
             self.keyframes.range(..=timestamp).next_back()
         && self.known_range.covers_range(t, timestamp)
         {
@@ -373,7 +373,7 @@ impl Sampler {
 
     pub fn get_frame_before(&self, time: Seconds) -> Option<(Seconds, isize)> {
         let timestamp = Timestamp::from_seconds(time, DEFAULT_TIMEBASE);
-        if let Some((&t, &pos)) = 
+        if let Some((&t, &pos)) =
             self.frames.range(..timestamp).next_back()
         && self.known_range.covers_range(t, timestamp)
         {

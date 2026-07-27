@@ -9,6 +9,7 @@ import type { BufferHandle, ReadonlyBufferHandle, SlabBuffer } from './details/S
 import type { DiffEntry } from './bindings/DiffEntry';
 import type { EntryScorer } from './bindings/EntryScorer';
 import type { MatchResult } from './bindings/MatchResult';
+import type { BackendSubtitleEntry } from './bindings/BackendSubtitleEntry';
 
 export class MediaError extends Error {
     constructor(msg: string, public readonly from: string) {
@@ -255,6 +256,17 @@ export class MMedia {
             void invoke('open_video_sampler', {id: this.id, videoId, accel, channel});
         });
         return this.#video;
+    }
+
+    async extractSubtitles(subId: number) {
+        Debug.assert(!this.#destroyed);
+        return await new Promise<BackendSubtitleEntry[]>((resolve, reject) => {
+            const channel = createChannel('extractSubtitles', {
+                subtitleData: (data) => resolve(data.entries),
+                progress: (data) => void Debug.info('progress: ', data.value),
+            }, reject, -1);
+            void invoke('extract_subtitles', {id: this.id, subId, channel});
+        });
     }
 
     async setVideoSize(width: number, height: number) {

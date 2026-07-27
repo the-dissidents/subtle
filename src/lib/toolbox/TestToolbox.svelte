@@ -4,7 +4,7 @@ import * as fs from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { Menu } from '@tauri-apps/api/menu';
 
-import { MAPI } from "../API";
+import { MAPI, MMedia } from "../API";
 import { Debug } from '../Debug';
 
 import { UICommand } from '../frontend/CommandBase';
@@ -87,6 +87,23 @@ let bracketPreset: keyof typeof BracketSetPresets = $state('curlyQuotes');
 let bracketResult = $state('');
 let forbidDeepNesting = $state(true);
 </script>
+
+<button onclick={async () => {
+  let path = await dialog.open();
+  if (!path) return;
+  const media = await MMedia.open(path);
+  const i = media.streams.findIndex((x) => x.type == 'subtitle');
+  if (i < 0) {
+    await Debug.info('no subtitle stream');
+    await media.close();
+    return;
+  }
+  await Debug.info('extracting subtitles');
+  const entries = await media.extractSubtitles(i);
+  await Debug.info(`${entries.length} entries extracted`);
+  console.log(entries);
+  await media.close();
+}}>read subtitle track</button>
 
 <button onclick={async () => {
   for (const f of Fonts.families) {

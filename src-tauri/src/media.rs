@@ -5,6 +5,7 @@ pub mod demux;
 pub mod units;
 pub mod audio;
 pub mod video;
+pub mod subtitles;
 pub mod session;
 
 mod aggregation_tree;

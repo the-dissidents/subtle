@@ -1,3 +1,5 @@
+use std::fs;
+
 use ffmpeg::codec;
 use ffmpeg_next::format;
 use ffmpeg_sys_next::AV_NOPTS_VALUE;
@@ -52,13 +54,20 @@ impl StreamInfo {
 }
 
 pub struct Demuxer {
-    input: Box<format::context::Input>
+    input: Box<format::context::Input>,
+    metadata: fs::Metadata,
 }
 
 impl Demuxer {
     pub fn open(path: &std::path::Path) -> Result<Demuxer, MediaError> {
         let input = Box::new(check!(format::input(&path))?);
-        Ok(Demuxer { input })
+        let metadata = fs::metadata(path)
+            .map_err(|e| MediaError::InternalError(e.to_string()))?;
+        Ok(Demuxer { input, metadata })
+    }
+
+    pub fn byte_size(&self) -> u64 {
+        self.metadata.len()
     }
 
     pub fn duration(&self) -> units::Seconds {
@@ -72,7 +81,7 @@ impl Demuxer {
             let language_code = metadata.get("language")
                 .unwrap_or("--")
                 .to_owned();
-            let codec_id = 
+            let codec_id =
                 codec::Context::from_parameters(stream.parameters())
                 .ok()
                 .and_then(|x|
@@ -150,7 +159,7 @@ impl Demuxer {
 
     pub fn seek(&mut self, time: units::Seconds) -> Result<(), MediaError> {
         trace!("seek: [-1] time={time}");
-        let units::Timestamp(rescaled) = 
+        let units::Timestamp(rescaled) =
             units::Timestamp::from_seconds(time, units::DEFAULT_TIMEBASE);
         check!(self.input.seek(rescaled, ..rescaled))?;
         Ok(())
@@ -176,7 +185,7 @@ impl Demuxer {
 
     pub fn seek_stream(&mut self, time: Seconds, stream: &StreamInfo) -> Result<(), MediaError> {
         trace!("seek_stream: [{}] time={time}", stream.index);
-        let units::Timestamp(rescaled) = 
+        let units::Timestamp(rescaled) =
             units::Timestamp::from_seconds(time, stream.timebase);
 
         unsafe {

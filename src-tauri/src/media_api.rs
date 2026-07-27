@@ -5,7 +5,7 @@ extern crate ffmpeg_next as ffmpeg;
 use crate::media::audio::{AudioSink, AudioSinkKind};
 use crate::media::internal::MediaError;
 use crate::media::video::{VideoSink, VideoSinkKind};
-use crate::media::{accel, audio, demux, frame, session, units, video};
+use crate::media::{accel, audio, demux, frame, session, subtitles, units, video};
 
 use log::warn;
 use num_traits::ToPrimitive;
@@ -45,11 +45,11 @@ pub enum MediaEvent<'a> {
         streams: Vec<demux::StreamDescription>,
     },
     #[serde(rename_all = "camelCase")]
-    AudioStatus { 
+    AudioStatus {
         index: usize,
-        length: usize, 
+        length: usize,
         start_time: units::Seconds,
-        sample_rate: u32 
+        sample_rate: u32
     },
     #[serde(rename_all = "camelCase")]
     VideoStatus {
@@ -80,10 +80,18 @@ pub enum MediaEvent<'a> {
     #[serde(rename_all = "camelCase")]
     NoResult {},
     #[serde(rename_all = "camelCase")]
-    SampleDone { 
+    SampleDone {
         audio: Option<audio::SamplerDeltaData>,
         video: Option<video::SamplerDeltaData>,
         is_eof: bool
+    },
+    #[serde(rename_all = "camelCase")]
+    Progress {
+        value: f64
+    },
+    #[serde(rename_all = "camelCase")]
+    SubtitleData {
+        entries: Vec<subtitles::SubtitleEntry>,
     },
 }
 
@@ -131,7 +139,7 @@ pub fn media_config() -> String {
 #[tauri::command]
 pub fn media_status(id: i32, state: State<Arc<Mutex<PlaybackRegistry>>>, channel: Channel<MediaEvent>) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
     let audio_index = match session.audio() {
         Some((d, _)) => d.stream_info().index().to_i32().unwrap(),
@@ -159,9 +167,9 @@ pub fn video_set_size(
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
-    let Some((_, VideoSinkKind::Player(c))) = 
+    let Some((_, VideoSinkKind::Player(c))) =
         session.video_mut() else { return send(&channel, MediaEvent::NoStream {}) };
 
     match c.set_output_size((width, height)) {
@@ -203,7 +211,7 @@ pub fn open_video(
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
 
     let index = (video_id > 0).then_some(video_id as usize);
@@ -233,7 +241,7 @@ pub fn open_video_sampler(
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
 
     let index = (video_id > 0).then_some(video_id as usize);
@@ -257,13 +265,68 @@ pub fn open_video_sampler(
 
 #[tauri::command]
 #[allow(clippy::cast_sign_loss)]
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_possible_truncation)]
+pub async fn extract_subtitles(
+    id: i32, sub_id: i32,
+    state: State<'_, Arc<Mutex<PlaybackRegistry>>>,
+    channel: Channel<MediaEvent<'static>>,
+) -> Result<(), ()> {
+    let state = Arc::clone(&state);
+    let channel = channel.clone();
+
+    async_runtime::spawn_blocking(move || {
+        let mut ap = state.lock().unwrap();
+        let Some(session) =
+            ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
+
+        let index = (sub_id > 0).then_some(sub_id as usize);
+        if let Err(e) = session.open_subtitles_decoder(index) {
+            return send_error!(&channel, e.to_string());
+        }
+
+        if let Err(e) = session.seek(units::Seconds(0.0)) {
+            return send_error!(&channel, e.to_string());
+        }
+
+        let size = session.demuxer().byte_size() as f64;
+        let mut percentage = 0;
+
+        loop {
+            match session.try_feed() {
+                Ok(false) => break,
+                Ok(true) => {
+                    let pos = session.subtitles().unwrap().stream_info().byte_pos;
+                    let progress = (pos as f64) / size;
+                    if (progress as i32) > percentage {
+                        percentage = progress as i32;
+                        send(&channel, MediaEvent::Progress { value: progress });
+                    }
+                },
+                Err(e) => return send_error!(&channel, e.to_string()),
+            }
+        }
+
+        let entries: Vec<subtitles::SubtitleEntry> =
+            session.subtitles_mut()
+                .map(|d| d.get_delta().into())
+                .unwrap();
+
+        send(&channel, MediaEvent::SubtitleData { entries });
+    })
+    .await
+    .map_err(|_| ())
+}
+
+#[tauri::command]
+#[allow(clippy::cast_sign_loss)]
 pub fn open_audio(
     id: i32, audio_id: i32,
     state: State<Arc<Mutex<PlaybackRegistry>>>,
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
 
     let index = (audio_id > 0).then_some(audio_id as usize);
@@ -291,7 +354,7 @@ pub fn open_audio_sampler(
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
 
     let index = (audio_id > 0).then_some(audio_id as usize);
@@ -318,7 +381,7 @@ pub fn seek_media(
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
     if let Err(e) = session.seek(time) {
         return send_error!(&channel, e.to_string());
@@ -334,7 +397,7 @@ pub fn seek_media_byte(
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
     if let Err(e) = session.seek_byte_pos(pos) {
         return send_error!(&channel, e.to_string());
@@ -350,7 +413,7 @@ pub fn seek_audio(
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
     if session.audio().is_none() {
         return send(&channel, MediaEvent::NoStream {});
@@ -369,7 +432,7 @@ pub fn seek_video(
     channel: Channel<MediaEvent>,
 ) {
     let mut ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get_mut(&id) else { return send_invalid_id(&channel) };
     if session.video().is_none() {
         return send(&channel, MediaEvent::NoStream {});
@@ -406,12 +469,8 @@ pub fn skip_until(
     loop {
         match session.try_process_skipping_before(time) {
             Ok((_, a, v)) => {
-                if let Some(f) = a {
-                    last_audio = Some(f);
-                }
-                if let Some(f) = v {
-                    last_video = Some(f);
-                }
+                if let Some(f) = a { last_audio = Some(f); }
+                if let Some(f) = v {  last_video = Some(f); }
             },
             Err(e) => {
                 send_error!(&channel, e.to_string());
@@ -454,7 +513,7 @@ pub async fn get_frames_automatic(
             send_invalid_id(&channel);
             return Err(());
         };
-        
+
         match work(session, target_working_time_ms) {
             Ok(_) => {
                 send_frames(session, None, None).map_err(
@@ -489,13 +548,13 @@ pub async fn sample_automatic(
 
         match work(session, target_working_time_ms) {
             Ok(has_next) => {
-                let audio = 
+                let audio =
                     if let Some((_, AudioSinkKind::Sampler(s))) = session.audio_mut() {
                         s.get_delta()
                     } else {
                         None
                     };
-                let video = 
+                let video =
                     if let Some((_, VideoSinkKind::Sampler(s))) = session.video_mut() {
                         s.get_delta()
                     } else {
@@ -544,13 +603,14 @@ fn work(
 }
 
 fn send_frames(
-    session: &mut session::Session, 
+    session: &mut session::Session,
+    // optionally append these frames to the sinks. I've forgotten why these exist
     last_audio: Option<frame::Audio>,
     last_video: Option<frame::Video>
 ) -> Result<ipc::Response, MediaError> {
     let mut buf: Vec<u8> = Vec::new();
 
-    let audio = 
+    let audio =
         if let Some((_, AudioSinkKind::Player(s))) = session.audio_mut() {
             if s.is_empty() && let Some(f) = last_audio {
                 s.process(f)?;
@@ -560,7 +620,7 @@ fn send_frames(
             VecDeque::new()
         };
 
-    let video = 
+    let video =
         if let Some((_, VideoSinkKind::Player(s))) = session.video_mut() {
             if s.is_empty() && let Some(f) = last_video {
                 s.process(f)?;
@@ -569,7 +629,7 @@ fn send_frames(
         } else {
             VecDeque::new()
         };
-    
+
     pack_audio_frames(&audio, &mut buf);
     pack_video_frames(&video, &mut buf);
     // log::trace!("sent frames: {} audio, {} video", audio.len(), video.len());
@@ -622,11 +682,11 @@ pub fn pack_video_frames(frames: &VecDeque<frame::Video>, buf: &mut Vec<u8>) {
 pub fn pack_audio_frames(frames: &VecDeque<frame::Audio>, buf: &mut Vec<u8>) {
     // FIXME: support multiple channels
     fn to_byte_slice(floats: &[f32]) -> &[u8] {
-        unsafe { 
-            std::slice::from_raw_parts(floats.as_ptr().cast(), floats.len() * 4) 
+        unsafe {
+            std::slice::from_raw_parts(floats.as_ptr().cast(), floats.len() * 4)
         }
     }
-    
+
     buf.extend(u32::try_from(frames.len()).unwrap().to_le_bytes().iter());
     for frame in frames {
         let time = frame.meta.time.0;
@@ -646,9 +706,9 @@ pub fn get_keyframe_before(
     channel: Channel<MediaEvent>
 ) {
     let ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get(&id) else { return send_invalid_id(&channel) };
-    let Some((_, VideoSinkKind::Sampler(s))) = 
+    let Some((_, VideoSinkKind::Sampler(s))) =
         session.video() else { return send(&channel, MediaEvent::NoStream {}) };
 
     if let Some((time, byte_pos)) = s.get_keyframe_before(time) {
@@ -666,9 +726,9 @@ pub fn get_frame_before(
     channel: Channel<MediaEvent>
 ) {
     let ap = state.lock().unwrap();
-    let Some(session) = 
+    let Some(session) =
         ap.table.get(&id) else { return send_invalid_id(&channel) };
-    let Some((_, VideoSinkKind::Sampler(s))) = 
+    let Some((_, VideoSinkKind::Sampler(s))) =
         session.video() else { return send(&channel, MediaEvent::NoStream {}) };
 
     if let Some((time, byte_pos)) = s.get_frame_before(time) {
@@ -687,7 +747,7 @@ pub fn test_performance(
         log::info!("-- {t}");
     }
 
-    let mut session = 
+    let mut session =
         session::Session::create(std::path::Path::new(&path)).unwrap();
     session.open_video_player(None, hwaccel).unwrap();
     session.open_audio_player(None).unwrap();
