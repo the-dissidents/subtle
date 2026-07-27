@@ -9,7 +9,6 @@ import type { BufferHandle, ReadonlyBufferHandle, SlabBuffer } from './details/S
 import type { DiffEntry } from './bindings/DiffEntry';
 import type { EntryScorer } from './bindings/EntryScorer';
 import type { MatchResult } from './bindings/MatchResult';
-import type { BackendSubtitleEntry } from './bindings/BackendSubtitleEntry';
 
 export class MediaError extends Error {
     constructor(msg: string, public readonly from: string) {
@@ -25,6 +24,7 @@ type MediaEventHandler<key extends MediaEventKey> = (data: MediaEventData[key]) 
 export type VideoStatus = MediaEventData['videoStatus'];
 export type AudioStatus = MediaEventData['audioStatus'];
 export type SampleResult = MediaEventData['sampleDone'];
+export type BackendSubtitleData = MediaEventData['subtitleData'];
 
 function createChannel(
     from: string, handler: {[key in MediaEventKey]?: MediaEventHandler<key>},
@@ -260,9 +260,9 @@ export class MMedia {
 
     async extractSubtitles(subId: number) {
         Debug.assert(!this.#destroyed);
-        return await new Promise<BackendSubtitleEntry[]>((resolve, reject) => {
+        return await new Promise<BackendSubtitleData>((resolve, reject) => {
             const channel = createChannel('extractSubtitles', {
-                subtitleData: (data) => resolve(data.entries),
+                subtitleData: (data) => resolve(data),
                 progress: (data) => void Debug.info('progress: ', data.value),
             }, reject, -1);
             void invoke('extract_subtitles', {id: this.id, subId, channel});

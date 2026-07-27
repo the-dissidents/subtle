@@ -91,6 +91,7 @@ pub enum MediaEvent<'a> {
     },
     #[serde(rename_all = "camelCase")]
     SubtitleData {
+        header: Option<String>,
         entries: Vec<subtitles::SubtitleEntry>,
     },
 }
@@ -307,12 +308,12 @@ pub async fn extract_subtitles(
             }
         }
 
-        let entries: Vec<subtitles::SubtitleEntry> =
+        let (entries, header) =
             session.subtitles_mut()
-                .map(|d| d.get_delta().into())
+                .map(|d| (d.get_delta().into(), d.header()))
                 .unwrap();
 
-        send(&channel, MediaEvent::SubtitleData { entries });
+        send(&channel, MediaEvent::SubtitleData { entries, header });
     })
     .await
     .map_err(|_| ())

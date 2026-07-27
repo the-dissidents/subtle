@@ -99,9 +99,10 @@ let forbidDeepNesting = $state(true);
     return;
   }
   await Debug.info('extracting subtitles');
-  const entries = await media.extractSubtitles(i);
-  await Debug.info(`${entries.length} entries extracted`);
-  console.log(entries);
+  const data = await media.extractSubtitles(i);
+  await Debug.info(`${data.entries.length} entries extracted`);
+  console.log(data.header);
+  console.log(data.entries.slice(0, 10));
   await media.close();
 }}>read subtitle track</button>
 

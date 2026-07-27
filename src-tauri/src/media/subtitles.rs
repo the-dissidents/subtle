@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, slice};
 
 use ffmpeg::codec;
 use ffmpeg::codec::subtitle;
@@ -12,6 +12,7 @@ use crate::media::{demux, internal::{MediaError, check}, units};
 #[serde(rename = "BackendSubtitleRect", rename_all = "camelCase", tag = "type")]
 #[ts(export)]
 pub enum SubtitleRect {
+    // Note: SRT decodes into ASS in ffmpeg
     Ass { content: String },
     Text { content: String },
     Unsupported,
@@ -30,6 +31,7 @@ pub struct SubtitleEntry {
 pub struct Decoder {
     inner: codec::decoder::Subtitle,
 
+    header: Option<String>,
     entries: VecDeque<SubtitleEntry>,
 
     #[getset(get = "pub")]
@@ -48,7 +50,21 @@ impl Decoder {
         let codecxt = check!(codec::Context::from_parameters(stream.parameters()))?;
         let decoder = check!(codecxt.decoder().subtitle())?;
 
-        Ok(Decoder { inner: decoder, stream_info, entries: VecDeque::new() })
+        // ffmpeg_next doesn't yet export subtitle_header
+        let header = unsafe {
+            let ctx = decoder.as_ptr();
+            if (*ctx).subtitle_header.is_null() {
+                None
+            } else {
+                #[allow(clippy::cast_sign_loss)]
+                Some(String::from_utf8_lossy(slice::from_raw_parts(
+                    (*ctx).subtitle_header,
+                    (*ctx).subtitle_header_size as usize)
+                ).to_string())
+            }
+        };
+
+        Ok(Decoder { inner: decoder, stream_info, entries: VecDeque::new(), header })
     }
 
     pub fn flush(&mut self) {
@@ -64,7 +80,7 @@ impl Decoder {
         }
 
         let mut decoded = subtitle::Subtitle::new();
-        let got = self.inner.decode(packet, &mut decoded)
+        let got = check!(self.inner.decode(packet, &mut decoded)
             .or_else(|e| match e {
                 ffmpeg::Error::Other { errno: EAGAIN } => {
                     warn!("subtitles::Decoder::feed: EAGAIN (unexpected)");
@@ -76,31 +92,45 @@ impl Decoder {
                     Ok(false)
                 },
                 e => Err(e),
-            })
-            .map_err(|e| MediaError::FFMpegError {
-                func: "subtitles::Decoder::feed: decode".to_string(),
-                line: line!(),
-                e,
-            })?;
+            }))?;
 
-        if got {
-            #[allow(clippy::cast_precision_loss)]
-            let pts = units::Timestamp(decoded.pts().unwrap_or(0));
-            let pts_seconds = pts.to_seconds(units::DEFAULT_TIMEBASE);
-            let start = units::Seconds(pts_seconds.0 + f64::from(decoded.start()) / 1000.0);
-            let end = units::Seconds(pts_seconds.0 + f64::from(decoded.end()) / 1000.0);
+        if !got { return Ok(()); }
 
-            let rects = decoded.rects().map(|rect| match rect {
-                subtitle::Rect::Ass(a) =>
-                    SubtitleRect::Ass { content: a.get().to_owned() },
-                subtitle::Rect::Text(t) =>
-                    SubtitleRect::Text { content: t.get().to_owned() },
-                _ => SubtitleRect::Unsupported,
-            }).collect();
+        // subtitle decoders often don't write to start_display_time and end_display_time
+        // we need to look into packet data
 
-            self.entries.push_back(SubtitleEntry { start, end, rects });
-        }
+        let (pts, base) =
+            decoded.pts().map(|pts| (pts, units::DEFAULT_TIMEBASE))
+            .or(packet.pts().map(|pts| (pts, self.stream_info.timebase())))
+            .unwrap_or((0, units::DEFAULT_TIMEBASE));
+
+        let units::Seconds(pts_seconds) =
+            units::Timestamp(pts).to_seconds(base);
+        let units::Seconds(duration_seconds) =
+            units::Timestamp(packet.duration()).to_seconds(self.stream_info.timebase());
+
+        let (start, end) = if decoded.start() > 0 || decoded.end() > 0 { (
+            units::Seconds(pts_seconds + f64::from(decoded.start()) / 1000.0),
+            units::Seconds(pts_seconds + f64::from(decoded.end()) / 1000.0)
+        ) } else { (
+            units::Seconds(pts_seconds),
+            units::Seconds(pts_seconds + duration_seconds)
+        ) };
+
+        let rects = decoded.rects().map(|rect| match rect {
+            subtitle::Rect::Ass(a) =>
+                SubtitleRect::Ass { content: a.get().to_owned() },
+            subtitle::Rect::Text(t) =>
+                SubtitleRect::Text { content: t.get().to_owned() },
+            _ => SubtitleRect::Unsupported,
+        }).collect();
+
+        self.entries.push_back(SubtitleEntry { start, end, rects });
         Ok(())
+    }
+
+    pub fn header(&self) -> Option<String> {
+        self.header.clone()
     }
 
     #[allow(dead_code)]
