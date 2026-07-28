@@ -84,7 +84,8 @@ export type AudioFrameData = {
 
 export type DecodeResult = {
     video: VideoFrameData[],
-    audio: AudioFrameData[]
+    audio: AudioFrameData[],
+    readTime: number
 }
 
 export class MMedia {
@@ -136,6 +137,8 @@ export class MMedia {
         data: ArrayBuffer,
         pool: SlabBuffer<ImageDataArray>
     ): DecodeResult {
+        const start = performance.now();
+
         const view = new BinaryReader(data);
         const nA = view.readU32();
         const audio: AudioFrameData[] = [];
@@ -148,7 +151,7 @@ export class MMedia {
         for (let i = 0; i < nV; i++)
             video.push(this.#readVideoFrame(view, pool));
 
-        return { audio, video };
+        return { audio, video, readTime: performance.now() - start };
     }
 
     #readAudioFrame(view: BinaryReader<ArrayBuffer>): AudioFrameData {

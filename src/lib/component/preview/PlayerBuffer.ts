@@ -1,5 +1,5 @@
 import type { AudioFrameData, DecodeResult, MMedia, ReadonlyVideoFrameData, VideoFrameData } from "$lib/API";
-import { Basic } from "$lib/Basic";
+import { Basic, TimeoutError } from "$lib/Basic";
 import { Debug } from "$lib/Debug";
 import { Mutex } from "$lib/details/Mutex";
 import { RestartableTask } from "$lib/details/RestartableTask";
@@ -9,7 +9,7 @@ import { EventHost } from "@the_dissidents/svelte-ui";
 import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
 
-export const FETCH_TIME_N = 20;
+export const FETCH_TIME_N = 25;
 
 export type SeekOptions = {
     imprecise?: boolean;
@@ -28,7 +28,7 @@ export type ConsumedFrame = {
 };
 
 export class PlayerBuffer {
-    #state: State = 'buffering';
+    #state: State = 'suspended';
     #mutex = new Mutex(1000, 'PlayerBuffer');
     #audio: Audio;
 
@@ -44,7 +44,7 @@ export class PlayerBuffer {
     #videoBuffer: VideoFrameData[] = [];
 
     #diag = {
-        fetchTimes: [] as number[]
+        fetchTimes: [] as [number, number][]
     }
 
     onArrive = new EventHost<[time: number]>();
@@ -59,7 +59,7 @@ export class PlayerBuffer {
     }
 
     get fetchTimes() {
-        return this.#diag.fetchTimes as readonly number[];
+        return this.#diag.fetchTimes as readonly (readonly [number, number])[];
     }
 
     get videoBufferLength() {
@@ -195,18 +195,20 @@ export class PlayerBuffer {
             if (tok.isCancelled) return;
             await this.#clearBufferLocked();
             if (tok.isCancelled) return;
-            void this.#seek.request(pos)
+            void this.#seek.request(pos);
         });
     }, { deduplicator: ([a, b], [c, d]) => a == c && b == d })
 
     async waitForPlayPosition() {
-        while (true) {
+        const t0 = performance.now();
+        while (performance.now() - t0 < 1000) {
             const pos = await this.#mutex.use(() => this.#playPosition);
             if (pos !== undefined) return pos;
             if (this.#state == 'closed') return -1;
-            await Debug.trace('waiting for play position');
+            // await Debug.trace('waiting for play position');
             Debug.assert(this.#state == 'buffering');
         }
+        throw new TimeoutError();
     }
 
     async #clearBufferLocked() {
@@ -288,7 +290,7 @@ export class PlayerBuffer {
         const targetTime = MediaConfig.data.preloadWorkTime;
         const result = await this.media.decodeAutomatic(targetTime, this.#pool);
         const time = performance.now() - start;
-        this.#diag.fetchTimes.push(time);
+        this.#diag.fetchTimes.push([time, result.readTime]);
         if (this.#diag.fetchTimes.length > FETCH_TIME_N)
             this.#diag.fetchTimes.shift();
 

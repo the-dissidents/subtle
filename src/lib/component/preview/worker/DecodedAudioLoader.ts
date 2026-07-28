@@ -19,16 +19,30 @@ export type AudioFeedbackData = {
     bufferLength: number,
     bufferSize: number,
     frameLength: number | undefined,
+    time: number | undefined,
     headTime: number | undefined,
     tailTime: number | undefined
 };
 
 class DecodedAudioLoader extends AudioWorkletProcessor {
-    #lastFeedbackTime = 0;
+    #time?: number;
+    #lastReportTime?: number;
     #buffer: AudioFrameData[] = [];
     #currentPosition = 0;
     #volume = 1;
     #playing: boolean = false;
+
+    #upateTime(playing = true) {
+        this.#time = this.#buffer.length == 0
+            ? undefined
+            : this.#currentPosition / sampleRate + this.#buffer[0].time;
+        if (playing && this.#time
+            && (!this.#lastReportTime || Math.abs(this.#time - this.#lastReportTime) > 0.003))
+        {
+            this.#lastReportTime = this.#time;
+            this.#postFeedback('playing');
+        }
+    }
 
     constructor(options?: AudioWorkletNodeOptions) {
         super(options);
@@ -47,15 +61,19 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                     break;
                 case "clearBuffer":
                     this.#buffer = [];
+                    this.#upateTime(false);
                     this.#postFeedback('ok');
                     break;
                 case "frame":
                     this.#buffer.push(e.data.frame);
+                    this.#upateTime(false);
                     this.#postFeedback('ok');
                     break;
                 case "shiftUntil":
                     while (this.#buffer.length > 0 && e.data.time > this.#buffer[0].time)
                         this.#buffer.shift();
+                    this.#currentPosition = 0;
+                    this.#upateTime(false);
                     this.#postFeedback('ok');
                     break;
                 case "setVolume":
@@ -76,6 +94,7 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
             bufferLength: this.#buffer.length,
             bufferSize: this.#buffer.reduce((a, b) => a + b.content.length * 4, 0),
             frameLength: this.#buffer[0]?.length,
+            time: this.#time,
             headTime: this.#buffer[0]?.time,
             tailTime: this.#buffer.at(-1)?.time,
         } satisfies AudioFeedbackData);
@@ -112,11 +131,6 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
                         break;
                     } else {
                         // this buffer entry is used up
-                        if (Math.abs(newBuffer[0].time - this.#lastFeedbackTime) > 0.001) {
-                            this.#postFeedback('playing');
-                            this.#lastFeedbackTime = newBuffer[0].time;
-                        }
-
                         newBuffer.shift();
                         newCurrentPosition = 0;
                         if (end == content.length)
@@ -127,6 +141,8 @@ class DecodedAudioLoader extends AudioWorkletProcessor {
             }
             this.#buffer = newBuffer;
             this.#currentPosition = newCurrentPosition;
+            this.#upateTime();
+
             if (this.#buffer.length == 0) {
                 this.#log('buffer exhausted!');
             }
