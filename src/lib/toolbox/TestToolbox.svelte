@@ -21,8 +21,9 @@ import { openDialog } from "../DialogOutlet.svelte";
 import { BracketSetPresets } from "../linter/brackets/Presets";
 import { BracketLinter, type BracketSet } from "../linter/brackets/Brackets";
 import { Diagnostic } from "../linter/Common";
-  import { showInputPopup } from "../ui/InputPopup.svelte";
-  import { showConfirmationPopup } from "../ui/ConfirmationPopup.svelte";
+import { showInputPopup } from "../ui/InputPopup.svelte";
+import { showConfirmationPopup } from "../ui/ConfirmationPopup.svelte";
+import { MediaPlayerInterface } from "$lib/component/preview/MediaPlayer";
 
 let result = $state("");
 
@@ -87,6 +88,10 @@ let bracketPreset: keyof typeof BracketSetPresets = $state('curlyQuotes');
 let bracketResult = $state('');
 let forbidDeepNesting = $state(true);
 </script>
+
+<button onclick={() => {
+  void Debug.info(MediaPlayerInterface.getLatencies());
+}}>latencies</button>
 
 <button onclick={async () => {
   let path = await dialog.open();

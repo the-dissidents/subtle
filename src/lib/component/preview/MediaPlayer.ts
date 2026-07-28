@@ -9,12 +9,15 @@ import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
 import { AsyncEventHost, EventHost } from "@the_dissidents/svelte-ui";
 import { PlayerBuffer, type SeekOptions } from "./PlayerBuffer";
+import { barPlot } from "$lib/details/DebugPlot";
 
 const DAMPING = 0.5;
+const N_LATENCY = 100;
 
 export const MediaPlayerInterface = {
     onPlayback: new EventHost<[pos: number]>(),
     onPlayStateChanged: new EventHost<[]>(),
+    getLatencies: () => [] as number[],
 };
 
 export class MediaPlayer {
@@ -29,6 +32,7 @@ export class MediaPlayer {
     #displaySize: [number, number] = [1, 1];
 
     #diag = {
+        latencies: [] as number[],
         latencySquared: 0,
         delay: 0,
         waitForAudio: 0,
@@ -78,6 +82,8 @@ export class MediaPlayer {
         });
         void this.#updateOutputSize();
         void this.#startPresenting();
+
+        MediaPlayerInterface.getLatencies = () => this.#diag.latencies;
     }
 
     async #updateOutputSize() {
@@ -175,7 +181,11 @@ export class MediaPlayer {
 
         let audioTime: string, latencyStr: string;
         if (audioHead !== undefined) {
-            const latency = (audioHead - frame.time) * 1000;
+            const latency = Math.round((audioHead - frame.time) * 1000);
+            this.#diag.latencies.push(latency);
+            if (this.#diag.latencies.length > N_LATENCY)
+                this.#diag.latencies.shift();
+
             this.#diag.latencySquared = this.#diag.latencySquared * DAMPING
                 + (latency * latency * (1 - DAMPING));
 
@@ -206,38 +216,24 @@ export class MediaPlayer {
         ctx.fillText(rescaled
             ? `RES ${ow}x${oh} -> ${dw}x${dh}`
             : `RES ${ow}x${oh}`, x, 140);
-        ctx.fillText(`WAT ${this.#diag.waitForAudio}`, x, 160);
-        ctx.fillText(`AFL ${this.#buffer.audio.lastFrameLength}`, x, 180);
+        ctx.fillText(`AFL ${this.#buffer.audio.lastFrameLength}`, x, 160);
 
         const lo = Math.floor(MediaConfig.data.preloadWorkTime);
         const hi = lo + 25;
         const bins: number[] = [];
+        for (let i = 0; i <= 25; i++)
+            bins[i] = 0;
+
         let _small = 0, big = 0;
         this.#buffer.fetchTimes.forEach((x) => {
             const i = Math.floor(x);
             if (i < lo) _small++;
             else if (i > hi) big++;
-            else bins[i] = (bins[i] ?? 0) + 1;
+            else bins[i - lo]++;
         });
-        const max = Math.max(...bins.filter(isFinite), big);
-
-        const W = 200, H = 100,
-              X = w - W,
-              Y = h - 20;
-
-        for (let i = lo; i <= hi; i++) {
-            const value = H * (bins[i] ?? 0) / max;
-            const x = X + W / (hi - lo + 1) * (i - lo);
-            ctx.fillRect(x - 1, Y - value, 2, value);
-            ctx.fillRect(x - 2, Y - 2, 4, 4);
-        }
-        const value = H * big / max;
-        ctx.fillRect(X + W - 2, Y - value, 2, value);
-
-        ctx.textAlign = 'right';
-        ctx.fillText(max.toFixed(0), X, Y - H);
-        ctx.fillText(lo.toFixed(0), X, Y);
-        ctx.fillText(hi.toFixed(0), w, Y);
+        bins.push(big);
+        barPlot(ctx, bins.map((v, i) => [i, v]), w - 200, h - 120, 200, 100);
+        barPlot(ctx, this.#diag.latencies.map((v, i) => [i, v]), w - 200, 0, 200, 100);
     }
 
     async #presentNextLocked() {
