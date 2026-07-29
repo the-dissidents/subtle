@@ -309,17 +309,17 @@ export class MMedia {
     ) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
-        let channel: Channel<MediaEvent> | undefined;
         this.#currentJobs += 1;
         try {
-            const result = await new Promise<ArrayBuffer>((resolve, reject) => {
-                channel = createChannel('decodeAutomatic', {}, reject);
-                void invoke<ArrayBuffer>('get_frames_automatic', {
-                    id: this.id, targetWorkingTimeMs, channel
-                }).then(resolve);
+            const channel = new Channel<MediaEvent>();
+            channel.onmessage = (msg) => {
+                if (msg.event === 'debug')
+                    void Debug.info(msg.data.message);
+            };
+            const result = await invoke<ArrayBuffer>('get_frames_automatic', {
+                id: this.id, targetWorkingTimeMs, channel
             });
-            const frames = this.#readFrames(result, pool);
-            return frames;
+            return this.#readFrames(result, pool);
         } finally {
             this.#currentJobs -= 1;
         }
@@ -396,18 +396,19 @@ export class MMedia {
     async skipUntil(time: number, pool: SlabBuffer<ImageDataArray>) {
         Debug.assert(!this.#destroyed);
         Debug.assert(this.#currentJobs == 0);
-        let channel: Channel<MediaEvent> | undefined;
         this.#currentJobs += 1;
         try {
-            return await new Promise<DecodeResult>((resolve, reject) => {
-                channel = createChannel('skipUntil', {}, reject);
-                void invoke<ArrayBuffer>('skip_until', {
-                    id: this.id, time, channel
-                }).then((x) => {
-                    if (x.byteLength > 0)
-                        resolve(this.#readFrames(x, pool));
-                });
+            const channel = new Channel<MediaEvent>();
+            channel.onmessage = (msg) => {
+                if (msg.event === 'debug')
+                    void Debug.info(msg.data.message);
+            };
+            const result = await invoke<ArrayBuffer>('skip_until', {
+                id: this.id, time, channel
             });
+            if (result.byteLength > 0)
+                return this.#readFrames(result, pool);
+            return { audio: [], video: [], readTime: 0 };
         } finally {
             this.#currentJobs -= 1;
         }
