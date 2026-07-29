@@ -1,9 +1,10 @@
-use crate::media::{audio::{self, AudioSink}, demux, frame, internal::MediaError, units, video::{self, VideoSink}};
+use crate::media::{audio::{self, AudioSink}, demux, frame, internal::MediaError, units, video::{self, VideoSink}, subtitles};
 
 pub struct Session {
     demuxer: demux::Demuxer,
     audio: Option<(audio::Decoder, audio::AudioSinkKind)>,
-    video: Option<(video::Decoder, video::VideoSinkKind)>
+    video: Option<(video::Decoder, video::VideoSinkKind)>,
+    subtitles: Option<subtitles::Decoder>,
 }
 
 impl Session {
@@ -16,11 +17,17 @@ impl Session {
     pub fn video(&self) -> Option<&(video::Decoder, video::VideoSinkKind)> {
         self.video.as_ref()
     }
+    pub fn subtitles(&self) -> Option<&subtitles::Decoder> {
+        self.subtitles.as_ref()
+    }
     pub fn audio_mut(&mut self) -> Option<&mut (audio::Decoder, audio::AudioSinkKind)> {
         self.audio.as_mut()
     }
     pub fn video_mut(&mut self) -> Option<&mut (video::Decoder, video::VideoSinkKind)> {
         self.video.as_mut()
+    }
+    pub fn subtitles_mut(&mut self) -> Option<&mut subtitles::Decoder> {
+        self.subtitles.as_mut()
     }
 }
 
@@ -32,6 +39,7 @@ impl Session {
             demuxer: demux::Demuxer::open(path)?,
             audio: None,
             video: None,
+            subtitles: None,
         })
     }
 
@@ -43,6 +51,9 @@ impl Session {
         if let Some((d, s)) = self.video.as_mut() {
             d.flush();
             s.clear();
+        }
+        if let Some(d) = self.subtitles.as_mut() {
+            d.flush();
         }
     }
 
@@ -104,6 +115,12 @@ impl Session {
         Ok(())
     }
 
+    pub fn open_subtitles_decoder(&mut self, index: Option<usize>) -> Result<(), MediaError> {
+        let decoder = subtitles::Decoder::create(&self.demuxer, index)?;
+        self.subtitles = Some(decoder);
+        Ok(())
+    }
+
     /// returns `Ok(false)` on EOF
     pub fn try_feed(&mut self) -> Result<bool, MediaError> {
         let Some((i, packet)) = self.demuxer.next_packet() else {
@@ -115,6 +132,11 @@ impl Session {
             d.feed(&packet)?;
         }
         if let Some((d, _)) = self.video_mut()
+            && d.stream_info().index() == i
+        {
+            d.feed(&packet)?;
+        }
+        if let Some(d) = self.subtitles_mut()
             && d.stream_info().index() == i
         {
             d.feed(&packet)?;

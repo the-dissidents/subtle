@@ -26,7 +26,7 @@ import Timeline from './lib/component/timeline/Timeline.svelte';
 import Preview from './lib/component/preview/Preview.svelte';
 
 import { Resizer, TabPage, TabView, Tooltip, Banner } from '@the_dissidents/svelte-ui';
-import { BugIcon, CommandIcon, DownloadIcon, FilePlusCornerIcon, FilmIcon, FolderOpenIcon, Redo2Icon, SaveIcon, SavePlusIcon, SettingsIcon, TriangleAlertIcon, Undo2Icon, UploadIcon } from '@lucide/svelte';
+import { BugIcon, CircleXIcon, ClosedCaptionIcon, CommandIcon, DownloadIcon, FileHeadphoneIcon, FilePlusCornerIcon, FilmIcon, FolderOpenIcon, Redo2Icon, SaveIcon, SavePlusIcon, SettingsIcon, TriangleAlertIcon, Undo2Icon, UploadIcon } from '@lucide/svelte';
 
 import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
 import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
@@ -302,17 +302,17 @@ observer.observe({ type: 'paint', buffered: true });
       {#key undoRedoUpdateCounter}
       <li>
         <Tooltip text={$_('menu.undo')} position="bottom">
-          <button
-            onclick={() => SourceCommands.undo.call()}
-            disabled={!Source.canUndo()}><Undo2Icon />
+          <button onclick={() => SourceCommands.undo.call()}
+              disabled={!Source.canUndo()}>
+            <Undo2Icon />
           </button>
         </Tooltip>
       </li>
       <li>
         <Tooltip text={$_('menu.redo')} position="bottom">
-          <button
-            onclick={() => SourceCommands.redo.call()}
-            disabled={!Source.canRedo()}><Redo2Icon />
+          <button onclick={() => SourceCommands.redo.call()}
+              disabled={!Source.canRedo()}>
+            <Redo2Icon />
           </button>
         </Tooltip>
       </li>
@@ -321,14 +321,30 @@ observer.observe({ type: 'paint', buffered: true });
       <li><button onclick={() => InterfaceCommands.openVideo.call()}>
         <FilmIcon />&nbsp;{$_('menu.open-video')}
       </button></li>
-      <li><button disabled={$loadState !== 'loaded'}
-          onclick={() => PlaybackCommands.selectAudioStream.call()}>
-        {$_('menu.select-audio-stream')}
-      </button></li>
-      <li><button disabled={$loadState !== 'loaded'}
-          onclick={() => InterfaceCommands.closeVideo.call()}>
-        {$_('menu.close-video')}
-      </button></li>
+      <li>
+        <Tooltip text={$_('menu.select-audio-stream')} position="bottom">
+          <button onclick={() => PlaybackCommands.selectAudioStream.call()}
+              disabled={$loadState !== 'loaded'}>
+            <FileHeadphoneIcon />
+          </button>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip text={$_('action.extract-subtitle-track')} position="bottom">
+          <button onclick={() => PlaybackCommands.extractSubtitles.call()}
+              disabled={$loadState !== 'loaded'}>
+            <ClosedCaptionIcon />
+          </button>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip text={$_('menu.close-video')} position="bottom">
+          <button onclick={() => InterfaceCommands.closeVideo.call()}
+              disabled={$loadState !== 'loaded'}>
+            <CircleXIcon />
+          </button>
+        </Tooltip>
+      </li>
       <li class='separator'></li>
       <li class="label">{$filenameDisplay}</li>
       <li>

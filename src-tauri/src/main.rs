@@ -95,6 +95,7 @@ fn main() {
             media_api::open_video,
             media_api::open_audio_sampler,
             media_api::open_video_sampler,
+            media_api::extract_subtitles,
             media_api::seek_media,
             media_api::seek_media_byte,
             media_api::seek_audio,

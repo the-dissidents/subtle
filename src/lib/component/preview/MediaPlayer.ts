@@ -9,12 +9,15 @@ import { Audio } from "./Audio";
 import { MediaConfig } from "./Config";
 import { AsyncEventHost, EventHost } from "@the_dissidents/svelte-ui";
 import { PlayerBuffer, type SeekOptions } from "./PlayerBuffer";
+import { barPlot } from "$lib/details/DebugPlot";
 
 const DAMPING = 0.5;
+const N_LATENCY = 100;
 
 export const MediaPlayerInterface = {
     onPlayback: new EventHost<[pos: number]>(),
     onPlayStateChanged: new EventHost<[]>(),
+    getLatencies: () => [] as number[],
 };
 
 export class MediaPlayer {
@@ -29,6 +32,7 @@ export class MediaPlayer {
     #displaySize: [number, number] = [1, 1];
 
     #diag = {
+        latencies: [] as number[],
         latencySquared: 0,
         delay: 0,
         waitForAudio: 0,
@@ -78,6 +82,8 @@ export class MediaPlayer {
         });
         void this.#updateOutputSize();
         void this.#startPresenting();
+
+        MediaPlayerInterface.getLatencies = () => this.#diag.latencies;
     }
 
     async #updateOutputSize() {
@@ -171,18 +177,22 @@ export class MediaPlayer {
         if (!MediaConfig.data.showDebug) return;
         const videoSize = this.#buffer.videoBufferSize
         const audioSize = this.#buffer.audio.bufferSize;
-        const audioHead = this.#buffer.audio.head;
+        const clock = this.#buffer.audio.time;
 
-        let audioTime: string, latencyStr: string;
-        if (audioHead !== undefined) {
-            const latency = (audioHead - frame.time) * 1000;
+        let clockString: string, latencyStr: string;
+        if (clock !== undefined) {
+            const latency = Math.round((clock - frame.time) * 1000);
+            this.#diag.latencies.push(latency);
+            if (this.#diag.latencies.length > N_LATENCY)
+                this.#diag.latencies.shift();
+
             this.#diag.latencySquared = this.#diag.latencySquared * DAMPING
                 + (latency * latency * (1 - DAMPING));
 
-            audioTime = audioHead.toFixed(3);
+            clockString = clock.toFixed(3);
             latencyStr = latency.toFixed(1);
         } else {
-            audioTime = 'n/a!';
+            clockString = 'n/a!';
             latencyStr = 'n/a!';
         }
 
@@ -194,7 +204,7 @@ export class MediaPlayer {
         const x = dx;
         ctx.fillText(`FPS ${this.frameRate.toFixed(3)}`
                    + `SPR ${this.#buffer.media.audio!.sampleRate}`, x, 0);
-        ctx.fillText(`ATi ${audioTime} s`, x, 20);
+        ctx.fillText(`ATi ${clockString} s`, x, 20);
         ctx.fillText(`VTi ${frame.time.toFixed(3)} s`, x, 40);
         ctx.fillText(`LAT${latencyStr.padStart(5)}`.padEnd(10)
                    + `STS ${Math.sqrt(this.#diag.latencySquared).toFixed(1).padStart(4)}`, x, 60);
@@ -206,38 +216,10 @@ export class MediaPlayer {
         ctx.fillText(rescaled
             ? `RES ${ow}x${oh} -> ${dw}x${dh}`
             : `RES ${ow}x${oh}`, x, 140);
-        ctx.fillText(`WAT ${this.#diag.waitForAudio}`, x, 160);
-        ctx.fillText(`AFL ${this.#buffer.audio.lastFrameLength}`, x, 180);
+        ctx.fillText(`AFL ${this.#buffer.audio.lastFrameLength}`, x, 160);
 
-        const lo = Math.floor(MediaConfig.data.preloadWorkTime);
-        const hi = lo + 25;
-        const bins: number[] = [];
-        let _small = 0, big = 0;
-        this.#buffer.fetchTimes.forEach((x) => {
-            const i = Math.floor(x);
-            if (i < lo) _small++;
-            else if (i > hi) big++;
-            else bins[i] = (bins[i] ?? 0) + 1;
-        });
-        const max = Math.max(...bins.filter(isFinite), big);
-
-        const W = 200, H = 100,
-              X = w - W,
-              Y = h - 20;
-
-        for (let i = lo; i <= hi; i++) {
-            const value = H * (bins[i] ?? 0) / max;
-            const x = X + W / (hi - lo + 1) * (i - lo);
-            ctx.fillRect(x - 1, Y - value, 2, value);
-            ctx.fillRect(x - 2, Y - 2, 4, 4);
-        }
-        const value = H * big / max;
-        ctx.fillRect(X + W - 2, Y - value, 2, value);
-
-        ctx.textAlign = 'right';
-        ctx.fillText(max.toFixed(0), X, Y - H);
-        ctx.fillText(lo.toFixed(0), X, Y);
-        ctx.fillText(hi.toFixed(0), w, Y);
+        barPlot(ctx, this.#buffer.fetchTimes.map((v, i) => [i, v]), w - 200, h - 120, 200, 100);
+        barPlot(ctx, this.#diag.latencies.map((v, i) => [i, [v]]), w - 200, 0, 200, 100);
     }
 
     async #presentNextLocked() {
@@ -255,7 +237,7 @@ export class MediaPlayer {
         }
 
         // if there's no audio, we can't synchronize and must wait for it
-        const clock = this.#buffer.audio.head;
+        const clock = this.#buffer.audio.time;
         if (clock === undefined) return 0;
 
         // consume a frame
@@ -268,9 +250,10 @@ export class MediaPlayer {
                     await Debug.debug('presentNextLocked: at EOF');
                     void this.stop();
                     return -1;
-                case "waiting_for_clock":
+                case "waiting_for_clock": {
                     this.#diag.waitForAudio += 1;
                     return data.earliest - clock;
+                }
                 case "ok": {
                     const frame = data.frame;
                     MediaPlayerInterface.onPlayback.dispatch(frame.time);
@@ -279,7 +262,12 @@ export class MediaPlayer {
 
                     const targetTime = (this.#buffer.peekVideoFrame() ?? frame).time;
                     const framerate = this.#buffer.media.video!.framerate;
-                    let delay = Math.max(0, targetTime - clock);
+                    const newClock = this.#buffer.audio.time;
+                    if (newClock === undefined) {
+                        // ???
+                        return 0;
+                    }
+                    let delay = Math.max(0, targetTime - newClock);
                     if (delay > 2 / framerate) {
                         await Debug.warn(`presentNext: delay too long:`, delay);
                         delay = 2 / framerate;

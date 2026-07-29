@@ -4,7 +4,7 @@ import * as fs from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { Menu } from '@tauri-apps/api/menu';
 
-import { MAPI } from "../API";
+import { MAPI, MMedia } from "../API";
 import { Debug } from '../Debug';
 
 import { UICommand } from '../frontend/CommandBase';
@@ -21,8 +21,9 @@ import { openDialog } from "../DialogOutlet.svelte";
 import { BracketSetPresets } from "../linter/brackets/Presets";
 import { BracketLinter, type BracketSet } from "../linter/brackets/Brackets";
 import { Diagnostic } from "../linter/Common";
-  import { showInputPopup } from "../ui/InputPopup.svelte";
-  import { showConfirmationPopup } from "../ui/ConfirmationPopup.svelte";
+import { showInputPopup } from "../ui/InputPopup.svelte";
+import { showConfirmationPopup } from "../ui/ConfirmationPopup.svelte";
+import { MediaPlayerInterface } from "$lib/component/preview/MediaPlayer";
 
 let result = $state("");
 
@@ -87,6 +88,28 @@ let bracketPreset: keyof typeof BracketSetPresets = $state('curlyQuotes');
 let bracketResult = $state('');
 let forbidDeepNesting = $state(true);
 </script>
+
+<button onclick={() => {
+  void Debug.info(MediaPlayerInterface.getLatencies());
+}}>latencies</button>
+
+<button onclick={async () => {
+  let path = await dialog.open();
+  if (!path) return;
+  const media = await MMedia.open(path);
+  const i = media.streams.findIndex((x) => x.type == 'subtitle');
+  if (i < 0) {
+    await Debug.info('no subtitle stream');
+    await media.close();
+    return;
+  }
+  await Debug.info('extracting subtitles');
+  const data = await media.extractSubtitles(i);
+  await Debug.info(`${data.entries.length} entries extracted`);
+  console.log(data.header);
+  console.log(data.entries.slice(0, 10));
+  await media.close();
+}}>read subtitle track</button>
 
 <button onclick={async () => {
   for (const f of Fonts.families) {

@@ -3,16 +3,23 @@ console.info('Playback loading');
 import { tick } from "svelte";
 import { get, writable, type Readable } from "svelte/store";
 import { Debug } from "../Debug";
-import { AsyncEventHost, EventHost } from "@the_dissidents/svelte-ui";
+import { AsyncEventHost, EventHost, showProgress } from "@the_dissidents/svelte-ui";
 import { Overridable } from "../details/Overridable.svelte";
 import type { MediaSampler } from "../component/timeline/MediaSampler";
 import { InputConfig } from "../config/Groups";
 import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
 import { unwrapFunctionStore, _ } from "svelte-i18n";
-import { guardAsync } from "./Frontend";
+import { Frontend, guard, guardAsync } from "./Frontend";
 import { MediaPlayerInterface, type MediaPlayer } from "$lib/component/preview/MediaPlayer";
 import type { SeekOptions } from "$lib/component/preview/PlayerBuffer";
+import { convertBackendSubtitles } from "$lib/core/formats/BackendSubtitles";
+import { SubtitleUtil } from "$lib/core/SubtitleUtil.svelte";
+import { Dialog } from "$lib/dialog";
+import { openDialog } from "$lib/DialogOutlet.svelte";
+import { Editing } from "./Editing";
+import { Source, ChangeType } from "./Source";
+import { MMedia } from "$lib/API";
 
 const $_ = unwrapFunctionStore(_);
 
@@ -168,17 +175,55 @@ export const PlaybackCommands = {
     {
         name: () => $_('menu.select-audio-stream'),
         isApplicable: () => get(Playback.loadState) == 'loaded',
-        items: () => Playback.player?.streams
+        items: () => Playback.player?.streams.filter((x) => x.type == 'audio')
             .map((x) => ({
                 name: `[${x.index}] ${x.type}: ${x.codecId ?? ''} ${x.languageCode}` + (
                     x.index == Playback.player?.currentAudioStream
                     ? ' ' + $_('menu.audio-stream-current') : ''),
-                isApplicable: () => x.type == 'audio'
-                                 && x.index != Playback.player?.currentAudioStream,
+                isApplicable: () => x.index != Playback.player?.currentAudioStream,
                 async call() {
                     if (Playback.player) await guardAsync(
                         () => Playback.setAudioStream(x.index),
                         $_('msg.failed-to-set-audio-stream'))
+                }
+            })) ?? [],
+        emptyText: () => $_('msg.no-available-item')
+    }),
+    extractSubtitles: new UICommand(() => $_('category.media'),
+        [ ],
+    {
+        name: () => $_('action.extract-subtitle-track'),
+        isApplicable: () => get(Playback.loadState) == 'loaded',
+        items: () => Playback.player?.streams.filter((x) => x.type == 'subtitle')
+            .map((x) => ({
+                name: `[${x.index}] ${x.type}: ${x.codecId ?? ''} ${x.languageCode}`,
+                async call() {
+                    Debug.assert(!!Playback.player);
+                    const result = await showProgress(
+                        () => guardAsync(async () => {
+                            const media = await MMedia.open(Playback.player!.source);
+                            const subs = await media.extractSubtitles(x.index);
+                            await media.close();
+                            return subs;
+                        }, $_('msg.failed-to-extract-subtitle-track'), null),
+                        $_('msg.extracting-subtitle-track'), null);
+                    if (!result) return;
+
+                    const subs = guard(() => convertBackendSubtitles(result),
+                        $_('msg.failed-to-extract-subtitle-track'), null);
+                    if (!subs || subs.entries.length == 0) {
+                        Frontend.setStatus($_('msg.failed-to-extract-subtitle-track'), 'error');
+                        return;
+                    }
+
+                    const options = await openDialog(
+                        Dialog.importOptions, subs.migrated != 'text', subs);
+                    if (!options) return;
+
+                    const entries = SubtitleUtil.merge(Source.subs, subs, options);
+                    if (entries.length > 0) await Editing.setSelection(entries);
+                    await Source.markChanged(ChangeType.General, $_('c.import-extracted-track'));
+                    Frontend.setStatus($_('msg.imported-extracted-track'));
                 }
             })) ?? [],
         emptyText: () => $_('msg.no-available-item')
