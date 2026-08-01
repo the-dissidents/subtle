@@ -205,8 +205,10 @@ export class PlayerBuffer {
             const pos = await this.#mutex.use(() => this.#playPosition);
             if (pos !== undefined) return pos;
             if (this.#state == 'closed') return -1;
-            // await Debug.trace('waiting for play position');
             Debug.assert(this.#state == 'buffering');
+
+            // avoid microtask starvation
+            await Basic.wait(0);
         }
         throw new TimeoutError();
     }

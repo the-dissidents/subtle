@@ -254,8 +254,17 @@
     "use-right": "全部使用右侧"
   },
   "comparereport": {
+    "letters": "字母",
+    "modification-d": "这个方法不能处理交换或移动的文字，例如将一句话头尾部分语序交换，该部分会被认为是插入和删除新的文字，不计入共有字数。此外，目前只能一对一地匹配字幕条，因此若一条字幕拆分为两条，将不能很好地匹配。",
+    "modification-formula": "计算方法：(1 - 两个版本共有部分字数 * 2 / 两个版本总字数) * 100%",
+    "modification-index": "文本改动占比（Sørensen–Dice）",
+    "modification-warning": "因此，本指标仅供参考，不建议直接用来衡量修改程度",
     "new": "修改版本",
-    "original": "原版本"
+    "nonletters": "非字母",
+    "original": "原版本",
+    "overall": "整体",
+    "time-modification-index": "时间轴改动占比",
+    "title": "对比报告"
   },
   "config": {
     "arrow-navigation-type": "上下方向键选择设置",
