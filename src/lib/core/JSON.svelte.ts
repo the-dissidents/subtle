@@ -23,8 +23,9 @@ import { LintProfile } from "./LintProfile";
  *                   wrapStyle in style
  *                   positioning and alignment in entry
  *  - 000706 (minor) styles have lint profiles
+ *  - 000710 (minor) metadata has framerate
  */
-export const SubtitleFormatVersion = '000707';
+export const SubtitleFormatVersion = '000710';
 export const SubtitleCompatibleVersion = '000700';
 
 export type JSONParseMessage = {

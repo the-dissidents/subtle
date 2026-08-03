@@ -50,6 +50,7 @@ export const ZMetadata = z.object({
     width:         z._default(z.int().check(z.positive()), 1920),
     height:        z._default(z.int().check(z.positive()), 1080),
     scalingFactor: z._default(z.number().check(z.positive()), 1),
+    framerate:     z._default(z.nullable(z.number().check(z.positive())), null),
     special: z.object({
         untimedText:        z._default(z.string(), ''),
     }),

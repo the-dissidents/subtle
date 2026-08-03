@@ -4,9 +4,8 @@
   import { lintProfileEquals, type LintProfile } from "./core/LintProfile";
   import { PencilIcon, SaveIcon, Trash2Icon } from "@lucide/svelte";
   import { Popup } from "@the_dissidents/svelte-ui";
-  import { showInputPopup } from "./ui/InputPopup.svelte";
+  import { showInputPopup, showConfirmationPopup } from "@the_dissidents/svelte-ui";
   import { Debug } from "./Debug";
-  import { showConfirmationPopup } from "./ui/ConfirmationPopup.svelte";
 
   const { value, onChange, allowManage }: {
     value: LintProfile,

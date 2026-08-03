@@ -21,8 +21,7 @@ import { openDialog } from "../DialogOutlet.svelte";
 import { BracketSetPresets } from "../linter/brackets/Presets";
 import { BracketLinter, type BracketSet } from "../linter/brackets/Brackets";
 import { Diagnostic } from "../linter/Common";
-import { showInputPopup } from "../ui/InputPopup.svelte";
-import { showConfirmationPopup } from "../ui/ConfirmationPopup.svelte";
+import { showInputPopup, showConfirmationPopup } from "@the_dissidents/svelte-ui";
 import { MediaPlayerInterface } from "$lib/component/preview/MediaPlayer";
 
 let result = $state("");

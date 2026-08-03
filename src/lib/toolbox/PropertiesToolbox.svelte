@@ -1,12 +1,14 @@
 <script lang="ts">
 import { Debug } from '../Debug';
+import { SavedStyles } from '../config/SavedStyles';
 import { SubtitleStyle } from '../core/Subtitles.svelte';
-import { SubtitleTools } from '../core/SubtitleUtil.svelte';
+import { SubtitleTools, SubtitleUtil } from '../core/SubtitleUtil.svelte';
 
-import { ConfigRow, ConfigTable, NumberInput, Tooltip } from "@the_dissidents/svelte-ui";
+import { AsyncEventHost, ConfigRow, ConfigTable, NumberInput, Tooltip } from "@the_dissidents/svelte-ui";
 import StyleEdit from '../StyleEdit.svelte';
 
 import { EventHost } from '@the_dissidents/svelte-ui';
+import { BasicCommands } from '$lib/frontend/Commands';
 import { Playback } from '../frontend/Playback';
 import { ChangeType, Source } from '../frontend/Source';
 
@@ -14,8 +16,7 @@ import { onDestroy } from 'svelte';
 import { flip } from 'svelte/animate';
 import { _ } from 'svelte-i18n';
 import { Menu } from '@tauri-apps/api/menu';
-import { PackageOpenIcon, PlusIcon } from '@lucide/svelte';
-  import { SavedStyles } from '../config/SavedStyles';
+import { PackageOpenIcon, PlusIcon, Trash2Icon } from '@lucide/svelte';
 
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
@@ -25,13 +26,33 @@ let updateCounter = $state(0);
 let loadState = Playback.loadState;
 
 const me = {};
-onDestroy(() => EventHost.unbind(me));
+onDestroy(() => {
+  EventHost.unbind(me);
+  AsyncEventHost.unbind(me);
+});
+
+let videoSize = $state<[number, number]>();
+let videoFramerate = $state<number>();
 
 Source.onSubtitleObjectReload.bind(me, () => {
   metadata = Source.subs.metadata;
   styles = Source.subs.styles;
   subtitles = Source.subs;
   updateCounter += 1;
+});
+
+Playback.onLoaded.bind(me, () => {
+  Debug.assert(Playback.player?.videoSize !== undefined);
+  Debug.assert(Playback.player?.sampleAspectRatio !== undefined);
+  const [w, h] = Playback.player.videoSize;
+  const sar = Playback.player.sampleAspectRatio;
+  videoSize = [w * sar, h];
+  videoFramerate = Playback.player.frameRate;
+});
+
+Playback.onClose.bind(me, () => {
+  videoSize = undefined;
+  videoFramerate = undefined;
 });
 
 async function newStyle() {
@@ -59,29 +80,55 @@ async function manageSavedStyles() {
     items: $SavedStyles.length > 0
       ? $SavedStyles.map((x) => ({
         text: x.name,
-        items: [
-          {
-            text: $_('ppty.add-to-project'),
-            action() {
-              let style = $state(SubtitleStyle.clone(x));
-              style.name = SubtitleTools.getUniqueStyleName(Source.subs, style.name);
-              Source.subs.styles.push(style);
-            }
-          }, {
-            text: $_('ppty.delete'),
-            action() {
-              const i = $SavedStyles.indexOf(x);
-              Debug.assert(i >= 0);
-              $SavedStyles.splice(i, 1);
-              SavedStyles.markChanged();
-            }
+        items: [ {
+          text: $_('ppty.add-to-project'),
+          action() {
+            let style = $state(SubtitleStyle.clone(x));
+            style.name = SubtitleTools.getUniqueStyleName(Source.subs, style.name);
+            Source.subs.styles.push(style);
           }
-        ],
+        }, {
+          text: $_('ppty.delete'),
+          action() {
+            const i = $SavedStyles.indexOf(x);
+            Debug.assert(i >= 0);
+            $SavedStyles.splice(i, 1);
+            SavedStyles.markChanged();
+          }
+        } ],
       }))
       : [{
         text: $_('msg.no-saved-styles'),
         enabled: false
       }]
+  })).popup();
+}
+
+async function doAdjust(from: number, to: number) {
+  SubtitleUtil.shiftTimes(Source.subs, { scale: to / from });
+  metadata.framerate = to;
+  await Source.markChanged(ChangeType.Times, $_('c.transform-times'));
+}
+
+async function adjustFramerate() {
+  await (await Menu.new({
+    items: [
+      {
+        text: '从字幕帧率调整至视频帧率',
+        enabled: !!videoFramerate && videoFramerate !== metadata.framerate,
+        action() {
+          Debug.assert(!!metadata.framerate && !!videoFramerate);
+          void doAdjust(metadata.framerate, videoFramerate);
+        }
+      },
+      {
+        text: '其它…',
+        enabled: !!videoFramerate,
+        action() {
+          void BasicCommands.transformTimes.call();
+        }
+      }
+    ]
   })).popup();
 }
 </script>
@@ -97,29 +144,67 @@ async function manageSavedStyles() {
         onchange={markMetadataChange} />
     </ConfigRow>
     <ConfigRow name={$_('ppty.resolution')}>
-      <NumberInput class='res' bind:value={metadata.width}
+      <NumberInput bind:value={metadata.width}
         min={1} max={10000}
         onchange={markMetadataChange}/>
       ×
-      <NumberInput class='res' bind:value={metadata.height}
+      <NumberInput bind:value={metadata.height}
         min={1} max={10000}
         onchange={markMetadataChange}/>
-      <button disabled={$loadState !== 'loaded'} onclick={async () => {
-        Debug.assert(Playback.player?.videoSize !== undefined);
-        Debug.assert(Playback.player?.sampleAspectRatio !== undefined);
-        const [w, h] = Playback.player.videoSize;
-        const sar = Playback.player.sampleAspectRatio;
-        metadata.width = Math.round(w * sar);
-        metadata.height = Math.round(h);
-        await markMetadataChange();
-      }}>
-        {$_('ppty.match-video-resolution')}
+
+      {let matches = $derived(videoSize
+        && videoSize[0] == metadata.width && videoSize[1] == metadata.height)}
+      <button
+        disabled={$loadState != 'loaded' || matches}
+        onclick={async () => {
+          Debug.assert(!!videoSize);
+          metadata.width = videoSize[0];
+          metadata.height = videoSize[1];
+          await markMetadataChange();
+        }}>
+        {matches ? $_('ppty.already-matched-video-resolution'): $_('ppty.match-video-resolution')}
+      </button>
+    </ConfigRow>
+
+    <ConfigRow name={$_('ppty.framerate')}>
+      {#if metadata.framerate}
+        <NumberInput bind:value={metadata.framerate}
+          step='any' min={1} max={200} style='max-width: 12ch'
+          onchange={markMetadataChange}/>
+        <button onclick={() => {
+          metadata.framerate = null;
+          void markMetadataChange();
+        }}>
+          <Trash2Icon/>
+        </button>
+      {:else}
+        <button onclick={() => {
+          metadata.framerate = videoFramerate ?? 24;
+          void markMetadataChange();
+        }}>
+          {$_('ppty.framerate-unset')}
+        </button>
+      {/if}
+
+      {let matches = $derived(!!metadata.framerate && !!videoFramerate
+        && metadata.framerate == videoFramerate)}
+      <button disabled={$loadState != 'loaded' || matches}
+        onclick={async () => {
+          Debug.assert(!!videoFramerate);
+          metadata.framerate = videoFramerate;
+          await markMetadataChange();
+        }}>
+        {matches ? $_('ppty.already-matched-video-framerate'): $_('ppty.match-video-framerate')}
+      </button>
+
+      <button disabled={!metadata.framerate} onclick={adjustFramerate}>
+        {$_('ppty.adjust-framerate')}
       </button>
     </ConfigRow>
 
     <ConfigRow name={$_('ppty.scaling')}>
-      <NumberInput class='res' bind:value={metadata.scalingFactor}
-        step='any' min={0.01}
+      <NumberInput bind:value={metadata.scalingFactor}
+        step='any' min={0.01} style='max-width: 12ch'
         onchange={markMetadataChange}/>
       <Tooltip text={$_('ppty.scaling-d')} />
     </ConfigRow>
