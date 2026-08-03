@@ -4,11 +4,10 @@ import { SavedStyles } from '../config/SavedStyles';
 import { SubtitleStyle } from '../core/Subtitles.svelte';
 import { SubtitleTools, SubtitleUtil } from '../core/SubtitleUtil.svelte';
 
-import { AsyncEventHost, ConfigRow, ConfigTable, NumberInput, Tooltip } from "@the_dissidents/svelte-ui";
+import { AsyncEventHost, ConfigRow, ConfigTable, NumberInput, showInputPopup, Tooltip } from "@the_dissidents/svelte-ui";
 import StyleEdit from '../StyleEdit.svelte';
 
 import { EventHost } from '@the_dissidents/svelte-ui';
-import { BasicCommands } from '$lib/frontend/Commands';
 import { Playback } from '../frontend/Playback';
 import { ChangeType, Source } from '../frontend/Source';
 
@@ -22,6 +21,7 @@ let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
 let subtitles = $state(Source.subs);
 let updateCounter = $state(0);
+let adjustButton = $state<HTMLButtonElement>();
 
 let loadState = Playback.loadState;
 
@@ -122,10 +122,14 @@ async function adjustFramerate() {
         }
       },
       {
-        text: '其它…',
-        enabled: !!videoFramerate,
-        action() {
-          void BasicCommands.transformTimes.call();
+        text: '从字幕帧率调整至其它帧率',
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        async action() {
+          Debug.assert(!!metadata.framerate);
+          const value = await showInputPopup(adjustButton!, '输入新帧率',
+            { validate: (s) => isFinite(parseFloat(s)) });
+          if (!value) return;
+          await doAdjust(metadata.framerate, parseFloat(value));
         }
       }
     ]
@@ -197,7 +201,7 @@ async function adjustFramerate() {
         {matches ? $_('ppty.already-matched-video-framerate'): $_('ppty.match-video-framerate')}
       </button>
 
-      <button disabled={!metadata.framerate} onclick={adjustFramerate}>
+      <button disabled={!metadata.framerate} onclick={adjustFramerate} bind:this={adjustButton}>
         {$_('ppty.adjust-framerate')}
       </button>
     </ConfigRow>
