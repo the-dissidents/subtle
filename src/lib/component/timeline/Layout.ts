@@ -235,6 +235,7 @@ export class TimelineLayout {
       (y + this.manager.scroll[1] - TimelineLayout.HEADER_HEIGHT - TimelineLayout.TRACKS_PADDING)
       / this.entryHeight);
     if (clamp) return this.#shownStyles[Math.min(Math.max(i, this.shownStyles.length - 1), 0)];
+    if (i < 0) return undefined;
     return this.#shownStyles.at(i);
   }
 

@@ -21,7 +21,7 @@ export class BoxSelect extends TimelineAction {
         this.deregister = self.registerInterruptKey();
     }
 
-    async onDrag(offsetX: number, offsetY: number) {
+    override async onDrag(offsetX: number, offsetY: number) {
         const x2 = offsetX + this.layout.manager.scroll[0], y2 = offsetY + this.layout.manager.scroll[1];
         const b: Box = {
             x: Math.min(this.x1, x2), y: Math.min(this.y1, y2),
@@ -40,7 +40,7 @@ export class BoxSelect extends TimelineAction {
         this.layout.manager.requestRender();
     }
 
-    onDragEnd(): void {
+    override onDragEnd(): void {
         this.deregister();
         this.self.currentAction = undefined;
         this.self.selectBox = null;

@@ -28,6 +28,7 @@ import { DragSeam } from "./actions/DragSeam";
 import { DragResize } from "./actions/DragResize";
 import { CreateEntry } from "./actions/CreateEntry";
 import { SplitEntry } from "./actions/SplitEntry";
+import { CreateChannel } from "./actions/CreateChannel";
 import type { TimelineAction } from "./actions/TimelineAction";
 
 export const TimelineHandle = {
@@ -54,6 +55,12 @@ export class TimelineInput {
         breakPosition: number,
         positions: Map<SubtitleStyle, number>,
         current: SubtitleStyle
+    } = null;
+
+    // ad-hoc, for rendering
+    newChannel: null | {
+        targets: Set<SubtitleEntry>,
+        channel: SubtitleStyle
     } = null;
 
     constructor(private layout: TimelineLayout) {
@@ -336,10 +343,18 @@ export class TimelineInput {
             return;
         }
 
-        if (h.hover.selDistL > resizeArea && h.hover.selDistR > resizeArea)
-            this.#setCursor('move');
-        else this.#setCursor(h.hover.selDistL <= TimelineConfig.data.dragResizeArea
-            ? 'e-resize' : 'w-resize');
+        if (h.hover.selDistL > resizeArea && h.hover.selDistR > resizeArea) {
+            if (TimelineHandle.currentMode.get() == 'create') {
+                this.#setCursor('copy');
+                this.alignmentLine = null;
+            } else {
+                this.#setCursor('move');
+            }
+        } else {
+            this.#setCursor(
+                h.hover.selDistL <= TimelineConfig.data.dragResizeArea
+                ? 'e-resize' : 'w-resize');
+        }
 
         if (h.hover.seam) {
             this.#setCursor('col-resize');
@@ -495,8 +510,12 @@ export class TimelineInput {
         if (h.hover.selDistL > TimelineConfig.data.dragResizeArea
             && h.hover.selDistR > TimelineConfig.data.dragResizeArea)
         {
-            this.currentAction = new DragMove(this, this.layout, e0,
-                origPositions, afterEnd, h.hover.underMouse);
+            if (TimelineHandle.currentMode.get() == 'create') {
+                this.currentAction = new CreateChannel(this, this.layout, e0, sels);
+            } else {
+                this.currentAction = new DragMove(this, this.layout, e0,
+                    origPositions, afterEnd, h.hover.underMouse);
+            }
         } else {
             this.currentAction = new DragResize(this, this.layout, e0,
                 origPositions, afterEnd,
@@ -529,9 +548,9 @@ export class TimelineInput {
         return () => document.removeEventListener('keydown', f);
     };
 
-    async #onDragEnd(offsetX: number, _offsetY: number, ev: MouseEvent) {
+    async #onDragEnd(offsetX: number, offsetY: number, ev: MouseEvent) {
         if (!this.currentAction) return Debug.early();
-        await this.currentAction.onDragEnd(offsetX, offsetX, ev);
+        await this.currentAction.onDragEnd(offsetX, offsetY, ev);
     }
 
     async #onDragInterrupted() {

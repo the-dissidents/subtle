@@ -12,13 +12,13 @@ export class Scale extends TimelineAction {
         this.deregister = self.registerInterruptKey();
     }
 
-    async onDrag(_offsetX: number, _offsetY: number, ev: MouseEvent) {
+    override async onDrag(_offsetX: number, _offsetY: number, ev: MouseEvent) {
         await this.layout.setScale(this.origScale /
             Math.pow(1.03, (this.e0.clientX - ev.clientX)));
         await this.layout.setOffset(this.origPos - this.e0.offsetX / this.layout.scale);
     }
 
-    onDragEnd(_offsetX: number, _offsetY: number, _ev: MouseEvent): Promise<void> | void {
+    override onDragEnd(): Promise<void> | void {
         this.deregister();
     }
 }
