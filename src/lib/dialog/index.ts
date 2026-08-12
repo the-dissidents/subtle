@@ -5,6 +5,9 @@ export const Dialog = {
     get combine() {
         return (async () => (await import('./CombineDialog.svelte')).default)();
     },
+    get combineAdvanced() {
+        return (async () => (await import('./CombineAdvancedDialog.svelte')).default)();
+    },
     get encoding() {
         return (async () => (await import('./EncodingDialog.svelte')).default)();
     },

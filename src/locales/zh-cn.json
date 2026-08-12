@@ -2,6 +2,7 @@
   "action": {
     "combine": "合并",
     "combine-by-matching-time": "合并时间相近的条目...",
+    "combine-dtw": "智能合并条目…",
     "compare-documents": "比较文档",
     "connect-all": "接在一起",
     "connect-keeping-first-only": "连在一起但只保留第一条的内容",
@@ -159,6 +160,7 @@
     "change-style": "更改样式",
     "column-view": "更改字幕表格的列视图",
     "combine-by-matching-time": "合并时间相近的条目",
+    "combine-dtw": "智能合并",
     "custom-alignment": "编辑对齐方式",
     "default-style": "改变默认样式",
     "delete-channel": "删除频道",
@@ -214,6 +216,10 @@
     "table": "字幕表格",
     "timeline": "时间线",
     "tool": "工具"
+  },
+  "combineadvdialog": {
+    "apply": "应用修改",
+    "compute": "计算"
   },
   "combinedialog": {
     "combine": "合并",

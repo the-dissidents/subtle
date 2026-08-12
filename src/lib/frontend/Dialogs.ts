@@ -41,8 +41,14 @@ export const DialogCommands = {
     {
         name: () => $_('action.combine-by-matching-time'),
         isDialog: true,
-        isApplicable: () => Editing.getSelection().length > 0,
         call: () => openDialog(Dialog.combine)
+    }),
+    combineAdvancedDialog: new UICommand(() => $_('category.tool'),
+        [],
+    {
+        name: () => $_('action.combine-dtw'),
+        isDialog: true,
+        call: () => openDialog(Dialog.combineAdvanced)
     }),
     splitDialog: new UICommand(() => $_('category.tool'),
         [],

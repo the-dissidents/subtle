@@ -159,6 +159,15 @@ export class Subtitles {
         }
     }
 
+    removeEntry(ent: SubtitleEntry) {
+        const i = this.entries.indexOf(ent);
+        if (i < 0) {
+            void Debug.warn(i);
+            return Debug.early();
+        }
+        this.entries.splice(i, 1);
+    }
+
     debugTestIntegrity() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const isProxy = (suspect: any) => {

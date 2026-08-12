@@ -88,6 +88,11 @@ let bracketResult = $state('');
 let forbidDeepNesting = $state(true);
 </script>
 
+
+<button onclick={() => {
+  void openDialog(Dialog.combineAdvanced);
+}}>dtw</button>
+
 <button onclick={() => {
   void Debug.info(MediaPlayerInterface.getLatencies());
 }}>latencies</button>
