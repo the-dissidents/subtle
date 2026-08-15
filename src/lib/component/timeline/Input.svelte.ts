@@ -44,8 +44,12 @@ export const TimelineHandle = {
 export class TimelineInput {
     private readonly manager: CanvasManager;
 
+    get selection(): ReadonlySet<SubtitleEntry> {
+        return this.#selection;
+    }
+
+    #selection = new SvelteSet<SubtitleEntry>;
     selectBox: Box | null = null;
-    selection = new SvelteSet<SubtitleEntry>;
     alignmentLine: { pos: number, rows: Set<number> } | null = null;
     currentAction: TimelineAction | undefined;
 
@@ -81,7 +85,7 @@ export class TimelineInput {
 
         Editing.onSelectionChanged.bind(this, async (cause) => {
             if (cause != ChangeCause.Timeline) {
-                this.selection = new SvelteSet(Editing.getSelection());
+                this.#selection = new SvelteSet(Editing.getSelection());
                 const focused = Editing.getFocusedEntry();
                 if (focused instanceof SubtitleEntry)
                     await this.layout.keepEntryInView(focused);
@@ -140,7 +144,7 @@ export class TimelineInput {
         snapped = this.trySnap(data, points, Playback.position) ?? snapped;
         snapped = this.trySnap(data, points, 0) ?? snapped;
         for (const e of this.layout.getVisibleEntries()) {
-            if (this.selection.has(e) && !includeSelection) continue;
+            if (this.#selection.has(e) && !includeSelection) continue;
             snapped = this.trySnap(data, points, e.start) ?? snapped;
             snapped = this.trySnap(data, points, e.end) ?? snapped;
         }
@@ -165,23 +169,25 @@ export class TimelineInput {
         return this.layout.offset + (x - this.layout.leftColumnWidth) / this.layout.scale;
     }
 
-    async dispatchSelectionChanged() {
+    async changeSelection(set?: Iterable<SubtitleEntry>, focused?: SubtitleEntry) {
         await Editing.clearFocus();
-        Editing.selection.submitted = new Set(this.selection);
-        if (this.selection.size == 1) {
-            const array = [...this.selection.values()];
+        if (set) this.#selection = new SvelteSet(set);
+
+        Editing.selection.submitted = new Set(this.#selection);
+        if (this.#selection.size == 1) {
+            const array = [...this.#selection.values()];
             Editing.selection.currentGroup = new Set(array);
             Editing.selection.focused = array[0];
         } else {
             Editing.selection.currentGroup.clear();
-            Editing.selection.focused = null;
+            Editing.selection.focused = focused ?? null;
         }
         Editing.onSelectionChanged.dispatch(ChangeCause.Timeline);
     }
 
     selectionFirstLast() {
-        Debug.assert(this.selection.size > 0);
-        const sels = [...this.selection];
+        Debug.assert(this.#selection.size > 0);
+        const sels = [...this.#selection];
         return sels.reduce<[SubtitleEntry, SubtitleEntry]>(
             ([pf, pl], current) => [
                 current.start < pf.start ? current : pf,
@@ -204,8 +210,8 @@ export class TimelineInput {
     }
 
     #onDoubleClick() {
-        if (this.selection.size == 1
-         && Editing.getFocusedEntry() == [...this.selection][0])
+        if (this.#selection.size == 1
+         && Editing.getFocusedEntry() == [...this.#selection][0])
         {
             void SubtitleTableHandle.processDoubleClick?.();
         }
@@ -244,10 +250,10 @@ export class TimelineInput {
             };
         }
 
-        const targetEntry = underMouse.find((x) => this.selection.has(x)) ?? underMouse[0];
-        const isOverSelected = underMouse.some((x) => this.selection.has(x));
-        const isMultiselect = (this.selection.size > 1 || ctrlHeld) && isOverSelected;
-        const shouldCheckSeam = this.selection.size <= 2 || !isOverSelected;
+        const targetEntry = underMouse.find((x) => this.#selection.has(x)) ?? underMouse[0];
+        const isOverSelected = underMouse.some((x) => this.#selection.has(x));
+        const isMultiselect = (this.#selection.size > 1 || ctrlHeld) && isOverSelected;
+        const shouldCheckSeam = this.#selection.size <= 2 || !isOverSelected;
 
         const [w, x] = this.layout.getHorizontalPos(targetEntry, {local: true});
         const singleDistL = e.offsetX - x;
@@ -321,7 +327,10 @@ export class TimelineInput {
             this.makeAlignmentLine(e.offsetX, {always: true});
             return;
         }
-        if (TimelineHandle.currentMode.get() == 'create' && !h.hover) {
+
+        if (TimelineHandle.currentMode.get() == 'create' && !h.hover
+         && !!this.layout.getChannelFromOffsetY(e.offsetY)
+        ) {
             this.#setCursor('crosshair');
             this.makeAlignmentLine(e.offsetX, {always: true, includeSelection: true});
             return;
@@ -416,7 +425,7 @@ export class TimelineInput {
         if (e0.button == 2) {
             void (async () => {
                 if (h.hover
-                 && !h.hover.underMouse.some((x) => this.selection.has(x)))
+                 && !h.hover.underMouse.some((x) => this.#selection.has(x)))
                 {
                     await Editing.clearSelection(ChangeCause.Timeline);
                     await Editing.selectEntry(h.hover.underMouse[0],
@@ -431,36 +440,38 @@ export class TimelineInput {
             Debug.assert(false);
 
         if (!h.hover) {
-            if (!e0.getModifierState(Basic.ctrlKey)) {
-                void Editing.clearSelection(ChangeCause.Timeline);
-                this.selection.clear();
-                this.manager.requestRender();
-            }
             if (TimelineHandle.currentMode.get() == 'create') {
                 const style = this.layout.getChannelFromOffsetY(e0.offsetY);
-                if (!style) return false;
-                this.currentAction = new CreateEntry(this, this.layout, e0, style);
-            } else {
-                this.currentAction = new BoxSelect(this, this.layout, e0);
+                if (style) {
+                    this.currentAction = new CreateEntry(this, this.layout, e0, style);
+                    return true;
+                }
             }
+
+            if (!e0.getModifierState(Basic.ctrlKey)) {
+                void Editing.clearSelection(ChangeCause.Timeline);
+                this.#selection.clear();
+                this.manager.requestRender();
+            }
+            this.currentAction = new BoxSelect(this, this.layout, e0);
             return true;
         }
 
         const target = h.hover.targetEntry;
 
         if (h.ctrlHeld) {
-            if (!this.selection.has(target))
-                this.selection.add(target);
+            if (!this.#selection.has(target))
+                this.#selection.add(target);
             else
-                this.selection.delete(target);
-            void this.dispatchSelectionChanged();
+                this.#selection.delete(target);
+            void this.changeSelection();
             this.manager.requestRender();
             return false;
         }
 
         if (!h.hover.isOverSelected) {
-            this.selection.clear();
-            this.selection.add(target);
+            this.#selection.clear();
+            this.#selection.add(target);
             void Editing.selectEntry(target,
                 SelectMode.Single, ChangeCause.Timeline);
         }
@@ -480,7 +491,7 @@ export class TimelineInput {
         // other action such as dragging has happened). We removed it because it's tricky
         // to make it coherent with other actions.
 
-        const sels = [...this.selection];
+        const sels = [...this.#selection];
         if (sels.length == 0) return false;
 
         const origPositions = new Map(
@@ -497,7 +508,7 @@ export class TimelineInput {
 
         if (h.hover.seam) {
             // manually set selection, avoiding the async Editing.setSelection
-            this.selection = new SvelteSet(h.hover.seam);
+            this.#selection = new SvelteSet(h.hover.seam);
             Editing.selection.submitted = new Set(h.hover.seam);
             Editing.selection.focused = h.hover.seam[0];
             Editing.selection.currentGroup = new Set([h.hover.seam[0]]);

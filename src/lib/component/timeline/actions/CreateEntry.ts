@@ -16,6 +16,8 @@ export class CreateEntry extends TimelineAction {
 
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent, style: SubtitleStyle) {
         super(self, layout, e0);
+
+        // prioritize alignment line position
         const startPos = this.self.alignmentLine?.pos ?? this.origPos;
         this.entry = Editing.insertAtTime(startPos, startPos, style);
         this.style = style;

@@ -240,8 +240,8 @@ export class TimelineLayout {
   }
 
   findEntriesByPosition(
-    x: number, y: number, w = 0, h = 0): SubtitleEntry[]
-  {
+    x: number, y: number, w = 0, h = 0
+  ): SubtitleEntry[] {
     const result = [];
     const start = (x - this.leftColumnWidth) / this.scale;
     const end = (x - this.leftColumnWidth + w) / this.scale;

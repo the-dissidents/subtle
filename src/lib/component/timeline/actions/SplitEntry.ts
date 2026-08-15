@@ -79,22 +79,23 @@ export class SplitEntry extends TimelineAction {
     }
 
     override async onDragEnd(offsetX: number) {
-        Debug.assert(this.self.splitting !== null);
+        const splitting = this.self.splitting;
+        Debug.assert(splitting !== null);
         this.styles.shift();
 
         if (this.styles.length == 0) {
             // all done, do split
             this.deregister();
-            const target = this.self.splitting.target;
+            const target = splitting.target;
             const index = Source.subs.entries.indexOf(target);
             if (index < 0) return Debug.early();
 
-            const newEntry = new SubtitleEntry(target.start, this.origPos);
+            const newEntry = new SubtitleEntry(target.start, splitting.breakPosition);
             Source.subs.entries.splice(index, 0, newEntry);
             newEntry.label = target.label;
-            target.start = this.origPos;
+            target.start = splitting.breakPosition;
             for (const [style, text] of target.texts) {
-                const pos = this.self.splitting.positions.get(style)!;
+                const pos = splitting.positions.get(style)!;
                 const first = RichText.substring(text, 0, pos);
                 const second = RichText.substring(text, pos);
                 newEntry.texts.set(style, RichText.trimEnd(first));
@@ -105,7 +106,7 @@ export class SplitEntry extends TimelineAction {
             this.self.splitting = null;
             this.self.currentAction = undefined;
         } else {
-            this.self.splitting.current = this.styles[0];
+            splitting.current = this.styles[0];
             this.onDrag(offsetX);
         }
         this.layout.manager.requestRender();

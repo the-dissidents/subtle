@@ -58,6 +58,7 @@ export async function contextMenu() {
                 { item: 'Separator' },
                 BasicCommands.mergeDuplicates.toMenuItem(),
                 DialogCommands.combineDialog.toMenuItem(),
+                DialogCommands.combineAdvancedDialog.toMenuItem(),
                 DialogCommands.splitDialog.toMenuItem(),
                 BasicCommands.fixOverlap.toMenuItem(),
             ]

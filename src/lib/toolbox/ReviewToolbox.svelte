@@ -1,5 +1,7 @@
 <script lang="ts">
 import { Filter } from "$lib/core/Filter";
+import { LABEL_TYPES } from "$lib/core/Labels";
+import LabelSelect from "$lib/LabelSelect.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { CompiledLintProfile } from "../core/LintProfile";
 import { RichText } from "../core/RichText";
@@ -65,6 +67,8 @@ async function fixAll() {
 
 let checkLint = Memorized.$('review-goto-lint', z.boolean(), true);
 let checkFilter = Memorized.$('review-goto-filter', z.boolean(), true);
+let checkLabel = Memorized.$('review-goto-label', z.boolean(), true);
+let label = Memorized.$('review-label', z.enum(LABEL_TYPES), 'red');
 
 let focusedEntry = Editing.focused.entry;
 
@@ -77,18 +81,18 @@ async function gotoProblem(dir: 1 | -1) {
   i += dir;
   while (i >= 0 && i < Source.subs.entries.length) {
     const ent = Source.subs.entries[i];
-    const hasProblem = [...ent.texts.entries()].find(
-      ([style, text]) => {
-        if ($checkFilter && style.validator
-         && Filter.evaluate(style.validator, ent, style).failed.length > 0)
-          return true;
-        if ($checkLint) {
-          const linter = linters.get(style);
-          if (linter && linter.check(RichText.toString(text)).length > 0)
+    const hasProblem = ($checkLabel && ent.label == $label)
+     || [...ent.texts.entries()].find(([style, text]) => {
+          if ($checkFilter && style.validator
+          && Filter.evaluate(style.validator, ent, style).failed.length > 0)
             return true;
-        }
-        return false;
-      });
+          if ($checkLint) {
+            const linter = linters.get(style);
+            if (linter && linter.check(RichText.toString(text)).length > 0)
+              return true;
+          }
+          return false;
+        });
     if (hasProblem) {
       await Editing.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
       Frontend.setStatus(dir > 0 ? $_('review.found-next') : $_('review.found-previous'));
@@ -114,6 +118,12 @@ async function gotoProblem(dir: 1 | -1) {
       <label>
         <input type='checkbox' bind:checked={$checkFilter}>
         不符合验证条件的条目
+      </label>
+      <br>
+      <label>
+        <input type='checkbox' bind:checked={$checkLabel}>
+        带有以下标签的条目
+        <LabelSelect disabled={!$checkLabel} bind:value={$label} />
       </label>
     </ConfigRow>
     <ConfigRow name='前往'>
