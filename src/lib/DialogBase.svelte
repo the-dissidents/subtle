@@ -84,6 +84,11 @@ export async function showModal() {
     Frontend.modalOpenCounter++;
   });
 }
+
+export function close(btn: string) {
+  Debug.assert(resolve !== undefined);
+  resolve(btn);
+}
 </script>
 
 <dialog

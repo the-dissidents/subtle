@@ -37,8 +37,9 @@ let data = $state<{
 let selectionOnly = $state(false),
     fromChannel = $state<SubtitleStyle>(Source.subs.defaultStyle),
     toChannel = $state<SubtitleStyle>(Source.subs.defaultStyle),
-    markLabel = $state('red' as LabelType),
-    markIgnoreLabel = $state('purple' as LabelType),
+    mergeSplitLabel = $state('red' as LabelType),
+    unmappedLabel = $state('red' as LabelType),
+    ignoredLabel = $state('purple' as LabelType),
     progress = $state(0);
 
 onMount(async () => {
@@ -97,25 +98,29 @@ async function apply() {
   }
 
   for (const [is, j] of result.merges) {
-    is.forEach((i) => as[i].label = markLabel);
-    bs[j].label = markLabel;
+    is.forEach((i) => as[i].label = mergeSplitLabel);
+    bs[j].label = mergeSplitLabel;
   }
   for (const [i, js] of result.splits) {
-    as[i].label = markLabel;
-    js.forEach((j) => bs[j].label = markLabel);
+    const times = js.flatMap((j) => [bs[j].start, bs[j].end]);
+    as[i].label = mergeSplitLabel;
+    as[i].start = Math.min(...times);
+    as[i].end = Math.max(...times);
+    js.forEach((j) => bs[j].label = mergeSplitLabel);
   }
 
   for (const i of result.unmappedA) {
-    as[i].label = markLabel;
+    as[i].label = unmappedLabel;
   }
   for (const i of result.unmappedB) {
-    bs[i].label = markLabel;
+    bs[i].label = unmappedLabel;
   }
   for (const ent of conflict) {
-    ent.label = markIgnoreLabel;
+    ent.label = ignoredLabel;
   }
 
   await Source.markChanged(ChangeType.Times, $_('c.combine-dtw'));
+  inner.close('ok');
 }
 
 </script>
@@ -174,13 +179,17 @@ async function apply() {
 
   <h5>将有问题的条目带上标记</h5>
   <ConfigTable>
-    <ConfigRow name="无法一对一匹配的条目">
+    <ConfigRow name="无对应的条目">
       <LabelSelect
-        bind:value={markLabel} onsubmit={() => clear()} />
+        bind:value={unmappedLabel} onsubmit={() => clear()} />
+    </ConfigRow>
+    <ConfigRow name="切分或合并的条目">
+      <LabelSelect
+        bind:value={mergeSplitLabel} onsubmit={() => clear()} />
     </ConfigRow>
     <ConfigRow name="已经包含此两种样式的条目">
       <LabelSelect
-        bind:value={markIgnoreLabel} onsubmit={() => clear()} />
+        bind:value={ignoredLabel} onsubmit={() => clear()} />
     </ConfigRow>
   </ConfigTable>
 
