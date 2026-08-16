@@ -162,8 +162,10 @@ export class MediaSampler {
                 try {
                     result = await this.media.sampleAutomatic(20);
                 } catch (e) {
+                    if (this.#cancelling || this.media.isClosed) return false;
+
                     await Debug.warn('sampling call failed, will retry:', e);
-                    return !this.#cancelling && !this.media.isClosed;
+                    return true;
                 }
                 if (result.audio) {
                     this.#sampleProgress = result.audio.endTime;

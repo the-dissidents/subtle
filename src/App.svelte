@@ -9,31 +9,46 @@ i18n.register('en', () => import('./locales/en.json'));
 i18n.register('zh-cn', () => import('./locales/zh-cn.json'));
 i18n.register('zh-tw', () => import('./locales/zh-tw.json'));
 
-import { DebugConfig, InterfaceConfig, MainConfig } from "./lib/config/Groups";
-import { TableConfig } from "./lib/component/subtitleTable/Config";
-import { MediaConfig } from "./lib/component/preview/Config";
-import { TimelineConfig } from './lib/component/timeline/Config';
-import { Memorized } from './lib/config/MemorizedValue.svelte';
+import { DebugConfig, InterfaceConfig, MainConfig } from "$lib/config/Groups";
+import { TableConfig } from "$lib/component/subtitleTable/Config";
+import { MediaConfig } from "$lib/component/preview/Config";
+import { TimelineConfig } from '$lib/component/timeline/Config';
+import { Memorized } from '$lib/config/MemorizedValue.svelte';
 
 MainConfig.addGroup('timeline', TimelineConfig);
 MainConfig.addGroup('media', MediaConfig);
 MainConfig.addGroup('table', TableConfig);
 
-import { initWindowMenu } from './lib/WindowMenu';
-import EntryEdit from './lib/EntryEdit.svelte';
-import SubtitleTable from './lib/component/subtitleTable/SubtitleTable.svelte';
-import Timeline from './lib/component/timeline/Timeline.svelte';
-import Preview from './lib/component/preview/Preview.svelte';
+import { initWindowMenu } from '$lib/WindowMenu';
+import EntryEdit from '$lib/EntryEdit.svelte';
+import SubtitleTable from '$lib/component/subtitleTable/SubtitleTable.svelte';
+import Timeline from '$lib/component/timeline/Timeline.svelte';
+import Preview from '$lib/component/preview/Preview.svelte';
 
 import { Resizer, TabPage, TabView, Tooltip, Banner } from '@the_dissidents/svelte-ui';
 import { BugIcon, CircleXIcon, ClosedCaptionIcon, CommandIcon, DownloadIcon, FileHeadphoneIcon, FilePlusCornerIcon, FilmIcon, FolderOpenIcon, Redo2Icon, SaveIcon, SavePlusIcon, SettingsIcon, TriangleAlertIcon, Undo2Icon, UploadIcon } from '@lucide/svelte';
 
-import PropertiesToolbox from './lib/toolbox/PropertiesToolbox.svelte';
-import SearchToolbox from './lib/toolbox/SearchToolbox.svelte';
-import TestToolbox from './lib/toolbox/TestToolbox.svelte';
-import UntimedToolbox from './lib/toolbox/UntimedToolbox.svelte';
-import ReferencesToolbox from './lib/toolbox/ReferencesToolbox.svelte';
-import ReviewToolbox from './lib/toolbox/ReviewToolbox.svelte';
+import PropertiesToolbox from '$lib/toolbox/PropertiesToolbox.svelte';
+import SearchToolbox from '$lib/toolbox/SearchToolbox.svelte';
+import TestToolbox from '$lib/toolbox/TestToolbox.svelte';
+import UntimedToolbox from '$lib/toolbox/UntimedToolbox.svelte';
+import ReferencesToolbox from '$lib/toolbox/ReferencesToolbox.svelte';
+import ReviewToolbox from '$lib/toolbox/ReviewToolbox.svelte';
+
+import { DialogCommands } from '$lib/frontend/Dialogs';
+import { Interface, InterfaceCommands, MEDIA_EXTENSIONS } from '$lib/frontend/Interface';
+import { Playback, PlaybackCommands } from '$lib/frontend/Playback';
+import { Source, SourceCommands } from '$lib/frontend/Source';
+import { KeybindingManager } from '$lib/frontend/Keybinding';
+import { Editing } from '$lib/frontend/Editing';
+import { Frontend } from '$lib/frontend/Frontend';
+
+import { Basic } from '$lib/Basic';
+import { Debug, GetLevelFilter } from '$lib/Debug';
+import { MAPI } from '$lib/API';
+import { Fonts } from '$lib/Fonts';
+import { Dialog } from '$lib/dialog';
+import DialogOutlet, { openDialog } from '$lib/DialogOutlet.svelte';
 
 import * as z from "zod/v4-mini";
 import { onMount } from 'svelte';
@@ -41,20 +56,6 @@ import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { arch, platform, version } from '@tauri-apps/plugin-os';
 import { restoreStateCurrent, saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state';
-
-import { DialogCommands } from './lib/frontend/Dialogs';
-import { Interface, InterfaceCommands, MEDIA_EXTENSIONS } from './lib/frontend/Interface';
-import { Playback, PlaybackCommands } from './lib/frontend/Playback';
-import { Source, SourceCommands } from './lib/frontend/Source';
-import { KeybindingManager } from './lib/frontend/Keybinding';
-import { Frontend } from './lib/frontend/Frontend';
-
-import { Basic } from './lib/Basic';
-import { Debug, GetLevelFilter } from './lib/Debug';
-import { MAPI } from './lib/API';
-import { Fonts } from './lib/Fonts';
-import { Dialog } from './lib/dialog';
-import DialogOutlet, { openDialog } from './lib/DialogOutlet.svelte';
 
 const appWindow = getCurrentWebviewWindow();
 
@@ -77,6 +78,11 @@ const me = {};
 let undoRedoUpdateCounter = $state(0);
 Source.onUndoBufferChanged.bind(me, () => {
   undoRedoUpdateCounter++;
+});
+
+let selectionLength = $state(0);
+Editing.onSelectionChanged.bind(me, () => {
+  selectionLength = Editing.getSelection().length;
 });
 
 status.subscribe(() => {
@@ -450,7 +456,17 @@ observer.observe({ type: 'paint', buffered: true });
   <footer
     class={[{twinkling: statusTwinkling}, $status.type]}
     onanimationend={() => statusTwinkling = false}
-  >{$status.msg}</footer>
+  >
+    <div class="message">
+      {$status.msg}
+    </div>
+    {#if selectionLength > 0}
+      <div class="border">
+        <span class="label">选中条目数量：</span>
+        {selectionLength}
+      </div>
+    {/if}
+  </footer>
 </main>
 
 {/if}
@@ -568,13 +584,34 @@ header {
 }
 
 footer {
-  text-align: left;
-  padding: 5px 7px;
-  margin: 5px 0 0 0;
-  line-height: normal;
-  white-space: nowrap;
-  overflow-x: auto;
+  display: flex;
+  flex-direction: row;
   border-radius: 4px;
+
+  text-align: left;
+  padding: 5px 0;
+  margin: 5px 0 0 0;
+
+  div {
+    padding: 0 7px;
+    font-size: 95%;
+    line-height: normal;
+    white-space: nowrap;
+
+    &.border {
+      border-left: 1px solid gray;
+    }
+
+    &.message {
+      flex-grow: 1;
+      font-size: 100%;
+      overflow-x: scroll;
+    }
+  }
+
+  span.label {
+    opacity: 0.7;
+  }
 }
 
 ul.menu li {

@@ -276,13 +276,14 @@ Source.onSubtitlesChanged.bind(me, (t) => {
       <div class="hlayout">
         <label>
           <input type='checkbox' class="button" checked={!!$style.lintProfile}
-            onclick={(e) => {
+            onclick={async (e) => {
               if (e.currentTarget.checked) {
                 if (!$style.lintProfile)
                   $style.lintProfile = { bracketGroups: [], regexes: [], forbiddenPunctuation: '' };
               } else {
                 $style.lintProfile = null;
               }
+              await Source.markChanged(ChangeType.LintProfile, $_('c.lint-profile'));
             }}>
           {$style.lintProfile ? $_('style.lint-enabled') : $_('style.lint-disabled')}
         </label>
