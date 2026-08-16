@@ -156,7 +156,19 @@
           },
           props: {
             handleDOMEvents: {
-              "blur"() { onBlur?.(text); },
+              "blur"(view, event) {
+                // When focus leaves the editor, drop the native DOM selection so WebKit stops
+                // painting the blinking caret of a blurred contenteditable. The selection itself
+                // is kept in EditorState and re-applied to the DOM on refocus, so selection() and
+                // setSelectionRange() keep working while the editor is unfocused.
+                const target = event.relatedTarget as Node | null;
+                if (!target || !view.dom.contains(target)) {
+                  const sel = view.dom.ownerDocument.getSelection();
+                  if (sel && view.dom.contains(sel.anchorNode))
+                    sel.removeAllRanges();
+                }
+                onBlur?.(text);
+              },
               "focus"() { onFocus?.(text); },
             }
           }
