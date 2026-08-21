@@ -222,7 +222,7 @@ export class TimelineLayout {
   getEntryPositions(ent: SubtitleEntry): (Box & {text: string, style: SubtitleStyle})[] {
     const [w, x] = this.getHorizontalPos(ent);
     return [...ent.texts.entries()].flatMap(([style, text]) => {
-      if (Source.subs.view.timelineExcludeStyles.has(style)) return [];
+      if (!this.#shownStyles.includes(style)) return [];
       const i = this.#stylesMap.get(style) ?? 0;
       const y = this.entryHeight * i
         + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
@@ -283,8 +283,9 @@ export class TimelineLayout {
   async layout(ctx: CanvasRenderingContext2D) {
     this.requestedLayout = false;
     const subs = Source.subs;
-    const exclude = subs.view.timelineExcludeStyles;
-    this.#shownStyles = subs.styles.filter((x) => !exclude.has(x));
+    this.#shownStyles = subs.styles.filter((x) =>
+        !subs.view.timelineExcludeStyles.has(x) && (subs.view.timelineShowHidden || !x.hidden));
+
     this.entryHeight = TimelineConfig.data.fontSize + 15;
     this.#stylesMap = new Map(this.#shownStyles.map((x, i) => [x, i]));
 

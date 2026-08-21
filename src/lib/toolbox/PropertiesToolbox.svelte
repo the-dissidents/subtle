@@ -17,6 +17,8 @@ import { _ } from 'svelte-i18n';
 import { Menu } from '@tauri-apps/api/menu';
 import { PackageOpenIcon, PlusIcon, Trash2Icon } from '@lucide/svelte';
 
+import * as dialog from '@tauri-apps/plugin-dialog';
+
 let metadata = $state(Source.subs.metadata);
 let styles = $state(Source.subs.styles);
 let subtitles = $state(Source.subs);
@@ -63,10 +65,14 @@ async function newStyle() {
 }
 
 async function removeUnusedStyles() {
-  let usedStyles = new Set<SubtitleStyle>(
+  const usedStyles = new Set<SubtitleStyle>(
     Source.subs.entries.flatMap((x) => [...x.texts.keys()]));
-  Source.subs.styles = Source.subs.styles.filter((x) =>
-    usedStyles.has(x) || Source.subs.defaultStyle.name == x.name);
+  if (usedStyles.size == 0) {
+    await dialog.message($_('msg.all-styles-are-unused'));
+    return;
+  }
+
+  Source.subs.styles = Source.subs.styles.filter((x) =>usedStyles.has(x));
   await Source.markChanged(ChangeType.StyleDefinitions, $_('ppty.remove-all-unused'));
   styles = Source.subs.styles;
 }

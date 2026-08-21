@@ -49,6 +49,7 @@ export function constructData(A: SourceEntry[], B: SourceEntry[], result: MatchR
 
 export function constructOutput(data: DataEntry[]) {
   const newsub = new Subtitles();
+  const style = newsub.styles[0];
   data.forEach((x) => {
     if (x.useFirstText === undefined || x.useFirstTime === undefined)
       return;
@@ -56,7 +57,7 @@ export function constructOutput(data: DataEntry[]) {
     const text = x.useFirstText === true ? x.first : x.second;
     if (!time || !text) return;
     const entry = new SubtitleEntry(time.start, time.end);
-    entry.texts.set(newsub.defaultStyle, text.text);
+    entry.texts.set(style, text.text);
     newsub.entries.push(entry);
   });
   return newsub;

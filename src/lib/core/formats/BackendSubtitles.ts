@@ -27,7 +27,7 @@ export function convertBackendSubtitles(data: BackendSubtitleData) {
         for (const rect of rects) {
             if (rect.type == 'text') {
                 const entry = new SubtitleEntry(start, end);
-                entry.texts.set(subs.defaultStyle, rect.content);
+                entry.texts.set(subs.styles[0], rect.content);
                 subs.entries.push(entry);
             }
         }

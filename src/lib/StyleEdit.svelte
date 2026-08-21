@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ArrowDown, ArrowUp, MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
+import { ArrowDown, ArrowUp, EllipsisIcon, PlusIcon } from "@lucide/svelte";
 import { Menu } from "@tauri-apps/api/menu";
 import * as dialog from "@tauri-apps/plugin-dialog";
 import { writable } from 'svelte/store';
@@ -13,7 +13,7 @@ import { Utils } from "./frontend/Utils";
 import { ChangeType, Source } from "./frontend/Source";
 import { WrapStyle } from "./details/TextLayout";
 
-import { Collapsible, ConfigRow, ConfigTable, NumberInput } from "@the_dissidents/svelte-ui";
+import { ButtonStrip, Collapsible, ConfigRow, ConfigTable, NumberInput, StripRadioItem } from "@the_dissidents/svelte-ui";
 import FilterEdit from "./FilterEdit.svelte";
 import FontSelect from "./FontSelect.svelte";
 import Colorpicker from "./ui/Colorpicker.svelte";
@@ -47,7 +47,6 @@ function isDuplicate(name: string) {
 }
 
 async function contextMenu() {
-  let isDefault = $style == subtitles.defaultStyle;
   let used = subtitles.entries.filter((x) => x.texts.has($style));
   let withoutThis = subtitles.styles.filter((x) => x !== $style);
 
@@ -55,13 +54,9 @@ async function contextMenu() {
     items: [
     {
       text: $_('style.delete'),
+      enabled: withoutThis.length > 0,
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       async action() {
-        if (isDefault) {
-          await dialog.message($_('msg.you-cant-delete-a-default-style'));
-          return;
-        }
-
         if (used.length > 0 && !await dialog.confirm(
           $_('msg.proceed-delete-n-occurrences', { values: { n: used.length } })))
             return;
@@ -151,7 +146,7 @@ async function contextMenu() {
 let update = $state(0);
 const me = {};
 Source.onSubtitlesChanged.bind(me, (t) => {
-  if (t == ChangeType.General || t == ChangeType.Times)
+  if (t == ChangeType.General || t == ChangeType.Times || t == ChangeType.StyleDefinitions)
     update++;
 })
 </script>
@@ -161,7 +156,8 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 {#snippet header()}
   {#key update}
     {$style.name} <span class="usage">{$_('style.usage-msg', {values: {
-      n: subtitles.entries.filter((x) => x.texts.has($style)).length
+      n: subtitles.entries.filter((x) => x.texts.has($style)).length,
+      state: $style.hidden ? 'hidden' : 'shown'
     }})}</span>
   {/key}
 {/snippet}
@@ -215,7 +211,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
       aria-label='move down'
     ><ArrowDown /></button><br/>
     <button onclick={() => contextMenu()} aria-label='more'>
-      <MoreHorizontalIcon />
+      <EllipsisIcon />
     </button><br/>
   </div>
   <!-- properties -->
@@ -237,16 +233,13 @@ Source.onSubtitlesChanged.bind(me, (t) => {
                 await Source.markChanged(ChangeType.InPlace, $_('c.style-name'));
               }
             }}/>
-          <label style="padding-left: 5px;">
-            <input type='checkbox'
-              checked={subtitles.defaultStyle == $style}
-              onclick={async (ev) => {
-                subtitles.defaultStyle = $style;
-                ev.currentTarget.checked = true;
-                await Source.markChanged(ChangeType.InPlace, $_('c.default-style'));
-              }}/>
-            {$_('style.default')}
-          </label>
+          <ButtonStrip bind:selectValue={() => $style.hidden, (x) => {
+            $style.hidden = x;
+            void Source.markChanged(ChangeType.StyleDefinitions, $_('c.style-visibility'));
+          }}>
+            <StripRadioItem value={false}>显示</StripRadioItem>
+            <StripRadioItem value={true}>隐藏</StripRadioItem>
+          </ButtonStrip>
         </div>
       </ConfigRow>
       <ConfigRow name={$_('style.font')}>
@@ -424,6 +417,10 @@ Source.onSubtitlesChanged.bind(me, (t) => {
 
 .usage {
   color: gray
+}
+
+.hlayout {
+  gap: 3px;
 }
 
 input {

@@ -10,7 +10,7 @@ import { TimelineLayout } from "./Layout";
 import { TimelineInput, TimelineHandle } from "./Input.svelte";
 import { TimelineRenderer } from "./Render.svelte";
 
-import { AlignCenterVerticalIcon, FrameIcon, MagnetIcon, MousePointerIcon, PenLineIcon, PlusSquareIcon, ScissorsIcon } from '@lucide/svelte';
+import { AlignCenterVerticalIcon, FrameIcon, MagnetIcon, MousePointerIcon, PenLineIcon, ScissorsIcon, SquarePlusIcon } from '@lucide/svelte';
 
 import { Popup, Tooltip } from '@the_dissidents/svelte-ui';
   import { Basic } from '../../Basic';
@@ -45,9 +45,10 @@ function setup(canvas: HTMLCanvasElement) {
   Source.onSubtitleObjectReload.bind(layout, () => {
     styleRefreshCounter++;
   });
+
   Source.onSubtitlesChanged.bind(layout, (type) => {
-    if (type == ChangeType.StyleDefinitions || type == ChangeType.General)
-      styleRefreshCounter++;
+    if (type == ChangeType.StyleDefinitions
+     || type == ChangeType.General) styleRefreshCounter++;
   });
 
   uiFocus.subscribe((x) => {
@@ -94,7 +95,7 @@ function updateSnapOverride(ev: KeyboardEvent) {
             e.preventDefault();
             void Basic.wait(0).then(() => $currentMode = 'create');
           }} />
-        <PlusSquareIcon />
+        <SquarePlusIcon />
       </label>
     </Tooltip>
     <Tooltip text={$_('timeline.split-tool')} position="right">
@@ -156,11 +157,23 @@ function updateSnapOverride(ev: KeyboardEvent) {
         {$_('timeline.filter-styles')}
       </h5>
       {#key styleRefreshCounter}
+      <label>
+        <input type='checkbox' bind:checked={Source.subs.view.timelineShowHidden}
+          onchange={async () => {
+            layout!.requestedLayout = true;
+            await Source.markChanged(ChangeType.View, $_('c.timeline-row-view'));
+            styleRefreshCounter++;
+          }}>
+        {$_('table.show-hidden-channels')}
+      </label>
+      <hr>
       {const exclude = Source.subs.view.timelineExcludeStyles}
       {#each Source.subs.styles as style (style.name)}
         <label>
+          {const hidden = $derived(!Source.subs.view.timelineShowHidden && style.hidden)}
           <input type="checkbox"
-            checked={!exclude.has(style)}
+            disabled={hidden}
+            checked={!exclude.has(style) && !hidden}
             onchange={async (ev) => {
               if (ev.currentTarget.checked)
                 exclude.delete(style);

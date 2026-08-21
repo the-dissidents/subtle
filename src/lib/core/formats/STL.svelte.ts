@@ -480,6 +480,7 @@ export class STLParser implements SubtitleParser {
         const subs = new Subtitles();
         subs.migrated = 'text';
         subs.metadata.language = this.#language;
+        const style = subs.styles[0];
 
         const processor = new STLTextProcessor(this.#encoding);
         let currentStart: number | null = null;
@@ -502,7 +503,7 @@ export class STLParser implements SubtitleParser {
                 Math.max(0, currentStart),
                 Math.max(0, currentEnd)
             );
-            entry.texts.set(subs.defaultStyle, rt);
+            entry.texts.set(style, rt);
             subs.entries.push(entry);
         };
 

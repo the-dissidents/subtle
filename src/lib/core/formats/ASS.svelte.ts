@@ -258,7 +258,6 @@ export class ASSParser implements SubtitleParser {
         }
 
         if (!first) this.#invalid({ type: 'no-styles' });
-        else this.#subs.defaultStyle = first;
     }
 
     #parseEvents() {

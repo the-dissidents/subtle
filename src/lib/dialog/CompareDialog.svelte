@@ -18,6 +18,7 @@ import { Interface } from '../frontend/Interface';
 import { Source } from '../frontend/Source';
 import { InputConfig } from "../config/Groups";
 import { constructData, constructHTMLReport, constructOutput, type DataEntry } from "./CompareReport";
+  import { Debug } from "$lib/Debug";
 
 interface Props {
   args: [style: SubtitleStyle],
@@ -40,14 +41,15 @@ function toEntries(s: Subtitles, style: SubtitleStyle) {
 
 async function chooseStyle(subs: Subtitles, prompt: string) {
   if (subs.styles.length == 1)
-    return subs.defaultStyle;
+    return Source.subs.styles[0];
+  Debug.assert(subs.styles.length > 1);
   const choice = await overlayMenu(
     subs.styles.map((x) => ({ text:
       `${x.name} （使用量：${subs.entries.filter((e) => e.texts.has(x)).length}）`
     })),
     {
       text: prompt,
-      rememberedItem: subs.defaultStyle.name
+      rememberedItem: subs.styles[0].name
     });
   if (choice < 0) return undefined;
   return subs.styles[choice];
@@ -59,9 +61,6 @@ onMount(async () => {
 
   const subs = await Interface.parseSubtitleSourceInteractive(path, true);
   if (!subs) return close();
-
-  // const styleA = await chooseStyle(Source.subs, $_('comparedialog.choose-style-original'));
-  // if (!styleA) return;
 
   const styleB = await chooseStyle(subs, $_('comparedialog.choose-style-new'));
   if (!styleB) return;

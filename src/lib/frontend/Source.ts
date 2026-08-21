@@ -53,7 +53,7 @@ async function readSnapshot(s: Snapshot, archive: string) {
 
     await Editing.clearFocus(false);
     await Editing.clearSelection();
-    Editing.focused.style.set(Source.subs.defaultStyle);
+    Editing.focused.style.set(Source.subs.getActiveChannel());
 
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch(false);
@@ -239,7 +239,7 @@ export const Source = {
         this.subs = newSubs;
         await Editing.clearFocus(false);
         await Editing.clearSelection();
-        Editing.focused.style.set(newSubs.defaultStyle);
+        Editing.focused.style.set(newSubs.getActiveChannel());
         currentFile.set(
             (newSubs.migrated !== 'none'
                 && newSubs.migrated !== 'olderVersion') ? '' : path);

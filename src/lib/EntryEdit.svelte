@@ -217,7 +217,7 @@ function applyEditForm() {
   <table class='fields'>
     <tbody>
       {#each Source.subs.styles as style (style.name)}
-      {#if focused.texts.has(style)}
+      {#if focused.texts.has(style) && (Source.subs.view.editorShowHidden || !style.hidden)}
       <tr>
         <td class={{selected: style.name == $focusedStyle?.name, vlayout: true}}>
           <StyleSelect currentStyle={style}
@@ -307,6 +307,13 @@ function applyEditForm() {
           ><PlusIcon />
           </button>
         </td>
+        <td>
+          <label>
+            <input type="checkbox" class="button" bind:checked={Source.subs.view.editorShowHidden}
+              onchange={() => void Source.markChanged(ChangeType.View, $_('c.editor-row-view'))}>
+            {$_('table.show-hidden-channels')}
+          </label>
+        </td>
       </tr>
     </tbody>
   </table>
@@ -374,7 +381,7 @@ td {
 
 @media (prefers-color-scheme: dark) {
   .selected {
-    background-color: var(--uchu-blue-9);
+    background-color: #247;
   }
   .hint {
     color: var(--disabled-text-dark);

@@ -144,7 +144,7 @@ export const SubtitleTools = {
         const subs = new Subtitles();
         for (let i = 0; i < 10; i++) {
             const entry = new SubtitleEntry(i * 5, i * 5 + 5);
-            entry.texts.set(subs.defaultStyle, `测试第${i}行`);
+            entry.texts.set(subs.styles[0], `测试第${i}行`);
             subs.entries.push(entry);
         }
         return subs;
@@ -182,9 +182,8 @@ export const SubtitleUtil = {
             const state = $state(SubtitleStyle.new(name));
             original.styles.push(state);
             overrideStyle = state;
-        } else {
-            overrideStyle = options.style.type == 'override'
-                ? options.style.overrideStyle : original.defaultStyle;
+        } else if (options.style.type == 'override') {
+            overrideStyle = options.style.overrideStyle;
             Debug.assert(original.styles.includes(overrideStyle));
         }
 
@@ -237,8 +236,6 @@ export const SubtitleUtil = {
                 case 'overwrite':
                     if (iLocalName >= 0) {
                         const newStyle = $state(s);
-                        if (original.defaultStyle === original.styles[iLocalName])
-                            original.defaultStyle = newStyle;
                         original.styles.splice(iLocalName, 1, newStyle);
                         styleMap.set(s, newStyle);
                         return newStyle;

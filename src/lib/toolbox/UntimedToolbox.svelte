@@ -15,7 +15,7 @@ let fuzzy = $state({
   enabled: false,
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   tokenizer: 'character' as keyof typeof tokenizers,
-  useStyle: Source.subs.defaultStyle,
+  useStyle: Source.subs.styles[0],
   engine: null as fuzzyAlgorithm.Searcher<string, string> | null,
   currentEntry: null as SubtitleEntry | null
 });
@@ -111,7 +111,7 @@ import { ChangeType, Source } from "../frontend/Source";
 
 import { Memorized } from "../config/MemorizedValue.svelte";
 
-let fillAsStyle = $state(Source.subs.defaultStyle);
+let fillAsStyle = $state(Source.subs.styles[0]);
 let selection = $state<SubtitleEntry[]>([]);
 let focusedEntry = Editing.focused.entry;
 
@@ -153,8 +153,8 @@ onDestroy(() => EventHost.unbind(me));
 
 Source.onSubtitleObjectReload.bind(me, () => {
   subs = Source.subs;
-  fuzzy.useStyle = Source.subs.defaultStyle;
-  fillAsStyle = Source.subs.defaultStyle;
+  fuzzy.useStyle = Source.subs.styles[0];
+  fillAsStyle = Source.subs.styles[0];
 });
 
 Editing.onSelectionChanged.bind(me, () => {

@@ -17,12 +17,13 @@ function overlappingTime(e1: SubtitleEntry | null, e2: SubtitleEntry) {
 }
 
 const textColor           = $derived(theme.isDark ? '#fff'          : '#000');
-const gridColor           = $derived(theme.isDark ? '#444'          : '#ddd');
-const gridMajorColor      = $derived(theme.isDark ? '#666'          : '#bbb');
-const headerBackground    = $derived(theme.isDark ? '#333'          : '#ddd');
+const hiddenTextColor     = $derived(theme.isDark ? '#aaa'          : '#888');
+const gridColor           = $derived(theme.isDark ? '#444'          : '#ccc');
+const gridMajorColor      = $derived(theme.isDark ? '#666'          : '#aaa');
+const headerBackground    = $derived(theme.isDark ? '#444'          : '#ccc');
 const overlapColor        = $derived(theme.isDark ? 'lightpink'       : 'crimson');
-const focusBackground     = $derived(theme.isDark ? 'darkslategray'   : 'lightblue');
-const selectedBackground  = $derived(theme.isDark ? '#444'          : '#e8e8e8');
+const focusBackground     = $derived(theme.isDark ? '#236'       : '#bde');
+const selectedBackground  = $derived(theme.isDark ? '#333'          : '#ddd');
 const errorBackground     = $derived(theme.isDark ? '#aa335599'     : '#eedd0099');
 const lintProblemLine     = $derived(theme.isDark ? '#eedd0099'     : '#aa335599');
 
@@ -104,7 +105,7 @@ export class TableRenderer {
             // channels; in the order of Source.subs.styles
             let y0 = baseY;
             let j = 0;
-            for (const { failed, height, cells, diagnostics } of texts) {
+            for (const { failed, height, cells, diagnostics, style } of texts) {
                 const xpos = this.layout.channelColumns[0].layout!.position;
 
                 // background for failed validation
@@ -118,7 +119,7 @@ export class TableRenderer {
                     const col = this.layout.channelColumns[k];
                     ctx.textBaseline = 'middle';
                     ctx.textAlign = col.layout!.align;
-                    ctx.fillStyle = textFillStyle;
+                    ctx.fillStyle = style.hidden ? hiddenTextColor : textFillStyle;
                     applyStyle(this.layout.baseStyleCSS, ctx);
                     drawText(cell.layout,
                         col.layout!.textX,
@@ -145,10 +146,11 @@ export class TableRenderer {
                 baseY + (lh - 1) * this.layout.lineHeight
             );
 
+            const hidden = !texts.find((x) => !x.style.hidden);
             cells.forEach((cell, j) => {
                 const col = this.layout.entryColumns[j];
                 ctx.textAlign = col.layout!.align;
-                ctx.fillStyle = textFillStyle;
+                ctx.fillStyle = hidden ? hiddenTextColor : textFillStyle;
                 applyStyle(this.layout.baseStyleCSS, ctx);
                 ctx.textBaseline = 'middle';
                 drawText(cell.layout,
@@ -158,7 +160,7 @@ export class TableRenderer {
 
             // index
             ctx.textAlign = 'end';
-            ctx.fillStyle = textFillStyle;
+            ctx.fillStyle = hidden ? hiddenTextColor : textFillStyle;
             applyStyle(this.layout.baseStyleMonospaceCSS, ctx);
             ctx.fillText(i.toString(),
                 this.layout.indexColumnLayout.width - this.layout.cellPadding,

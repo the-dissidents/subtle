@@ -18,7 +18,7 @@
   // $disabled-text-light:   uchu.$gray-9,
   // $disabled-text-dark:    uchu.$gray-9,
   $disabled-back-light:   uchu.$gray-1,
-  $disabled-back-dark:    uchu.$yin-9,
+  $disabled-back-dark:    uchu.$yin-8,
 
   // $box-border-light:      uchu.$gray-4,
   $box-border-dark:       #333,
@@ -161,7 +161,7 @@ table.config td:first-child {
 
 @media (prefers-color-scheme: dark) {
   table.data th {
-    background-color: var(--uchu-yin-5);
+    background-color: var(--uchu-yin-7);
     color: var(--uchu-gray-1);
   }
   table.data .focused {

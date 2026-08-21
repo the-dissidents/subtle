@@ -23,7 +23,8 @@ import { LintProfile } from "./LintProfile";
  *                   wrapStyle in style
  *                   positioning and alignment in entry
  *  - 000706 (minor) styles have lint profiles
- *  - 000710 (minor) metadata has framerate
+ *  - 000710 (minor) metadata has `framerate`
+ *  - 000712 (minor) styles have `hidden`
  */
 export const SubtitleFormatVersion = '000710';
 export const SubtitleCompatibleVersion = '000700';
@@ -54,19 +55,25 @@ export type JSONParseMessage = {
 const ZView = z.object({
     perEntryColumns: z.array(z.string()),
     perChannelColumns: z.array(z.string()),
+    tableShowHidden: z._default(z.boolean(), true),
     timelineExcludeStyles: z.array(z.string()),
-    timelineActiveChannel: z._default(z.nullable(z.string()), null)
+    timelineActiveChannel: z._default(z.nullable(z.string()), null),
+    timelineShowHidden: z._default(z.boolean(), false),
+    editorShowHidden: z._default(z.boolean(), false),
 });
 
-function serializeView(sub: Subtitles) {
+function serializeView(sub: Subtitles): z.infer<typeof ZView> {
     return {
         perEntryColumns: sub.view.perEntryColumns,
         perChannelColumns: sub.view.perChannelColumns,
+        tableShowHidden: sub.view.tableShowHidden,
         timelineExcludeStyles: sub.styles
             .filter((x) => sub.view.timelineExcludeStyles.has(x))
             .map((x) => x.name),
         timelineActiveChannel:
-            sub.view.timelineActiveChannel?.deref()?.name ?? null
+            sub.view.timelineActiveChannel?.deref()?.name ?? null,
+        timelineShowHidden: sub.view.timelineShowHidden,
+        editorShowHidden: sub.view.editorShowHidden,
     };
 }
 
@@ -100,7 +107,6 @@ const ZDocument = z.object({
     version: z.string(),
     metadata: ZMetadata,
     view: ZView,
-    defaultStyle: z.string(),
     styles: z.array(ZStyleBase),
     entries: z.array(ZEntry)
 });
@@ -160,6 +166,10 @@ export class JSONParser implements SubtitleParser {
     #parseView() {
         if (!this.#obj.view) return;
         const sv = this.#obj.view;
+
+        this.#subs.view.tableShowHidden = sv.tableShowHidden;
+        this.#subs.view.timelineShowHidden = sv.timelineShowHidden;
+
         this.#subs.view.perEntryColumns = sv.perEntryColumns.filter(
             (x) => x in Metrics && Metrics[x].context == 'entry');
         this.#subs.view.perChannelColumns = sv.perChannelColumns.filter(
@@ -182,16 +192,10 @@ export class JSONParser implements SubtitleParser {
 
     #parseStyles() {
         const parsedStyles = this.#obj.styles;
-        const defaultStyleName = this.#obj.defaultStyle;
-
         this.#subs.styles = parsedStyles.map((x) => {
             const style = $state({ ...x, validator: null, lintProfile: null });
             return style;
         });
-        const def = this.#subs.styles.find((x) => x.name == defaultStyleName);
-        if (def === undefined)
-            throw new DeserializationError('invalid default style name');
-        this.#subs.defaultStyle = def;
 
         // now go back and add validators
         // since parsing filters requires access to all the styles
@@ -285,7 +289,6 @@ export const JSONSubtitles = {
             toString: () => JSON.stringify({
                 version: SubtitleFormatVersion,
                 metadata: subs.metadata,
-                defaultStyle: subs.defaultStyle.name,
                 styles: subs.styles.map((x) => SubtitleStyle.serialize(x)),
                 view: serializeView(subs),
                 entries: (options.useEntries ?? subs.entries)

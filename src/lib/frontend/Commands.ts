@@ -323,7 +323,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 style: portion.migrated == 'text'
                     ? {
                         type: 'override',
-                        overrideStyle: Source.subs.defaultStyle
+                        overrideStyle: Source.subs.getActiveChannel()
                     } : {
                         type: 'keepDifferent'
                     },

@@ -13,7 +13,8 @@ import { Menu } from "@tauri-apps/api/menu";
 import { DeleteIcon, PenLineIcon, PlusIcon } from "@lucide/svelte";
 import { onMount } from "svelte";
 import { _, locale } from 'svelte-i18n';
-  import MessagePopup from "./MessagePopup.svelte";
+import MessagePopup from "./MessagePopup.svelte";
+import { ChangeType, Source } from "$lib/frontend/Source";
 
 let canvas = $state<HTMLCanvasElement>();
 let uiFocus = Frontend.uiFocus;
@@ -52,6 +53,17 @@ onMount(() => {
     {#if layout !== undefined}
     {#key $locale}
     <div class="form">
+      <label>
+        <input type='checkbox' bind:checked={Source.subs.view.tableShowHidden}
+          onchange={async () => {
+            if (layout) {
+              layout.requestedLayout = { lint: false };
+              layout.manager.requestRender();
+              await Source.markChanged(ChangeType.View, $_('c.table-row-view'));
+            }
+          }}>
+        {$_('table.show-hidden-channels')}
+      </label>
       <h5>
         {$_('table.edit-columns')}
       </h5>
@@ -119,9 +131,6 @@ onMount(() => {
     display: flex;
     flex-direction: column;
     text-align: start;
-  }
-  .form h5 {
-    padding-top: 0;
   }
   .form select {
     flex-grow: 1;

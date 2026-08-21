@@ -34,7 +34,7 @@ onMount(async () => {
     for (const [style, _] of entry.texts)
       map.set(style.name, (map.get(style.name) ?? 0) + 1);
   styles = subs.styles.map(
-    (x) => ({style: x, count: map.get(x.name) ?? 0, use: true}));
+    (x) => ({style: x, count: map.get(x.name) ?? 0, use: !x.hidden}));
 
   fonts.clear();
   for (const s of styles) if (s.style.font) {
@@ -146,6 +146,7 @@ async function handleSubsetButton(setting: FontSetting) {
         <tr>
           <th></th>
           <th class="stylename">{$_('exportdialog.style')}</th>
+          <th></th>
           <th>{$_('exportdialog.usage')}</th>
         </tr>
         </thead>
@@ -153,10 +154,11 @@ async function handleSubsetButton(setting: FontSetting) {
         {#each styles as entry (entry)}
         <tr>
           <td><input type="checkbox"
+            bind:checked={() => entry.use && entry.count > 0, (x) => entry.use = x}
             disabled={entry.count == 0}
-            bind:checked={entry.use}
             onchange={() => update()}/></td>
           <td>{entry.style.name}</td>
+          <td>{entry.style.hidden ? $_('exportdialog.hidden') : ''}</td>
           <td>{entry.count}</td>
         </tr>
         {/each}

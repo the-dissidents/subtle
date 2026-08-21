@@ -35,8 +35,8 @@ let data = $state<{
 }>();
 
 let selectionOnly = $state(false),
-    fromChannel = $state<SubtitleStyle>(Source.subs.defaultStyle),
-    toChannel = $state<SubtitleStyle>(Source.subs.defaultStyle),
+    fromChannel = $state<SubtitleStyle>(Source.subs.styles[0]),
+    toChannel = $state<SubtitleStyle>(Source.subs.styles[0]),
     mergeSplitLabel = $state('red' as LabelType),
     unmappedLabel = $state('red' as LabelType),
     ignoredLabel = $state('purple' as LabelType),

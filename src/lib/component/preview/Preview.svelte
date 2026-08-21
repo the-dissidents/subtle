@@ -142,6 +142,10 @@ canvas {
   box-sizing: border-box;
 }
 
+.hlayout {
+  gap: 3px;
+}
+
 .volume {
   padding: 3px;
 

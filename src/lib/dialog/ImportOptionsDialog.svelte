@@ -39,7 +39,7 @@ onMount(async () => {
   });
 });
 
-let overrideStyle = $state(Source.subs.defaultStyle);
+let overrideStyle = $state(Source.subs.styles[0]);
 let overrideStyleName = $state('');
 let duplicateWarning = $state(true);
 

@@ -50,6 +50,7 @@ export class SRTParser implements SubtitleParser {
      */
     decode() {
         const subs = new Subtitles();
+        const style = subs.styles[0];
         this.#ignoredCoords = 0;
 
         let buffer = '';
@@ -68,8 +69,8 @@ export class SRTParser implements SubtitleParser {
                 buffer = buffer.substring(0, buffer.length - 1);
             if (buffer.length > 0) {
                 const entry = new SubtitleEntry(start, end);
-                const parsed = HTMLString.parse(buffer, subs.defaultStyle, warnings);
-                entry.texts.set(subs.defaultStyle, parsed);
+                const parsed = HTMLString.parse(buffer, style, warnings);
+                entry.texts.set(style, parsed);
                 subs.entries.push(entry);
                 buffer = '';
             }

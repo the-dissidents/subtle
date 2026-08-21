@@ -66,7 +66,7 @@ function createDefaultValue(type: MetricType) {
   return type == 'number' ? 0
        : type == 'string' ? ''
        : type == 'richtext' ? ''
-       : type == 'style' ? Source.subs.defaultStyle
+       : type == 'style' ? Source.subs.getActiveChannel()
        : type == 'time' ? 0
        : type == 'label' ? 'none'
        : type == 'boolean' ? 'false'

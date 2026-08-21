@@ -126,7 +126,7 @@ function makeData() {
       span: 1,
       ok: true,
       type: 'use',
-      style: Source.subs.defaultStyle,
+      style: Source.subs.styles[0],
       styleName: ''
     });
     i++;
@@ -229,7 +229,7 @@ function resetLineSpan(lineIndex: number) {
       rowIndex: i,
       span: 1,
       type: "use",
-      style: Source.subs.defaultStyle,
+      style: Source.subs.styles[0],
       styleName: ""
     });
 
@@ -329,7 +329,7 @@ function processEntry(ent: SubtitleEntry) {
                 onchange={() => check()} />
               <StyleSelect disabled={line.type !== 'use'}
                 bind:currentStyle={
-                  () => line.style ?? Source.subs.defaultStyle,
+                  () => line.style,
                   // work around a strange problem where this can be called when the dialog is being closed, when `line` is undefined
                   (x) => line ? line.style = x : undefined
                 }

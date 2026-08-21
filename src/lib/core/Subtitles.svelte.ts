@@ -36,6 +36,7 @@ export const ZStyleBase = z.object({
     }),
     alignment:         z._default(z.enum(AlignMode), AlignMode.BottomCenter),
     wrapStyle:         z._default(z.enum(WrapStyle), WrapStyle.Balanced),
+    hidden:            z._default(z.boolean(), false),
 
     // Special members.
     // We allow the value these two properties to be incompatible with the
@@ -127,18 +128,19 @@ type MigrationInfo = 'none' | 'ASS' | 'text' | 'olderVersion' | 'newerVersion';
 
 export class Subtitles {
     metadata: SubtitleMetadata = $state(Subtitles.#createMetadata());
-    /** Must be set to one of `styles` */
-    defaultStyle: SubtitleStyle = $state(SubtitleStyle.new('default'));
     /** The order of the styles should be strictly the reverse of the ASS display order */
-    styles: SubtitleStyle[] = $state([this.defaultStyle]);
+    styles: SubtitleStyle[] = $state([SubtitleStyle.new('default')]);
     entries: SubtitleEntry[] = [];
     migrated: MigrationInfo = 'none';
 
     view = $state({
         perEntryColumns: ['startTime', 'endTime'],
         perChannelColumns: ['style', 'content'],
+        tableShowHidden: true,
         timelineExcludeStyles: new WeakSet<SubtitleStyle>(),
-        timelineActiveChannel: null as WeakRef<SubtitleStyle> | null
+        timelineActiveChannel: null as WeakRef<SubtitleStyle> | null,
+        timelineShowHidden: false,
+        editorShowHidden: false,
     });
 
     static #createMetadata(): SubtitleMetadata {
@@ -148,15 +150,16 @@ export class Subtitles {
     /** Note: only copies styles from base */
     constructor(base?: Subtitles) {
         if (base) {
-            let def: SubtitleStyle | undefined;
             this.styles = base.styles.map((x) => {
                 const clone = $state(SubtitleStyle.clone(x));
-                if (x == base.defaultStyle) def = clone;
                 return clone;
             });
-            Debug.assert(def !== undefined);
-            this.defaultStyle = def;
         }
+    }
+
+    getActiveChannel() {
+        Debug.assert(this.styles.length > 0);
+        return this.view.timelineActiveChannel?.deref() ?? this.styles[0];
     }
 
     removeEntry(ent: SubtitleEntry) {
@@ -188,11 +191,6 @@ export class Subtitles {
                 console.log(style);
                 ok = false;
             }
-        }
-        if (!this.styles.includes(this.defaultStyle)) {
-            void Debug.warn(`debugTestIntegrity: defaultStyle not found in styles`);
-            console.log(this.defaultStyle);
-            ok = false;
         }
         const map = new Map<SubtitleStyle, number>();
         this.entries.forEach((ent, i) => {

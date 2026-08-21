@@ -65,17 +65,13 @@ function updateFocusedStyle() {
     const focused = Editing.getFocusedEntry();
     Debug.assert(focused instanceof SubtitleEntry);
     const style = get(Editing.focused.style);
-    if (style === null || !focused.texts.has(style)
-    ) {
-        const first = focused.texts.has(Source.subs.defaultStyle)
-            ? Source.subs.defaultStyle
-            : Source.subs.styles.find((x) => focused.texts.has(x));
+
+    if (style === null || !focused.texts.has(style)) {
+        const first = Source.subs.styles.find((x) => focused.texts.has(x));
         Debug.assert(first !== undefined);
         Editing.focused.style.set(first);
-        // void Debug.trace('focused style', style?.name, '->', first.name);
         return first;
     }
-    // void Debug.trace('focused style is', style.name);
     return style;
 }
 
@@ -165,7 +161,7 @@ export const Editing = {
     ) {
         void Debug.trace('insertEntry', start, end, index);
         const entry = new SubtitleEntry(start, end);
-        if (!styles) styles = [Source.subs.defaultStyle];
+        if (!styles) styles = [Source.subs.getActiveChannel()];
         for (const s of styles)
             entry.texts.set(s, '');
 
@@ -197,7 +193,7 @@ export const Editing = {
             for (const [style, _] of last.texts)
                 entry.texts.set(style, '');
         } else {
-            entry.texts.set(Source.subs.defaultStyle, '');
+            entry.texts.set(Source.subs.getActiveChannel(), '');
         }
         Source.subs.entries.push(entry);
         await Source.markChanged(ChangeType.Times, $_('action.insert-after'));

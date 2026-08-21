@@ -148,17 +148,11 @@ export class SubtitleRenderer {
 
     #searchCurrentEntries() {
         this.#currentEntries = [];
-        // this.#nextStopTime = Infinity;
         for (let i = 0; i < this.#sortedEntries.length; i++) {
             const w = this.#sortedEntries[i];
-            if (w.entry.start > this.#currentTime) {
-                // this.#nextUpdateEntry = w;
-                break;
-            }
-            if (w.entry.end > this.#currentTime) {
+            if (w.entry.start > this.#currentTime) break;
+            if (w.entry.end > this.#currentTime)
                 this.#currentEntries.push(w);
-                // this.#nextStopTime = Math.min(this.#nextStopTime, w.entry.end);
-            }
         }
         this.#currentEntries.sort((a, b) => a.oldIndex - b.oldIndex);
     }
@@ -215,7 +209,7 @@ export class SubtitleRenderer {
 
         this.#layout = [];
 
-        const reverseStyles = this.#subs.styles.toReversed();
+        const reverseStyles = this.#subs.styles.toReversed().filter((x) => !x.hidden);
         for (const style of reverseStyles)
         for (const ent of this.#currentEntries) {
             const text = ent.entry.texts.get(style);

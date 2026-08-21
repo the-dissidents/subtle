@@ -104,12 +104,10 @@ export class TableLayout {
 
         Source.onSubtitlesChanged.bind(this, (t) => {
             if (t == ChangeType.View) {
-                // the only way columns are updated is through the subtitle table
-                // updateColumns();
+                // if the changes concern the subtitle table, they must have come from the table
+                // itself and already been taken care of, so we don't need to do anything here
             } else if (t !== ChangeType.Metadata) {
-                this.requestedLayout = {
-                    lint: t == ChangeType.LintProfile
-                };
+                this.requestedLayout = { lint: t == ChangeType.LintProfile };
                 this.manager.requestRender();
             }
         });
@@ -145,37 +143,15 @@ export class TableLayout {
 
         this.totalLines = 0;
         Source.subs.entries.forEach((entry, i) => {
-            let entryColumnsHeight = 1;
             const oldEntry = this.entries.at(i);
-
-            const cells: Cell[] = this.entryColumns.map((col, j) => {
-                const metric = Metrics[col.metric];
-
-                const text = metric.textValue(entry, Source.subs.defaultStyle);
-                const oldCell = oldEntry?.cells[j];
-
-                const layout = (oldCell && RichText.equals(oldCell.text, text))
-                    ? oldCell.layout
-                    : layoutText(text, ctx, {
-                        baseStyle: metric.type.isMonospace
-                            ? this.baseStyleMonospace : this.baseStyle,
-                        warpStyle: WrapStyle.NoWrap,
-                        disableSize: true,
-                    });
-                const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
-
-                col.layout!.width = Math.max(col.layout!.width, w);
-                entryColumnsHeight = Math.max(entryColumnsHeight, layout.length);
-                return { text, layout };
-            });
 
             let entryHeight = 0;
             const texts: ChannelLayout[] = [];
 
-            let j = 0;
-            for (const style of Source.subs.styles) {
+            Source.subs.styles.forEach((style, j) => {
                 const content = entry.texts.get(style);
-                if (content === undefined) continue;
+                if (content === undefined
+                || !Source.subs.view.tableShowHidden && style.hidden) return;
 
                 const oldChannel = oldEntry?.texts[j];
                 let lineHeight = 1;
@@ -211,8 +187,32 @@ export class TableLayout {
                         ? [] : Filter.evaluate(style.validator, entry, style).failed
                 });
                 entryHeight += lineHeight;
-                j++;
-            }
+            });
+
+            if (texts.length == 0) return;
+
+            let entryColumnsHeight = 1;
+            const cells: Cell[] = this.entryColumns.map((col, j) => {
+                const metric = Metrics[col.metric];
+
+                // FIXME: dummy style value
+                const text = metric.textValue(entry, [...entry.texts.keys()][0]);
+                const oldCell = oldEntry?.cells[j];
+
+                const layout = (oldCell && RichText.equals(oldCell.text, text))
+                    ? oldCell.layout
+                    : layoutText(text, ctx, {
+                        baseStyle: metric.type.isMonospace
+                            ? this.baseStyleMonospace : this.baseStyle,
+                        warpStyle: WrapStyle.NoWrap,
+                        disableSize: true,
+                    });
+                const w = Math.max(...layout.map((x) => x.width)) + this.cellPadding * 2;
+
+                col.layout!.width = Math.max(col.layout!.width, w);
+                entryColumnsHeight = Math.max(entryColumnsHeight, layout.length);
+                return { text, layout };
+            });
 
             newEntries.push({entry, line: this.totalLines, height: entryHeight, texts, cells});
             newMap.set(entry, {line: this.totalLines, height: entryHeight});

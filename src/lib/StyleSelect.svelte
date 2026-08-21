@@ -3,6 +3,7 @@ import { onDestroy } from "svelte";
 import type { SubtitleStyle } from "./core/Subtitles.svelte";
 import { ChangeType, Source } from "./frontend/Source";
 import { EventHost } from "@the_dissidents/svelte-ui";
+  import { Debug } from "./Debug";
 
 interface Props {
   disabled?: boolean,
@@ -21,7 +22,8 @@ onDestroy(() => EventHost.unbind(me));
 Source.onSubtitlesChanged.bind(me, (t) => {
   if (t == ChangeType.StyleDefinitions || t == ChangeType.General) {
     styles = Source.subs.styles;
-    currentStyle = Source.subs.defaultStyle;
+    Debug.assert(styles.length > 0);
+    currentStyle = styles[0];
     refresh++;
   }
 });
