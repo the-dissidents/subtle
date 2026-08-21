@@ -14,7 +14,7 @@ import { DeleteIcon, PenLineIcon, PlusIcon } from "@lucide/svelte";
 import { onMount } from "svelte";
 import { _, locale } from 'svelte-i18n';
 import MessagePopup from "./MessagePopup.svelte";
-import { ChangeType, Source } from "$lib/frontend/Source";
+import { Source } from "$lib/frontend/Source";
 
 let canvas = $state<HTMLCanvasElement>();
 let uiFocus = Frontend.uiFocus;
@@ -55,12 +55,11 @@ onMount(() => {
     <div class="form">
       <label>
         <input type='checkbox' bind:checked={Source.subs.view.tableShowHidden}
-          onchange={async () => {
-            if (layout) {
-              layout.requestedLayout = { lint: false };
-              layout.manager.requestRender();
-              await Source.markChanged(ChangeType.View, $_('c.table-row-view'));
-            }
+          onchange={() => {
+            Debug.assert(!!layout);
+            layout.requestedLayout = { lint: false };
+            layout.manager.requestRender();
+            Source.markChangedNonSaving();
           }}>
         {$_('table.show-hidden-channels')}
       </label>
@@ -91,9 +90,9 @@ onMount(() => {
           {/if}
         {/each}
       </select>
-      <button onclick={async () => {
+      <button onclick={() => {
         opt.list.splice(i, 1);
-        await layout!.changeColumns();
+        layout!.changeColumns();
       }} aria-label='delete'>
         <DeleteIcon />
       </button>
@@ -107,9 +106,9 @@ onMount(() => {
         onclick={async () =>
           (await Menu.new({items: unused.map(([x, y]) => ({
             text: y.localizedName(),
-            async action() {
+            action() {
               opt.list.push({ metric: x });
-              await layout!.changeColumns();
+              layout!.changeColumns();
             }
           }))})).popup()}
       >

@@ -44,7 +44,7 @@ async function run(doit: boolean) {
 
   let selection: SubtitleEntry[]
   if (selectionOnly) {
-    let s = Editing.getSelection();
+    let s = Editing.selectedEntries;
     if (s.length > 0) selection = s;
     else selection = [...Source.subs.entries];
   } else selection = [...Source.subs.entries];

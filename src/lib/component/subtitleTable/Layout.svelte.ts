@@ -1,4 +1,3 @@
-import { get } from "svelte/store";
 import { CanvasManager } from "../../CanvasManager";
 import { InterfaceConfig, MainConfig } from "../../config/Groups";
 import { Filter, Metrics, type SimpleMetricFilter } from "../../core/Filter";
@@ -103,10 +102,7 @@ export class TableLayout {
         });
 
         Source.onSubtitlesChanged.bind(this, (t) => {
-            if (t == ChangeType.View) {
-                // if the changes concern the subtitle table, they must have come from the table
-                // itself and already been taken care of, so we don't need to do anything here
-            } else if (t !== ChangeType.Metadata) {
+            if (t !== ChangeType.Metadata) {
                 this.requestedLayout = { lint: t == ChangeType.LintProfile };
                 this.manager.requestRender();
             }
@@ -264,10 +260,11 @@ export class TableLayout {
         this.manager.requestRender();
     }
 
-    async changeColumns() {
+    changeColumns() {
         Source.subs.view.perEntryColumns = this.entryColumns.map((x) => x.metric);
         Source.subs.view.perChannelColumns = this.channelColumns.map((x) => x.metric);
-        await Source.markChanged(ChangeType.View, get(_)('c.column-view'));
+        Source.markChangedNonSaving();
+
         this.requestedLayout = { lint: false };
         this.manager.requestRender();
     }

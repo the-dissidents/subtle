@@ -127,6 +127,10 @@ export class TimelineLayout {
         this.manager.requestRender();
     });
 
+    Source.onSubtitleViewChanged.bind(this, () => {
+        this.manager.requestRender();
+    });
+
     Source.onSubtitleObjectReload.bind(this, (newFile) => {
       this.requestedLayout = true;
       this.manager.requestRender();

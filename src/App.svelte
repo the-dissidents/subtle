@@ -82,7 +82,7 @@ Source.onUndoBufferChanged.bind(me, () => {
 
 let selectionLength = $state(0);
 Editing.onSelectionChanged.bind(me, () => {
-  selectionLength = Editing.getSelection().length;
+  selectionLength = Editing.selectionSize;
 });
 
 status.subscribe(() => {

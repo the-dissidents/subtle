@@ -37,7 +37,6 @@ let editingLabel: LabelType = $state('none');
 let uiFocus = Frontend.uiFocus;
 
 let focusedEntry = Editing.focused.entry;
-let focusedStyle = Editing.focused.style;
 
 function updateLinters() {
   return new SvelteMap(Source.subs.styles.map(
@@ -62,7 +61,7 @@ Source.onSubtitleObjectReload.bind(me, () => {
 
 Editing.onSelectionChanged.bind(me, () => {
   editFormUpdateCounter++;
-  const focused = Editing.getFocusedEntry();
+  const focused = Editing.focusedEntry;
   if (focused instanceof SubtitleEntry) {
     updateForm();
     if ($uiFocus == 'EditingField')
@@ -71,7 +70,7 @@ Editing.onSelectionChanged.bind(me, () => {
 });
 
 function updateForm() {
-  let focused = Editing.getFocusedEntry();
+  let focused = Editing.focusedEntry;
   if (!(focused instanceof SubtitleEntry)) return;
   editingT0 = focused.start;
   editingT1 = focused.end;
@@ -82,7 +81,7 @@ function updateForm() {
 }
 
 function applyEditForm() {
-  let focused = Editing.getFocusedEntry();
+  let focused = Editing.focusedEntry;
   Debug.assert(focused instanceof SubtitleEntry);
   focused.start = editingT0;
   focused.end = editingT1;
@@ -99,7 +98,7 @@ function applyEditForm() {
 <!-- timestamp fields -->
 {#key `${editFormUpdateCounter}`}
 <fieldset class="vlayout"
-    disabled={!(Editing.getFocusedEntry() instanceof SubtitleEntry)}>
+    disabled={!(Editing.focusedEntry instanceof SubtitleEntry)}>
   <span class="hlayout center-items">
     <select bind:value={editAnchor}>
       <option value="start">{$_('editbox.anchor-start')}</option>
@@ -178,7 +177,7 @@ function applyEditForm() {
     <input type="checkbox" checked={!!editingAlign}
       onchange={async (x) => {
         if (x.currentTarget.checked && editingAlign == null)
-          editingAlign = $focusedStyle?.alignment ?? AlignMode.BottomCenter;
+          editingAlign = Editing.activeChannel?.alignment ?? AlignMode.BottomCenter;
         if (!x.currentTarget.checked)
           editingAlign = null;
         applyEditForm();
@@ -208,8 +207,9 @@ function applyEditForm() {
 </fieldset>
 <!-- channels view -->
 <div class="vlayout channels flexgrow isolated area" class:focused={$uiFocus == 'EditingField'}>
+  {const focusedStyle = $derived(Editing.activeChannel)}
   <RichEditToolbar
-    target={$focusedStyle ? Editing.styleToEditor.get($focusedStyle) : undefined}
+    target={focusedStyle ? Editing.styleToEditor.get(focusedStyle) : undefined}
     onAction={() => Editing.submitFocusedEntry()} />
 
   {#if $focusedEntry instanceof SubtitleEntry}
@@ -219,7 +219,7 @@ function applyEditForm() {
       {#each Source.subs.styles as style (style.name)}
       {#if focused.texts.has(style) && (Source.subs.view.editorShowHidden || !style.hidden)}
       <tr>
-        <td class={{selected: style.name == $focusedStyle?.name, vlayout: true}}>
+        <td class={{selected: style.name == focusedStyle?.name, vlayout: true}}>
           <StyleSelect currentStyle={style}
             onsubmit={async (newStyle, cancel) => {
               if (focused.texts.has(newStyle) && !await dialog.confirm(
@@ -274,7 +274,7 @@ function applyEditForm() {
               const self = Editing.styleToEditor.get(style);
               Debug.assert(!!self);
               $uiFocus = 'EditingField';
-              Editing.focused.style.set(style);
+              Editing.setActiveChannel(style);
               // void Debug.trace('focused style set to', style.name);
               Editing.focused.control = self;
             }}
@@ -310,7 +310,7 @@ function applyEditForm() {
         <td>
           <label>
             <input type="checkbox" class="button" bind:checked={Source.subs.view.editorShowHidden}
-              onchange={() => void Source.markChanged(ChangeType.View, $_('c.editor-row-view'))}>
+              onchange={() => Source.onSubtitleViewChanged.dispatch()}>
             {$_('table.show-hidden-channels')}
           </label>
         </td>
@@ -319,7 +319,7 @@ function applyEditForm() {
   </table>
   {:else}
   <div class="flexgrow hlayout hint">
-    <i>{Editing.getFocusedEntry() == 'virtual'
+    <i>{Editing.focusedEntry == 'virtual'
       ? $_('editbox.at-virtual-entry')
       : $_('editbox.no-selection')}</i>
   </div>

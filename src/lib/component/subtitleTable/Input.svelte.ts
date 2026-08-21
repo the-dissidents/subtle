@@ -108,7 +108,7 @@ export class TableInput {
 
     async #handleDoubleClick() {
         this.focus();
-        const focused = Editing.getFocusedEntry();
+        const focused = Editing.focusedEntry;
 
         if (focused == 'virtual') {
             if (TableConfig.data.doubleClickStartEdit)

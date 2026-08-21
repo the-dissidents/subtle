@@ -6,7 +6,7 @@ import { _ } from "svelte-i18n";
 import { DialogCommands } from "../../frontend/Dialogs";
 
 export async function contextMenu() {
-    const selection = Editing.getSelection();
+    const selection = Editing.selectedEntries;
     if (selection.length == 0) return;
 
     const menu = await Menu.new({items: [

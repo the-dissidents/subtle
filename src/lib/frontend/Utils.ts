@@ -9,7 +9,6 @@ import { ChangeType, Source } from "./Source";
 import { Debug } from "../Debug";
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { Frontend } from "./Frontend";
-import { get } from "svelte/store";
 import { RichText } from "../core/RichText";
 import { InputConfig } from "../config/Groups";
 const $_ = unwrapFunctionStore(_);
@@ -31,7 +30,7 @@ export const Utils = {
 
     async moveSelectionContinuous(direction: number) {
         if (this.isSelectionDisjunct()) return Debug.early();
-        const selection = Editing.getSelection();
+        const selection = Editing.selectedEntries;
         if (selection.length == 0 || direction == 0) return Debug.early();
 
         const index = Source.subs.entries.indexOf(selection[0]);
@@ -47,7 +46,7 @@ export const Utils = {
     },
 
     async moveSelectionTo(to: 'beginning' | 'end') {
-        const selection = Editing.getSelection();
+        const selection = Editing.selectedEntries;
         if (selection.length == 0) return Debug.early();
         const selectionSet = new Set(selection);
         let newEntries = Source.subs.entries.filter((x) => !selectionSet.has(x));
@@ -241,9 +240,9 @@ export const Utils = {
     },
 
     getAdjecentEntryWithThisStyle(dir: 'next' | 'previous') {
-        const focusedEntry = Editing.getFocusedEntry();
+        const focusedEntry = Editing.focusedEntry;
         if (!(focusedEntry instanceof SubtitleEntry)) return null;
-        const style = get(Editing.focused.style);
+        const style = Editing.activeChannel;
         if (!style) return null;
         const thisIndex = Source.subs.entries.indexOf(focusedEntry);
         Debug.assert(thisIndex >= 0);
@@ -254,7 +253,7 @@ export const Utils = {
     },
 
     async sortSelection(cmp: (a: SubtitleEntry, b: SubtitleEntry) => number, changeName: string) {
-        const selection = Editing.getSelection();
+        const selection = Editing.selectedEntries;
         // assumes selection is not disjunct
         const start = Source.subs.entries.indexOf(selection[0]);
         if (start < 0) return Debug.early();

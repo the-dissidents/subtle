@@ -29,7 +29,7 @@ let inner: DialogBase;
 
 onMount(async () => {
   Debug.assert(inner !== undefined);
-  selection = Editing.getSelection();
+  selection = Editing.selectedEntries;
   Debug.assert(selection.length > 0);
   if (selection.some((x) => x.texts.size > 1)) {
     await dialog.message($_('splitbylinedialog.error'));

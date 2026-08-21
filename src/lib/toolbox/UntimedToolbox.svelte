@@ -71,11 +71,11 @@ const UntimedCommands = {
     name: () => get(_)('untimed.fuzzy.action-apply-match'),
     isApplicable: () => fuzzy.enabled,
     call: async () => {
-      if (fuzzy.currentEntry !== Editing.getFocusedEntry())
+      if (fuzzy.currentEntry !== Editing.focusedEntry)
         return Debug.early();
 
       Debug.assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
-      Editing.focused.style.set(fuzzy.useStyle);
+      Editing.setActiveChannel(fuzzy.useStyle);
       const str = textarea.value
         .substring(textarea.selectionStart, textarea.selectionEnd);
       if (fuzzy.currentEntry.texts.get(fuzzy.useStyle) != str) {
@@ -158,7 +158,7 @@ Source.onSubtitleObjectReload.bind(me, () => {
 });
 
 Editing.onSelectionChanged.bind(me, () => {
-  selection = Editing.getSelection();
+  selection = Editing.selectedEntries;
   fuzzyMatch();
 });
 

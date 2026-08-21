@@ -30,13 +30,11 @@ export type SelectionState = {
 type WritableFocusState = {
     entry: Writable<SubtitleEntry | null | 'virtual'>,
     control: RichEdit | null,
-    style: Writable<SubtitleStyle | null>
 }
 
 export type FocusState = {
     entry: Readable<SubtitleEntry | null | 'virtual'>,
     control: RichEdit | null,
-    style: Writable<SubtitleStyle | null>
 }
 
 export enum SelectMode {
@@ -61,15 +59,14 @@ Metrics['selected'] = new MetricDefinition('boolean', 'editing',
     () => $_('metrics.selected'),
     (e) => Editing.inSelection(e));
 
-function updateFocusedStyle() {
-    const focused = Editing.getFocusedEntry();
+function updateActiveChannel() {
+    const focused = Editing.focusedEntry;
     Debug.assert(focused instanceof SubtitleEntry);
-    const style = get(Editing.focused.style);
-
-    if (style === null || !focused.texts.has(style)) {
+    const style = Editing.activeChannel;
+    if (!style || !focused.texts.has(style)) {
         const first = Source.subs.styles.find((x) => focused.texts.has(x));
         Debug.assert(first !== undefined);
-        Editing.focused.style.set(first);
+        Editing.setActiveChannel(first);
         return first;
     }
     return style;
@@ -83,7 +80,6 @@ const focusState: WritableFocusState = {
     set control(x) {
         __control = x;
     },
-    style: writable(null)
 };
 
 // Blur the rich text editor whenever UI focus leaves the editing field, because this doesn't automatically happen if the selection didn't change.
@@ -117,8 +113,34 @@ export const Editing = {
     onKeepEntryInView: new EventHost<[entry: SubtitleEntry | 'virtual']>(),
     onKeepEntryAtPosition: new EventHost<[entry: SubtitleEntry, previous: SubtitleEntry]>(),
 
-    getFocusedEntry() {
+    get focusedEntry() {
         return get(focusState.entry);
+    },
+
+    /**
+     * @returns the currently selected entries, in source order
+     */
+    get selectedEntries() {
+        return Source.subs.entries.filter(
+            (x) => this.selection.submitted.has(x) ||
+                this.selection.currentGroup.has(x));
+    },
+
+    get selectionSize() {
+        const size = this.selection.submitted.size + this.selection.currentGroup.size;
+        Debug.assert(size == this.selectedEntries.length);
+        return size;
+    },
+
+    get activeChannel() {
+        const channel = Source.subs.view.activeChannel;
+        if (channel && !Source.subs.styles.includes(channel))
+            Source.subs.view.activeChannel = null;
+        return Source.subs.view.activeChannel;
+    },
+
+    get activeOrFirstChannel() {
+        return this.activeChannel ?? Source.subs.styles[0];
     },
 
     inSelection(entry: SubtitleEntry) {
@@ -126,17 +148,16 @@ export const Editing = {
             || this.selection.currentGroup.has(entry);
     },
 
-    /**
-     * @returns the currently selected entries, in source order
-     */
-    getSelection() {
-        return Source.subs.entries.filter(
-            (x) => this.selection.submitted.has(x) ||
-                this.selection.currentGroup.has(x));
+    setActiveChannel(s: SubtitleStyle | null) {
+        Debug.assert(!s || Source.subs.styles.includes(s));
+        if (Source.subs.view.activeChannel === s) return;
+
+        Source.subs.view.activeChannel = s;
+        Source.onSubtitleViewChanged.dispatch();
     },
 
     startEditingFocusedEntry() {
-        const style = updateFocusedStyle();
+        const style = updateActiveChannel();
         const editor = this.styleToEditor.get(style);
         if (!editor) return Debug.early();
         editor.focus();
@@ -161,7 +182,7 @@ export const Editing = {
     ) {
         void Debug.trace('insertEntry', start, end, index);
         const entry = new SubtitleEntry(start, end);
-        if (!styles) styles = [Source.subs.getActiveChannel()];
+        if (!styles) styles = [Editing.activeOrFirstChannel];
         for (const s of styles)
             entry.texts.set(s, '');
 
@@ -193,7 +214,7 @@ export const Editing = {
             for (const [style, _] of last.texts)
                 entry.texts.set(style, '');
         } else {
-            entry.texts.set(Source.subs.getActiveChannel(), '');
+            entry.texts.set(Editing.activeOrFirstChannel, '');
         }
         Source.subs.entries.push(entry);
         await Source.markChanged(ChangeType.Times, $_('action.insert-after'));
@@ -210,22 +231,21 @@ export const Editing = {
     },
 
     async insertChannel(style: SubtitleStyle) {
-        const focused = this.getFocusedEntry();
+        const focused = this.focusedEntry;
         Debug.assert(focused instanceof SubtitleEntry);
         if (focused.texts.has(style)) return;
         focused.texts.set(style, '');
-        focusState.style.set(style);
+        this.setActiveChannel(style);
         await Source.markChanged(ChangeType.InPlace, $_('c.insert-channel'));
         this.startEditingFocusedEntry();
     },
 
     async deleteChannel(style: SubtitleStyle) {
-        const focused = this.getFocusedEntry();
+        const focused = this.focusedEntry;
         Debug.assert(focused instanceof SubtitleEntry);
         if (!focused.texts.has(style)) return Debug.early();
         Debug.assert(focused.texts.size > 1);
         focused.texts.delete(style);
-        updateFocusedStyle();
         await Source.markChanged(ChangeType.InPlace, $_('c.delete-channel'));
     },
 
@@ -236,12 +256,12 @@ export const Editing = {
     },
 
     async submitFocusedEntry() {
-        const focused = this.getFocusedEntry();
+        const focused = this.focusedEntry;
         if (!(focused instanceof SubtitleEntry))
             return Debug.early();
         if (!this.editChanged) return;
 
-        const style = get(focusState.style);
+        const style = this.activeChannel;
         const control = focusState.control;
         Debug.assert(style !== null);
         Debug.assert(control !== null);
@@ -249,7 +269,7 @@ export const Editing = {
     },
 
     async clearFocus(check = true) {
-        const focused = this.getFocusedEntry();
+        const focused = this.focusedEntry;
         if (focused == null) return;
         if (check && focused instanceof SubtitleEntry)
             await this.submitFocusedEntry();
@@ -277,7 +297,7 @@ export const Editing = {
     },
 
     async deleteSelection(cause = ChangeCause.UIList) {
-        const selection = this.getSelection();
+        const selection = this.selectedEntries;
         if (selection.length == 0) return;
         const next = Source.subs.entries.at(Source.subs.entries.indexOf(selection.at(-1)!) + 1);
         const newEntries =
@@ -292,7 +312,7 @@ export const Editing = {
     },
 
     async offsetFocus(n: number, mode: SelectMode, keepType = KeepInViewMode.KeepInSight) {
-        const focused = this.getFocusedEntry();
+        const focused = this.focusedEntry;
         if (focused == 'virtual' && mode == SelectMode.Single && n == -1
          && Source.subs.entries.length > 0)
         {
@@ -316,7 +336,7 @@ export const Editing = {
         // it's only a 'toggle' when multiselecting; otherwise, just select it
         if (mode === SelectMode.Multiple) {
             this.isEditingVirtualEntry.set(false);
-            if (this.getFocusedEntry() == ent) {
+            if (this.focusedEntry == ent) {
                 await this.clearFocus();
             }
             if (this.selection.currentGroup.has(ent)) {
@@ -373,8 +393,8 @@ export const Editing = {
                 this.selection.focused = ent;
                 break;
         }
-        if (this.getFocusedEntry() != ent) {
-            const oldFocus = this.getFocusedEntry();
+        if (this.focusedEntry != ent) {
+            const oldFocus = this.focusedEntry;
 
             this.isEditingVirtualEntry.set(false);
             await this.clearFocus();
@@ -385,7 +405,6 @@ export const Editing = {
             else
                 this.onKeepEntryInView.dispatch(ent);
             this.onSelectionChanged.dispatch(cause);
-            updateFocusedStyle();
         }
     },
 }

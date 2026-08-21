@@ -24,10 +24,11 @@ import { LintProfile } from "./LintProfile";
  *                   positioning and alignment in entry
  *  - 000706 (minor) styles have lint profiles
  *  - 000710 (minor) metadata has `framerate`
- *  - 000712 (minor) styles have `hidden`
+ *  - 000800 (major) styles have `hidden`
+ *                   merge `timelineActiveChannel` and focused style
  */
-export const SubtitleFormatVersion = '000710';
-export const SubtitleCompatibleVersion = '000700';
+export const SubtitleFormatVersion = '000800';
+export const SubtitleCompatibleVersion = '000800';
 
 export type JSONParseMessage = {
     type: 'fixed-style',
@@ -53,11 +54,12 @@ export type JSONParseMessage = {
 };
 
 const ZView = z.object({
+    activeChannel: z._default(z.nullable(z.string()), null),
+
     perEntryColumns: z.array(z.string()),
     perChannelColumns: z.array(z.string()),
     tableShowHidden: z._default(z.boolean(), true),
     timelineExcludeStyles: z.array(z.string()),
-    timelineActiveChannel: z._default(z.nullable(z.string()), null),
     timelineShowHidden: z._default(z.boolean(), false),
     editorShowHidden: z._default(z.boolean(), false),
 });
@@ -70,8 +72,8 @@ function serializeView(sub: Subtitles): z.infer<typeof ZView> {
         timelineExcludeStyles: sub.styles
             .filter((x) => sub.view.timelineExcludeStyles.has(x))
             .map((x) => x.name),
-        timelineActiveChannel:
-            sub.view.timelineActiveChannel?.deref()?.name ?? null,
+        activeChannel: sub.styles
+            .find((x) => x == sub.view.activeChannel)?.name ?? null,
         timelineShowHidden: sub.view.timelineShowHidden,
         editorShowHidden: sub.view.editorShowHidden,
     };
@@ -182,11 +184,11 @@ export class JSONParser implements SubtitleParser {
         this.#subs.view.timelineExcludeStyles =
             new SvelteSet(sv.timelineExcludeStyles.flatMap((x) => styleMap.get(x) ?? []));
 
-        if (sv.timelineActiveChannel) {
-            if (!styleMap.has(sv.timelineActiveChannel))
-                void Debug.warn('invalid timelineActiveChannel');
-            this.#subs.view.timelineActiveChannel =
-                new WeakRef(styleMap.get(sv.timelineActiveChannel)!);
+        if (sv.activeChannel) {
+            if (!styleMap.has(sv.activeChannel))
+                void Debug.warn('invalid activeChannel');
+            else
+                this.#subs.view.activeChannel = styleMap.get(sv.activeChannel)!;
         }
     }
 
@@ -293,7 +295,7 @@ export const JSONSubtitles = {
                 view: serializeView(subs),
                 entries: (options.useEntries ?? subs.entries)
                     .map((x) => serializeEntry(x)),
-            }, undefined, 2)
+            }) // , undefined, 2)
         }
         return obj;
     }

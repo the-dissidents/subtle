@@ -78,7 +78,7 @@ export const TimelineConfig = new PublicConfigGroup(
 async function makeHoldToCreate<T>(other: UICommand<T>) {
     if (other.activated)
         await other.end();
-    const style = Source.subs.view.timelineActiveChannel?.deref();
+    const style = Editing.activeChannel;
     Debug.assert(!!style);
     const pos = Playback.position;
     const entry = Editing.insertAtTime(pos, pos, style);
@@ -92,8 +92,7 @@ export const TimelineCommands = {
         [ CommandBinding.from(['J'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-1'),
-        isApplicable: () => Playback.isPlaying
-            && !!Source.subs.view.timelineActiveChannel?.deref(),
+        isApplicable: () => Playback.isPlaying && !!Editing.activeChannel,
         call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> =>
             makeHoldToCreate(TimelineCommands.holdToCreateEntry2),
         onDeactivate: async ([entry, style]) => {
@@ -107,8 +106,7 @@ export const TimelineCommands = {
         [ CommandBinding.from(['K'], ['Timeline']) ],
     {
         name: () => $_('action.hold-to-create-entry-2'),
-        isApplicable: () => Playback.isPlaying
-            && !!Source.subs.view.timelineActiveChannel?.deref(),
+        isApplicable: () => Playback.isPlaying && !!Editing.activeChannel,
         call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> =>
             makeHoldToCreate(TimelineCommands.holdToCreateEntry1),
         onDeactivate: async ([entry, style]) => {
@@ -122,9 +120,9 @@ export const TimelineCommands = {
         [ CommandBinding.from(['CmdOrCtrl+['], ['Timeline']) ],
     {
         name: () => $_('action.move-whole-start-time-to-cursor'),
-        isApplicable: () => Editing.getSelection().length > 0,
+        isApplicable: () => Editing.selectionSize > 0,
         async call() {
-            const selection = Editing.getSelection();
+            const selection = Editing.selectedEntries;
             const start = Math.min(...selection.map((x) => x.start));
             const delta = start - Playback.position;
             selection.forEach((x) => {
@@ -138,9 +136,9 @@ export const TimelineCommands = {
         [ CommandBinding.from(['CmdOrCtrl+]'], ['Timeline']) ],
     {
         name: () => $_('action.move-whole-end-time-to-cursor'),
-        isApplicable: () => Editing.getSelection().length > 0,
+        isApplicable: () => Editing.selectionSize > 0,
         async call() {
-            const selection = Editing.getSelection();
+            const selection = Editing.selectedEntries;
             const end = Math.max(...selection.map((x) => x.end));
             const delta = end - Playback.position;
             selection.forEach((x) => {
@@ -154,9 +152,9 @@ export const TimelineCommands = {
         [ CommandBinding.from(['['], ['Timeline']) ],
     {
         name: () => $_('action.set-start-time-to-cursor'),
-        isApplicable: () => Editing.getFocusedEntry() instanceof SubtitleEntry,
+        isApplicable: () => Editing.focusedEntry instanceof SubtitleEntry,
         async call() {
-            const focus = Editing.getFocusedEntry();
+            const focus = Editing.focusedEntry;
             Debug.assert(focus instanceof SubtitleEntry);
             if (focus.end > Playback.position) {
                 focus.start = Playback.position;
@@ -168,9 +166,9 @@ export const TimelineCommands = {
         [ CommandBinding.from([']'], ['Timeline']) ],
     {
         name: () => $_('action.set-end-time-to-cursor'),
-        isApplicable: () => Editing.getFocusedEntry() instanceof SubtitleEntry,
+        isApplicable: () => Editing.focusedEntry instanceof SubtitleEntry,
         async call() {
-            const focus = Editing.getFocusedEntry();
+            const focus = Editing.focusedEntry;
             Debug.assert(focus instanceof SubtitleEntry);
             if (focus.start < Playback.position) {
                 focus.end = Playback.position;

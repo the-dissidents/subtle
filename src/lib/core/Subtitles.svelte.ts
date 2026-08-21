@@ -138,7 +138,10 @@ export class Subtitles {
         perChannelColumns: ['style', 'content'],
         tableShowHidden: true,
         timelineExcludeStyles: new WeakSet<SubtitleStyle>(),
-        timelineActiveChannel: null as WeakRef<SubtitleStyle> | null,
+
+        // internal
+        activeChannel: null as SubtitleStyle | null,
+
         timelineShowHidden: false,
         editorShowHidden: false,
     });
@@ -155,11 +158,6 @@ export class Subtitles {
                 return clone;
             });
         }
-    }
-
-    getActiveChannel() {
-        Debug.assert(this.styles.length > 0);
-        return this.view.timelineActiveChannel?.deref() ?? this.styles[0];
     }
 
     removeEntry(ent: SubtitleEntry) {

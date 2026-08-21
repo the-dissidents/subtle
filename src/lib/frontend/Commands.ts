@@ -42,33 +42,33 @@ const toPlaintext = (entries: SubtitleEntry[]) =>
         .toString();
 
 async function copySelection(transform: (use: SubtitleEntry[]) => string) {
-    const selection = Editing.getSelection();
+    const selection = Editing.selectedEntries;
     if (selection.length == 0) return;
     await clipboard.writeText(transform(selection));
     Frontend.setStatus($_('msg.copied'));
 };
 
 function hasSelection(n = 0) {
-    return Editing.getSelection().length > n;
+    return Editing.selectionSize > n;
 }
 
 export function hasFocus() {
-    return Editing.getFocusedEntry() instanceof SubtitleEntry;
+    return Editing.focusedEntry instanceof SubtitleEntry;
 }
 
 function selectionDistinctStyles() {
-    const styles = Editing.getSelection().map((x) => [...x.texts.keys()]).flat();
+    const styles = Editing.selectedEntries.map((x) => [...x.texts.keys()]).flat();
     return Source.subs.styles.filter((x) => styles.includes(x));
 }
 
 function selectionCanCombine() {
-    const styles = Editing.getSelection().map((x) => [...x.texts.keys()]).flat();
+    const styles = Editing.selectedEntries.map((x) => [...x.texts.keys()]).flat();
     const distinctStyles = Source.subs.styles.filter((x) => styles.includes(x));
     return styles.length == distinctStyles.length;
 }
 
 function selectionCommonStyles() {
-    const selection = Editing.getSelection();
+    const selection = Editing.selectedEntries;
     return Source.subs.styles
         .filter((x) => selection.every((y) => y.texts.has(x)));
 }
@@ -109,9 +109,9 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         [ CommandBinding.from(['Enter'], ['Table', 'Timeline']), ],
     {
         name: () => $_('action.edit-this-entry'),
-        isApplicable: () => Editing.getFocusedEntry() !== null,
+        isApplicable: () => Editing.focusedEntry !== null,
         async call() {
-            const focusedEntry = Editing.getFocusedEntry();
+            const focusedEntry = Editing.focusedEntry;
             if (focusedEntry == 'virtual')
                 await Editing.startEditingNewVirtualEntry();
             else
@@ -124,7 +124,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.edit-next-entry'),
         isApplicable: hasFocus,
         async call() {
-            const focusedEntry = Editing.getFocusedEntry();
+            const focusedEntry = Editing.focusedEntry;
             if (!(focusedEntry instanceof SubtitleEntry)) return;
             await Editing.submitFocusedEntry();
             const i = Source.subs.entries.indexOf(focusedEntry) + 1;
@@ -143,7 +143,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.edit-next-entry-with-this-style'),
         isApplicable: hasFocus,
         async call() {
-            const focusedEntry = Editing.getFocusedEntry();
+            const focusedEntry = Editing.focusedEntry;
             if (!(focusedEntry instanceof SubtitleEntry)) return;
             await Editing.submitFocusedEntry();
             const next = Utils.getAdjecentEntryWithThisStyle('next');
@@ -239,7 +239,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.copy-text'),
         isApplicable: hasSelection,
         items: () => forEachStyle(async (style) => {
-            const selection = Editing.getSelection();
+            const selection = Editing.selectedEntries;
             if (selection.length == 0) return;
             const results: string[] = [];
             selection.forEach((x) => {
@@ -281,7 +281,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 return;
             }
 
-            const selection = Editing.getSelection();
+            const selection = Editing.selectedEntries;
             if (selection.length !== portion.entries.length
             && !await dialog.confirm($_('msg.paste-text-entry-count-mismatch',
                     {values: { n1: selection.length, n2: portion.entries.length }}))
@@ -323,7 +323,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                 style: portion.migrated == 'text'
                     ? {
                         type: 'override',
-                        overrideStyle: Source.subs.getActiveChannel()
+                        overrideStyle: Editing.activeOrFirstChannel
                     } : {
                         type: 'keepDifferent'
                     },
@@ -380,7 +380,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         isApplicable: hasSelection,
         async call() {
             const newSelection = new Set<SubtitleEntry>;
-            const oldSelection = new Set(Editing.getSelection());
+            const oldSelection = new Set(Editing.selectedEntries);
             for (const e of Source.subs.entries)
                 if (!oldSelection.has(e)) newSelection.add(e);
             await Editing.clearFocus();
@@ -396,7 +396,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.insert-before'),
         isApplicable: hasFocus,
         async call() {
-            const ent = Editing.getFocusedEntry();
+            const ent = Editing.focusedEntry;
             Debug.assert(ent instanceof SubtitleEntry);
             const index = Source.subs.entries.indexOf(ent);
             Debug.assert(index >= 0);
@@ -430,7 +430,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.insert-after'),
         async call() {
-            let ent = Editing.getFocusedEntry();
+            let ent = Editing.focusedEntry;
             if (!(ent instanceof SubtitleEntry)) ent = null;
             const index = ent ? Source.subs.entries.indexOf(ent) + 1 : Source.subs.entries.length;
             Debug.assert(index >= 0);
@@ -502,7 +502,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.combine'),
         isApplicable: () => hasSelection(1) && selectionCanCombine(),
         async call() {
-            const selection = Editing.getSelection();
+            const selection = Editing.selectedEntries;
             const first = selection[0];
             for (const entry of selection.slice(1)) {
                 for (const [style, text] of entry.texts)
@@ -521,7 +521,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.split-simultaneous'),
         isApplicable: () => hasSelection(),
         async call() {
-            const selection = Editing.getSelection();
+            const selection = Editing.selectedEntries;
             const newSelection: SubtitleEntry[] = [];
             for (let i = 0; i < selection.length; i++) {
                 const entry = selection[i];
@@ -551,14 +551,14 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.connect-all'),
         isApplicable: () => hasSelection(1),
-        call: () => Utils.mergeEntries(Editing.getSelection(), true),
+        call: () => Utils.mergeEntries(Editing.selectedEntries, true),
     }),
     connectKeepingFirstOnly: new UICommand(() => $_('category.editing'),
         [],
     {
         name: () => $_('action.connect-keeping-first-only'),
         isApplicable: () => hasSelection(1),
-        call: () => Utils.mergeEntries(Editing.getSelection(), false),
+        call: () => Utils.mergeEntries(Editing.selectedEntries, false),
     }),
     connectMenu: new UICommand(() => $_('category.editing'),
         [],
@@ -577,7 +577,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         items: LABEL_TYPES.map((x) => ({
             name: () => $_(`label.${x}`),
             async call() {
-                for (const entry of Editing.getSelection())
+                for (const entry of Editing.selectedEntries)
                     entry.label = x;
                 await Source.markChanged(ChangeType.InPlace, $_('c.label'));
             },
@@ -615,7 +615,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.create-channel'),
         isApplicable: () => hasSelection() && notSelectionCommonStyles().length > 0,
         items: () => forEachStyle(async (x) => {
-            const selection = Editing.getSelection();
+            const selection = Editing.selectedEntries;
             let done = false;
             for (const ent of selection)
                 if (!ent.texts.has(x)) {
@@ -632,7 +632,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.remove-channel'),
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
-            (x) => Utils.removeStyle(Editing.getSelection(), x),
+            (x) => Utils.removeStyle(Editing.selectedEntries, x),
             selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -642,7 +642,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.remove-newlines'),
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
-            (x) => Utils.removeNewlines(Editing.getSelection(), x),
+            (x) => Utils.removeNewlines(Editing.selectedEntries, x),
             selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -652,7 +652,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.remove-formatting'),
         isApplicable: () => hasSelection(),
         items: () => forEachStyle(
-            (x) => Utils.removeFormatting(Editing.getSelection(), x),
+            (x) => Utils.removeFormatting(Editing.selectedEntries, x),
             selectionDistinctStyles()),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -662,7 +662,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         name: () => $_('action.remove-empty'),
         isApplicable: () => hasSelection(),
         async call() {
-            const selection = Editing.getSelection();
+            const selection = Editing.selectedEntries;
             let done = 0;
             for (const ent of selection) {
                 for (const [style, text] of ent.texts) {
@@ -688,7 +688,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         items: () => doubleForEachStyle(
             selectionDistinctStyles(), Source.subs.styles,
             () => $_('cxtmenu.by'),
-            (x, y) => Utils.replaceStyle(Editing.getSelection(), x, y)
+            (x, y) => Utils.replaceStyle(Editing.selectedEntries, x, y)
         ),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -700,7 +700,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         items: () => doubleForEachStyle(
             selectionDistinctStyles(), selectionDistinctStyles(),
             () => $_('cxtmenu.and'),
-            (x, y) => Utils.exchangeStyle(Editing.getSelection(), x, y)
+            (x, y) => Utils.exchangeStyle(Editing.selectedEntries, x, y)
         ),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -712,7 +712,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         items: () => doubleForEachStyle(
             selectionDistinctStyles(), selectionDistinctStyles(),
             () => $_('cxtmenu.and'),
-            (x, y) => Utils.mergeStyle(Editing.getSelection(), x, y)
+            (x, y) => Utils.mergeStyle(Editing.selectedEntries, x, y)
         ),
         emptyText: () => $_('msg.no-available-item')
     }),
@@ -721,14 +721,14 @@ export const BasicCommands: Record<string, AnyUICommand> = {
     {
         name: () => $_('action.merge-overlapping-duplicates'),
         isApplicable: () => hasSelection(1),
-        call: () => Utils.mergeDuplicate(Editing.getSelection())
+        call: () => Utils.mergeDuplicate(Editing.selectedEntries)
     }),
     fixOverlap: new UICommand(() => $_('category.tool'),
         [],
     {
         name: () => $_('action.fix-erroneous-overlapping'),
         isApplicable: () => hasSelection(1),
-        call: () => Utils.fixOverlap(Editing.getSelection())
+        call: () => Utils.fixOverlap(Editing.selectedEntries)
     }),
 };
 

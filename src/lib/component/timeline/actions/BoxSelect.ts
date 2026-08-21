@@ -16,7 +16,7 @@ export class BoxSelect extends TimelineAction {
 
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent) {
         super(self, layout, e0);
-        this.origSelection = Editing.getSelection();
+        this.origSelection = Editing.selectedEntries;
         this.x1 = e0.offsetX + this.layout.manager.scroll[0];
         this.y1 = e0.offsetY + this.layout.manager.scroll[1];
         this.deregister = self.registerInterruptKey();

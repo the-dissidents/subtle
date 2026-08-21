@@ -85,18 +85,12 @@ export class TimelineInput {
 
         Editing.onSelectionChanged.bind(this, async (cause) => {
             if (cause != ChangeCause.Timeline) {
-                this.#selection = new SvelteSet(Editing.getSelection());
-                const focused = Editing.getFocusedEntry();
+                this.#selection = new SvelteSet(Editing.selectedEntries);
+                const focused = Editing.focusedEntry;
                 if (focused instanceof SubtitleEntry)
                     await this.layout.keepEntryInView(focused);
                 this.manager.requestRender();
             }
-        });
-
-        this.layout.onLayout.bind(this, () => {
-            const active = Source.subs.view.timelineActiveChannel?.deref();
-            if (active && !this.layout.shownStyles.includes(active))
-                Source.subs.view.timelineActiveChannel = null;
         });
 
         this.currentAction = $state();
@@ -211,7 +205,7 @@ export class TimelineInput {
 
     #onDoubleClick() {
         if (this.#selection.size == 1
-         && Editing.getFocusedEntry() == [...this.#selection][0])
+         && Editing.focusedEntry == [...this.#selection][0])
         {
             void SubtitleTableHandle.processDoubleClick?.();
         }
@@ -389,10 +383,7 @@ export class TimelineInput {
         if (e.offsetX < this.layout.leftColumnWidth) {
             const style = this.layout.getChannelFromOffsetY(e.offsetY);
             if (style) {
-                if (Source.subs.view.timelineActiveChannel?.deref() === style)
-                    Source.subs.view.timelineActiveChannel = null;
-                else
-                    Source.subs.view.timelineActiveChannel = new WeakRef(style);
+                Editing.setActiveChannel(Editing.activeChannel === style ? null : style);
                 this.manager.requestRender();
             }
             return;

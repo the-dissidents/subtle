@@ -42,7 +42,6 @@ export enum ChangeType {
     Order,
     Filter,
     LintProfile,
-    View,
     StyleDefinitions,
     General,   // TODO: this is unclear
     Metadata
@@ -53,7 +52,6 @@ async function readSnapshot(s: Snapshot, archive: string) {
 
     await Editing.clearFocus(false);
     await Editing.clearSelection();
-    Editing.focused.style.set(Source.subs.getActiveChannel());
 
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch(false);
@@ -162,6 +160,7 @@ export const Source = {
     onUndoBufferChanged: new EventHost(),
     onSubtitlesChanged: new EventHost<[type: ChangeType]>(),
     onSubtitleObjectReload: new EventHost<[newFile: boolean]>(),
+    onSubtitleViewChanged: new EventHost<[]>(),
     onSubtitleWillSave: new EventHost<[disk: boolean]>(),
 
     async init() {
@@ -239,7 +238,7 @@ export const Source = {
         this.subs = newSubs;
         await Editing.clearFocus(false);
         await Editing.clearSelection();
-        Editing.focused.style.set(newSubs.getActiveChannel());
+
         currentFile.set(
             (newSubs.migrated !== 'none'
                 && newSubs.migrated !== 'olderVersion') ? '' : path);

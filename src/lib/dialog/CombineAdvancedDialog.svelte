@@ -58,7 +58,7 @@ function prepare() {
   const as: SubtitleEntry[] = [];
   const bs: SubtitleEntry[] = [];
   const both: SubtitleEntry[] = [];
-  const entries = selectionOnly ? Editing.getSelection() : Source.subs.entries;
+  const entries = selectionOnly ? Editing.selectedEntries : Source.subs.entries;
 
   for (const ent of entries) {
     const hasA = ent.texts.has(fromChannel);

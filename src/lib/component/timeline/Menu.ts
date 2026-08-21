@@ -5,7 +5,7 @@ import { get } from "svelte/store";
 import { _ } from "svelte-i18n";
 
 export async function contextMenu() {
-    const selection = Editing.getSelection();
+    const selection = Editing.selectedEntries;
 
     const menu = await Menu.new({items:
         selection.length == 0

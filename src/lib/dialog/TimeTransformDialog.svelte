@@ -46,7 +46,7 @@ onMount(async () => {
   return close({
     // t = (t0 - anchor) * scale + anchor + offset
     // t = t0 * scale + anchor + offset - anchor * scale
-    selection: Editing.getSelection(),
+    selection: Editing.selectedEntries,
     offset: cpAnchor + cpOffset - cpAnchor * cpScale,
     modifySince,
     scale: cpScale
@@ -73,7 +73,7 @@ let cpAnchor = $derived.by(() => {
 let selection: SubtitleEntry[];
 
 function updateSelection() {
-  selection = Editing.getSelection();
+  selection = Editing.selectedEntries;
   selectionStart = Math.min(...selection.map((x) => x.start));
   selectionEnd = Math.max(...selection.map((x) => x.end));
 }

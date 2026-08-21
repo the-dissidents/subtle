@@ -84,14 +84,14 @@ let term             = Memorized.$('search-term', z.string(), ''),
     caseSensitive    = Memorized.$('search-caseSensitive', z.boolean(), true),
     useReplaceStyle  = Memorized.$('use-replace-style', z.boolean(), false),
     onlyReplaceStyle = Memorized.$('only-replace-style', z.boolean(), false),
-    replaceStyle     = $state(Source.subs.getActiveChannel());
+    replaceStyle     = $state(Editing.activeOrFirstChannel);
 
 // condition (simple)
 let selectionOnly   = Memorized.$('search-selectionOnly', z.boolean(), false),
     useStyle        = $state(false),
     useLabel        = $state(false);
 
-let searchStyle  = $state(Source.subs.getActiveChannel());
+let searchStyle  = $state(Editing.activeOrFirstChannel);
 let label: LabelType = $state('none');
 
 // condition (advanced)
@@ -203,7 +203,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     return;
   }
 
-  const focusedEntry = Editing.getFocusedEntry();
+  const focusedEntry = Editing.focusedEntry;
   let focus = focusedEntry instanceof SubtitleEntry ? focusedEntry : entries[0];
   if ($selectionOnly)
     focus = Source.subs.entries.find((x) => Editing.inSelection(x)) ?? focus;
@@ -303,7 +303,7 @@ async function execute(type: SearchAction, option: SearchOption) {
         if (newType == 'select') {
           // select this, and done
           await Editing.selectEntry(entry, SelectMode.Single, ChangeCause.Action);
-          Editing.focused.style.set(newStyle);
+          Source.subs.view.activeChannel = newStyle;
           setTimeout(async () => {
             const editor = Editing.styleToEditor.get(newStyle);
             if (!editor) {

@@ -3,7 +3,6 @@ import { Debug } from "./Debug";
 import { newMetricFilter, MetricFilterMethods, Metrics, type SimpleMetricFilter, type MetricFilter, MetricFilterDefaultMethods, type MetricContext, METRIC_CONTEXTS, type MetricFilterMethodName, type MetricType } from "./core/Filter";
 import { type SubtitleStyle } from "./core/Subtitles.svelte";
 import { type LabelType } from "./core/Labels";
-import { Source } from "./frontend/Source";
 
 import StyleSelect from "./StyleSelect.svelte";
 import TimestampInput from "./TimestampInput.svelte";
@@ -11,10 +10,11 @@ import LabelSelect from "./LabelSelect.svelte";
 import { Tooltip } from "@the_dissidents/svelte-ui";
 
 import { Menu } from "@tauri-apps/api/menu";
-import { MoreHorizontalIcon, PlusIcon } from "@lucide/svelte";
+import { EllipsisIcon, PlusIcon } from "@lucide/svelte";
 import { tick } from "svelte";
 import { _, locale } from 'svelte-i18n';
 import type { Action } from "svelte/action";
+  import { Editing } from "./frontend/Editing";
 
 interface Props {
   filter: MetricFilter | null;
@@ -66,7 +66,7 @@ function createDefaultValue(type: MetricType) {
   return type == 'number' ? 0
        : type == 'string' ? ''
        : type == 'richtext' ? ''
-       : type == 'style' ? Source.subs.getActiveChannel()
+       : type == 'style' ? Editing.activeOrFirstChannel
        : type == 'time' ? 0
        : type == 'label' ? 'none'
        : type == 'boolean' ? 'false'
@@ -282,7 +282,7 @@ function createDefaultFilter(metric: string = 'content'): SimpleMetricFilter {
         ]});
         await menu.popup();
       }}>
-        <MoreHorizontalIcon />
+        <EllipsisIcon />
       </button>
     </div>
   {/if}

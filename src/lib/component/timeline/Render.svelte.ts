@@ -8,6 +8,7 @@ import { TimelineConfig } from "./Config";
 import { type TimelineInput } from "./Input.svelte";
 import { hook } from "../../details/Hook.svelte";
 import { Source } from "../../frontend/Source";
+import { Editing } from "$lib/frontend/Editing";
 
 const HEADER_BACK       = $derived(theme.isDark ? 'hsl(0deg 0% 20%/50%)' : 'hsl(0deg 0% 75%/50%)');
 const TICK_COLOR        = $derived(theme.isDark ? 'white' : 'gray');
@@ -288,7 +289,7 @@ export class TimelineRenderer {
 	#renderTracks(ctx: CanvasRenderingContext2D) {
 		let y = TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
 		for (const s of this.layout.shownStyles) {
-			if (Source.subs.view.timelineActiveChannel?.deref() === s) {
+			if (Editing.activeChannel === s) {
 				ctx.fillStyle = SELECTED_TRACK_BACK;
 				ctx.fillRect(this.manager.scroll[0], y,
 					this.layout.width,
@@ -500,8 +501,10 @@ export class TimelineRenderer {
 		ctx.font = font(TimelineConfig.data.fontSize);
 		ctx.textBaseline = 'middle';
 		ctx.textAlign = 'end';
+
+        const activeChannel = Editing.activeChannel;
 		for (const s of this.layout.shownStyles) {
-			if (Source.subs.view.timelineActiveChannel?.deref() === s) {
+			if (s === activeChannel) {
 				ctx.fillStyle = LEFT_COLUMN_SELECTED;
 				ctx.fillRect(x, y1,
 					this.layout.leftColumnWidth,

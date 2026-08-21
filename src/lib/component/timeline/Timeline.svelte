@@ -14,6 +14,7 @@ import { AlignCenterVerticalIcon, FrameIcon, MagnetIcon, MousePointerIcon, PenLi
 
 import { Popup, Tooltip } from '@the_dissidents/svelte-ui';
   import { Basic } from '../../Basic';
+  import { Debug } from '$lib/Debug';
 
 let currentMode = TimelineHandle.currentMode;
 let useSnap = TimelineHandle.useSnap;
@@ -159,10 +160,11 @@ function updateSnapOverride(ev: KeyboardEvent) {
       {#key styleRefreshCounter}
       <label>
         <input type='checkbox' bind:checked={Source.subs.view.timelineShowHidden}
-          onchange={async () => {
-            layout!.requestedLayout = true;
-            await Source.markChanged(ChangeType.View, $_('c.timeline-row-view'));
+          onchange={() => {
+            Debug.assert(!!layout);
+            layout.requestedLayout = true;
             styleRefreshCounter++;
+            Source.markChangedNonSaving();
           }}>
         {$_('table.show-hidden-channels')}
       </label>
@@ -174,13 +176,15 @@ function updateSnapOverride(ev: KeyboardEvent) {
           <input type="checkbox"
             disabled={hidden}
             checked={!exclude.has(style) && !hidden}
-            onchange={async (ev) => {
+            onchange={(ev) => {
               if (ev.currentTarget.checked)
                 exclude.delete(style);
               else
                 exclude.add(style);
-              layout!.requestedLayout = true;
-              await Source.markChanged(ChangeType.View, $_('c.timeline-row-view'));
+
+              Debug.assert(!!layout);
+              layout.requestedLayout = true;
+              Source.markChangedNonSaving();
             }} />
           {style.name}
         </label>

@@ -69,8 +69,8 @@ export class TableRenderer {
         const [width, height] = this.manager.size;
 
         // table
-        const focused = Editing.getFocusedEntry();
-        const selection = new Set(Editing.getSelection());
+        const focused = Editing.focusedEntry;
+        const selection = new Set(Editing.selectedEntries);
         let i = 0;
         for (const { entry, line, height: lh, texts, cells } of this.layout.entries) {
             i += 1;

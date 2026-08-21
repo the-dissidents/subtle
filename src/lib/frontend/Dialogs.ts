@@ -55,7 +55,7 @@ export const DialogCommands = {
     {
         name: () => $_('action.split-by-line'),
         isDialog: true,
-        isApplicable: () => Editing.getSelection().length > 0,
+        isApplicable: () => Editing.selectionSize > 0,
         call: () => openDialog(Dialog.splitByLine)
     }),
     compareDialog: new UICommand(() => $_('category.tool'),
