@@ -253,6 +253,12 @@ const result = $derived<LintProfile>({
             (x) => dashes!.dialog.separateLines = x}>
           {$_('lint.dashes-require-newline')}
         </label>
+        <label>
+          <input type='checkbox' bind:checked={
+            () => dashes?.dialog.reportLoneDash ?? false,
+            (x) => dashes!.dialog.reportLoneDash = x}>
+          {$_('lint.dashes-report-single-dash')}
+        </label>
       </div>
       <div class="list flexgrow">
         <h5>{$_('lint.latin-dashes')}</h5>

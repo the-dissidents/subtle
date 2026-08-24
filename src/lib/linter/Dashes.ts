@@ -30,7 +30,8 @@ export const DashesConfig = z.object({
     dialog: z.object({
         type: ZDashType,
         spaces: z.boolean(),
-        separateLines: z.boolean()
+        separateLines: z.boolean(),
+        reportLoneDash: z.optional(z.boolean()),
     }),
     dash: z.object({
         type: ZDashType,
@@ -51,9 +52,14 @@ export type DashesConfig = z.infer<typeof DashesConfig>;
 // The en-dash is the correct form of a CJK word connector.
 const CJK_WORD_CONNECTOR = DashType.enDash;
 
-// Wide CJK punctuations that subsume a following space, so a dash right after them is
-// effectively spaced and no missing space should be reported there.
-const SPACE_SUBSUMING = '、，。；：！？」』';
+// Wide CJK punctuations that subsume a following space: a dash right after them is already
+// visually spaced on its left, so no missing space should be reported there.
+const FOLLOWING_SPACE_SUBSUMING = '、，。；：！？」』';
+
+// Wide CJK punctuations that subsume a preceding space (opening brackets and quotes): a dash
+// right before them is already visually spaced on its right, so no missing space should be
+// reported there either.
+const PRECEDING_SPACE_SUBSUMING = '「『（《【〈';
 
 export class DashLinter {
     constructor(private config: DashesConfig) {}
@@ -74,13 +80,17 @@ export class DashLinter {
 
     // Emit a dialog-dash diagnostic, normalizing the dash form and its surrounding spaces.
     // A left space is never added at the start of a line or right after a space-subsuming
-    // punctuation (it is unavoidable/subsumed); likewise no right space at the end of a line.
+    // punctuation; a right space is never added at the end of a line or right before a
+    // preceding-space-subsuming punctuation (in either case it is unavoidable/subsumed).
     private emitDialog(
         diagnostics: Diagnostic[],
         start: number, to: number, fullMatch: string,
         isStartOfLine: boolean, isEndOfLine: boolean, leftSubsumed: boolean,
-        confident: boolean
+        rightSubsumed: boolean,
+        confident: boolean,
+        dialogRanges: { start: number, to: number, isStartOfLine: boolean }[]
     ): void {
+        dialogRanges.push({ start, to, isStartOfLine });
         // Only nag about newlines when we are sure this is a dialog dash, to avoid false
         // positives on ambiguous CJK guesses (which might actually be word connectors).
         if (confident && this.config.dialog.separateLines && !isStartOfLine) diagnostics.push({
@@ -92,7 +102,7 @@ export class DashLinter {
         const spaces = this.config.dialog.spaces;
 
         const expLeftSpace = (isStartOfLine || leftSubsumed) ? '' : (spaces ? ' ' : '');
-        const expRightSpace = isEndOfLine ? '' : (spaces ? ' ' : '');
+        const expRightSpace = (isEndOfLine || rightSubsumed) ? '' : (spaces ? ' ' : '');
         const expectedSub = expLeftSpace + expectedChar + expRightSpace;
 
         if (fullMatch !== expectedSub) diagnostics.push({
@@ -111,14 +121,16 @@ export class DashLinter {
         //   non-CJK. Otherwise, in a profile that checks CJK dashes, it lives in a CJK context.
         // - Real CJK dashes are always long (never a single em-dash) and never spaced; a short
         //   or spaced dash in a CJK context is therefore a dialog dash, not a broken CJK dash.
-        // - Start of line, and (as spacing) right after a space-subsuming punctuation, count the
-        //   same as being spaced. End of line does not (a trailing dash can be a real CJK dash).
+        // - Start of line, a space-subsuming punctuation on the left, and a preceding-space-
+        //   subsuming punctuation on the right all count as spacing. End of line does not (a
+        //   trailing dash can be a real CJK dash).
         // - Unspaced short dashes in a CJK context are ambiguous between dialog dashes and word
         //   connectors; the `wordConnectors` option decides, and neither is reported confidently.
         // - When `cjkDash` is undefined, no CJK logic applies: everything is plain non-CJK text.
 
         const cjk = this.config.cjkDash;
         const diagnostics: Diagnostic[] = [];
+        const dialogRanges: { start: number, to: number, isStartOfLine: boolean }[] = [];
         const dashRegex = /([ \t]*)([-－⸺\u2010-\u2015]+)([ \t]*)/g;
         let match;
 
@@ -138,11 +150,12 @@ export class DashLinter {
             const leftChar = leftContext.slice(-1);
             const rightChar = rightContext.slice(0, 1);
 
-            const leftSubsumed = leftChar !== '' && SPACE_SUBSUMING.includes(leftChar);
+            const leftSubsumed = leftChar !== '' && FOLLOWING_SPACE_SUBSUMING.includes(leftChar);
+            const rightSubsumed = rightChar !== '' && PRECEDING_SPACE_SUBSUMING.includes(rightChar);
             // Start of line and subsumed punctuation act like spacing on the left; a bare end
             // of line does not count as spacing (trailing CJK dashes are legitimate).
             const spacedLeft = leftSpaces.length > 0 || isStartOfLine || leftSubsumed;
-            const spacedRight = rightSpaces.length > 0;
+            const spacedRight = rightSpaces.length > 0 || rightSubsumed;
             const spaced = spacedLeft || spacedRight;
 
             const isLong = dashChars === '⸺' || dashChars.length >= 2;
@@ -155,7 +168,7 @@ export class DashLinter {
                 // A dash at the start of a line is a dialog dash.
                 if (isStartOfLine) {
                     this.emitDialog(diagnostics, start, to, fullMatch,
-                        isStartOfLine, isEndOfLine, leftSubsumed, true);
+                        isStartOfLine, isEndOfLine, leftSubsumed, rightSubsumed, true, dialogRanges);
                     continue;
                 }
 
@@ -188,7 +201,7 @@ export class DashLinter {
                         });
                     } else {
                         this.emitDialog(diagnostics, start, to, fullMatch,
-                            isStartOfLine, isEndOfLine, leftSubsumed, false);
+                            isStartOfLine, isEndOfLine, leftSubsumed, rightSubsumed, false, dialogRanges);
                     }
                     continue;
                 }
@@ -197,7 +210,7 @@ export class DashLinter {
                 // spaced it certainly cannot be a CJK dash, so we can report it confidently;
                 // otherwise (spaced but long) we only guess.
                 this.emitDialog(diagnostics, start, to, fullMatch,
-                    isStartOfLine, isEndOfLine, leftSubsumed, !isLong);
+                    isStartOfLine, isEndOfLine, leftSubsumed, rightSubsumed, !isLong, dialogRanges);
                 continue;
             }
 
@@ -223,7 +236,7 @@ export class DashLinter {
 
             if (isDialog) {
                 this.emitDialog(diagnostics, start, to, fullMatch,
-                    isStartOfLine, isEndOfLine, leftSubsumed, true);
+                    isStartOfLine, isEndOfLine, leftSubsumed, rightSubsumed, true, dialogRanges);
                 continue;
             }
 
@@ -248,6 +261,20 @@ export class DashLinter {
                 });
             }
         }
+
+        // A lone dialog dash marks no speaker change, so it is unnecessary: report it when
+        // asked. We can only safely remove a dash that begins a line; elsewhere dropping the
+        // surrounding spaces might join two unrelated words, so no fix is offered there.
+        if (this.config.dialog.reportLoneDash && dialogRanges.length === 1) {
+            const { start, to, isStartOfLine } = dialogRanges[0];
+            diagnostics.push({
+                start, to,
+                type: 'punctuation',
+                description: $_('dashlint.single-dialog-dash'),
+                ...(isStartOfLine ? { fix: { substitute: '', confident: true } } : {})
+            });
+        }
+
         return diagnostics;
     }
 }

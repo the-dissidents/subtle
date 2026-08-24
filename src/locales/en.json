@@ -398,6 +398,7 @@
     "cjk-word-connector": "CJK word connectors should use the en-dash form.",
     "dialog-dashes-should-begin-on-a-new-line": "Dialog dashes should begin on a new line.",
     "no-midline-dashes": "Mid-line dashes are disallowed. Use ellipses for mid-line trail-offs.",
+    "single-dialog-dash": "Lone dialog dash",
     "wrong-cjk-dashes": "CJK dashes must use '{preferred}' with no surrounding spaces.",
     "wrong-dash": "use of non-preferred dash form",
     "wrong-dialog-dash": "use of non-preferred form of dialog dash"
@@ -590,6 +591,7 @@
     "dashes-line-end-only": "restrict to end of line only",
     "dashes-need-spaces-around": "require spaces around",
     "dashes-normal": "normal",
+    "dashes-report-single-dash": "report lone dialog dashs",
     "dashes-require-newline": "require new line",
     "dashes-unicode": "Unicode",
     "dialog-dashes": "dialog dashes",

@@ -200,12 +200,12 @@ export class TimelineLayout {
     this.requestedSampler = true;
   }
 
-  async setOffset(v: number) {
-    if (v < 0) v = 0;
+  async setOffset(seconds: number) {
+    if (seconds < 0) seconds = 0;
 
-    v = Math.max(v, this.minPosition);
-    v = Math.min(v, this.maxPosition - this.width / this.scale);
-    await this.manager.setScroll({x: v * this.scale});
+    seconds = Math.max(seconds, this.minPosition);
+    seconds = Math.min(seconds, this.maxPosition - this.width / this.scale);
+    await this.manager.setScroll({x: seconds * this.scale});
     this.manager.requestRender();
     this.requestedSampler = true;
   }
@@ -262,9 +262,9 @@ export class TimelineLayout {
     const [w, x] = this.getHorizontalPos(ent, {local: true});
     const dxStart = x;
     const dxEnd = (x + w) - this.width;
-    if (dxStart >= 0 && dxEnd <= 0) return;
+    if (dxStart >= this.leftColumnWidth && dxEnd <= 0) return;
     if (Math.abs(dxStart) < Math.abs(dxEnd))
-      await this.setOffset(this.offset + dxStart / this.scale);
+      await this.setOffset(this.offset + (dxStart - this.leftColumnWidth) / this.scale);
     else
       await this.setOffset(this.offset + dxEnd / this.scale);
   }

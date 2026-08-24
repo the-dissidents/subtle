@@ -393,6 +393,7 @@
     "cjk-word-connector": "中日韓文連接號應使用連接號（en-dash）形態",
     "dialog-dashes-should-begin-on-a-new-line": "對話應另起一行",
     "no-midline-dashes": "只允許在行尾出現破折號；考慮使用省略號",
+    "single-dialog-dash": "單獨的對話破折號",
     "wrong-cjk-dashes": "不建議的中日韓文破折號形態",
     "wrong-dash": "不建議的西文破折號形態",
     "wrong-dialog-dash": "不建議的對話破折號形態"
@@ -574,6 +575,7 @@
     "dashes-line-end-only": "限制只能出現在行尾",
     "dashes-need-spaces-around": "周圍需要空格",
     "dashes-normal": "正常",
+    "dashes-report-single-dash": "檢查單獨的對話破折號",
     "dashes-require-newline": "必須換行",
     "dashes-unicode": "Unicode",
     "dialog-dashes": "表示對話的破折號",
@@ -843,8 +845,8 @@
   },
   "stlimport": {
     "header": "匯入 STL 字幕",
-    "ignored-color-code": "忽略了顏色代碼",
     "ignored-boxing-code": "忽略了邊框代碼",
+    "ignored-color-code": "忽略了顏色代碼",
     "info-unsupported": "{n,plural,one{此警告表示} other{這些警告表示}}此 STL 檔案使用了 subtle 暫不支援的特性，它們將在匯入時被跳過。",
     "unknown-control-byte": "未知控制位元組",
     "user-data-block": "使用者資料區塊"

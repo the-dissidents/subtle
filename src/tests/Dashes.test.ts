@@ -118,6 +118,32 @@ test('dash right after space-subsuming punctuation counts as spaced', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Preceding-space-subsuming punctuation
+// ---------------------------------------------------------------------------
+
+test('no right space is required before a preceding-space-subsuming punctuation', () => {
+    const check = make({
+        dialog: { type: 'emDash', spaces: true, separateLines: false },
+        dash: baseLatin,
+        cjkDash: { type: 'standard', wordConnectors: false }
+    });
+    // '「' subsumes a preceding space, so we only add the left space, never the right one
+    const diags = check('你好—「世界」');
+    expect(diags).toHaveLength(1);
+    expect(diags[0].fix).toEqual({ substitute: ' —', confident: true });
+});
+
+test('dash right before preceding-space-subsuming punctuation counts as spaced', () => {
+    const check = make({
+        dialog: { type: 'emDash', spaces: true, separateLines: false },
+        dash: baseLatin,
+        cjkDash: { type: 'standard', wordConnectors: false }
+    });
+    // at start of line and subsumed on the right -> no space needed on either side
+    expect(check('—「你好」')).toHaveLength(0);
+});
+
+// ---------------------------------------------------------------------------
 // CJK word connectors
 // ---------------------------------------------------------------------------
 
@@ -207,4 +233,33 @@ test('Latin dialog dash at start of line stays confident', () => {
 test('Latin unspaced hyphen inside a word is ignored', () => {
     const check = make({ dialog: baseDialog, dash: baseLatin });
     expect(check('well-known')).toHaveLength(0);
+});
+
+// ---------------------------------------------------------------------------
+// single dialog dash
+// ---------------------------------------------------------------------------
+
+test('a lone dialog dash is reported when enabled, with a removal fix', () => {
+    const check = make({
+        dialog: { type: 'emDash', spaces: false, separateLines: false, reportLoneDash: true },
+        dash: baseLatin
+    });
+    // already-correct em-dash form, so the only diagnostic is the lone-dash report
+    const diags = check('—Hello!');
+    expect(diags).toHaveLength(1);
+    expect(diags[0].description).toBe('Lone dialog dash');
+    expect(diags[0].fix).toEqual({ substitute: '', confident: true });
+});
+
+test('two dialog dashes are not reported as a lone dash', () => {
+    const check = make({
+        dialog: { type: 'emDash', spaces: false, separateLines: false, reportLoneDash: true },
+        dash: baseLatin
+    });
+    expect(check('—Hello!\n—Hi')).toHaveLength(0);
+});
+
+test('a lone dialog dash is not reported by default', () => {
+    const check = make({ dialog: baseDialog, dash: baseLatin });
+    expect(check('—Hello!')).toHaveLength(0);
 });
