@@ -9,7 +9,7 @@ import { Subtitles } from "../core/Subtitles.svelte";
 import { Format } from "../core/formats/SimpleFormats";
 
 import { ChangeType, Source } from "./Source";
-import { Editing } from "./Editing";
+import { Selection } from "./Editing";
 import { Frontend, guardAsync } from "./Frontend";
 import { Playback } from "./Playback";
 import { MainConfig } from "../config/Groups";
@@ -158,7 +158,7 @@ export const Interface = {
 
         const entries = SubtitleUtil.merge(Source.subs, newSubs, options);
         if (entries.length > 0) {
-            await Editing.setSelection(entries);
+            await Selection.set(entries);
         }
         await Source.markChanged(ChangeType.General, $_('c.import-file'));
         Frontend.setStatus($_('msg.imported'));

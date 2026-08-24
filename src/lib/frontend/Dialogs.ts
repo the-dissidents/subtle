@@ -2,12 +2,12 @@ console.info('Dialogs loading');
 
 import { UICommand } from "./CommandBase";
 import { KeybindingManager } from "./Keybinding";
-import { Editing } from "./Editing";
 
 import { _, unwrapFunctionStore } from 'svelte-i18n';
 import { openDialog } from "../DialogOutlet.svelte";
 import { Dialog } from "../dialog";
 import { Source } from "./Source";
+import { Selection } from "./Editing";
 const $_ = unwrapFunctionStore(_);
 
 export class DialogHandler<TInput = void, TOutput = string> {
@@ -55,7 +55,7 @@ export const DialogCommands = {
     {
         name: () => $_('action.split-by-line'),
         isDialog: true,
-        isApplicable: () => Editing.selectionSize > 0,
+        isApplicable: () => Selection.size > 0,
         call: () => openDialog(Dialog.splitByLine)
     }),
     compareDialog: new UICommand(() => $_('category.tool'),

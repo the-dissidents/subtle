@@ -1,12 +1,12 @@
 import { Menu } from "@tauri-apps/api/menu";
-import { Editing } from "../../frontend/Editing";
+import { Selection } from "../../frontend/Editing";
 import { BasicCommands } from "../../frontend/Commands";
 import { get } from "svelte/store";
 import { _ } from "svelte-i18n";
 import { DialogCommands } from "../../frontend/Dialogs";
 
 export async function contextMenu() {
-    const selection = Editing.selectedEntries;
+    const selection = Selection.entries;
     if (selection.length == 0) return;
 
     const menu = await Menu.new({items: [

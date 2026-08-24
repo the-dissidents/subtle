@@ -56,7 +56,7 @@ import { LABEL_TYPES, type LabelType } from "../core/Labels";
 import { Filter, type MetricFilter } from '../core/Filter';
 import { RichText } from '../core/RichText';
 
-import { Editing, SelectMode } from '../frontend/Editing';
+import { Editing, Selection, SelectMode } from '../frontend/Editing';
 import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 
 import FilterEdit from '../FilterEdit.svelte';
@@ -112,7 +112,7 @@ function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
   } else {
     // not using filter
     return (!useStyle || style.name === searchStyle.name)
-        && (!$selectionOnly || Editing.inSelection(entry))
+        && (!$selectionOnly || Selection.has(entry))
         && (!useLabel || entry.label === label);
   }
 }
@@ -203,10 +203,10 @@ async function execute(type: SearchAction, option: SearchOption) {
     return;
   }
 
-  const focusedEntry = Editing.focusedEntry;
-  let focus = focusedEntry instanceof SubtitleEntry ? focusedEntry : entries[0];
+  const focusedEntry = Selection.focusedEntry;
+  let focus = focusedEntry ? focusedEntry : entries[0];
   if ($selectionOnly)
-    focus = Source.subs.entries.find((x) => Editing.inSelection(x)) ?? focus;
+    focus = Source.subs.entries.find((x) => Selection.has(x)) ?? focus;
 
   if (resumeFrom)
     if (resumeFrom.entry !== focus || option == "all")
@@ -238,10 +238,6 @@ async function execute(type: SearchAction, option: SearchOption) {
 
   await Debug.debug('executing search:', expr.source, type, option);
 
-  if (type == "select" || !$selectionOnly) {
-    await Editing.clearSelection(ChangeCause.Action);
-  }
-
   const repl = type == "replace" ? $replaceTerm : '';
   const startIndex = option == "all"
     ? 0 : Math.max(entries.indexOf(focus), 0);
@@ -250,6 +246,11 @@ async function execute(type: SearchAction, option: SearchOption) {
   if (!resumeFrom && option !== 'all') {
     type = 'select';
     await Debug.trace('no resumeFrom; falling back to select');
+  }
+
+  const selection: SubtitleEntry[] = [];
+  if (type == "select" || !$selectionOnly) {
+    await Selection.clear(ChangeCause.Action);
   }
 
   let nDone = 0, nEntries = 0;
@@ -270,7 +271,7 @@ async function execute(type: SearchAction, option: SearchOption) {
     nEntries++;
 
     if (type == 'select' && option == 'all') {
-      Editing.selection.submitted.add(entry);
+      selection.push(entry);
       res = gen.next(true);
       continue; // selecting one channel suffices
     }
@@ -341,9 +342,8 @@ async function execute(type: SearchAction, option: SearchOption) {
   let status: string;
   if (nEntries > 0) {
     if (type == "select") {
+      await Selection.set(selection);
       status = $_('search.selected-n-lines', {values: {n: nEntries}});
-      // manually call this because we didn't use selectEntry etc.
-      Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     } else if (type == "replace" || type === "replaceStyles") {
       status = $_('search.replaced-n-lines', {values: {n: nDone, nEntries}});
       await Source.markChanged(ChangeType.InPlace, $_('c.replace'));

@@ -3,7 +3,7 @@ console.info('Utils loading');
 import * as dialog from "@tauri-apps/plugin-dialog";
 
 import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
-import { Editing, SelectMode } from "./Editing";
+import { Editing, Selection, SelectMode } from "./Editing";
 import { ChangeType, Source } from "./Source";
 
 import { Debug } from "../Debug";
@@ -14,23 +14,9 @@ import { InputConfig } from "../config/Groups";
 const $_ = unwrapFunctionStore(_);
 
 export const Utils = {
-    isSelectionDisjunct() {
-        let state = 0;
-        for (let i = 0; i < Source.subs.entries.length; i++) {
-            const ent = Source.subs.entries[i];
-            if (Editing.selection.submitted.has(ent)
-             || Editing.selection.currentGroup.has(ent))
-            {
-                if (state == 2) return true;
-                else state = 1;
-            } else if (state == 1) state = 2;
-        }
-        return false;
-    },
-
     async moveSelectionContinuous(direction: number) {
-        if (this.isSelectionDisjunct()) return Debug.early();
-        const selection = Editing.selectedEntries;
+        if (Selection.isDisjunct()) return Debug.early();
+        const selection = Selection.entries;
         if (selection.length == 0 || direction == 0) return Debug.early();
 
         const index = Source.subs.entries.indexOf(selection[0]);
@@ -46,7 +32,7 @@ export const Utils = {
     },
 
     async moveSelectionTo(to: 'beginning' | 'end') {
-        const selection = Editing.selectedEntries;
+        const selection = Selection.entries;
         if (selection.length == 0) return Debug.early();
         const selectionSet = new Set(selection);
         let newEntries = Source.subs.entries.filter((x) => !selectionSet.has(x));
@@ -240,8 +226,9 @@ export const Utils = {
     },
 
     getAdjecentEntryWithThisStyle(dir: 'next' | 'previous') {
-        const focusedEntry = Editing.focusedEntry;
-        if (!(focusedEntry instanceof SubtitleEntry)) return null;
+        const focusedEntry = Selection.focusedEntry;
+        if (!focusedEntry) return null;
+
         const style = Editing.activeChannel;
         if (!style) return null;
         const thisIndex = Source.subs.entries.indexOf(focusedEntry);
@@ -253,7 +240,7 @@ export const Utils = {
     },
 
     async sortSelection(cmp: (a: SubtitleEntry, b: SubtitleEntry) => number, changeName: string) {
-        const selection = Editing.selectedEntries;
+        const selection = Selection.entries;
         // assumes selection is not disjunct
         const start = Source.subs.entries.indexOf(selection[0]);
         if (start < 0) return Debug.early();

@@ -71,7 +71,7 @@ const UntimedCommands = {
     name: () => get(_)('untimed.fuzzy.action-apply-match'),
     isApplicable: () => fuzzy.enabled,
     call: async () => {
-      if (fuzzy.currentEntry !== Editing.focusedEntry)
+      if (fuzzy.currentEntry !== Selection.focusedEntry)
         return Debug.early();
 
       Debug.assert(fuzzy.useStyle !== null && fuzzy.currentEntry !== null);
@@ -105,15 +105,11 @@ import { RichText } from "../core/RichText";
 import * as fuzzyAlgorithm from "../details/Fuzzy";
 import { EventHost } from "@the_dissidents/svelte-ui";
 
-import { Editing, SelectMode } from "../frontend/Editing";
+import { Editing, Selection, SelectMode } from "../frontend/Editing";
 import { Frontend } from "../frontend/Frontend";
 import { ChangeType, Source } from "../frontend/Source";
 
 import { Memorized } from "../config/MemorizedValue.svelte";
-
-let fillAsStyle = $state(Source.subs.styles[0]);
-let selection = $state<SubtitleEntry[]>([]);
-let focusedEntry = Editing.focused.entry;
 
 async function fillIn(range: SubtitleEntry[]) {
   const separator = useDoubleNewline ? '\n\n' : '\n';
@@ -151,6 +147,10 @@ let changed = false;
 const me = {};
 onDestroy(() => EventHost.unbind(me));
 
+let fillAsStyle = $state(Source.subs.styles[0]);
+let selection = $state<SubtitleEntry[]>([]);
+let focusedEntry = $state<SubtitleEntry | undefined>();
+
 Source.onSubtitleObjectReload.bind(me, () => {
   subs = Source.subs;
   fuzzy.useStyle = Source.subs.styles[0];
@@ -158,7 +158,8 @@ Source.onSubtitleObjectReload.bind(me, () => {
 });
 
 Editing.onSelectionChanged.bind(me, () => {
-  selection = Editing.selectedEntries;
+  selection = Selection.entries;
+  focusedEntry = Selection.focusedEntry;
   fuzzyMatch();
 });
 
@@ -172,8 +173,11 @@ async function checkChanged() {
 function fuzzyMatch() {
   if (!fuzzy.enabled) return;
 
-  fuzzy.currentEntry = Editing.selection.focused;
-  const current = fuzzy.currentEntry?.texts?.get(fuzzy.useStyle);
+  const focused = Selection.focusedEntry;
+  if (!focused) return Debug.early();
+
+  fuzzy.currentEntry = focused;
+  const current = focused.texts.get(fuzzy.useStyle);
   const haystack = textarea.value;
 
   if (!current || haystack == '') {
@@ -315,11 +319,9 @@ async function clear() {
     <label>
       {$_('untimed.fill-in.with-style')}<StyleSelect bind:currentStyle={fillAsStyle} />
     </label>
-    <button disabled={!($focusedEntry instanceof SubtitleEntry)}
+    <button disabled={!focusedEntry}
       onclick={async () => {
-        if (!($focusedEntry instanceof SubtitleEntry))
-          return Debug.early();
-        if (await fillIn([$focusedEntry]))
+        if (await fillIn([focusedEntry!]))
           await Editing.offsetFocus(1, SelectMode.Single);
       }}
     >{$_('untimed.fill-in.this-entry')}</button>

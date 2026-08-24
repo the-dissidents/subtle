@@ -12,7 +12,7 @@ import { SubtitleEntry, type Positioning } from './core/Subtitles.svelte';
 import { AlignMode, type LabelType } from "./core/Labels";
 import { CompiledLintProfile } from './core/LintProfile';
 
-import { Editing } from './frontend/Editing';
+import { Editing, Selection } from './frontend/Editing';
 import { ChangeType, Source } from './frontend/Source';
 import { Frontend } from './frontend/Frontend';
 
@@ -35,8 +35,6 @@ let editingPos: Positioning = $state(null);
 let editingAlign: AlignMode | null = $state(null);
 let editingLabel: LabelType = $state('none');
 let uiFocus = Frontend.uiFocus;
-
-let focusedEntry = Editing.focused.entry;
 
 function updateLinters() {
   return new SvelteMap(Source.subs.styles.map(
@@ -61,8 +59,8 @@ Source.onSubtitleObjectReload.bind(me, () => {
 
 Editing.onSelectionChanged.bind(me, () => {
   editFormUpdateCounter++;
-  const focused = Editing.focusedEntry;
-  if (focused instanceof SubtitleEntry) {
+  const focused = Selection.focusedEntry;
+  if (focused) {
     updateForm();
     if ($uiFocus == 'EditingField')
       void tick().then(() => Editing.startEditingFocusedEntry());
@@ -70,8 +68,8 @@ Editing.onSelectionChanged.bind(me, () => {
 });
 
 function updateForm() {
-  let focused = Editing.focusedEntry;
-  if (!(focused instanceof SubtitleEntry)) return;
+  const focused = Selection.focusedEntry;
+  if (!focused) return;
   editingT0 = focused.start;
   editingT1 = focused.end;
   editingDt = editingT1 - editingT0;
@@ -81,8 +79,8 @@ function updateForm() {
 }
 
 function applyEditForm() {
-  let focused = Editing.focusedEntry;
-  Debug.assert(focused instanceof SubtitleEntry);
+  const focused = Selection.focusedEntry;
+  if (!focused) return;
   focused.start = editingT0;
   focused.end = editingT1;
   editingDt = editingT1 - editingT0;
@@ -98,7 +96,7 @@ function applyEditForm() {
 <!-- timestamp fields -->
 {#key `${editFormUpdateCounter}`}
 <fieldset class="vlayout"
-    disabled={!(Editing.focusedEntry instanceof SubtitleEntry)}>
+    disabled={!Selection.focusedEntry}>
   <span class="hlayout center-items">
     <select bind:value={editAnchor}>
       <option value="start">{$_('editbox.anchor-start')}</option>
@@ -212,8 +210,8 @@ function applyEditForm() {
     target={focusedStyle ? Editing.styleToEditor.get(focusedStyle) : undefined}
     onAction={() => Editing.submitFocusedEntry()} />
 
-  {#if $focusedEntry instanceof SubtitleEntry}
-  {const focused = $focusedEntry}
+  {#if Selection.focusedEntry instanceof SubtitleEntry}
+  {const focused = Selection.focusedEntry}
   <table class='fields'>
     <tbody>
       {#each Source.subs.styles as style (style.name)}
@@ -319,7 +317,7 @@ function applyEditForm() {
   </table>
   {:else}
   <div class="flexgrow hlayout hint">
-    <i>{Editing.focusedEntry == 'virtual'
+    <i>{Selection.isVirtualEntry
       ? $_('editbox.at-virtual-entry')
       : $_('editbox.no-selection')}</i>
   </div>

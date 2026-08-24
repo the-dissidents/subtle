@@ -8,7 +8,7 @@ import { InputConfig } from "../../config/Groups";
 import type { TranslatedWheelEvent } from "../../frontend/Frontend";
 import { Source, ChangeCause } from "../../frontend/Source";
 import { Playback } from "../../frontend/Playback";
-import { Editing, SelectMode } from "../../frontend/Editing";
+import { Editing, Selection, SelectMode } from "../../frontend/Editing";
 import { Memorized } from "../../config/MemorizedValue.svelte";
 
 import { SubtitleTableHandle } from "../subtitleTable/Input.svelte";
@@ -85,10 +85,9 @@ export class TimelineInput {
 
         Editing.onSelectionChanged.bind(this, async (cause) => {
             if (cause != ChangeCause.Timeline) {
-                this.#selection = new SvelteSet(Editing.selectedEntries);
-                const focused = Editing.focusedEntry;
-                if (focused instanceof SubtitleEntry)
-                    await this.layout.keepEntryInView(focused);
+                this.#selection = new SvelteSet(Selection.entries);
+                const focused = Selection.focusedEntry;
+                if (focused) await this.layout.keepEntryInView(focused);
                 this.manager.requestRender();
             }
         });
@@ -164,18 +163,8 @@ export class TimelineInput {
     }
 
     async changeSelection(set?: Iterable<SubtitleEntry>, focused?: SubtitleEntry) {
-        await Editing.clearFocus();
         if (set) this.#selection = new SvelteSet(set);
-
-        Editing.selection.submitted = new Set(this.#selection);
-        if (this.#selection.size == 1) {
-            const array = [...this.#selection.values()];
-            Editing.selection.currentGroup = new Set(array);
-            Editing.selection.focused = array[0];
-        } else {
-            Editing.selection.currentGroup.clear();
-            Editing.selection.focused = focused ?? null;
-        }
+        await Selection.set([...this.#selection], focused);
         Editing.onSelectionChanged.dispatch(ChangeCause.Timeline);
     }
 
@@ -205,7 +194,7 @@ export class TimelineInput {
 
     #onDoubleClick() {
         if (this.#selection.size == 1
-         && Editing.focusedEntry == [...this.#selection][0])
+         && Selection.focusedEntry == [...this.#selection][0])
         {
             void SubtitleTableHandle.processDoubleClick?.();
         }
@@ -418,7 +407,7 @@ export class TimelineInput {
                 if (h.hover
                  && !h.hover.underMouse.some((x) => this.#selection.has(x)))
                 {
-                    await Editing.clearSelection(ChangeCause.Timeline);
+                    await Selection.clear(ChangeCause.Timeline);
                     await Editing.selectEntry(h.hover.underMouse[0],
                         SelectMode.Single, ChangeCause.Action);
                 }
@@ -440,7 +429,7 @@ export class TimelineInput {
             }
 
             if (!e0.getModifierState(Basic.ctrlKey)) {
-                void Editing.clearSelection(ChangeCause.Timeline);
+                void Selection.clear(ChangeCause.Timeline);
                 this.#selection.clear();
                 this.manager.requestRender();
             }
@@ -500,9 +489,7 @@ export class TimelineInput {
         if (h.hover.seam) {
             // manually set selection, avoiding the async Editing.setSelection
             this.#selection = new SvelteSet(h.hover.seam);
-            Editing.selection.submitted = new Set(h.hover.seam);
-            Editing.selection.focused = h.hover.seam[0];
-            Editing.selection.currentGroup = new Set([h.hover.seam[0]]);
+            Selection.setSync([h.hover.seam[0]]);
             Editing.onSelectionChanged.dispatch(ChangeCause.Timeline);
             this.currentAction = new DragSeam(this, this.layout, e0,
                 h.hover.seam[0], h.hover.seam[1], afterEnd);

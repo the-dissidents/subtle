@@ -7,7 +7,7 @@ import { InterfaceConfig } from "../config/Groups";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { EventHost } from "@the_dissidents/svelte-ui";
 
-import { Editing } from "./Editing";
+import { Editing, Selection } from "./Editing";
 import { Frontend, guardAsync } from "./Frontend";
 import { UICommand } from "./CommandBase";
 import { CommandBinding, KeybindingManager } from "./Keybinding";
@@ -47,12 +47,9 @@ export enum ChangeType {
     Metadata
 }
 
-async function readSnapshot(s: Snapshot, archive: string) {
+function readSnapshot(s: Snapshot, archive: string) {
+    Selection.clearSync();
     Source.subs = Format.JSON.parse(archive).decode().subs;
-
-    await Editing.clearFocus(false);
-    await Editing.clearSelection();
-
     fileChanged.set(!s.saved);
     Source.onSubtitleObjectReload.dispatch(false);
     // Source.onSubtitlesChanged.dispatch(s.change);
@@ -208,7 +205,7 @@ export const Source = {
         redoStack.push(top);
         const snap = undoStack.at(-1)!;
         Debug.assert(!!snap);
-        await readSnapshot(snap, await MAPI.readUndo());
+        readSnapshot(snap, await MAPI.readUndo());
         this.onUndoBufferChanged.dispatch();
         Frontend.setStatus($_('msg.undone', {values: {op: top.description}}), 'info');
         return true;
@@ -221,7 +218,7 @@ export const Source = {
         }
         const top = redoStack.pop()!;
         undoStack.push(top);
-        await readSnapshot(top, await MAPI.readRedo());
+        readSnapshot(top, await MAPI.readRedo());
         this.onUndoBufferChanged.dispatch();
         Frontend.setStatus($_('msg.redone', {values: {op: top.description}}), 'info');
         return true;
@@ -237,7 +234,7 @@ export const Source = {
         if (path !== '') await pushRecent(path);
         this.subs = newSubs;
         await Editing.clearFocus(false);
-        await Editing.clearSelection();
+        await Selection.clear();
 
         currentFile.set(
             (newSubs.migrated !== 'none'

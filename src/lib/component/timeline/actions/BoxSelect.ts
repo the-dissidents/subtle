@@ -1,5 +1,5 @@
 import type { SubtitleEntry } from "$lib/core/Subtitles.svelte";
-import { Editing } from "$lib/frontend/Editing";
+import { Selection } from "$lib/frontend/Editing";
 import { TimelineInput } from "../Input.svelte";
 import type { TimelineLayout, Box } from "../Layout";
 import { TimelineAction } from "./TimelineAction";
@@ -16,7 +16,7 @@ export class BoxSelect extends TimelineAction {
 
     constructor(self: TimelineInput, layout: TimelineLayout, e0: MouseEvent) {
         super(self, layout, e0);
-        this.origSelection = Editing.selectedEntries;
+        this.origSelection = Selection.entries;
         this.x1 = e0.offsetX + this.layout.manager.scroll[0];
         this.y1 = e0.offsetY + this.layout.manager.scroll[1];
         this.deregister = self.registerInterruptKey();

@@ -2,7 +2,7 @@ import { Debug } from "../../Debug";
 import type { CanvasManager } from "../../CanvasManager";
 import { SubtitleEntry } from "../../core/Subtitles.svelte";
 
-import { Editing, getSelectMode, SelectMode } from "../../frontend/Editing";
+import { Editing, getSelectMode, Selection, SelectMode } from "../../frontend/Editing";
 import { ChangeCause, Source } from "../../frontend/Source";
 import { Playback } from "../../frontend/Playback";
 import { Frontend } from "../../frontend/Frontend";
@@ -108,12 +108,12 @@ export class TableInput {
 
     async #handleDoubleClick() {
         this.focus();
-        const focused = Editing.focusedEntry;
 
-        if (focused == 'virtual') {
+        if (Selection.isVirtualEntry) {
             if (TableConfig.data.doubleClickStartEdit)
             await Editing.startEditingNewVirtualEntry();
-        } else if (focused !== null) {
+        } else if (Selection.focusedEntry) {
+            const focused = Selection.focusedEntry;
             switch (TableConfig.data.doubleClickPlaybackBehavior) {
                 case 'none': break;
                 case 'seek':
@@ -246,6 +246,9 @@ export class TableInput {
         if (line != this.currentLine && this.layout.entries.length > 0) {
             this.currentLine = line;
             const [_, entry] = this.#getTextFromLineIndex(line);
+            // if the drag happens within one entry it's not a real sequence selection,
+            // but this will behave identically to SelectMode.Multiple so no need for
+            // specialization
             if (entry) await Editing.selectEntry(entry, SelectMode.Sequence);
         }
     }

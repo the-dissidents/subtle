@@ -17,7 +17,7 @@ import { convertBackendSubtitles } from "$lib/core/formats/BackendSubtitles";
 import { SubtitleUtil } from "$lib/core/SubtitleUtil.svelte";
 import { Dialog } from "$lib/dialog";
 import { openDialog } from "$lib/DialogOutlet.svelte";
-import { Editing } from "./Editing";
+import { Selection } from "./Editing";
 import { Source, ChangeType } from "./Source";
 import { MMedia } from "$lib/API";
 
@@ -221,7 +221,7 @@ export const PlaybackCommands = {
                     if (!options) return;
 
                     const entries = SubtitleUtil.merge(Source.subs, subs, options);
-                    if (entries.length > 0) await Editing.setSelection(entries);
+                    if (entries.length > 0) await Selection.set(entries);
                     await Source.markChanged(ChangeType.General, $_('c.import-extracted-track'));
                     Frontend.setStatus($_('msg.imported-extracted-track'));
                 }

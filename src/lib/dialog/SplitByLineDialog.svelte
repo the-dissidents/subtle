@@ -3,7 +3,7 @@ import { Debug } from "../Debug";
 import { SubtitleStyle, type SubtitleEntry } from '../core/Subtitles.svelte';
 import { type LabelType } from "../core/Labels";
 import { RichText } from "../core/RichText";
-import { Editing } from '../frontend/Editing';
+import { Selection } from '../frontend/Editing';
 import { ChangeType, Source } from "../frontend/Source";
 
 import DialogBase from '../DialogBase.svelte';
@@ -29,7 +29,7 @@ let inner: DialogBase;
 
 onMount(async () => {
   Debug.assert(inner !== undefined);
-  selection = Editing.selectedEntries;
+  selection = Selection.entries;
   Debug.assert(selection.length > 0);
   if (selection.some((x) => x.texts.size > 1)) {
     await dialog.message($_('splitbylinedialog.error'));

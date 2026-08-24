@@ -5,9 +5,9 @@ import LabelSelect from "$lib/LabelSelect.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { CompiledLintProfile } from "../core/LintProfile";
 import { RichText } from "../core/RichText";
-import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
+import { type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
-import { Editing, SelectMode } from "../frontend/Editing";
+import { Editing, Selection, SelectMode } from "../frontend/Editing";
 import { Frontend } from "../frontend/Frontend";
 import { ChangeCause, ChangeType, Source } from "../frontend/Source";
 import { Diagnostic } from "../linter/Common";
@@ -70,13 +70,16 @@ let checkFilter = Memorized.$('review-goto-filter', z.boolean(), true);
 let checkLabel = Memorized.$('review-goto-label', z.boolean(), true);
 let label = Memorized.$('review-label', z.enum(LABEL_TYPES), 'red');
 
-let focusedEntry = Editing.focused.entry;
+let updateCounter = $state(0);
+const me = {};
+Editing.onSelectionChanged.bind(me, () => { updateCounter++ });
 
 async function gotoProblem(dir: 1 | -1) {
-  if (!($focusedEntry instanceof SubtitleEntry)) return;
+  const focusedEntry = Selection.focusedEntry;
+  if (!focusedEntry) return;
 
   const linters = getLinters();
-  let i = Source.subs.entries.indexOf($focusedEntry);
+  let i = Source.subs.entries.indexOf(focusedEntry);
   Debug.assert(i >= 0);
   i += dir;
   while (i >= 0 && i < Source.subs.entries.length) {
@@ -127,12 +130,14 @@ async function gotoProblem(dir: 1 | -1) {
       </label>
     </ConfigRow>
     <ConfigRow name='前往'>
+    {#key updateCounter}
       <div>
-        <button disabled={!($focusedEntry instanceof SubtitleEntry)}
+        <button disabled={!Selection.focusedEntry}
           onclick={() => gotoProblem(-1)}>上一个</button>
-        <button disabled={!($focusedEntry instanceof SubtitleEntry)}
+        <button disabled={!Selection.focusedEntry}
           onclick={() => gotoProblem(1)}>下一个</button>
       </div>
+    {/key}
     </ConfigRow>
   </ConfigTable>
 

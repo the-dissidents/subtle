@@ -1,7 +1,7 @@
 import { get } from "svelte/store";
 import { PublicConfigGroup } from '../../config/PublicConfig.svelte';
 import { UICommand } from '../../frontend/CommandBase';
-import { Editing } from '../../frontend/Editing';
+import { Editing, Selection } from '../../frontend/Editing';
 import { CommandBinding, KeybindingManager } from '../../frontend/Keybinding';
 import { Debug } from '../../Debug';
 import { EventHost } from '@the_dissidents/svelte-ui';
@@ -120,9 +120,9 @@ export const TimelineCommands = {
         [ CommandBinding.from(['CmdOrCtrl+['], ['Timeline']) ],
     {
         name: () => $_('action.move-whole-start-time-to-cursor'),
-        isApplicable: () => Editing.selectionSize > 0,
+        isApplicable: () => Selection.size > 0,
         async call() {
-            const selection = Editing.selectedEntries;
+            const selection = Selection.entries;
             const start = Math.min(...selection.map((x) => x.start));
             const delta = start - Playback.position;
             selection.forEach((x) => {
@@ -136,9 +136,9 @@ export const TimelineCommands = {
         [ CommandBinding.from(['CmdOrCtrl+]'], ['Timeline']) ],
     {
         name: () => $_('action.move-whole-end-time-to-cursor'),
-        isApplicable: () => Editing.selectionSize > 0,
+        isApplicable: () => Selection.size > 0,
         async call() {
-            const selection = Editing.selectedEntries;
+            const selection = Selection.entries;
             const end = Math.max(...selection.map((x) => x.end));
             const delta = end - Playback.position;
             selection.forEach((x) => {
@@ -152,10 +152,10 @@ export const TimelineCommands = {
         [ CommandBinding.from(['['], ['Timeline']) ],
     {
         name: () => $_('action.set-start-time-to-cursor'),
-        isApplicable: () => Editing.focusedEntry instanceof SubtitleEntry,
+        isApplicable: () => !!Selection.focusedEntry,
         async call() {
-            const focus = Editing.focusedEntry;
-            Debug.assert(focus instanceof SubtitleEntry);
+            const focus = Selection.focusedEntry;
+            Debug.assert(!!focus);
             if (focus.end > Playback.position) {
                 focus.start = Playback.position;
                 await Source.markChanged(ChangeType.Times, $_('action.set-start-time-to-cursor'));
@@ -166,10 +166,10 @@ export const TimelineCommands = {
         [ CommandBinding.from([']'], ['Timeline']) ],
     {
         name: () => $_('action.set-end-time-to-cursor'),
-        isApplicable: () => Editing.focusedEntry instanceof SubtitleEntry,
+        isApplicable: () => !!Selection.focusedEntry,
         async call() {
-            const focus = Editing.focusedEntry;
-            Debug.assert(focus instanceof SubtitleEntry);
+            const focus = Selection.focusedEntry;
+            Debug.assert(!!focus);
             if (focus.start < Playback.position) {
                 focus.end = Playback.position;
                 await Source.markChanged(ChangeType.Times, $_('action.set-end-time-to-cursor'));

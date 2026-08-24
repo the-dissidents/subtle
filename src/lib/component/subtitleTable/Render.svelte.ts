@@ -2,7 +2,7 @@ import { SubtitleEntry } from "../../core/Subtitles.svelte";
 import { hook } from "../../details/Hook.svelte";
 import { applyStyle, toCSSStyle, type Line } from "../../details/TextLayout";
 import { InputConfig } from "../../config/Groups";
-import { Editing } from "../../frontend/Editing";
+import { Selection } from "../../frontend/Editing";
 
 import { LabelColor, theme } from "../../Theming.svelte";
 import { CanvasManager } from "../../CanvasManager";
@@ -69,8 +69,8 @@ export class TableRenderer {
         const [width, height] = this.manager.size;
 
         // table
-        const focused = Editing.focusedEntry;
-        const selection = new Set(Editing.selectedEntries);
+        const focused = Selection.focusedEntry;
+        const selection = new Set(Selection.entries);
         let i = 0;
         for (const { entry, line, height: lh, texts, cells } of this.layout.entries) {
             i += 1;
@@ -96,8 +96,7 @@ export class TableRenderer {
 
             // texts
             const textFillStyle =
-                (entry !== focused
-                    && focused instanceof SubtitleEntry
+                (entry !== focused && focused
                     && overlappingTime(focused, entry)) ? overlapColor : textColor;
 
             ctx.strokeStyle = gridColor;
@@ -177,7 +176,7 @@ export class TableRenderer {
             const y = (lastLine
                         ? (lastLine.line + lastLine.height) * this.layout.lineHeight
                         : 0) + this.layout.headerHeight;
-            if (focused == 'virtual') {
+            if (Selection.isVirtualEntry) {
                 ctx.fillStyle = focusBackground;
                 ctx.fillRect(0, y, width + sx, this.layout.lineHeight);
             }

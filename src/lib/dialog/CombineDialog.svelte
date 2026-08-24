@@ -1,7 +1,7 @@
 <script lang="ts">
 import { SubtitleEntry } from '../core/Subtitles.svelte';
 import { type LabelType } from "../core/Labels";
-import { Editing } from '../frontend/Editing';
+import { Selection } from '../frontend/Editing';
 import { ChangeType, Source } from '../frontend/Source';
 
 import DialogBase from '../DialogBase.svelte';
@@ -44,7 +44,7 @@ async function run(doit: boolean) {
 
   let selection: SubtitleEntry[]
   if (selectionOnly) {
-    let s = Editing.selectedEntries;
+    let s = Selection.entries;
     if (s.length > 0) selection = s;
     else selection = [...Source.subs.entries];
   } else selection = [...Source.subs.entries];
@@ -98,9 +98,7 @@ async function run(doit: boolean) {
   if (doit) {
     hasbeen = true;
     if (done.size > 0) {
-      await Editing.clearSelection();
-      for (let ent of selection.filter((x) => !done.has(x)))
-        Editing.selection.submitted.add(ent);
+      await Selection.set(selection.filter((x) => !done.has(x)));
       await Source.markChanged(ChangeType.Times, $_('c.combine-by-matching-time'));
     }
     if (marked.size > 0 && done.size == 0)

@@ -40,7 +40,7 @@ import { Interface, InterfaceCommands, MEDIA_EXTENSIONS } from '$lib/frontend/In
 import { Playback, PlaybackCommands } from '$lib/frontend/Playback';
 import { Source, SourceCommands } from '$lib/frontend/Source';
 import { KeybindingManager } from '$lib/frontend/Keybinding';
-import { Editing } from '$lib/frontend/Editing';
+import { Editing, Selection } from '$lib/frontend/Editing';
 import { Frontend } from '$lib/frontend/Frontend';
 
 import { Basic } from '$lib/Basic';
@@ -82,7 +82,7 @@ Source.onUndoBufferChanged.bind(me, () => {
 
 let selectionLength = $state(0);
 Editing.onSelectionChanged.bind(me, () => {
-  selectionLength = Editing.selectionSize;
+  selectionLength = Selection.size;
 });
 
 status.subscribe(() => {

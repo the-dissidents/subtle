@@ -2,7 +2,7 @@
 import { Basic } from '../Basic';
 import { SubtitleEntry } from '../core/Subtitles.svelte';
 import { type TimeShiftOptions } from "../core/SubtitleUtil.svelte";
-import { Editing } from '../frontend/Editing';
+import { Selection } from '../frontend/Editing';
 
 import DialogBase from '../DialogBase.svelte';
 import TimestampInput from '../TimestampInput.svelte';
@@ -46,7 +46,7 @@ onMount(async () => {
   return close({
     // t = (t0 - anchor) * scale + anchor + offset
     // t = t0 * scale + anchor + offset - anchor * scale
-    selection: Editing.selectedEntries,
+    selection: Selection.entries,
     offset: cpAnchor + cpOffset - cpAnchor * cpScale,
     modifySince,
     scale: cpScale
@@ -73,7 +73,7 @@ let cpAnchor = $derived.by(() => {
 let selection: SubtitleEntry[];
 
 function updateSelection() {
-  selection = Editing.selectedEntries;
+  selection = Selection.entries;
   selectionStart = Math.min(...selection.map((x) => x.start));
   selectionEnd = Math.max(...selection.map((x) => x.end));
 }
