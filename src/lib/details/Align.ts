@@ -16,7 +16,7 @@ export type AlignmentOptions = z.infer<typeof ZAlignmentOptions>;
 export const DefaultAlignmentOptions: AlignmentOptions = {
     weightOnset: 0.8,
     weightEnd: 0.2,
-    penaltySkip: 30,
+    penaltySkip: 10,
     penaltyMerge: 5,
     penaltySplit: 5,
     windowMs: 5000,
@@ -60,12 +60,7 @@ export async function alignSubtitles(
     const M = trackB.length;
 
     const opts: AlignmentOptions = {
-        weightOnset: 0.8,
-        weightEnd: 0.2,
-        penaltySkip: 3000,
-        penaltyMerge: 500,
-        penaltySplit: 500,
-        windowMs: 5000,
+        ...DefaultAlignmentOptions,
         ...options
     };
 

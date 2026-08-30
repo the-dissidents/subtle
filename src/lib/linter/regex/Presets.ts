@@ -4,8 +4,6 @@ import { unwrapFunctionStore, _ } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 export const RegexLintPresets = {
-    // todo: spaces around ellipses/dashes; enforce correct dashes
-
     noLeadingTrailingSpaces: [{
         type: 'format',
         pattern: /^[ ]+|[ ]+$/mug,

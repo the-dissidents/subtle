@@ -1,4 +1,4 @@
-# subtle
+# subtle <img src="https://img.shields.io/github/v/release/the-dissidents/subtle?include_prereleases" />
 
 <img width="1300" alt="screenshot" src="https://github.com/user-attachments/assets/a65d6051-3d5c-448f-9b89-d04035dcf847" />
 

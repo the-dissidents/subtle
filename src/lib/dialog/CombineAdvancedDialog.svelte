@@ -87,14 +87,17 @@ async function run() {
   console.log(data);
 }
 
-async function apply() {
+async function apply(modify: boolean) {
   Debug.assert(!!data);
 
   const { as, bs, conflict, result } = data;
-  for (const [i, j] of result.matches) {
-    if (conflict.has(as[i]) || conflict.has(bs[j])) continue;
-    as[i].texts.forEach((v, k) => bs[j].texts.set(k, v));
-    Source.subs.removeEntry(as[i]);
+
+  if (modify) {
+    for (const [i, j] of result.matches) {
+      if (conflict.has(as[i]) || conflict.has(bs[j])) continue;
+      as[i].texts.forEach((v, k) => bs[j].texts.set(k, v));
+      Source.subs.removeEntry(as[i]);
+    }
   }
 
   for (const [is, j] of result.merges) {
@@ -104,8 +107,10 @@ async function apply() {
   for (const [i, js] of result.splits) {
     const times = js.flatMap((j) => [bs[j].start, bs[j].end]);
     as[i].label = mergeSplitLabel;
-    as[i].start = Math.min(...times);
-    as[i].end = Math.max(...times);
+    if (modify) {
+      as[i].start = Math.min(...times);
+      as[i].end = Math.max(...times);
+    }
     js.forEach((j) => bs[j].label = mergeSplitLabel);
   }
 
@@ -120,7 +125,7 @@ async function apply() {
   }
 
   await Source.markChanged(ChangeType.Times, $_('c.combine-dtw'));
-  inner.close('ok');
+  if (modify) inner.close('ok');
 }
 
 </script>
@@ -218,8 +223,11 @@ async function apply() {
       {data.conflict.size}
     </ConfigRow>
   </ConfigTable>
-  <button class="wide" onclick={() => apply()}>
+  <button class="wide" onclick={() => apply(true)}>
     {$_('combineadvdialog.apply')}
+  </button>
+  <button class="wide" onclick={() => apply(false)}>
+    {$_('combineadvdialog.mark-only')}
   </button>
   {/if}
 </DialogBase>

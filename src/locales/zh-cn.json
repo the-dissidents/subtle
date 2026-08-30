@@ -222,7 +222,8 @@
   },
   "combineadvdialog": {
     "apply": "应用修改",
-    "compute": "计算"
+    "compute": "计算",
+    "mark-only": "仅标记标签"
   },
   "combinedialog": {
     "combine": "合并",

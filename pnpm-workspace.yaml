@@ -1,5 +1,10 @@
-onlyBuiltDependencies:
-  - es5-ext
-  - esbuild
 
 minimumReleaseAge: 1440
+
+minimumReleaseAgeExclude:
+  - '@the_dissidents/*'
+
+allowBuilds:
+  '@parcel/watcher': true
+  es5-ext: true
+  esbuild: true

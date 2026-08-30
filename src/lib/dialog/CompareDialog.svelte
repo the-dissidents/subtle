@@ -68,6 +68,8 @@ onMount(async () => {
   const A = toEntries(Source.subs, args[0]);
   const B = toEntries(subs, styleB);
 
+  console.log(styleB, B.length, subs.entries.length);
+
   const result = await showProgress<MatchResult | null>(
     (report) => MAPI.matchEntries(A, B, {
       timeWeight: 0.5, textWeight: 1.5,

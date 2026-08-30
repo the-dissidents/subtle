@@ -463,6 +463,8 @@ export const Editing = {
             submitted: new Set([ent]),
         };
 
+        const oldFocused = selection.focused;
+
         // selecting an entry always sets it as focused
         if (selection.focused != ent) {
             const oldFocus = selection.focused;
@@ -482,7 +484,7 @@ export const Editing = {
             case SelectMode.Sequence: {
                 const head = selection.currentGroup
                     ? selection.currentGroup.head
-                    : (selection.focused ?? ent);
+                    : (oldFocused ?? ent);
 
                 if (ent === head) {
                     selection.submitted.add(ent);
