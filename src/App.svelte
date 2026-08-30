@@ -462,7 +462,7 @@ observer.observe({ type: 'paint', buffered: true });
     </div>
     {#if selectionLength > 0}
       <div class="border">
-        <span class="label">选中条目数量：</span>
+        <span class="label">{$_('msg.selected-entries-count')}</span>
         {selectionLength}
       </div>
     {/if}

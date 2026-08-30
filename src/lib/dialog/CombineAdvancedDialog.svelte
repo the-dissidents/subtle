@@ -134,47 +134,47 @@ async function apply(modify: boolean) {
   name: 'ok',
   localizedName: () => $_('back')
 }]}>
-  <h5>DTW算法参数</h5>
+  <h5>{$_('combineadvdialog.dtw-parameters')}</h5>
   <ConfigTable>
-    <ConfigRow name="起始时间差权重">
+    <ConfigRow name={$_('combineadvdialog.weight-onset')}>
       <NumberInput min='0' step="0.01"
         bind:value={$opts.weightOnset}
         onchange={() => opts.markChanged()} />
     </ConfigRow>
-    <ConfigRow name="结束时间差权重">
+    <ConfigRow name={$_('combineadvdialog.weight-end')}>
       <NumberInput min='0' step="0.01"
         bind:value={$opts.weightEnd}
         onchange={() => opts.markChanged()} />
     </ConfigRow>
-    <ConfigRow name="跳过条目权重">
+    <ConfigRow name={$_('combineadvdialog.penalty-skip')}>
       <NumberInput min='0' step="0.01"
         bind:value={$opts.penaltySkip}
         onchange={() => opts.markChanged()} />
     </ConfigRow>
-    <ConfigRow name="合并条目权重">
+    <ConfigRow name={$_('combineadvdialog.penalty-merge')}>
       <NumberInput min='0' step="0.01"
         bind:value={$opts.penaltyMerge}
         onchange={() => opts.markChanged()} />
     </ConfigRow>
-    <ConfigRow name="切分条目权重">
+    <ConfigRow name={$_('combineadvdialog.penalty-split')}>
       <NumberInput min='0' step="0.01"
         bind:value={$opts.penaltySplit}
         onchange={() => opts.markChanged()} />
     </ConfigRow>
-    <ConfigRow name="忽略起始时间差大于此的条目">
+    <ConfigRow name={$_('combineadvdialog.window-ms')}>
       <NumberInput min='0' step="1"
         bind:value={$opts.windowMs}
         onchange={() => opts.markChanged()} />
-      毫秒
+      {$_('combineadvdialog.ms')}
     </ConfigRow>
   </ConfigTable>
 
-  <h5>设置</h5>
+  <h5>{$_('combineadvdialog.settings')}</h5>
   <ConfigTable>
-    <ConfigRow name="匹配对象（时间轴错误）">
+    <ConfigRow name={$_('combineadvdialog.from-channel')}>
       <StyleSelect bind:currentStyle={fromChannel} onsubmit={() => clear()}/>
     </ConfigRow>
-    <ConfigRow name="匹配目标（时间轴正确）">
+    <ConfigRow name={$_('combineadvdialog.to-channel')}>
       <StyleSelect bind:currentStyle={toChannel} onsubmit={() => clear()} />
     </ConfigRow>
     <ConfigRow name={$_('combinedialog.selection-only')}>
@@ -182,17 +182,17 @@ async function apply(modify: boolean) {
     </ConfigRow>
   </ConfigTable>
 
-  <h5>将有问题的条目带上标记</h5>
+  <h5>{$_('combineadvdialog.label-problematic')}</h5>
   <ConfigTable>
-    <ConfigRow name="无对应的条目">
+    <ConfigRow name={$_('combineadvdialog.unmapped-entries')}>
       <LabelSelect
         bind:value={unmappedLabel} onsubmit={() => clear()} />
     </ConfigRow>
-    <ConfigRow name="切分或合并的条目">
+    <ConfigRow name={$_('combineadvdialog.merge-or-split-entries')}>
       <LabelSelect
         bind:value={mergeSplitLabel} onsubmit={() => clear()} />
     </ConfigRow>
-    <ConfigRow name="已经包含此两种样式的条目">
+    <ConfigRow name={$_('combineadvdialog.entries-with-both-styles')}>
       <LabelSelect
         bind:value={ignoredLabel} onsubmit={() => clear()} />
     </ConfigRow>
@@ -202,24 +202,24 @@ async function apply(modify: boolean) {
   <button class="wide" onclick={() => run()}>{$_('combineadvdialog.compute')}</button>
 
   {#if data}
-  <h5>计算结果</h5>
+  <h5>{$_('combineadvdialog.results')}</h5>
   <ConfigTable>
-    <ConfigRow name="找到对应条目组数">
+    <ConfigRow name={$_('combineadvdialog.matched-groups')}>
       {data.result.matches.length}
     </ConfigRow>
-    <ConfigRow name="切分条目数">
+    <ConfigRow name={$_('combineadvdialog.split-count')}>
       {data.result.splits.length}
     </ConfigRow>
-    <ConfigRow name="合并条目数">
+    <ConfigRow name={$_('combineadvdialog.merge-count')}>
       {data.result.merges.length}
     </ConfigRow>
-    <ConfigRow name="{fromChannel.name} 中未匹配条目数">
+    <ConfigRow name={$_('combineadvdialog.unmapped-count', {values: {name: fromChannel.name}})}>
       {data.result.unmappedA.length}
     </ConfigRow>
-    <ConfigRow name="{toChannel.name} 中未匹配条目数">
+    <ConfigRow name={$_('combineadvdialog.unmapped-count', {values: {name: toChannel.name}})}>
       {data.result.unmappedB.length}
     </ConfigRow>
-    <ConfigRow name="样式冲突导致未合并的条目数">
+    <ConfigRow name={$_('combineadvdialog.conflict-count')}>
       {data.conflict.size}
     </ConfigRow>
   </ConfigTable>

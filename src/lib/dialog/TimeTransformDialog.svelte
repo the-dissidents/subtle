@@ -99,7 +99,7 @@ function fromTransformed() {
   <table class='config'>
     <tbody>
       <tr>
-        <td colspan="2"><h5>平移</h5></td>
+        <td colspan="2"><h5>{$_('transformdialog.shift')}</h5></td>
       </tr>
       <tr>
         <td>{$_('transformdialog.shift-times')}</td>
@@ -120,7 +120,7 @@ function fromTransformed() {
         </td>
       </tr>
       <tr>
-        <td colspan="2"><h5>缩放</h5></td>
+        <td colspan="2"><h5>{$_('transformdialog.scale')}</h5></td>
       </tr>
       <tr>
         <td>{$_('transformdialog.fps-before-after')}</td>
@@ -180,7 +180,7 @@ function fromTransformed() {
           <br/>
           <label>
             <input type='checkbox' bind:checked={keepDuration}>
-            保持时长
+            {$_('transformdialog.keep-duration')}
           </label>
         </td>
       </tr>

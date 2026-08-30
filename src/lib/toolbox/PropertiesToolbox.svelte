@@ -120,7 +120,7 @@ async function adjustFramerate() {
   await (await Menu.new({
     items: [
       {
-        text: '从字幕帧率调整至视频帧率',
+        text: $_('ppty.adjust-to-video-framerate'),
         enabled: !!videoFramerate && videoFramerate !== metadata.framerate,
         action() {
           Debug.assert(!!metadata.framerate && !!videoFramerate);
@@ -128,11 +128,11 @@ async function adjustFramerate() {
         }
       },
       {
-        text: '从字幕帧率调整至其它帧率',
+        text: $_('ppty.adjust-to-other-framerate'),
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         async action() {
           Debug.assert(!!metadata.framerate);
-          const value = await showInputPopup(adjustButton!, '输入新帧率',
+          const value = await showInputPopup(adjustButton!, $_('ppty.input-new-framerate'),
             { validate: (s) => isFinite(parseFloat(s)) });
           if (!value) return;
           await doAdjust(metadata.framerate, parseFloat(value));

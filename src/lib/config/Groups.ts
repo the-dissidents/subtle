@@ -185,12 +185,12 @@ export const DebugConfig = new PublicConfigGroup(
     () => $_('config.debug-d'), 10,
     {
         showTestToolbox: {
-            localizedName: () => 'show test toolbox',
+            localizedName: () => $_('config.show-test-toolbox'),
             type: 'boolean',
             default: false
         },
         persistentLogLevel: {
-            localizedName: () => 'persistent log level',
+            localizedName: () => $_('config.persistent-log-level'),
             type: 'dropdown',
             options: {
                 ['Off']: { localizedName: () => 'off' },
@@ -203,7 +203,7 @@ export const DebugConfig = new PublicConfigGroup(
             default: 'Trace'
         },
         logLevel: {
-            localizedName: () => 'webview log level',
+            localizedName: () => $_('config.webview-log-level'),
             type: 'dropdown',
             options: {
                 ['Off']: { localizedName: () => 'off' },
@@ -216,31 +216,31 @@ export const DebugConfig = new PublicConfigGroup(
             default: 'Debug'
         },
         redirectLogs: {
-            localizedName: () => 'redirect native log to devtools',
+            localizedName: () => $_('config.redirect-native-log'),
             type: 'boolean',
             default: true
         },
         disableWaveform: {
-            localizedName: () => 'disable waveform in timeline',
+            localizedName: () => $_('config.disable-waveform'),
             type: 'boolean',
             default: false
         },
         disableVideo: {
-            localizedName: () => 'disable video rendering',
+            localizedName: () => $_('config.disable-video-rendering'),
             type: 'boolean',
             default: false
         },
         disableTry: {
-            localizedName: () => 'disable try-guards',
+            localizedName: () => $_('config.disable-try-guards'),
             type: 'boolean',
             default: false
         },
         mouseWheelDetection: {
-            localizedName: () => 'mouse wheel detection method',
+            localizedName: () => $_('config.mouse-wheel-detection'),
             type: 'dropdown',
             options: {
-                threshold: { localizedName: () => 'delta >= 100' },
-                multiple: { localizedName: () => 'delta is ±120 or ±100' }
+                threshold: { localizedName: () => $_('config.mouse-wheel-threshold') },
+                multiple: { localizedName: () => $_('config.mouse-wheel-multiple') }
             },
             default: 'multiple'
         }

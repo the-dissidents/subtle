@@ -45,7 +45,10 @@ async function chooseStyle(subs: Subtitles, prompt: string) {
   Debug.assert(subs.styles.length > 1);
   const choice = await overlayMenu(
     subs.styles.map((x) => ({ text:
-      `${x.name} （使用量：${subs.entries.filter((e) => e.texts.has(x)).length}）`
+      $_('comparedialog.usage-count', {values: {
+        name: x.name,
+        n: subs.entries.filter((e) => e.texts.has(x)).length
+      }})
     })),
     {
       text: prompt,

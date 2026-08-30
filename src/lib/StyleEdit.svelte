@@ -237,8 +237,8 @@ Source.onSubtitlesChanged.bind(me, (t) => {
             $style.hidden = x;
             void Source.markChanged(ChangeType.StyleDefinitions, $_('c.style-visibility'));
           }}>
-            <StripRadioItem value={false}>显示</StripRadioItem>
-            <StripRadioItem value={true}>隐藏</StripRadioItem>
+            <StripRadioItem value={false}>{$_('style.show')}</StripRadioItem>
+            <StripRadioItem value={true}>{$_('style.hide')}</StripRadioItem>
           </ButtonStrip>
         </div>
       </ConfigRow>

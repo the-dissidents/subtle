@@ -110,39 +110,39 @@ async function gotoProblem(dir: 1 | -1) {
 </script>
 
 <div class='vlayout fill'>
-  <h5>导航</h5>
+  <h5>{$_('review.navigation')}</h5>
   <ConfigTable>
     <ConfigRow name=''>
       <label>
         <input type='checkbox' bind:checked={$checkLint}>
-        拼写检查问题
+        {$_('review.problem-lint')}
       </label>
       <br>
       <label>
         <input type='checkbox' bind:checked={$checkFilter}>
-        不符合验证条件的条目
+        {$_('review.problem-filter')}
       </label>
       <br>
       <label>
         <input type='checkbox' bind:checked={$checkLabel}>
-        带有以下标签的条目
+        {$_('review.problem-label')}
         <LabelSelect disabled={!$checkLabel} bind:value={$label} />
       </label>
     </ConfigRow>
-    <ConfigRow name='前往'>
+    <ConfigRow name={$_('review.goto')}>
     {#key updateCounter}
       <div>
         <button disabled={!Selection.focusedEntry}
-          onclick={() => gotoProblem(-1)}>上一个</button>
+          onclick={() => gotoProblem(-1)}>{$_('review.previous')}</button>
         <button disabled={!Selection.focusedEntry}
-          onclick={() => gotoProblem(1)}>下一个</button>
+          onclick={() => gotoProblem(1)}>{$_('review.next')}</button>
       </div>
     {/key}
     </ConfigRow>
   </ConfigTable>
 
-  <h5>拼写检查</h5>
+  <h5>{$_('review.lint')}</h5>
   <div>
-    <button onclick={() => fixAll()}>尝试修复所有拼写问题</button>
+    <button onclick={() => fixAll()}>{$_('review.fix-all-problems')}</button>
   </div>
 </div>
