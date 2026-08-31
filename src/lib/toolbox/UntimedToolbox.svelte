@@ -112,7 +112,7 @@ import { ChangeType, Source } from "../frontend/Source";
 import { Memorized } from "../config/MemorizedValue.svelte";
 
 async function fillIn(range: SubtitleEntry[]) {
-  const separator = useDoubleNewline ? '\n\n' : '\n';
+  const separator = $useDoubleNewline ? '\n\n' : '\n';
   const lines = Source.subs.metadata.special.untimedText.split(separator);
 
   if (lines.length < range.length) {
