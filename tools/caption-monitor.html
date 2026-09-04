@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caption Monitor</title>
+<style>
+    :root {
+        --bg: #14161a;
+        --panel: #1e2127;
+        --panel-2: #262a32;
+        --text: #e8eaed;
+        --muted: #9aa0a6;
+        --accent: #4fc3f7;
+        --border: #3a3f48;
+        --danger: #ef5350;
+        --calibrate-fill: rgba(79, 195, 247, 0.15);
+        --calibrate-border: #4fc3f7;
+        --controls-w: 440px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: black;
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 18px;
+        overflow: hidden;
+    }
+
+    /* ---- Region (the cloned closed-caption area, anchored at top-left) ---- */
+    #region {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 1000px;
+        height: 100px;
+        z-index: 10;
+        background: #000;
+        overflow: hidden;
+        user-select: none;
+    }
+
+    #caption {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 4%;
+        color: #fff;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 40px;
+        font-family: sans-serif;
+        line-height: 1.25;
+        text-shadow:
+            2px 2px 0 #000,
+            -2px 2px 0 #000,
+            2px -2px 0 #000,
+            -2px -2px 0 #000,
+            0 2px 0 #000,
+            0 -2px 0 #000,
+            2px 0 0 #000,
+            -2px 0 0 #000;
+    }
+
+    #region.calibrating {
+        background: var(--calibrate-fill);
+        outline: 1px solid var(--calibrate-border);
+        outline-offset: -1px;
+        cursor: crosshair;
+    }
+
+    #region.calibrating #caption {
+        display: none;
+    }
+
+    #calib-handle {
+        display: none;
+        position: absolute;
+        right: -8px;
+        bottom: -8px;
+        width: 16px;
+        height: 16px;
+        background: var(--calibrate-border);
+        border: 2px solid #000;
+        cursor: nwse-resize;
+        border-radius: 2px;
+    }
+
+    #region.calibrating #calib-handle {
+        display: block;
+    }
+
+    /* ---- Controls sidebar (pinned to the right edge) ---- */
+    #controls {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: var(--controls-w);
+        overflow-y: auto;
+        background: var(--panel);
+        border-left: 1px solid var(--border);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    h1 {
+        font-size: 16px;
+        margin: 0;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+    }
+
+    .section {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+    }
+
+    .section h2 {
+        font-size: 12px;
+        margin: 0 0 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    button {
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 7px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background 0.12s, border-color 0.12s;
+    }
+
+    button:hover {
+        background: #2f343d;
+        border-color: #4b515c;
+    }
+
+    button.primary {
+        background: var(--accent);
+        color: #000;
+        border-color: var(--accent);
+        font-weight: 600;
+    }
+
+    button.primary:hover {
+        background: #66cdfb;
+    }
+
+    button.danger {
+        color: var(--danger);
+        border-color: #5c3535;
+    }
+
+    button.danger:hover {
+        background: #3a2222;
+    }
+
+    .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .offset-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .offset-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
+    }
+
+    .offset-btn small {
+        color: var(--muted);
+        font-size: 11px;
+    }
+
+    label.field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--muted);
+        flex: 1;
+        min-width: 120px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 7px 9px;
+        font-size: 13px;
+        width: 100%;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+    }
+
+    .mono {
+        font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .size-label {
+        font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+        font-variant-numeric: tabular-nums;
+        color: var(--accent);
+        font-weight: 600;
+    }
+
+    .muted { color: var(--muted); font-size: 12px; }
+
+    /* ---- Subtitle list (fills the space under the region) ---- */
+    #list {
+        position: fixed;
+        top: 100px;
+        margin-top: 50px;
+        left: 0;
+        right: var(--controls-w);
+        bottom: 0;
+        overflow-y: auto;
+        background: var(--bg);
+        border-top: 1px solid var(--border);
+    }
+
+    .list-item {
+        display: flex;
+        gap: 10px;
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        align-items: baseline;
+    }
+
+    .list-item:last-child { border-bottom: none; }
+
+    .list-item .idx {
+        color: var(--muted);
+        font-size: 11px;
+        min-width: 30px;
+        text-align: right;
+    }
+
+    .list-item .timing {
+        font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        min-width: 150px;
+    }
+
+    .list-item .ltext {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .list-item.active {
+        background: rgba(79, 195, 247, 0.16);
+    }
+
+    .list-item.active .idx,
+    .list-item.active .timing {
+        color: var(--accent);
+    }
+
+    .list-item.active .ltext {
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .empty-hint {
+        padding: 24px;
+        text-align: center;
+        color: var(--muted);
+    }
+
+    /* Drop overlay */
+    #drop-hint {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.7);
+        color: var(--accent);
+        font-size: 22px;
+        z-index: 100;
+        pointer-events: none;
+    }
+</style>
+</head>
+<body>
+    <div id="region">
+        <div id="caption"></div>
+        <div id="calib-handle"></div>
+    </div>
+
+    <div id="list"><div class="empty-hint">Open an SRT file to see its lines.</div></div>
+
+    <div id="controls">
+        <div class="row" style="justify-content: space-between;">
+            <h1>Caption Monitor</h1>
+            <button id="btn-fullscreen">Fullscreen</button>
+        </div>
+
+        <div class="section">
+            <h2>File</h2>
+            <div class="row">
+                <button id="btn-open">Open SRT…</button>
+                <span id="file-name" class="muted mono">no file loaded</span>
+            </div>
+            <input type="file" id="file-input" accept=".srt,.vtt,.txt" style="display:none">
+        </div>
+
+        <div class="section">
+            <h2>Playback</h2>
+            <div class="row">
+                <button id="btn-play" class="primary">Play</button>
+                <button id="btn-stop" class="danger">Stop</button>
+                <span id="clock" class="mono muted">00:00:00,000</span>
+            </div>
+            <div style="margin-top: 10px;">
+                <input type="range" id="scrub" min="0" max="0" value="0" step="0.001">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Timing offset</h2>
+            <div class="offset-grid">
+                <button class="offset-btn" data-delta="-0.1"><span>−100ms</span><small>faster</small></button>
+                <button class="offset-btn" data-delta="0.1"><span>+100ms</span><small>slower</small></button>
+                <button class="offset-btn" data-delta="-0.3"><span>−300ms</span><small>faster</small></button>
+                <button class="offset-btn" data-delta="0.3"><span>+300ms</span><small>slower</small></button>
+                <button class="offset-btn" data-delta="-1"><span>−1s</span><small>faster</small></button>
+                <button class="offset-btn" data-delta="1"><span>+1s</span><small>slower</small></button>
+            </div>
+            <div class="row" style="margin-top: 8px;">
+                <span class="muted">Current offset:</span>
+                <span id="offset-label" class="size-label">0ms</span>
+                <button id="btn-offset-reset" class="danger" style="margin-left: auto;">Reset</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Font</h2>
+            <div class="row">
+                <label class="field">Font family
+                    <input type="text" id="font-family" value="sans-serif" placeholder="e.g. Arial, sans-serif">
+                </label>
+                <label class="field">Font size (px)
+                    <input type="number" id="font-size" value="40" min="6" max="400" step="1">
+                </label>
+            </div>
+            <div class="row" style="margin-top: 10px;">
+                <label class="field">Text brightness
+                    <input type="range" id="brightness" min="0" max="200" value="100" step="1">
+                </label>
+                <span id="brightness-label" class="size-label" style="min-width: 48px; text-align: right;">100%</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Display region</h2>
+            <div class="row">
+                <button id="btn-calibrate">Calibrate…</button>
+                <span>size: <span id="size-label" class="size-label">1000 × 100</span></span>
+            </div>
+            <p class="muted" style="margin-bottom:0;">
+                In calibrate mode, drag the blue square (bottom-right vertex) of the colored rectangle
+                until it matches the caption display.
+            </p>
+        </div>
+    </div>
+
+<div id="drop-hint">Drop SRT file to load</div>
+
+<script>
+(function () {
+    'use strict';
+
+    var $ = function (sel) { return document.querySelector(sel); };
+
+    var STORE_KEY = 'caption-monitor';
+    var DEFAULT_REGION = { w: 1000, h: 100 };
+
+    var state = {
+        entries: [],          // [{start, end, text}]
+        currentTime: 0,       // source seconds (offset applied separately)
+        playing: false,
+        startWallTime: 0,     // Date.now() when playback resumed
+        pausedTime: 0,
+        offset: 0,            // seconds
+        region: { w: DEFAULT_REGION.w, h: DEFAULT_REGION.h },
+        fontFamily: 'sans-serif',
+        fontSize: 40,
+        brightness: 100,      // percent
+        calibrating: false,
+        activeIndex: -1,
+        duration: 0
+    };
+
+    /* ======================= SRT parsing ======================= */
+
+    // Exact port of the algorithm in libavformat/srtdec.c, as used by the
+    // project's SRT.svelte.ts (warnings/styling stripped out).
+    function getTime(h, m, s, ms) {
+        return parseInt(h, 10) * 3600
+             + parseInt(m, 10) * 60
+             + parseInt(s, 10)
+             + parseInt(ms, 10) * 0.001;
+    }
+
+    var timeRegex = /^\s*(\d+):(\d+):(\d+)[,.](\d+) --> (\d+):(\d+):(\d+)[,.](\d+)(?:\s+X1:(-?\d+) X2:(-?\d+) Y1:(-?\d+) Y2:(-?\d+))?\s*$/m;
+
+    // Strip SRT-HTML to plain text (stage 1: no SRT-HTML styling).
+    function htmlToPlainText(str) {
+        var s = String(str);
+        s = s.replace(/<</g, '\u0000');               // escaped '<'
+        s = s.replace(/<br\s*\/?>/gi, '\n');          // <br> -> newline
+        s = s.replace(/<[^>]*>/g, '');                // drop all other tags
+        s = s.replace(/\u0000/g, '<');
+        var entities = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&nbsp;': ' ', '&quot;': '"', '&#39;': "'" };
+        s = s.replace(/&(amp|lt|gt|nbsp|quot|#39);/g, function (m, k) { return entities[m]; });
+        return s;
+    }
+
+    function parseSRT(source) {
+        var entries = [];
+        var buffer = '';
+        var lineCache = '';
+        var start = -1, end = -1;
+        var lines = source.split('\n');
+
+        function submit() {
+            while (buffer.charAt(buffer.length - 1) === '\n')
+                buffer = buffer.slice(0, -1);
+            if (buffer.length > 0) {
+                entries.push({ start: start, end: end, text: htmlToPlainText(buffer) });
+                buffer = '';
+            }
+        }
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            if (line.length === 0) continue;
+            var times = timeRegex.exec(line);
+            if (times) {
+                if (start >= 0) {
+                    var standaloneNumber = /^\d+$/.test(lineCache);
+                    if (!standaloneNumber && buffer.length === 0)
+                        buffer = lineCache;
+                    lineCache = '';
+                    submit();
+                }
+                start = getTime(times[1], times[2], times[3], times[4]);
+                end = getTime(times[5], times[6], times[7], times[8]);
+            } else {
+                if (start < 0) continue;
+                if (lineCache.length > 0) {
+                    buffer += lineCache + '\n';
+                    lineCache = '';
+                }
+                if (/^\s*\d+/.test(line)) {
+                    lineCache = line;
+                } else {
+                    buffer += line + '\n';
+                }
+            }
+        }
+
+        if (start >= 0) {
+            if (lineCache.length > 0)
+                buffer = lineCache;
+            submit();
+        } else {
+            throw new Error('invalid or empty SRT');
+        }
+
+        return entries;
+    }
+
+    /* ======================= helpers ======================= */
+
+    function formatTime(sec) {
+        if (!isFinite(sec) || sec < 0) sec = 0;
+        var h = Math.floor(sec / 3600);
+        var m = Math.floor((sec % 3600) / 60);
+        var s = Math.floor(sec % 60);
+        var ms = Math.round((sec - Math.floor(sec)) * 1000);
+        if (ms >= 1000) { ms -= 1000; s += 1; }
+        function p(n, w) { return String(n).padStart(w, '0'); }
+        return p(h, 2) + ':' + p(m, 2) + ':' + p(s, 2) + ',' + p(ms, 3);
+    }
+
+    function effectiveStart(e) { return e.start + state.offset; }
+    function effectiveEnd(e) { return e.end + state.offset; }
+
+    // Returns index of current entry, or the next entry when inside a gap.
+    function findActiveIndex(t) {
+        for (var i = 0; i < state.entries.length; i++) {
+            var e = state.entries[i];
+            if (t >= effectiveStart(e) && t < effectiveEnd(e)) return i;
+            if (effectiveStart(e) > t) return i;
+        }
+        return -1;
+    }
+
+    function computeDuration() {
+        var d = 0;
+        for (var i = 0; i < state.entries.length; i++)
+            if (state.entries[i].end > d) d = state.entries[i].end;
+        return d;
+    }
+
+    /* ======================= persistence ======================= */
+
+    function load() {
+        var raw;
+        try { raw = localStorage.getItem(STORE_KEY); } catch (e) { return; }
+        if (!raw) return;
+        try {
+            var data = JSON.parse(raw);
+            if (data && typeof data === 'object') {
+                if (typeof data.w === 'number' && typeof data.h === 'number')
+                    state.region = { w: data.w, h: data.h };
+                if (typeof data.fontFamily === 'string') state.fontFamily = data.fontFamily;
+                if (typeof data.fontSize === 'number') state.fontSize = data.fontSize;
+                if (typeof data.offset === 'number') state.offset = data.offset;
+                if (typeof data.brightness === 'number') state.brightness = data.brightness;
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    function save() {
+        try {
+            localStorage.setItem(STORE_KEY, JSON.stringify({
+                w: state.region.w,
+                h: state.region.h,
+                fontFamily: state.fontFamily,
+                fontSize: state.fontSize,
+                offset: state.offset,
+                brightness: state.brightness
+            }));
+        } catch (e) { /* ignore */ }
+    }
+
+    /* ======================= DOM refs ======================= */
+
+    var regionEl = $('#region');
+    var captionEl = $('#caption');
+    var handleEl = $('#calib-handle');
+    var listEl = $('#list');
+    var fileNameEl = $('#file-name');
+    var clockEl = $('#clock');
+    var scrubEl = $('#scrub');
+    var offsetLabelEl = $('#offset-label');
+    var sizeLabelEl = $('#size-label');
+    var brightnessEl = $('#brightness');
+    var brightnessLabelEl = $('#brightness-label');
+
+    var listItemEls = [];
+
+    /* ======================= rendering ======================= */
+
+    function applyFont() {
+        captionEl.style.fontFamily = state.fontFamily;
+        captionEl.style.fontSize = state.fontSize + 'px';
+        $('#font-family').value = state.fontFamily;
+        $('#font-size').value = state.fontSize;
+    }
+
+    function applyBrightness() {
+        captionEl.style.filter = 'brightness(' + (state.brightness / 100) + ')';
+        brightnessEl.value = state.brightness;
+        brightnessLabelEl.textContent = state.brightness + '%';
+    }
+
+    function applyRegion() {
+        regionEl.style.width = state.region.w + 'px';
+        regionEl.style.height = state.region.h + 'px';
+        listEl.style.top = state.region.h + 'px';
+        sizeLabelEl.textContent = state.region.w + ' \u00d7 ' + state.region.h;
+    }
+
+    function updateOffsetLabel() {
+        var ms = Math.round(state.offset * 1000);
+        offsetLabelEl.textContent = (ms >= 0 ? '+' : '\u2212') + Math.abs(ms) + 'ms';
+    }
+
+    function renderList() {
+        listEl.innerHTML = '';
+        listItemEls = [];
+        if (state.entries.length === 0) {
+            listEl.innerHTML = '<div class="empty-hint">Open an SRT file to see its lines.</div>';
+            return;
+        }
+        for (var i = 0; i < state.entries.length; i++) {
+            var e = state.entries[i];
+            var item = document.createElement('div');
+            item.className = 'list-item';
+            item.dataset.index = String(i);
+
+            var idx = document.createElement('span');
+            idx.className = 'idx';
+            idx.textContent = String(i + 1);
+
+            var timing = document.createElement('span');
+            timing.className = 'timing';
+            timing.textContent = formatTime(e.start) + ' \u2192 ' + formatTime(e.end);
+
+            var text = document.createElement('span');
+            text.className = 'ltext';
+            text.textContent = e.text.replace(/\n/g, ' ');
+            text.title = e.text;
+
+            item.appendChild(idx);
+            item.appendChild(timing);
+            item.appendChild(text);
+
+            item.addEventListener('click', (function (idxVal) {
+                return function () { seekToEntry(idxVal); };
+            })(i));
+
+            listEl.appendChild(item);
+            listItemEls.push(item);
+        }
+    }
+
+    function seekToEntry(i) {
+        var e = state.entries[i];
+        state.pausedTime = e.start;
+        if (state.playing) state.startWallTime = Date.now();
+        syncScrub();
+    }
+
+    function updateHighlight() {
+        for (var i = 0; i < listItemEls.length; i++)
+            listItemEls[i].classList.toggle('active', i === state.activeIndex);
+    }
+
+    function scrollToActive() {
+        var el = listItemEls[state.activeIndex];
+        if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    function updateCaption() {
+        var idx = state.activeIndex;
+        if (idx >= 0) {
+            var e = state.entries[idx];
+            var t = state.currentTime;
+            if (t >= effectiveStart(e) && t < effectiveEnd(e))
+                captionEl.textContent = e.text;
+            else
+                captionEl.textContent = '';
+        } else {
+            captionEl.textContent = '';
+        }
+    }
+
+    function syncScrub() {
+        scrubEl.max = Math.max(state.duration, 0.001);
+        scrubEl.value = Math.min(state.currentTime, state.duration);
+    }
+
+    /* ======================= playback loop ======================= */
+
+    function tick() {
+        if (state.playing)
+            state.currentTime = state.pausedTime + (Date.now() - state.startWallTime) / 1000;
+
+        var idx = findActiveIndex(state.currentTime);
+        if (idx !== state.activeIndex) {
+            state.activeIndex = idx;
+            updateHighlight();
+            scrollToActive();
+        }
+        updateCaption();
+        clockEl.textContent = formatTime(state.currentTime);
+        if (document.activeElement !== scrubEl)
+            syncScrub();
+        requestAnimationFrame(tick);
+    }
+
+    function play() {
+        if (state.entries.length === 0) return;
+        if (!state.playing) {
+            state.startWallTime = Date.now();
+            state.playing = true;
+            $('#btn-play').textContent = 'Pause';
+        } else {
+            state.pausedTime = state.currentTime;
+            state.playing = false;
+            $('#btn-play').textContent = 'Play';
+        }
+    }
+
+    function stop() {
+        state.playing = false;
+        state.pausedTime = 0;
+        state.currentTime = 0;
+        $('#btn-play').textContent = 'Play';
+        syncScrub();
+    }
+
+    /* ======================= file loading ======================= */
+
+    function loadSource(source, name) {
+        var text = source.replace(/^\uFEFF/, ''); // strip BOM
+        try {
+            state.entries = parseSRT(text);
+        } catch (e) {
+            alert('Failed to parse SRT: ' + e.message);
+            return;
+        }
+        state.duration = computeDuration();
+        state.pausedTime = 0;
+        state.currentTime = 0;
+        state.playing = false;
+        $('#btn-play').textContent = 'Play';
+        fileNameEl.textContent = name || (state.entries.length + ' entries');
+        fileNameEl.title = name || '';
+        renderList();
+        syncScrub();
+    }
+
+    function readFile(file) {
+        var reader = new FileReader();
+        reader.onload = function () { loadSource(String(reader.result), file.name); };
+        reader.onerror = function () { alert('Failed to read file.'); };
+        reader.readAsText(file);
+    }
+
+    /* ======================= calibrate ======================= */
+
+    var drag = null;
+
+    function setCalibrating(on) {
+        state.calibrating = on;
+        regionEl.classList.toggle('calibrating', on);
+        $('#btn-calibrate').textContent = on ? 'Done' : 'Calibrate\u2026';
+    }
+
+    handleEl.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        handleEl.setPointerCapture(e.pointerId);
+        drag = {
+            id: e.pointerId,
+            startX: e.clientX,
+            startY: e.clientY,
+            w: state.region.w,
+            h: state.region.h
+        };
+    });
+
+    handleEl.addEventListener('pointermove', function (e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        var w = Math.max(20, Math.round(drag.w + (e.clientX - drag.startX)));
+        var h = Math.max(20, Math.round(drag.h + (e.clientY - drag.startY)));
+        state.region.w = w;
+        state.region.h = h;
+        applyRegion();
+    });
+
+    handleEl.addEventListener('pointerup', function (e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        drag = null;
+        save();
+    });
+
+    /* ======================= events ======================= */
+
+    $('#btn-open').addEventListener('click', function () { $('#file-input').click(); });
+    $('#file-input').addEventListener('change', function (e) {
+        if (e.target.files && e.target.files[0]) readFile(e.target.files[0]);
+        e.target.value = '';
+    });
+
+    $('#btn-play').addEventListener('click', play);
+    $('#btn-stop').addEventListener('click', stop);
+
+    scrubEl.addEventListener('input', function () {
+        state.pausedTime = parseFloat(scrubEl.value) || 0;
+        state.currentTime = state.pausedTime;
+        if (state.playing) state.startWallTime = Date.now();
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.offset-btn'), function (btn) {
+        btn.addEventListener('click', function () {
+            state.offset += parseFloat(btn.dataset.delta);
+            updateOffsetLabel();
+            save();
+        });
+    });
+
+    $('#btn-offset-reset').addEventListener('click', function () {
+        state.offset = 0;
+        updateOffsetLabel();
+        save();
+    });
+
+    $('#btn-calibrate').addEventListener('click', function () {
+        setCalibrating(!state.calibrating);
+        save();
+    });
+
+    $('#font-family').addEventListener('change', function (e) {
+        state.fontFamily = e.target.value.trim() || 'sans-serif';
+        applyFont();
+        save();
+    });
+
+    $('#font-size').addEventListener('change', function (e) {
+        var n = parseInt(e.target.value, 10);
+        if (!isNaN(n) && n > 0) {
+            state.fontSize = n;
+            applyFont();
+            save();
+        } else {
+            e.target.value = state.fontSize;
+        }
+    });
+
+    brightnessEl.addEventListener('input', function () {
+        state.brightness = parseInt(brightnessEl.value, 10) || 0;
+        applyBrightness();
+    });
+    brightnessEl.addEventListener('change', save);
+
+    $('#btn-fullscreen').addEventListener('click', function () {
+        if (!document.fullscreenElement)
+            document.documentElement.requestFullscreen();
+        else
+            document.exitFullscreen();
+    });
+
+    // Drag & drop an SRT file anywhere onto the page.
+    var dropHint = $('#drop-hint');
+    var dragDepth = 0;
+    window.addEventListener('dragenter', function (e) {
+        e.preventDefault();
+        dragDepth++;
+        dropHint.style.display = 'flex';
+    });
+    window.addEventListener('dragover', function (e) { e.preventDefault(); });
+    window.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        dragDepth--;
+        if (dragDepth <= 0) { dragDepth = 0; dropHint.style.display = 'none'; }
+    });
+    window.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dragDepth = 0;
+        dropHint.style.display = 'none';
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0])
+            readFile(e.dataTransfer.files[0]);
+    });
+
+    /* ======================= init ======================= */
+
+    load();
+    applyRegion();
+    applyFont();
+    applyBrightness();
+    updateOffsetLabel();
+    requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
