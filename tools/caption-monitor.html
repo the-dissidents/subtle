@@ -43,11 +43,13 @@
         background: #000;
         overflow: hidden;
         user-select: none;
+        cursor: none;
     }
 
     #caption {
         position: absolute;
         inset: 0;
+        cursor: none;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -115,7 +117,7 @@
     }
 
     h1 {
-        font-size: 16px;
+        font-size: 18px;
         margin: 0;
         font-weight: 600;
         letter-spacing: 0.2px;
@@ -129,7 +131,7 @@
     }
 
     .section h2 {
-        font-size: 12px;
+        font-size: 16px;
         margin: 0 0 10px;
         text-transform: uppercase;
         letter-spacing: 0.8px;
@@ -144,8 +146,7 @@
         border-radius: 6px;
         padding: 7px 12px;
         cursor: pointer;
-        font-size: 13px;
-        transition: background 0.12s, border-color 0.12s;
+        font-size: 15px;
     }
 
     button:hover {
@@ -162,6 +163,45 @@
 
     button.primary:hover {
         background: #66cdfb;
+    }
+
+    .transport {
+        display: flex;
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .transport-btn {
+        border: none;
+        border-radius: 0;
+        border-right: 1px solid var(--border);
+        padding: 7px 12px;
+    }
+
+    .transport-btn:last-child {
+        border-right: none;
+    }
+
+    .transport-btn.active {
+        background: var(--accent);
+        color: #000;
+        font-weight: 600;
+    }
+
+    .transport-btn.active:hover {
+        background: #66cdfb;
+    }
+
+    button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    input[type="range"]:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
     }
 
     button.danger {
@@ -195,7 +235,7 @@
 
     .offset-btn small {
         color: var(--muted);
-        font-size: 11px;
+        font-size: 13px;
     }
 
     label.field {
@@ -264,14 +304,14 @@
 
     .list-item .idx {
         color: var(--muted);
-        font-size: 11px;
+        font-size: 15px;
         min-width: 30px;
         text-align: right;
     }
 
     .list-item .timing {
         font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 12px;
+        font-size: 15px;
         color: var(--muted);
         white-space: nowrap;
         min-width: 150px;
@@ -345,12 +385,16 @@
         <div class="section">
             <h2>Playback</h2>
             <div class="row">
-                <button id="btn-play" class="primary">Play</button>
-                <button id="btn-stop" class="danger">Stop</button>
+                <div class="transport">
+                    <button id="btn-play" class="transport-btn" disabled>Play</button>
+                    <button id="btn-pause" class="transport-btn" disabled>Pause</button>
+                    <button id="btn-suspend" class="transport-btn" disabled>Suspend</button>
+                </div>
+                <button id="btn-stop" class="danger" disabled>Stop</button>
                 <span id="clock" class="mono muted">00:00:00,000</span>
             </div>
             <div style="margin-top: 10px;">
-                <input type="range" id="scrub" min="0" max="0" value="0" step="0.001">
+                <input type="range" id="scrub" min="0" max="0" value="0" step="0.001" disabled>
             </div>
         </div>
 
@@ -416,7 +460,7 @@
     var state = {
         entries: [],          // [{start, end, text}]
         currentTime: 0,       // source seconds (offset applied separately)
-        playing: false,
+        mode: 'suspended',    // 'playing' | 'paused' | 'suspended'
         startWallTime: 0,     // Date.now() when playback resumed
         pausedTime: 0,
         offset: 0,            // seconds
@@ -659,7 +703,8 @@
     function seekToEntry(i) {
         var e = state.entries[i];
         state.pausedTime = e.start;
-        if (state.playing) state.startWallTime = Date.now();
+        state.currentTime = e.start;
+        if (state.mode === 'playing') state.startWallTime = Date.now();
         syncScrub();
     }
 
@@ -674,6 +719,10 @@
     }
 
     function updateCaption() {
+        if (state.mode === 'suspended') {
+            captionEl.textContent = '';
+            return;
+        }
         var idx = state.activeIndex;
         if (idx >= 0) {
             var e = state.entries[idx];
@@ -695,7 +744,7 @@
     /* ======================= playback loop ======================= */
 
     function tick() {
-        if (state.playing)
+        if (state.mode === 'playing')
             state.currentTime = state.pausedTime + (Date.now() - state.startWallTime) / 1000;
 
         var idx = findActiveIndex(state.currentTime);
@@ -711,24 +760,40 @@
         requestAnimationFrame(tick);
     }
 
-    function play() {
-        if (state.entries.length === 0) return;
-        if (!state.playing) {
-            state.startWallTime = Date.now();
-            state.playing = true;
-            $('#btn-play').textContent = 'Pause';
+    function updateTransport() {
+        $('#btn-play').classList.toggle('active', state.mode === 'playing');
+        $('#btn-pause').classList.toggle('active', state.mode === 'paused');
+        $('#btn-suspend').classList.toggle('active', state.mode === 'suspended');
+    }
+
+    function setMode(mode) {
+        if (mode === 'playing') {
+            if (state.entries.length === 0) return; // nothing to play
+            if (state.mode !== 'playing')
+                state.startWallTime = Date.now();
         } else {
-            state.pausedTime = state.currentTime;
-            state.playing = false;
-            $('#btn-play').textContent = 'Play';
+            // Freeze the clock when leaving playing.
+            if (state.mode === 'playing')
+                state.pausedTime = state.currentTime;
         }
+        state.mode = mode;
+        updateTransport();
+    }
+
+    function updateControlsEnabled() {
+        var enabled = state.entries.length > 0;
+        $('#btn-play').disabled = !enabled;
+        $('#btn-pause').disabled = !enabled;
+        $('#btn-suspend').disabled = !enabled;
+        $('#btn-stop').disabled = !enabled;
+        scrubEl.disabled = !enabled;
     }
 
     function stop() {
-        state.playing = false;
         state.pausedTime = 0;
         state.currentTime = 0;
-        $('#btn-play').textContent = 'Play';
+        state.mode = 'suspended';
+        updateTransport();
         syncScrub();
     }
 
@@ -745,8 +810,9 @@
         state.duration = computeDuration();
         state.pausedTime = 0;
         state.currentTime = 0;
-        state.playing = false;
-        $('#btn-play').textContent = 'Play';
+        state.mode = 'suspended';
+        updateTransport();
+        updateControlsEnabled();
         fileNameEl.textContent = name || (state.entries.length + ' entries');
         fileNameEl.title = name || '';
         renderList();
@@ -805,13 +871,15 @@
         e.target.value = '';
     });
 
-    $('#btn-play').addEventListener('click', play);
+    $('#btn-play').addEventListener('click', function () { setMode('playing'); });
+    $('#btn-pause').addEventListener('click', function () { setMode('paused'); });
+    $('#btn-suspend').addEventListener('click', function () { setMode('suspended'); });
     $('#btn-stop').addEventListener('click', stop);
 
     scrubEl.addEventListener('input', function () {
         state.pausedTime = parseFloat(scrubEl.value) || 0;
         state.currentTime = state.pausedTime;
-        if (state.playing) state.startWallTime = Date.now();
+        if (state.mode === 'playing') state.startWallTime = Date.now();
     });
 
     Array.prototype.forEach.call(document.querySelectorAll('.offset-btn'), function (btn) {
@@ -892,6 +960,8 @@
     applyFont();
     applyBrightness();
     updateOffsetLabel();
+    updateTransport();
+    updateControlsEnabled();
     requestAnimationFrame(tick);
 })();
 </script>
