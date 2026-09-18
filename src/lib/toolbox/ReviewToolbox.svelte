@@ -1,6 +1,7 @@
 <script lang="ts">
 import { Filter } from "$lib/core/Filter";
 import { LABEL_TYPES } from "$lib/core/Labels";
+import { DialogCommands } from "$lib/frontend/Dialogs";
 import LabelSelect from "$lib/LabelSelect.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { CompiledLintProfile } from "../core/LintProfile";
@@ -144,5 +145,15 @@ async function gotoProblem(dir: 1 | -1) {
   <h5>{$_('review.lint')}</h5>
   <div>
     <button onclick={() => fixAll()}>{$_('review.fix-all-problems')}</button>
+  </div>
+
+  <h5>{$_('review.tools')}</h5>
+  <div>
+    <button onclick={() => DialogCommands.wordCount.call()}>
+      {$_('wordcountdialog.header')}
+    </button>
+    <button onclick={() => DialogCommands.compareDialog.call()}>
+      {$_('action.compare-documents')}
+    </button>
   </div>
 </div>

@@ -44,4 +44,7 @@ export const Dialog = {
     get lintProfile() {
         return (async () => (await import('./LintProfileDialog.svelte')).default)();
     },
+    get wordCount() {
+        return (async () => (await import('./WordCountDialog.svelte')).default)();
+    },
 }

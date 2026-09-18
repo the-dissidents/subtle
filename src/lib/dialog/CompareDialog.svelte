@@ -41,7 +41,7 @@ function toEntries(s: Subtitles, style: SubtitleStyle) {
 
 async function chooseStyle(subs: Subtitles, prompt: string) {
   if (subs.styles.length == 1)
-    return Source.subs.styles[0];
+    return subs.styles[0];
   Debug.assert(subs.styles.length > 1);
   const choice = await overlayMenu(
     subs.styles.map((x) => ({ text:
@@ -70,8 +70,6 @@ onMount(async () => {
 
   const A = toEntries(Source.subs, args[0]);
   const B = toEntries(subs, styleB);
-
-  console.log(styleB, B.length, subs.entries.length);
 
   const result = await showProgress<MatchResult | null>(
     (report) => MAPI.matchEntries(A, B, {

@@ -9,7 +9,6 @@ import { Debug } from '../Debug';
 
 import { UICommand } from '../frontend/CommandBase';
 import { Source, SourceCommands } from '../frontend/Source';
-import { DialogCommands } from "../frontend/Dialogs";
 import { Typography } from '../details/Typography';
 import { CharacterTokenizer, DefaultTokenizer, Searcher, SyllableTokenizer, type Tokenizer } from "../details/Fuzzy";
 
@@ -88,11 +87,6 @@ let bracketResult = $state('');
 let forbidDeepNesting = $state(true);
 </script>
 
-
-<button onclick={() => {
-  void openDialog(Dialog.combineAdvanced);
-}}>dtw</button>
-
 <button onclick={() => {
   void Debug.info(MediaPlayerInterface.getLatencies());
 }}>latencies</button>
@@ -148,10 +142,6 @@ let forbidDeepNesting = $state(true);
     filters: [{name: 'HTML', extensions: ['html']}],
   });
 }}>test save dialog</button>
-
-<button onclick={async () => {
-  await DialogCommands.compareDialog.call();
-}}>compare</button>
 
 <button
   onclick={async () => {

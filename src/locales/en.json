@@ -85,7 +85,8 @@
     "toggle-out-point": "toggle out point",
     "toggle-play": "toggle play/pause",
     "transform-times": "transform times...",
-    "up": "up"
+    "up": "up",
+    "word-count": "word count"
   },
   "appmenu": {
     "entries": "Entries",
@@ -578,7 +579,8 @@
     "any": "any",
     "clear": "clear",
     "conflicts": "This shortcut conflicts with:\n{list}",
-    "context": {},
+    "context": {
+    },
     "contexts": "Contexts",
     "input-keybinding-for-what": "input keybinding for {what}",
     "press-a-key": "Press a key",
@@ -1026,5 +1028,22 @@
     "paste": "paste",
     "text-size": "text size"
   },
-  "untitled": "<untitled>"
+  "untitled": "<untitled>",
+  "wordcountdialog": {
+    "channels": "channels",
+    "character-count": "character count",
+    "close": "close",
+    "entry-count": "entry count",
+    "header": "Word count",
+    "letters": "letters",
+    "line-count": "line count",
+    "line-count-d": "The total number of channels across all counted entries. This is not the number of literal lines separated by newline characters.",
+    "numbers": "numbers",
+    "others": "others",
+    "punctuations": "punctuations",
+    "selection-only": "selection only",
+    "whitespaces": "whitespaces",
+    "word-count": "space-delimited word count",
+    "word-count-d": "Counts runs of letters (the regular expression \\p{L}+). This is not meaningful for languages like Chinese and Japanese, where each character is counted as a single word."
+  }
 }

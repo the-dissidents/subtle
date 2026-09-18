@@ -85,7 +85,8 @@
     "toggle-out-point": "設定／取消出點",
     "toggle-play": "播放／暫停",
     "transform-times": "變換時間...",
-    "up": "向上"
+    "up": "向上",
+    "word-count": "字數統計"
   },
   "appmenu": {
     "entries": "字幕塊",
@@ -1026,5 +1027,22 @@
     "paste": "貼上",
     "text-size": "字型大小"
   },
-  "untitled": "「未命名」"
+  "untitled": "「未命名」",
+  "wordcountdialog": {
+    "channels": "頻道",
+    "character-count": "字元數",
+    "close": "關閉",
+    "entry-count": "條目數",
+    "header": "字數統計",
+    "letters": "字母",
+    "line-count": "行數",
+    "line-count-d": "所有被統計條目的頻道數總和。這不是按換行符分隔的實際行數。",
+    "numbers": "數字",
+    "others": "其他",
+    "punctuations": "標點",
+    "selection-only": "僅統計選取條目",
+    "whitespaces": "空白",
+    "word-count": "字數",
+    "word-count-d": "按連續字母（正規表示式 \\p{L}+）計數。這不適用於中文、日文等語言，這些語言中每個字元會被算作一個詞。"
+  }
 }

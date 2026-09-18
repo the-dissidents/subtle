@@ -61,6 +61,8 @@ export async function contextMenu() {
                 DialogCommands.combineAdvancedDialog.toMenuItem(),
                 DialogCommands.splitDialog.toMenuItem(),
                 BasicCommands.fixOverlap.toMenuItem(),
+                { item: 'Separator' },
+                DialogCommands.wordCount.toGlobalMenuItem(),
             ]
         },
     ]});

@@ -70,6 +70,13 @@ export const DialogCommands = {
                 call: () => openDialog(Dialog.compare, s)
             }))
         ]
+    }),
+    wordCount: new UICommand(() => $_('category.tool'),
+        [],
+    {
+        name: () => $_('action.word-count'),
+        isDialog: true,
+        call: () => openDialog(Dialog.wordCount)
     })
 }
 KeybindingManager.register(DialogCommands);

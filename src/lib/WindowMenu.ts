@@ -97,6 +97,8 @@ export async function initWindowMenu() {
             DialogCommands.combineDialog.toGlobalMenuItem(),
             DialogCommands.splitDialog.toGlobalMenuItem(),
             BasicCommands.fixOverlap.toGlobalMenuItem(),
+            { item: 'Separator' },
+            DialogCommands.wordCount.toGlobalMenuItem(),
         ]
     });
     const playback = await Submenu.new({

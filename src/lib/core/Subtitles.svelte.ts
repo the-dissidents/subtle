@@ -93,7 +93,9 @@ export const SubtitleStyle = {
         };
     },
     new(name: string) {
-        return SubtitleStyle.deserializeWithoutSpecial({ name, styles: {}, margin: {} });
+        const state = $state(
+            SubtitleStyle.deserializeWithoutSpecial({ name, styles: {}, margin: {} }));
+        return state;
     }
 };
 

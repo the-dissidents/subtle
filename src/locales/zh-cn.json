@@ -85,7 +85,8 @@
     "toggle-out-point": "设置/取消出点",
     "toggle-play": "播放/暂停",
     "transform-times": "变换时间...",
-    "up": "向上"
+    "up": "向上",
+    "word-count": "字数统计"
   },
   "appmenu": {
     "entries": "字幕块",
@@ -578,7 +579,8 @@
     "any": "所有",
     "clear": "清除",
     "conflicts": "此快捷键与以下命令冲突：\n{list}",
-    "context": {},
+    "context": {
+    },
     "contexts": "上下文",
     "input-keybinding-for-what": "输入 {what} 的快捷键",
     "press-a-key": "请按键",
@@ -734,7 +736,7 @@
     "saved-to-file": "已保存：{file}",
     "search-expression-is-empty": "查找表达式为空",
     "search-failed": "查找失败：",
-    "selected-entries-count": "选中条目数量：",
+    "selected-entries-count": "选中条目：",
     "subtitle-is-empty": "字幕文件为空",
     "unable-to-read-file-path": "无法读取文件：{path}",
     "undone": "已撤销：{op}",
@@ -831,7 +833,8 @@
     "previous": "上一个",
     "problem-filter": "不符合验证条件的条目",
     "problem-label": "带有以下标签的条目",
-    "problem-lint": "拼写检查问题"
+    "problem-lint": "拼写检查问题",
+    "tools": "工具"
   },
   "search": {
     "advanced": "高级",
@@ -1026,5 +1029,25 @@
     "paste": "粘贴",
     "text-size": "字号"
   },
-  "untitled": "「未命名」"
+  "untitled": "「未命名」",
+  "wordcountdialog": {
+    "channels": "频道",
+    "character-count": "字符数",
+    "close": "关闭",
+    "deselect-all": "全不选",
+    "entry-count": "条目数",
+    "header": "字数统计",
+    "letters": "字母",
+    "line-count": "行数",
+    "line-count-d": "所有被统计条目的频道数之和，不是按换行符分隔的实际行数",
+    "numbers": "数字",
+    "others": "其他",
+    "punctuations": "标点",
+    "select-all": "全选",
+    "selection-only": "仅统计选中条目",
+    "settings": "设置",
+    "whitespaces": "空白",
+    "word-count": "空格隔开的词数",
+    "word-count-d": "不适用于中文、日文等语言"
+  }
 }
