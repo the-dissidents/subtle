@@ -54,6 +54,7 @@ import * as z from "zod/v4-mini";
 import { onMount } from 'svelte';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { listen } from '@tauri-apps/api/event';
 import { arch, platform, version } from '@tauri-apps/plugin-os';
 import { restoreStateCurrent, saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state';
 
@@ -187,6 +188,12 @@ Memorized.onInitialize(async () => {
   leftPane!.style.width = `${$leftPaneW}px`;
 });
 
+async function openFileFromOS(file: string) {
+  if (!await Interface.warnIfNotSaved()) return;
+  await Interface.openFile(file);
+  Source.startAutoSave();
+}
+
 async function init() {
   await Promise.all([
     i18n.init({ fallbackLocale: 'zh-cn', initialLocale: 'en' }),
@@ -199,6 +206,10 @@ async function init() {
       appWindow.setTitle(`subtle beta ${x} (${platform()}-${version()}/${arch()})`)),
   ]);
   await Debug.info('ending init', performance.now());
+
+  void listen<string>('opened-file', (e) => {
+    void openFileFromOS(e.payload);
+  });
 }
 void init();
 
@@ -229,6 +240,8 @@ observer.observe({ type: 'paint', buffered: true });
     const time = performance.now();
     void getVersion().then((x) => Debug.info(`------ SUBTLE ${x} on ${Basic.architecture} ${Basic.platform} ${Basic.osVersion} | load time: ${time}`));
     await Source.init();
+    for (const file of await MAPI.takePendingFiles())
+      await openFileFromOS(file);
   }}
   onbeforeunload={(ev) => {
     if (get(Source.fileChanged)) ev.preventDefault();
@@ -393,7 +406,7 @@ observer.observe({ type: 'paint', buffered: true });
       </div>
       <!-- toolbox -->
       <div class="flexgrow fixminheight">
-        <TabView bind:value={$toolboxFocus}>
+        <TabView bind:current={$toolboxFocus}>
           <TabPage id='properties'>
             {#snippet header()}{$_('tab.properties')}{/snippet}
             <PropertiesToolbox/>

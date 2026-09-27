@@ -479,6 +479,18 @@ export const MAPI = {
         return result.data;
     },
 
+    async readSubz(path: string) {
+        return await invoke<string>('read_subz', { path });
+    },
+
+    async writeSubz(path: string, data: string) {
+        await invoke<void>('write_subz', { path, data });
+    },
+
+    async takePendingFiles() {
+        return await invoke<string[]>('take_pending_files');
+    },
+
     async openDevtools() {
         await invoke<void>('open_devtools');
     },

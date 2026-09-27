@@ -279,6 +279,21 @@ export const Source = {
         }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
     },
 
+    async saveToCompressed(file: string, text: string) {
+        return guardAsync(async () => {
+            await MAPI.writeSubz(file, text);
+            Frontend.setStatus($_('msg.saved-to-file', {values: {file}}));
+            fileChanged.set(false);
+            changedSinceLastAutosave = false;
+            if (file != get(this.currentFile)) {
+                await pushRecent(file);
+                currentFile.set(file);
+            }
+            await cleanAutosave();
+            return true;
+        }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
+    },
+
     startAutoSave() {
         let first = true;
         if (intervalId) {

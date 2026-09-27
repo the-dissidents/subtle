@@ -514,7 +514,8 @@
     "ssa-subtitles": "SSA字幕",
     "stl-subtitles": "STL字幕",
     "subtitle-file": "字幕文件",
-    "subtle-archive": "subtle存档",
+    "subtle-archive": "subtle 项目存档",
+    "subtle-archive-legacy": "subtle 项目存档（旧版）",
     "video-file": "视频文件",
     "vtt-subtitles": "VTT字幕"
   },

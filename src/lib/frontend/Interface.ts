@@ -34,12 +34,13 @@ import { path } from "@tauri-apps/api";
 const $_ = unwrapFunctionStore(_);
 
 const IMPORT_FILTERS = () => [
-    { name: $_('filter.all-supported-formats'), extensions: ['json', 'srt', /*'vtt',*/ 'ssa', 'ass', 'stl'] },
+    { name: $_('filter.all-supported-formats'), extensions: ['subz', 'json', 'srt', /*'vtt',*/ 'ssa', 'ass', 'stl'] },
+    { name: $_('filter.subtle-archive'), extensions: ['subz'] },
+    { name: $_('filter.subtle-archive-legacy'), extensions: ['json'] },
     { name: $_('filter.srt-subtitles'), extensions: ['srt'] },
     // { name: $_('filter.vtt-subtitles'), extensions: ['vtt'] },
     { name: $_('filter.ssa-subtitles'), extensions: ['ssa', 'ass'] },
     { name: $_('filter.stl-subtitles'), extensions: ['stl'] },
-    { name: $_('filter.subtle-archive'), extensions: ['json'] }
 ];
 
 export const MEDIA_EXTENSIONS =
@@ -76,6 +77,12 @@ async function decodeTextFile(path: string, file: Uint8Array) {
     }
 }
 
+function isZstd(bytes: Uint8Array) {
+    return bytes.length >= 4
+        && bytes[0] === 0x28 && bytes[1] === 0xB5
+        && bytes[2] === 0x2F && bytes[3] === 0xFD;
+}
+
 export const Interface = {
     async parseSubtitleSourceInteractive(path: string, skippable?: boolean) {
         const bytes = await readFile(path);
@@ -85,6 +92,11 @@ export const Interface = {
             if (STLSubtitles.detect(bytes)) {
                 const parser = STLSubtitles.parse(bytes);
                 return await ImportFormatDialogs.STL(parser, skippable);
+            }
+            if (isZstd(bytes)) {
+                const text = await MAPI.readSubz(path);
+                const parser = JSONSubtitles.parse(text);
+                return await ImportFormatDialogs.JSON(parser, skippable);
             }
 
             const text = await decodeTextFile(path, bytes);
@@ -191,7 +203,10 @@ export const Interface = {
         let file = get(Source.currentFile);
         if (file == '' || saveAs || Source.subs.migrated != 'none') {
             const selected = await dialog.save({
-                filters: [{name: $_('filter.subtle-archive'), extensions: ['json']}],
+                filters: [
+                    { name: $_('filter.subtle-archive'), extensions: ['subz'] },
+                    { name: $_('filter.subtle-archive-legacy'), extensions: ['json'] }
+                ],
                 defaultPath: file ?? undefined
             });
             if (typeof selected != 'string') return;
@@ -199,7 +214,10 @@ export const Interface = {
         }
         Source.onSubtitleWillSave.dispatch(true);
         const text = Format.JSON.write(Source.subs).toString();
-        if (await Source.saveTo(file, text)) {
+        const saved = /\.subz$/i.test(file)
+            ? await Source.saveToCompressed(file, text)
+            : await Source.saveTo(file, text);
+        if (saved) {
             await this.saveFileData();
             Source.subs.migrated = 'none';
         }

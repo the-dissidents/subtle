@@ -12,13 +12,18 @@ mod font;
 mod subset;
 mod history;
 mod diff;
+mod subz;
 
 use std::panic;
 use std::sync::{Arc, Mutex};
-use tauri::AppHandle;
-use tauri::Manager;
+use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_log::TimezoneStrategy;
 use time::macros::format_description;
+
+#[derive(Default)]
+struct PendingFiles {
+    files: Vec<String>,
+}
 
 #[allow(clippy::too_many_lines)]
 fn main() {
@@ -45,7 +50,7 @@ fn main() {
         "[year]-[month]-[day]@[hour]:[minute]:[second].[subsecond digits:3]");
 
     let ctx = tauri::generate_context!();
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(
@@ -86,6 +91,7 @@ fn main() {
         .plugin(tauri_plugin_os::init())
         .manage(Arc::new(Mutex::new(media_api::PlaybackRegistry::new())))
         .manage(Mutex::new(history::HistoryState { undo: vec![], redo: vec![] }))
+        .manage(Mutex::new(PendingFiles::default()))
         .invoke_handler(tauri::generate_handler![
             media_api::media_version,
             media_api::media_status,
@@ -119,11 +125,37 @@ fn main() {
             history::read_undo,
             history::read_redo,
             diff::diff_entries,
+            subz::read_subz,
+            subz::write_subz,
             open_devtools,
             make_panic,
+            take_pending_files,
         ])
-        .run(ctx)
-        .expect("error while running tauri application");
+        .build(ctx)
+        .expect("error while building tauri application");
+
+    app.run(|app, event| {
+        #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+        if let RunEvent::Opened { urls } = event {
+            for url in urls {
+                if let Ok(path) = url.to_file_path() {
+                    let path = path.to_string_lossy().into_owned();
+                    if let Some(state) = app.try_state::<Mutex<PendingFiles>>() {
+                        state.lock().unwrap().files.push(path.clone());
+                    }
+                    let _ = app.emit("opened-file", path);
+                }
+            }
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+        let _ = (app, event);
+    });
+}
+
+#[tauri::command]
+fn take_pending_files(state: State<Mutex<PendingFiles>>) -> Vec<String> {
+    std::mem::take(&mut state.lock().unwrap().files)
 }
 
 #[tauri::command]

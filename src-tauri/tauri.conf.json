@@ -14,6 +14,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "fileAssociations": [
+        {
+            "ext": ["subz"],
+            "mimeType": "application/vnd.subtle.project+json+zstd",
+            "name": "subtle subtitle project",
+            "rank": "Owner",
+            "role": "Editor"
+        }
     ]
   },
   "productName": "subtle",
