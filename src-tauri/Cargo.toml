@@ -11,19 +11,23 @@ inherits = "release"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "=2.6.3", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["devtools", "protocol-asset"] }
+tauri = { version = "=2.11.1", features = ["devtools", "protocol-asset"] }
+tauri-runtime = "=2.11.3"
+tauri-runtime-wry = "=2.11.4"
+tauri-utils = "=2.9.3"
+tauri-macros = "=2.6.3"
 serde = { version = "1", features = ["derive"] }
-tauri-plugin-os = "2"
-tauri-plugin-fs = "2"
-tauri-plugin-clipboard-manager = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-opener = "2"
-tauri-plugin-log = "2"
-tauri-plugin-http = "2"
-tauri-plugin-window-state = "2"
+tauri-plugin-os = "=2.3.2"
+tauri-plugin-fs = "=2.5.1"
+tauri-plugin-clipboard-manager = "=2.3.2"
+tauri-plugin-dialog = "=2.7.1"
+tauri-plugin-opener = "=2.5.4"
+tauri-plugin-log = "=2.9.0"
+tauri-plugin-http = "=2.5.9"
+tauri-plugin-window-state = "=2.4.1"
 ffmpeg-next = { version = "7.1.0", features = ["build"] }
 rand = "0.8.5"
 ffmpeg-sys-next = "7.1.0"

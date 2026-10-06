@@ -193,6 +193,49 @@ function Invoke-CheckedCommand {
     }
 }
 
+function Get-FfmpegSourcePath {
+    <#
+    .SYNOPSIS
+        Resolves the cached FFmpeg source path.
+    .DESCRIPTION
+        Always uses the cached FFmpeg checkout so ffmpeg-sys-next never clones
+        on its own.  Warns and throws if the cache is missing.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$TauriDir
+    )
+
+    if ($env:FFMPEG_SOURCE_PATH) {
+        $source = $env:FFMPEG_SOURCE_PATH
+    } else {
+        $cacheDir = if ($env:FFMPEG_CACHE_DIR) {
+            $env:FFMPEG_CACHE_DIR
+        } else {
+            Join-Path $env:USERPROFILE '.cache\subtle-ffmpeg'
+        }
+
+        $version = '7.1'
+        $lockFile = Join-Path $TauriDir 'Cargo.lock'
+        if (Test-Path $lockFile) {
+            $lock = Get-Content $lockFile -Raw
+            if ($lock -match 'name = "ffmpeg-sys-next"\s+version = "(\d+)\.(\d+)"') {
+                $version = "$($Matches[1]).$($Matches[2])"
+            }
+        }
+
+        $source = Join-Path $cacheDir "ffmpeg-$version"
+    }
+
+    if (-not (Test-Path (Join-Path $source 'configure'))) {
+        Write-Warning "Cached FFmpeg source not found at: $source"
+        throw "Run 'bash build-with-ffmpeg-cache.sh' first to clone FFmpeg, or set FFMPEG_SOURCE_PATH to a local FFmpeg checkout."
+    }
+
+    return $source
+}
+
 try {
     $scriptDir = Split-Path -Path $PSCommandPath -Parent
     Push-Location $scriptDir
@@ -294,6 +337,10 @@ try {
     if (-not (Test-Path $tauriDir)) {
         throw "Error: Could not find `src-tauri` directory at $tauriDir"
     }
+
+    $ffmpegSource = Get-FfmpegSourcePath -TauriDir $tauriDir
+    $env:FFMPEG_SOURCE_PATH = $ffmpegSource
+    Write-Host "Using cached FFmpeg source at: $ffmpegSource" -ForegroundColor Green
 
     Write-Host "Installing frontend dependencies (pnpm install)..." -ForegroundColor Cyan
     Invoke-CheckedCommand -Command { & pnpm install --frozen-lockfile --ignore-scripts } -ErrorMessage "Error: 'pnpm install' failed."

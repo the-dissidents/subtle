@@ -19,8 +19,7 @@
         {
             "ext": ["subz"],
             "mimeType": "application/vnd.subtle.project+json+zstd",
-            "name": "subtle subtitle project",
-            "rank": "Owner",
+            "name": "subtle project",
             "role": "Editor"
         }
     ]
