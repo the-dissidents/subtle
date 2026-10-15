@@ -191,8 +191,10 @@ export const Selection = {
         }
 
         focused = focused ?? entries[0];
-        if (this.focusedEntry !== focused)
+        if (this.focusedEntry !== focused) {
+            Editing.isEditingVirtualEntry.set(false);
             await Editing.submitFocusedEntry();
+        }
 
         selection = {
             type: 'selection',
@@ -466,16 +468,15 @@ export const Editing = {
         const oldFocused = selection.focused;
 
         // selecting an entry always sets it as focused
-        if (selection.focused != ent) {
-            const oldFocus = selection.focused;
-            if (oldFocus) {
+        if (oldFocused !== ent) {
+            if (oldFocused) {
                 this.isEditingVirtualEntry.set(false);
                 await this.submitFocusedEntry();
             }
             selection.focused = ent;
 
-            if (keepType == KeepInViewMode.SamePosition && oldFocus)
-                this.onKeepEntryAtPosition.dispatch(ent, oldFocus);
+            if (keepType == KeepInViewMode.SamePosition && oldFocused)
+                this.onKeepEntryAtPosition.dispatch(ent, oldFocused);
             else
                 this.onKeepEntryInView.dispatch(ent);
         }

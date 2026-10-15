@@ -305,16 +305,17 @@ async function execute(type: SearchAction, option: SearchOption) {
           // select this, and done
           await Editing.selectEntry(entry, SelectMode.Single, ChangeCause.Action);
           Source.subs.view.activeChannel = newStyle;
-          setTimeout(async () => {
-            const editor = Editing.styleToEditor.get(newStyle);
-            if (!editor) {
-              await Debug.warn('no editor', entry);
-            } else {
-              editor.focus();
-              editor.scrollIntoView();
-              editor.setSelectionRange(match!.index, match!.index + match![0].length);
-            }
-          }, 0);
+
+          await Basic.wait(0);
+          const editor = Editing.styleToEditor.get(newStyle);
+          if (!editor) {
+            await Debug.warn('no editor', entry);
+          } else {
+            editor.focus();
+            editor.scrollIntoView();
+            editor.setSelectionRange(match.index, match.index + match[0].length);
+          }
+
           await Debug.trace('done selecting', text);
           resumeFrom = { entry, style: newStyle, fromIndex: match.index };
           break outer;
@@ -342,7 +343,8 @@ async function execute(type: SearchAction, option: SearchOption) {
   let status: string;
   if (nEntries > 0) {
     if (type == "select") {
-      await Selection.set(selection);
+      if (option == 'all')
+        await Selection.set(selection);
       status = $_('search.selected-n-lines', {values: {n: nEntries}});
     } else if (type == "replace" || type === "replaceStyles") {
       status = $_('search.replaced-n-lines', {values: {n: nDone, nEntries}});
