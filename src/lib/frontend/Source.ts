@@ -53,10 +53,6 @@ function readSnapshot(s: Snapshot, archive: string) {
     Source.subs = Format.JSON.parse(archive).decode().subs;
     currentVersion.set(s.currentVersion);
 
-    const saved = s.currentVersion == get(savedVersion);
-    // we might have an autosave corresponding to this state but let's be conservative
-    changedSinceLastAutosave = !saved;
-
     // currently we treat this as a near-full reload
     Source.onSubtitleObjectReload.dispatch(false);
 }
@@ -77,7 +73,7 @@ function autosaveTimestamp(now: Date = new Date()): string {
 async function doAutoSave() {
     if (isEmpty) return;
 
-    if (!changedSinceLastAutosave) {
+    if (lastAutosaveVersion === get(currentVersion)) {
         await Debug.info('no change since last autosave');
         return;
     }; // only autosave when changed
@@ -90,11 +86,14 @@ async function doAutoSave() {
             (currentFile == '' ? 'untitled' : await basename(currentFile, '.json'))
             + '_' + autosaveTimestamp() + '.json';
         Source.onSubtitleWillSave.dispatch(true);
+
+        const savingVersion = get(currentVersion);
         const text = Format.JSON.write(Source.subs).toString();
         await fs.writeTextFile(
             await join('autosave', autoSaveName), text,
             { baseDir: fs.BaseDirectory.AppLocalData });
-        changedSinceLastAutosave = false;
+        lastAutosaveVersion = savingVersion;
+
         await Debug.info('autosaved', currentFile ?? '<untitled>');
         Frontend.setStatus($_('msg.autosave-complete', {values: {time: new Date().toLocaleTimeString(),}}));
     }, $_('msg.autosave-failed'));
@@ -135,11 +134,11 @@ const currentFile = writable('');
 
 const savedVersion = writable(0);
 const currentVersion = writable(0);
+let lastAutosaveVersion = 0;
 
 derived([currentVersion, savedVersion], ([a, b]) => console.log(a, b));
 
 let intervalId = 0;
-let changedSinceLastAutosave = false;
 let isEmpty = true;
 
 let undoStack = [] as Snapshot[];
@@ -177,7 +176,6 @@ export const Source = {
 
     markChangedNonSaving() {
         currentVersion.update((x) => x + 1);
-        changedSinceLastAutosave = true;
         isEmpty = false;
     },
 
@@ -194,7 +192,6 @@ export const Source = {
         await MAPI.pushHistory(Format.JSON.write(this.subs).toString());
 
         currentVersion.update((x) => x + 1);
-        changedSinceLastAutosave = true;
         isEmpty = false;
 
         this.onUndoBufferChanged.dispatch();
@@ -249,9 +246,9 @@ export const Source = {
                 && newSubs.migrated !== 'olderVersion') ? '' : path);
 
         isEmpty = false;
-        changedSinceLastAutosave = false;
 
         savedVersion.set(0);
+        lastAutosaveVersion = 0;
         currentVersion.set(newSubs.migrated == 'olderVersion' ? 1 : 0);
 
         undoStack = [{
@@ -276,6 +273,7 @@ export const Source = {
 
     async saveTo(file: string, text: string, method: 'compressed' | 'plain') {
         return guardAsync(async () => {
+            const savingVersion = get(currentVersion);
             switch (method) {
                 case "compressed":
                     await MAPI.writeSubz(file, text);
@@ -286,9 +284,10 @@ export const Source = {
                 default:
                     Debug.never(method);
             }
+
             Frontend.setStatus($_('msg.saved-to-file', {values: {file}}));
-            changedSinceLastAutosave = false;
-            savedVersion.set(get(currentVersion));
+            savedVersion.set(savingVersion);
+            lastAutosaveVersion = savingVersion;
 
             if (file != get(this.currentFile)) {
                 await pushRecent(file);
