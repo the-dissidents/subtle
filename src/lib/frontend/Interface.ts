@@ -214,9 +214,8 @@ export const Interface = {
         }
         Source.onSubtitleWillSave.dispatch(true);
         const text = Format.JSON.write(Source.subs).toString();
-        const saved = /\.subz$/i.test(file)
-            ? await Source.saveToCompressed(file, text)
-            : await Source.saveTo(file, text);
+        const saved = await Source.saveTo(file, text,
+            /\.subz$/i.test(file) ? 'compressed' : 'plain');
         if (saved) {
             await this.saveFileData();
             Source.subs.migrated = 'none';

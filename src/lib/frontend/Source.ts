@@ -14,7 +14,7 @@ import { CommandBinding, KeybindingManager } from "./Keybinding";
 
 import * as fs from "@tauri-apps/plugin-fs";
 import { basename, join } from '@tauri-apps/api/path';
-import { get, readonly, writable } from "svelte/store";
+import { derived, get, readonly, writable } from "svelte/store";
 import * as z from "zod/v4-mini";
 
 import { TimelineHandle } from "../component/timeline/Input.svelte";
@@ -23,9 +23,7 @@ import { unwrapFunctionStore, _ } from 'svelte-i18n';
 const $_ = unwrapFunctionStore(_);
 
 export type Snapshot = {
-    // archive: string,
-    // change: ChangeType,
-    saved: boolean,
+    currentVersion: number, // -1 means not saved
     description: string
 };
 
@@ -48,11 +46,19 @@ export enum ChangeType {
 }
 
 function readSnapshot(s: Snapshot, archive: string) {
+    void Debug.trace('loading snapshot', s.description,
+        get(currentVersion), s.currentVersion, get(savedVersion));
+
     Selection.clearSync();
     Source.subs = Format.JSON.parse(archive).decode().subs;
-    fileChanged.set(!s.saved);
+    currentVersion.set(s.currentVersion);
+
+    const saved = s.currentVersion == get(savedVersion);
+    // we might have an autosave corresponding to this state but let's be conservative
+    changedSinceLastAutosave = !saved;
+
+    // currently we treat this as a near-full reload
     Source.onSubtitleObjectReload.dispatch(false);
-    // Source.onSubtitlesChanged.dispatch(s.change);
 }
 
 function autosaveTimestamp(now: Date = new Date()): string {
@@ -125,11 +131,16 @@ const zFileSaveState = z.object({
 
 const recentOpened = Memorized.$('recentOpened', z.array(zFileSaveState), []);
 const currentFile = writable('');
-export const fileChanged = writable(false);
+// const fileChanged = writable(false);
+
+const savedVersion = writable(0);
+const currentVersion = writable(0);
+
+derived([currentVersion, savedVersion], ([a, b]) => console.log(a, b));
 
 let intervalId = 0;
-export let changedSinceLastAutosave = false;
-export let isEmpty = true;
+let changedSinceLastAutosave = false;
+let isEmpty = true;
 
 let undoStack = [] as Snapshot[];
 let redoStack = [] as Snapshot[];
@@ -150,7 +161,7 @@ export const Source = {
     subs: new Subtitles(),
 
     get currentFile() { return readonly(currentFile); },
-    get fileChanged() { return readonly(fileChanged); },
+    get fileChanged() { return derived([currentVersion, savedVersion], ([a, b]) => a != b) },
     get fileIsEmpty() { return isEmpty; },
     get recentOpened() { return recentOpened; },
 
@@ -165,29 +176,26 @@ export const Source = {
     },
 
     markChangedNonSaving() {
-        fileChanged.set(true);
+        currentVersion.update((x) => x + 1);
         changedSinceLastAutosave = true;
         isEmpty = false;
     },
 
     async markChanged(type: ChangeType, description: string) {
         await Debug.trace('marking change:', ChangeType[type], description);
-        fileChanged.set(true);
-        changedSinceLastAutosave = true;
-        isEmpty = false;
 
         Editing.editChanged = false;
         // TODO: why?
         Editing.isEditingVirtualEntry.set(false);
 
         Source.onSubtitleWillSave.dispatch(true);
-        undoStack.push({
-            // change: type,
-            saved: false,
-            description
-        });
+        undoStack.push({ currentVersion: get(currentVersion), description });
         redoStack = [];
         await MAPI.pushHistory(Format.JSON.write(this.subs).toString());
+
+        currentVersion.update((x) => x + 1);
+        changedSinceLastAutosave = true;
+        isEmpty = false;
 
         this.onUndoBufferChanged.dispatch();
         this.onSubtitlesChanged.dispatch(type);
@@ -227,25 +235,27 @@ export const Source = {
     async newDocument() {
         await Source.openDocument(new Subtitles());
         isEmpty = true;
-        fileChanged.set(false);
+        savedVersion.set(0);
+        currentVersion.set(0);
     },
 
     async openDocument(newSubs: Subtitles, path: string = '') {
         if (path !== '') await pushRecent(path);
-        this.subs = newSubs;
-        await Editing.clearFocus(false);
         await Selection.clear();
+        this.subs = newSubs;
 
         currentFile.set(
             (newSubs.migrated !== 'none'
                 && newSubs.migrated !== 'olderVersion') ? '' : path);
-        fileChanged.set(newSubs.migrated == 'olderVersion');
-        changedSinceLastAutosave = false;
+
         isEmpty = false;
+        changedSinceLastAutosave = false;
+
+        savedVersion.set(0);
+        currentVersion.set(newSubs.migrated == 'olderVersion' ? 1 : 0);
 
         undoStack = [{
-            // change: ChangeType.General,
-            saved: !get(fileChanged),
+            currentVersion: get(currentVersion),
             description: 'You should NOT see this unless there is a bug'
         }];
         redoStack = [];
@@ -264,27 +274,22 @@ export const Source = {
         }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
     },
 
-    async saveTo(file: string, text: string) {
+    async saveTo(file: string, text: string, method: 'compressed' | 'plain') {
         return guardAsync(async () => {
-            await fs.writeTextFile(file, text);
-            Frontend.setStatus($_('msg.saved-to-file', {values: {file}}));
-            fileChanged.set(false);
-            changedSinceLastAutosave = false;
-            if (file != get(this.currentFile)) {
-                await pushRecent(file);
-                currentFile.set(file);
+            switch (method) {
+                case "compressed":
+                    await MAPI.writeSubz(file, text);
+                    break;
+                case "plain":
+                    await fs.writeTextFile(file, text);
+                    break;
+                default:
+                    Debug.never(method);
             }
-            await cleanAutosave();
-            return true;
-        }, $_('msg.error-when-writing-to-file', {values: {file}}), false);
-    },
-
-    async saveToCompressed(file: string, text: string) {
-        return guardAsync(async () => {
-            await MAPI.writeSubz(file, text);
             Frontend.setStatus($_('msg.saved-to-file', {values: {file}}));
-            fileChanged.set(false);
             changedSinceLastAutosave = false;
+            savedVersion.set(get(currentVersion));
+
             if (file != get(this.currentFile)) {
                 await pushRecent(file);
                 currentFile.set(file);
@@ -331,9 +336,7 @@ export const SourceCommands = {
     {
         name: () => $_('menu.redo'),
         call: async () => {
-            if (TimelineHandle.isDuringAction())
-                await TimelineHandle.interruptAction();
-            else
+            if (!TimelineHandle.isDuringAction())
                 await Source.redo();
         }
     }),
