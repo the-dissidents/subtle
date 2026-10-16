@@ -208,8 +208,8 @@ async function execute(type: SearchAction, option: SearchOption) {
   if ($selectionOnly)
     focus = Source.subs.entries.find((x) => Selection.has(x)) ?? focus;
 
-  if (resumeFrom)
-    if (resumeFrom.entry !== focus || option == "all")
+  // only apply resumeFrom if the focus has not changed
+  if (resumeFrom && (resumeFrom.entry !== focus || option == "all"))
       resumeFrom = null;
 
   if (useFilter && filter == null) {
@@ -221,8 +221,10 @@ async function execute(type: SearchAction, option: SearchOption) {
   if ($term !== '') {
     // construct regex from search term
     try {
-      expr = new RegExp($useRegex ? $term : Basic.escapeRegexp($term),
-        `ug${$caseSensitive ? '' : 'i'}`);
+      expr = new RegExp(
+        $useRegex ? $term : Basic.escapeRegexp($term),
+        `ug${$caseSensitive ? '' : 'i'}`
+      );
     } catch (e) {
       Debug.assert(e instanceof Error);
       Frontend.setStatus($_('msg.search-failed') + e.message, 'error');
@@ -262,13 +264,16 @@ async function execute(type: SearchAction, option: SearchOption) {
     expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
 
     const str = RichText.toString(text);
-    if (!expr.test(str) || (first && resumeFrom && type == 'select')) {
+    if (!expr.test(str)) {
       res = gen.next(false);
       continue;
     }
 
     // matched
     nEntries++;
+    const codepointPrefixLengths: number[] = [0];
+    for (const cp of str)
+      codepointPrefixLengths.push(codepointPrefixLengths.at(-1)! + cp.length);
 
     if (type == 'select' && option == 'all') {
       selection.push(entry);
@@ -289,6 +294,11 @@ async function execute(type: SearchAction, option: SearchOption) {
     let match: RegExpExecArray | null;
     let newStr = str, newRich = text;
     expr.lastIndex = (first && resumeFrom) ? resumeFrom.fromIndex : 0;
+    const nextCodepointIndex = (from: number) => {
+      const i = codepointPrefixLengths.find((x) => x > from);
+      return i ?? codepointPrefixLengths.at(-1)!;
+    };
+
     while ((match = expr.exec(newStr)) !== null) {
       nDone++;
       if (newType == 'replace') {
@@ -298,7 +308,12 @@ async function execute(type: SearchAction, option: SearchOption) {
           type: 'leaf', content: replacement, attrs
         }]);
         newStr = RichText.toString(newRich);
-        expr.lastIndex += replacement.length - match[0].length;
+
+        const advancement = replacement.length - match[0].length;
+        if (advancement > 0)
+          expr.lastIndex += replacement.length - match[0].length;
+        else
+          expr.lastIndex = nextCodepointIndex(expr.lastIndex);
       }
       if (option != "all") {
         if (newType == 'select') {
@@ -317,7 +332,12 @@ async function execute(type: SearchAction, option: SearchOption) {
           }
 
           await Debug.trace('done selecting', text);
-          resumeFrom = { entry, style: newStyle, fromIndex: match.index };
+          resumeFrom = {
+            entry, style: newStyle,
+            fromIndex: match[0].length > 0
+              ? match.index + match[0].length
+              : nextCodepointIndex(match.index)
+          };
           break outer;
         } else {
           // just replaced one, select next
@@ -350,13 +370,13 @@ async function execute(type: SearchAction, option: SearchOption) {
       status = $_('search.replaced-n-lines', {values: {n: nDone, nEntries}});
       await Source.markChanged(ChangeType.InPlace, $_('c.replace'));
     } else {
-      status = $_('search.found-n-lines', {values: {n: nEntries}});
+      Debug.never(type);
     }
   } else {
     status = $_('search.found-nothing');
     resumeFrom = null;
     if (option != "all") {
-      await Editing.clearFocus();
+      await Selection.clear();
       Editing.onSelectionChanged.dispatch(ChangeCause.Action);
     }
   }
