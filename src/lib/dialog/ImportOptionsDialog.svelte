@@ -24,6 +24,8 @@ let inner: DialogBase;
 
 onMount(async () => {
   if (!hasStyles) styleOption = 'override';
+  hasMultipleChannels = !!subs.entries.find((x) => x.texts.size > 1);
+
   let btn = await inner.showModal!();
   if (btn !== 'ok')
     return close(null);
@@ -38,6 +40,8 @@ onMount(async () => {
     overrideMetadata: overrideMetadata
   });
 });
+
+let hasMultipleChannels = $state(false);
 
 let overrideStyle = $state(Source.subs.styles[0]);
 let overrideStyleName = $state('');
@@ -94,18 +98,22 @@ let overrideMetadata = $state(false);
       </label><br/>
 
       <label>
-        <input type="radio" value="override" bind:group={styleOption}/>
+        <input type="radio"
+          disabled={hasMultipleChannels}
+          value="override" bind:group={styleOption}/>
         {$_('importdialog.use-for-all')}
         <StyleSelect
-          disabled={styleOption != 'override'}
+          disabled={styleOption != 'override' || hasMultipleChannels}
           bind:currentStyle={overrideStyle}/>
       </label><br/>
 
       <label>
-        <input type="radio" value="createNewOverride" bind:group={styleOption}/>
+        <input type="radio"
+          disabled={hasMultipleChannels}
+          value="createNewOverride" bind:group={styleOption}/>
         {$_('importdialog.use-new-for-all')}
         <input type='text'
-          disabled={styleOption != 'createNewOverride'}
+          disabled={styleOption != 'createNewOverride' || hasMultipleChannels}
           class={{duplicate: duplicateWarning}}
           oninput={() => duplicateWarning = !subs
             || subs.styles.find((x) => x.name == overrideStyleName) !== undefined
