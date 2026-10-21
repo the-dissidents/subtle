@@ -32,9 +32,10 @@ class ASSState extends Formatter {
         super();
     }
 
-    static fromGlobals(opts: { pos?: Positioning }) {
+    static fromGlobals(opts: { pos?: Positioning, alignment?: AlignMode }) {
         const obj = new ASSState();
         obj.#pos = opts.pos ?? null;
+        obj.#align = opts.alignment ?? null;
         return obj;
     }
 
@@ -170,14 +171,15 @@ class ASSState extends Formatter {
 export namespace ASSString {
     export function serialize(rt: RichText, base?: SubtitleStyle, opts?: {
         defaultWrapStyle?: WrapStyle,
-        pos?: Positioning;
+        pos?: Positioning,
+        alignment?: AlignMode,
     }): string {
-        let state = ASSState.fromGlobals({ pos: opts?.pos });
-        if (typeof rt === 'string') return state.formatASSString(rt);
-
-        let result = '';
+        let state = ASSState.fromGlobals({ pos: opts?.pos, alignment: opts?.alignment });
+        let result = state.emitGlobals();
         if (base && base.wrapStyle !== opts?.defaultWrapStyle)
             result += `{\\q${base.wrapStyle}}`;
+        if (typeof rt === 'string') return result + state.formatASSString(rt);
+
         for (const part of rt) {
             const attrs = typeof part === 'string' ? [] : part.attrs;
             const content = typeof part === 'string' ? part : part.content;
@@ -232,7 +234,7 @@ export namespace ASSString {
                     break;
                 }
                 i++; // accept '}'
-                if (content.startsWith('\\p')) {
+                if (/^\\p(?=\d)/.test(content)) {
                     // handle drawing commands
                     let commands = '';
                     while (i < source.length && !source.slice(i).startsWith('{\\p0}')) {

@@ -78,7 +78,7 @@ export class ASSParser implements SubtitleParser {
     #parsed = false;
 
     constructor(source: string) {
-        const sectionRegex  = /^\[(.+)\]\s*\n((?:\s*[^[\n]+.+\n)+)/gm;
+        const sectionRegex  = /(?<=^|\n)\[(.+)\]\s*\n((?:\s*[^[\n]+.+(\n|$))+)/g;
         this.#sections = new Map([...source.matchAll(sectionRegex)].map((x) => [x[1], x[2]]));
         if (this.#sections.size == 0)
             throw new DeserializationError('invalid ASS');
@@ -427,7 +427,9 @@ export class ASSWriter implements SubtitleWriter {
                 Debug.assert(styleName !== undefined);
 
                 const assText = ASSString.serialize(text, style, {
-                    defaultWrapStyle: this.#defaultWrapStyle
+                    defaultWrapStyle: this.#defaultWrapStyle,
+                    pos: entry.positioning,
+                    alignment: entry.alignment ?? undefined
                 });
                 result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${assText}\n`;
             }
@@ -494,7 +496,7 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
                     + `${toASSColor(s.color)},`
                     + `${toASSColor(s.color)},`
                     + `${toASSColor(s.outlineColor)},`
-                    + `${toASSColor(s.outlineColor)},`
+                    + `${toASSColor(s.shadowColor)},`
                     + `${s.styles.bold ? '-1' : '0'},`
                     + `${s.styles.italic ? '-1' : '0'},`
                     + `${s.styles.underline ? '-1' : '0'},`

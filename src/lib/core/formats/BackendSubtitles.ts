@@ -13,8 +13,8 @@ export function convertBackendSubtitles(data: BackendSubtitleData) {
             if (rect.type == 'ass') {
                 const t0 = Basic.formatTimestamp(start, 2);
                 const t1 = Basic.formatTimestamp(end, 2);
-                source += '\n' +
-                    rect.content.replace(/^\d+,(\d+),/, (_, layer) => `Dialogue: ${layer},${t0},${t1},`);
+                source += '\n' + rect.content.replace(
+                    /^\d+,(\d+),/, (_, layer) => `Dialogue: ${layer},${t0},${t1},`);
             }
         }
         const result = new ASSParser(source).decode();

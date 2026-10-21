@@ -61,12 +61,15 @@ export type LinearEntry = {
     start: number, end: number, text: string
 };
 
-function getText(subs: Subtitles, ent: SubtitleEntry, f: FormatOption) {
+function getText(subs: Subtitles, entry: SubtitleEntry, f: FormatOption) {
     return subs.styles
-        .map((s) => ent.texts.get(s))
-        .filter((x) => x)
+        .map((s) => entry.texts.get(s))
+        .filter((x) => x && RichText.length(x) > 0)
         .map((text) => f == 'html' ? HTMLString.serialize(text!)
-                     : f == 'ass'  ? ASSString.serialize(text!)
+                     : f == 'ass'  ? ASSString.serialize(text!, undefined, {
+                                         pos: entry.positioning,
+                                         alignment: entry.alignment ?? undefined
+                                     })
                      : f == 'none' ? RichText.toString(text!).trim()
                      : Debug.never(f))
         .join('\n')
@@ -169,11 +172,14 @@ export const SubtitleUtil = {
         return ToLinearFormat[strategy](subs, entries, option);
     },
 
-    /** Note: this method will use and modify the entries in `other` */
+    /**
+     * Merge some `other` subtitles into `original`. This consumes and modifies the entries in
+     * `other` so avoid using them afterwards.
+     */
     merge(original: Subtitles, other: Subtitles, options: MergeOptions): SubtitleEntry[] {
         if (options.overrideMetadata) {
             // TODO: properly clone it
-            other.metadata = JSON.parse(JSON.stringify(original.metadata));
+            original.metadata = JSON.parse(JSON.stringify(other.metadata));
         }
 
         let overrideStyle: SubtitleStyle;
@@ -267,7 +273,8 @@ export const SubtitleUtil = {
             case 'sortedBefore':
                 insertEntry = (e) => {
                     const i = original.entries.findIndex((x) => x.start >= e.start);
-                    original.entries.splice(i, 0, e);
+                    if (i < 0) original.entries.push(e);
+                    else original.entries.splice(i, 0, e);
                 }; break;
             case 'sortedAfter':
                 insertEntry = (e) => {
