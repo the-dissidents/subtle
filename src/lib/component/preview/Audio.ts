@@ -78,10 +78,14 @@ export class Audio {
 
     async close() {
         Debug.assert(!this.#closed);
-        await this.#mutex.acquire(); // never release
-        this.#closed = true;
-        await this.stop();
-        await this.ctx.close();
+        try {
+            await this.stop();
+            await this.#mutex.acquire(); // never release
+        } finally {
+            // try to close anyway
+            this.#closed = true;
+            await this.ctx.close();
+        }
     }
 
     async #post(msg: AudioInputData) {

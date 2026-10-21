@@ -143,7 +143,9 @@ export class MediaSampler {
         this.#sampleProgress = from;
         this.#sampleEnd = to;
 
-        await this.#mutex.use(async () => {
+        const ok = await this.#mutex.use(async () => {
+            if (this.#cancelling || this.media.isClosed) return false;
+
             const prevKeyframe = await this.media.getKeyframeBefore(from);
             if (prevKeyframe === null
              || this.#sampleProgress > from
@@ -154,16 +156,19 @@ export class MediaSampler {
             } else {
                 await Debug.trace(`startSampling: ${from.toFixed(4)} - ${to.toFixed(4)} without seeking`);
             }
+            return true;
         });
+        if (!ok) return;
 
         const doSampling = async () => {
             const ok = await this.#mutex.use(async () => {
+                if (this.#cancelling || this.media.isClosed) return false;
+
                 let result: SampleResult;
                 try {
                     result = await this.media.sampleAutomatic(20);
                 } catch (e) {
                     if (this.#cancelling || this.media.isClosed) return false;
-
                     await Debug.warn('sampling call failed, will retry:', e);
                     return true;
                 }
