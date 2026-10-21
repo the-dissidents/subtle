@@ -12,7 +12,10 @@ export type MergeStyleSelection =
     'usedOnly' | 'all' | 'onlyStyles';
 
 export type MergeStyleBehavior = {
-    type: 'keepAll' | 'keepDifferent' | 'useLocalByName' | 'overwrite';
+    type: 'keepAll' | 'keepDifferent' | 'useLocalByName'
+        // Note: removed, see line 245 and below
+        // | 'overwrite'
+    ;
 } | {
     type: 'override',
     overrideStyle: SubtitleStyle
@@ -194,9 +197,9 @@ export const SubtitleUtil = {
         }
 
         const styleMap = new Map<SubtitleStyle, SubtitleStyle>();
-
         const orginalStyleSerialized = original.styles
             .map((x) => JSON.stringify(SubtitleStyle.serialize(x)));
+
         const processStyle = (s: SubtitleStyle) => {
             if (styleMap.has(s)) return styleMap.get(s)!;
             const newStyleSerialized = JSON.stringify(SubtitleStyle.serialize(s));
@@ -239,14 +242,20 @@ export const SubtitleUtil = {
                         return styleMap.get(s)!;
                     }
                     return add();
-                case 'overwrite':
-                    if (iLocalName >= 0) {
-                        const newStyle = $state(s);
-                        original.styles.splice(iLocalName, 1, newStyle);
-                        styleMap.set(s, newStyle);
-                        return newStyle;
-                    }
-                    return add();
+
+                // NOTE: removed because mutating exiting styles cause trouble with reactivity that
+                // is difficult to work around
+
+                // case 'overwrite':
+                //     if (iLocalName >= 0) {
+                //         const newStyle = $state(s);
+                //         const orig = original.styles[iLocalName];
+                //         original.styles.splice(iLocalName, 1, newStyle);
+                //         styleMap.set(s, newStyle);
+                //         styleMap.set(orig, newStyle);
+                //         return newStyle;
+                //     }
+                //     return add();
                 default:
                     Debug.never(options.style);
             }
@@ -267,6 +276,7 @@ export const SubtitleUtil = {
 
         if (options.position.type == 'overwrite')
             original.entries = [];
+        const mergedEntries: SubtitleEntry[] = [];
         let insertEntry: (e: SubtitleEntry) => void;
         let insertIndex = 0;
         switch (options.position.type) {
@@ -275,11 +285,13 @@ export const SubtitleUtil = {
                     const i = original.entries.findIndex((x) => x.start >= e.start);
                     if (i < 0) original.entries.push(e);
                     else original.entries.splice(i, 0, e);
+                    mergedEntries.push(e);
                 }; break;
             case 'sortedAfter':
                 insertEntry = (e) => {
                     const i = original.entries.findLastIndex((x) => x.start <= e.start);
                     original.entries.splice(i+1, 0, e);
+                    mergedEntries.push(e);
                 }; break;
             case 'custom':
                 insertIndex = options.position.customPosition;
@@ -288,22 +300,26 @@ export const SubtitleUtil = {
                 insertEntry = (e) => {
                     original.entries.splice(insertIndex, 0, e);
                     insertIndex++;
+                    mergedEntries.push(e);
                 }; break;
             case 'after':
             case 'overwrite':
                 insertEntry = (e) => {
                     original.entries.push(e);
+                    mergedEntries.push(e);
                 }; break;
             default:
                 Debug.never(options.position);
         }
 
-        for (const ent of other.entries) {
+        for (const ent of other.entries)
             insertEntry(ent);
+
+        for (const ent of original.entries)
             ent.texts = new SvelteMap([...ent.texts]
                 .map(([style, text]) => [processStyle(style), text]));
-        }
-        return other.entries;
+
+        return mergedEntries;
     },
 
     // first scale, then offset

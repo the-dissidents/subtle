@@ -91,11 +91,11 @@ let overrideMetadata = $state(false);
         {$_('importdialog.use-local-styles-when-names-match')}
       </label><br/>
 
-      <label>
+      <!-- <label>
         <input type="radio" value="overwrite"
           bind:group={styleOption} disabled={!hasStyles} />
         {$_('importdialog.overwrite-local-styles-when-names-match')}
-      </label><br/>
+      </label><br/> -->
 
       <label>
         <input type="radio"
