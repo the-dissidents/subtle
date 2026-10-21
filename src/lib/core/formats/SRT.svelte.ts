@@ -65,6 +65,7 @@ export class SRTParser implements SubtitleParser {
         };
 
         const submit = () => {
+            // trim trailing newlines
             while (buffer.at(-1) == '\n')
                 buffer = buffer.substring(0, buffer.length - 1);
             if (buffer.length > 0) {
@@ -80,8 +81,11 @@ export class SRTParser implements SubtitleParser {
             if (line.length == 0) continue;
             const times = timeRegex.exec(line);
             if (times) {
+                // handle the previous entry
                 if (start >= 0) {
                     const standalone_number = /^\d+$/.test(line_cache);
+                    // only use the cache if the buffer is otherwise empty AND the cache
+                    // contains only a number (somewhat weird but this is what ffmpeg does)
                     if (!standalone_number && buffer.length == 0)
                         buffer = line_cache;
                     line_cache = '';
@@ -98,20 +102,25 @@ export class SRTParser implements SubtitleParser {
             } else {
                 if (start < 0) continue;
                 if (line_cache.length > 0) {
+                    // encountered new lines in the same entry, so the line cache is
+                    // not an entry index
                     buffer += line_cache + '\n';
                     line_cache = '';
                 }
                 if (/^\s*\d+/.test(line)) {
+                    // the line starts with a number and is possibly an entry index
+                    // put it in the temporary line cache
                     line_cache = line;
                 } else {
+                    // simple case
                     buffer += line + '\n';
                 }
             }
         }
 
         if (start >= 0) {
-            if (line_cache.length > 0)
-                buffer = line_cache;
+            // handle last entry: in this case the cache is probably a real line
+            buffer += line_cache;
             submit();
         } else {
             throw new DeserializationError('invalid or empty SRT');
