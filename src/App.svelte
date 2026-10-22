@@ -165,7 +165,7 @@ void appWindow.onDragDropEvent(async (ev) => {
     const path = ev.payload.paths.at(0);
     if (!path) return Debug.early();
 
-    if (MEDIA_EXTENSIONS.includes(path.split('.').at(-1)!)) {
+    if (MEDIA_EXTENSIONS.includes(path.split('.').at(-1)!.toLowerCase())) {
       await Interface.openVideo(path);
     } else {
       if (!await Interface.warnIfNotSaved()) return;
