@@ -91,6 +91,7 @@ onMount(async () => {
 });
 
 let data: DataEntry[] = $state([]);
+let dontCompareTimes = $state(false);
 
 async function exportFile() {
   const path = await dialog.save({
@@ -112,7 +113,7 @@ async function exportReport() {
   // Debug.warn('2');
 
   // return await Source.exportTo((await documentDir()) + '/report.html', constructHTMLReport(data));
-  return await Source.exportTo(path, constructHTMLReport(data));
+  return await Source.exportTo(path, constructHTMLReport(data, { dontCompareTimes }));
 }
 </script>
 
@@ -124,6 +125,12 @@ async function exportReport() {
   {/snippet}
 
   <ConfigTable>
+    <ConfigRow name="">
+      <label>
+        不比较时间轴
+        <input type='checkbox' bind:checked={dontCompareTimes}/>
+      </label>
+    </ConfigRow>
     <ConfigRow name={$_('comparedialog.matched-entries')}>
       <div class="hlayout">
         <button class="left" disabled>{$_('comparedialog.times')}</button>
@@ -215,12 +222,12 @@ async function exportReport() {
       {/if}
     {/snippet}
     {#snippet s1({ first: a, second: b })}
-      <span class:diff={!b || !a || !Basic.approx(b.start, a.start, InputConfig.data.epsilon)}>
+      <span class:diff={!dontCompareTimes && (!b || !a || !Basic.approx(b.start, a.start, InputConfig.data.epsilon))}>
         {a ? Basic.formatTimestamp(a.start) : ''}
       </span>
     {/snippet}
     {#snippet e1({ first: a, second: b })}
-      <span class:diff={!b || !a || !Basic.approx(b.end, a.end, InputConfig.data.epsilon)}>
+      <span class:diff={!dontCompareTimes && (!b || !a || !Basic.approx(b.end, a.end, InputConfig.data.epsilon))}>
         {a ? Basic.formatTimestamp(a.end) : ''}
       </span>
     {/snippet}
@@ -257,12 +264,12 @@ async function exportReport() {
       {/if}
     {/snippet}
     {#snippet s2({ first: b, second: a })}
-      <span class:diff={!b || !a || !Basic.approx(b.start, a.start, InputConfig.data.epsilon)}>
+      <span class:diff={!dontCompareTimes && (!b || !a || !Basic.approx(b.start, a.start, InputConfig.data.epsilon))}>
         {a ? Basic.formatTimestamp(a.start) : ''}
       </span>
     {/snippet}
     {#snippet e2({ first: b, second: a })}
-      <span class:diff={!b || !a || !Basic.approx(b.end, a.end, InputConfig.data.epsilon)}>
+      <span class:diff={!dontCompareTimes && (!b || !a || !Basic.approx(b.end, a.end, InputConfig.data.epsilon))}>
         {a ? Basic.formatTimestamp(a.end) : ''}
       </span>
     {/snippet}

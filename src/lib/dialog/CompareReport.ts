@@ -15,11 +15,11 @@ export type SourceEntry = {
 };
 
 export type DataEntry = {
-  first?: DiffEntry,
-  second?: DiffEntry,
-  merged?: MergedDiffPart<string>[],
-  useFirstTime?: boolean,
-  useFirstText?: boolean,
+    first?: DiffEntry,
+    second?: DiffEntry,
+    merged?: MergedDiffPart<string>[],
+    useFirstTime?: boolean,
+    useFirstText?: boolean,
 };
 
 export function constructData(A: SourceEntry[], B: SourceEntry[], result: MatchResult) {
@@ -75,7 +75,10 @@ function getLetters(s: string) {
     return s.replaceAll(/[^\p{L}\d]/ug, '').length;
 }
 
-export function constructHTMLReport(data: DataEntry[]): string {
+export function constructHTMLReport(
+    data: DataEntry[],
+    opt?: { dontCompareTimes?: boolean }
+): string {
     const styles = `
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 20px; }
         table { border-collapse: collapse; width: 100%; font-size: 14px; margin-bottom: 1em; }
@@ -159,26 +162,44 @@ export function constructHTMLReport(data: DataEntry[]): string {
         identicalLetters += t1.identicalLetters + t2.identicalLetters;
         totalLetters += t1.letters + t2.letters;
 
-        rows += `<tr>
-            <td class="num">${i1}</td>
-            <td class="time ${sd ? 'diff' : ''}">${s1}</td>
-            <td class="time ${ed ? 'diff' : ''}">${e1}</td>
-            <td>${t1.result}</td>
-            <td class="num">${i2}</td>
-            <td class="time ${sd ? 'diff' : ''}">${s2}</td>
-            <td class="time ${ed ? 'diff' : ''}">${e2}</td>
-            <td>${t2.result}</td>
-        </tr>\n`;
+        if (opt?.dontCompareTimes) {
+            rows += `<tr>
+                <td class="num">${i1}</td>
+                <td>${t1.result}</td>
+                <td class="num">${i2}</td>
+                <td>${t2.result}</td>
+            </tr>\n`;
+        } else {
+            rows += `<tr>
+                <td class="num">${i1}</td>
+                <td class="time ${sd ? 'diff' : ''}">${s1}</td>
+                <td class="time ${ed ? 'diff' : ''}">${e1}</td>
+                <td>${t1.result}</td>
+                <td class="num">${i2}</td>
+                <td class="time ${sd ? 'diff' : ''}">${s2}</td>
+                <td class="time ${ed ? 'diff' : ''}">${e2}</td>
+                <td>${t2.result}</td>
+            </tr>\n`;
+        }
     }
+
+    const tableHeader = opt?.dontCompareTimes
+        ? `<th>#</th>
+        <th>${escapeHtml($_('metrics.content'))}</th>`
+        : `<th>#</th>
+        <th>${escapeHtml($_('metrics.start-time-short'))}</th>
+        <th>${escapeHtml($_('metrics.end-time-short'))}</th>
+        <th>${escapeHtml($_('metrics.content'))}</th>`;
 
     // statistics
     const stats =
 `<table>
 <tbody>
-    <tr>
+    ${opt?.dontCompareTimes ? '' : `<tr>
         <td>${escapeHtml($_('comparereport.time-modification-index'))}</td>
         <td colspan=3>${timeModified} / ${count} * 100% = ${(timeModified / count * 100).toFixed(1)}%</td>
-    </tr><tr>
+    </tr>`}
+    <tr>
         <td rowspan=3>${escapeHtml($_('comparereport.modification-index'))}</td>
         <td>${escapeHtml($_('comparereport.letters'))}</td>
         <td>${((1 - identicalLetters / totalLetters) * 100).toFixed(1)}%</td>
@@ -187,10 +208,12 @@ export function constructHTMLReport(data: DataEntry[]): string {
             ${escapeHtml($_('comparereport.modification-d'))}
             <em>${escapeHtml($_('comparereport.modification-warning'))}</em>
         </td>
-    </tr><tr>
+    </tr>
+    <tr>
         <td>${escapeHtml($_('comparereport.nonletters'))}</td>
         <td>${((1 - (identicalChars - identicalLetters) / (totalChars - totalLetters)) * 100).toFixed(1)}%</td>
-    </tr><tr>
+    </tr>
+    <tr>
         <td>${escapeHtml($_('comparereport.overall'))}</td>
         <td>${((1 - identicalChars / totalChars) * 100).toFixed(1)}%</td>
     </tr>
@@ -210,12 +233,11 @@ ${stats}
 <table>
 <thead>
 <tr>
-    <th colspan="4">${escapeHtml($_('comparereport.original'))}</th>
-    <th colspan="4">${escapeHtml($_('comparereport.new'))}</th>
+    <th colspan="${opt?.dontCompareTimes ? '2' : '4'}">${escapeHtml($_('comparereport.original'))}</th>
+    <th colspan="${opt?.dontCompareTimes ? '2' : '4'}">${escapeHtml($_('comparereport.new'))}</th>
 </tr>
 <tr>
-    <th>#</th><th>${escapeHtml($_('metrics.start-time-short'))}</th><th>${escapeHtml($_('metrics.end-time-short'))}</th><th>${escapeHtml($_('metrics.content'))}</th>
-    <th>#</th><th>${escapeHtml($_('metrics.start-time-short'))}</th><th>${escapeHtml($_('metrics.end-time-short'))}</th><th>${escapeHtml($_('metrics.content'))}</th>
+    ${tableHeader}${tableHeader}
 </tr>
 </thead>
 <tbody>
