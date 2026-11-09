@@ -37,6 +37,9 @@ export default defineConfig(() => ({
       'top-level-await': false //browsers can handle top-level-await features
     },
   },
+  build: {
+    sourcemap: true
+  },
   resolve: {
     alias: {
       '$lib': path.resolve(__dirname, './src/lib')

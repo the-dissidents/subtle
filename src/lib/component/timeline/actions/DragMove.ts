@@ -10,6 +10,10 @@ import type { TimelineLayout } from "../Layout";
 import { type TimelineInput, TimelineHandle } from "../Input.svelte";
 
 export class DragMove extends MoveResizeBase {
+    // Start only after the mouse has moved a certain distance
+    // to prevent accidentally dragging things
+    started = false;
+
     points: number[];
     start: number;
 
@@ -58,6 +62,10 @@ export class DragMove extends MoveResizeBase {
     }
 
     onDrag(offsetX: number, _offsetY: number): void {
+        if (Math.abs(offsetX - this.e0.offsetX) > TimelineConfig.data.snapDistance)
+            this.started = true;
+        if (!this.started) return;
+
         const dval = this.self.convertX(offsetX) - this.origPos;
         let newDval = dval;
         if (TimelineHandle.useSnap.get())

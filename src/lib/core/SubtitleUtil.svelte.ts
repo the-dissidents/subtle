@@ -201,7 +201,9 @@ export const SubtitleUtil = {
             .map((x) => JSON.stringify(SubtitleStyle.serialize(x)));
 
         const processStyle = (s: SubtitleStyle) => {
+            if (original.styles.includes(s)) return s;
             if (styleMap.has(s)) return styleMap.get(s)!;
+
             const newStyleSerialized = JSON.stringify(SubtitleStyle.serialize(s));
             const iLocalName = original.styles.findIndex((x) => x.name == s.name);
             const iLocalMatch = orginalStyleSerialized.indexOf(newStyleSerialized);

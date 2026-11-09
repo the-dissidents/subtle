@@ -71,7 +71,7 @@ export class CanvasManager {
     readonly onUserScroll = new EventHost();
 
     // must synchronous
-    canBeginDrag: (ev: MouseEvent) => boolean | (() => Promise<void>) = () => false;
+    canBeginDrag: (ev: MouseEvent) => boolean = () => false;
 
     renderer?: (ctx: CanvasRenderingContext2D) => void | Promise<void>;
     doNotPrescaleHighDPI = false;
@@ -164,6 +164,9 @@ export class CanvasManager {
         return scrollerSize;
     }
 
+    /**
+     * Note: the user doesn't have to be actually dragging for this to be non-`none`. This is set as soon as a mouse button is pressed down at a location where it's possible to drag.
+     */
     get dragType() {
         return this.#dragType;
     }
@@ -268,8 +271,7 @@ export class CanvasManager {
                 this.#dragType = 'hscroll';
         }
 
-        let beginDragHandler: boolean | (() => Promise<void>) = false;
-        if (this.dragType == 'none' && (beginDragHandler = this.canBeginDrag(ev)))
+        if (this.dragType == 'none' && this.canBeginDrag(ev))
             this.#dragType = 'custom';
 
         if (this.dragType !== 'none') {
@@ -297,13 +299,8 @@ export class CanvasManager {
             document.addEventListener('mousemove', handlerMove);
             document.addEventListener('mouseup', handlerUp, { once: true });
 
-            if (typeof beginDragHandler == 'function') {
-                await beginDragHandler();
-            }
-
-            if (this.#dragType == 'custom') {
+            if (this.#dragType == 'custom')
                 await this.onMouseDown.dispatchAndAwaitAll(ev, true);
-            }
         }
 
         if (this.dragType == 'none')
