@@ -84,7 +84,8 @@ export class MediaSampler {
     ) {
         Debug.assert(media.audio !== undefined);
         this.#intensity = new AggregationTree(Float32Array,
-            Math.ceil(this.media.duration * this.resolution), Math.max);
+            // leave some seconds at the end to account for inaccurate duration
+            Math.ceil((this.media.duration + 5) * this.resolution), Math.max);
         this.#videoIndex = new Index();
     }
 

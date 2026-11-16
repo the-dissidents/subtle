@@ -255,6 +255,12 @@ const result = $derived<LintProfile>({
         </label>
         <label>
           <input type='checkbox' bind:checked={
+            () => dashes?.dialog.reportMissingDash ?? false,
+            (x) => dashes!.dialog.reportMissingDash = x}>
+          {$_('lint.dashes-report-missing-dash')}
+        </label>
+        <label>
+          <input type='checkbox' bind:checked={
             () => dashes?.dialog.reportLoneDash ?? false,
             (x) => dashes!.dialog.reportLoneDash = x}>
           {$_('lint.dashes-report-single-dash')}

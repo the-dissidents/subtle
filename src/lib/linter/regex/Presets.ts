@@ -102,7 +102,7 @@ export const RegexLintPresets = {
     }],
     noSpaceAroundEllipsis: [{
         type: 'format',
-        pattern: /\s+…+\s*|\s*…+\s+(?![-－⸺\u2010-\u2015])/mug,
+        pattern: /(?<![-－―⸺\u2010-\u2015])\s+…+\s*|\s*…+\s+(?![-－⸺\u2010-\u2015])/mug,
         description: () => $_('regexlint.no-space-around-ellipsis'),
         fix: (m) => m[0].trim(),
 

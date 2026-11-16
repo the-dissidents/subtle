@@ -417,6 +417,7 @@
   "dashlint": {
     "cjk-dashes-forbidden": "Long CJK dashes are disallowed here.",
     "dialog-dashes-should-begin-on-a-new-line": "Dialog dashes should begin on a new line.",
+    "missing-dialog-dash": "Missing dialog dash at the beginning of the entry.",
     "no-midline-dashes": "Mid-line dashes are disallowed. Use ellipses for mid-line trail-offs.",
     "single-dialog-dash": "Lone dialog dash",
     "wrong-cjk-dashes": "CJK dashes must use '{preferred}' with no surrounding spaces.",
@@ -609,6 +610,7 @@
     "dashes-line-end-only": "restrict to end of line only",
     "dashes-need-spaces-around": "require spaces around",
     "dashes-normal": "normal",
+    "dashes-report-missing-dash": "report missing dialog dashes",
     "dashes-report-single-dash": "report lone dialog dashes",
     "dashes-require-newline": "require new line",
     "dashes-unicode": "Unicode",
@@ -848,7 +850,8 @@
     "only-replace-styles": "only replace styles",
     "options": "options",
     "pattern": {
-      "newline": "newline"
+      "newline": "newline",
+      "tab": "tab character"
     },
     "previous": "previous",
     "range": "range",

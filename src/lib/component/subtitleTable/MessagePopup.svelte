@@ -56,7 +56,7 @@ export function open(d: Data, o: Parameters<Popup['open']>[0]) {
           segments.push({ text: plain.slice(last, pos), superscripts: [id] });
         else {
           Debug.assert(stack.length > 0);
-          segments.at(-1)!.superscripts.push(id);
+          segments.at(-1)?.superscripts.push(id);
         }
       }
 

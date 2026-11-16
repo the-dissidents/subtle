@@ -9,7 +9,7 @@ const defaultLintProfiles: [string, LintProfile][] = [
         regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'spaceBetweenCJKAndNarrow', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
         dashes: {
-            dialog: { type: 'horizontalBar', spaces: true, separateLines: false },
+            dialog: { type: 'horizontalBar', spaces: true, separateLines: false, reportLoneDash: true, reportMissingDash: true },
             dash: { type: 'emDash', spaces: false, endOnly: false },
             cjkDash: { type: 'standard', wordConnectors: true }
         },
@@ -19,7 +19,7 @@ const defaultLintProfiles: [string, LintProfile][] = [
         regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'noSpaceAroundEllipsis', 'spaceBetweenCJKAndNarrow', 'useFullwidthPunctuationInCJK'],
         forbiddenPunctuation: '，、：；。',
         dashes: {
-            dialog: { type: 'horizontalBar', spaces: true, separateLines: false },
+            dialog: { type: 'horizontalBar', spaces: true, separateLines: false, reportLoneDash: true, reportMissingDash: true },
             dash: { type: 'emDash', spaces: false, endOnly: false },
             cjkDash: { type: 'standard', wordConnectors: true }
         },
@@ -29,7 +29,7 @@ const defaultLintProfiles: [string, LintProfile][] = [
         regexes: ['noConsecutiveSpaces', 'noLeadingTrailingSpaces', 'spaceAfterLatinPunctuation', 'noSpaceBeforePunctuation', 'useSingleEllipsis', 'spaceAroundEllipsis', 'useHalfwidthPunctuationInLatin'],
         forbiddenPunctuation: '',
         dashes: {
-            dialog: { type: 'horizontalBar', spaces: true, separateLines: false },
+            dialog: { type: 'horizontalBar', spaces: true, separateLines: true, reportLoneDash: true, reportMissingDash: true },
             dash: { type: 'emDash', spaces: false, endOnly: false },
         }
     }],

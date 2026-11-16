@@ -4,7 +4,7 @@ import { UICommand } from '../../frontend/CommandBase';
 import { Editing, Selection } from '../../frontend/Editing';
 import { CommandBinding, KeybindingManager } from '../../frontend/Keybinding';
 import { Debug } from '../../Debug';
-import { EventHost } from '@the_dissidents/svelte-ui';
+import { unbindEvents } from '@the_dissidents/svelte-ui';
 import { Playback } from '../../frontend/Playback';
 import { ChangeType, Source } from '../../frontend/Source';
 
@@ -96,7 +96,7 @@ export const TimelineCommands = {
         call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> =>
             makeHoldToCreate(TimelineCommands.holdToCreateEntry2),
         onDeactivate: async ([entry, style]) => {
-            EventHost.unbind(entry);
+            unbindEvents(entry);
             if (get(Editing.useUntimedForNewEntires))
                 await Editing.fillWithFirstLineOfUntimed(entry, style);
             await Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));
@@ -110,7 +110,7 @@ export const TimelineCommands = {
         call: (): Promise<readonly [SubtitleEntry, SubtitleStyle]> =>
             makeHoldToCreate(TimelineCommands.holdToCreateEntry1),
         onDeactivate: async ([entry, style]) => {
-            EventHost.unbind(entry);
+            unbindEvents(entry);
             if (get(Editing.useUntimedForNewEntires))
                 await Editing.fillWithFirstLineOfUntimed(entry, style);
             await Source.markChanged(ChangeType.Times, $_('c.hold-to-create-entry'));

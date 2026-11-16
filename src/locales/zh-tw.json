@@ -417,6 +417,7 @@
   "dashlint": {
     "cjk-dashes-forbidden": "此處不允許使用中日韓文破折號",
     "dialog-dashes-should-begin-on-a-new-line": "對話應另起一行",
+    "missing-dialog-dash": "項目開頭缺少對話破折號",
     "no-midline-dashes": "只允許在行尾出現破折號；考慮使用省略號",
     "single-dialog-dash": "單獨的對話破折號",
     "wrong-cjk-dashes": "不建議的中日韓文破折號形態",
@@ -608,6 +609,7 @@
     "dashes-line-end-only": "限制只能出現在行尾",
     "dashes-need-spaces-around": "周圍需要空格",
     "dashes-normal": "正常",
+    "dashes-report-missing-dash": "報告缺少的對話破折號",
     "dashes-report-single-dash": "檢查單獨的對話破折號",
     "dashes-require-newline": "必須換行",
     "dashes-unicode": "Unicode",

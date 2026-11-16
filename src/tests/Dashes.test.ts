@@ -263,3 +263,80 @@ test('a lone dialog dash is not reported by default', () => {
     const check = make({ dialog: baseDialog, dash: baseLatin });
     expect(check('—Hello!')).toHaveLength(0);
 });
+
+// ---------------------------------------------------------------------------
+// missing leading dialog dash
+// ---------------------------------------------------------------------------
+
+const missingConfig = {
+    type: 'emDash', spaces: true, separateLines: false,
+    reportLoneDash: true, reportMissingDash: true
+} as const;
+
+test('a dash on a later line is not reported as a lone dash', () => {
+    const check = make({
+        dialog: { type: 'emDash', spaces: true, separateLines: false, reportLoneDash: true },
+        dash: baseLatin
+    });
+    expect(check('First line.\n— Second line.')).toHaveLength(0);
+});
+
+test('a missing leading dash is reported for a dash on a later line', () => {
+    const check = make({ dialog: missingConfig, dash: baseLatin });
+    const diags = check('First line.\n— Second line.');
+    expect(diags).toHaveLength(1);
+    expect(diags[0].description).toBe('Missing dialog dash at the beginning of the entry.');
+    expect(diags[0]).toMatchObject({ start: 0, to: 0 });
+    expect(diags[0].fix).toEqual({ substitute: '— ', confident: true });
+});
+
+test('a missing leading dash is reported for a mid-line dash', () => {
+    const check = make({ dialog: missingConfig, dash: baseLatin });
+    const diags = check('First line. — Second line.');
+    expect(diags).toHaveLength(1);
+    expect(diags[0]).toMatchObject({ start: 0, to: 0 });
+    expect(diags[0].fix).toEqual({ substitute: '— ', confident: true });
+});
+
+test('no missing leading dash is reported when the entry begins with one', () => {
+    const check = make({ dialog: missingConfig, dash: baseLatin });
+    expect(check('— First line. — Second line.')).toHaveLength(0);
+});
+
+test('a mid-line dash also triggers the separate-lines report', () => {
+    const check = make({
+        dialog: { ...missingConfig, separateLines: true },
+        dash: baseLatin
+    });
+    const descriptions = check('First line. — Second line.').map((x) => x.description);
+    expect(descriptions).toContain('Dialog dashes should begin on a new line.');
+    expect(descriptions).toContain('Missing dialog dash at the beginning of the entry.');
+});
+
+test('a missing leading dash is inserted after leading whitespace', () => {
+    const check = make({ dialog: missingConfig, dash: baseLatin });
+    const diags = check('  First line. — Second line.');
+    expect(diags).toHaveLength(1);
+    expect(diags[0]).toMatchObject({ start: 2, to: 2 });
+});
+
+test('a missing leading dash is not reported by default', () => {
+    const check = make({
+        dialog: { type: 'emDash', spaces: true, separateLines: false },
+        dash: baseLatin
+    });
+    expect(check('First line.\n— Second line.')).toHaveLength(0);
+});
+
+test('an ambiguous CJK dash does not trigger a missing leading dash', () => {
+    const check = make({
+        dialog: {
+            type: 'hyphenMinus', spaces: false, separateLines: false,
+            reportMissingDash: true
+        },
+        dash: baseLatin,
+        cjkDash: { type: 'standard', wordConnectors: false }
+    });
+    // the only dash is an unconfident word-connector/dialog guess, so no insertion
+    expect(check('让-吕克')).toHaveLength(0);
+});

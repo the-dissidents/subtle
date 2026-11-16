@@ -6,7 +6,7 @@ import LabelSelect from "$lib/LabelSelect.svelte";
 import { Memorized } from "../config/MemorizedValue.svelte";
 import { CompiledLintProfile } from "../core/LintProfile";
 import { RichText } from "../core/RichText";
-import { type SubtitleStyle } from "../core/Subtitles.svelte";
+import { SubtitleEntry, type SubtitleStyle } from "../core/Subtitles.svelte";
 import { Debug } from "../Debug";
 import { Editing, Selection, SelectMode } from "../frontend/Editing";
 import { Frontend } from "../frontend/Frontend";
@@ -75,14 +75,17 @@ let updateCounter = $state(0);
 const me = {};
 Editing.onSelectionChanged.bind(me, () => { updateCounter++ });
 
-async function gotoProblem(dir: 1 | -1) {
+async function gotoProblem(select: 'forward' | 'backward' | 'all') {
   const focusedEntry = Selection.focusedEntry;
   if (!focusedEntry) return;
 
   const linters = getLinters();
-  let i = Source.subs.entries.indexOf(focusedEntry);
+  let i = select == 'all' ? 0 : Source.subs.entries.indexOf(focusedEntry);
+  const dir = select == 'backward' ? -1 : 1;
   Debug.assert(i >= 0);
   i += dir;
+
+  const toSelect: SubtitleEntry[] = [];
   while (i >= 0 && i < Source.subs.entries.length) {
     const ent = Source.subs.entries[i];
     const hasProblem = ($checkLabel && ent.label == $label)
@@ -98,14 +101,21 @@ async function gotoProblem(dir: 1 | -1) {
           return false;
         });
     if (hasProblem) {
-      await Editing.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
-      Frontend.setStatus(dir > 0 ? $_('review.found-next') : $_('review.found-previous'));
-      return;
+      if (select == 'all') {
+        toSelect.push(ent);
+      } else {
+        await Editing.selectEntry(ent, SelectMode.Single, ChangeCause.Action);
+        Frontend.setStatus(dir > 0 ? $_('review.found-next') : $_('review.found-previous'));
+        return;
+      }
     }
 
     i += dir;
   }
-  Frontend.setStatus(
+  if (select == 'all') {
+    await Selection.set(toSelect);
+    Frontend.setStatus($_('search.selected-n-lines', {values: {n: toSelect.length}}), 'info');
+  } else Frontend.setStatus(
     dir > 0 ? $_('review.not-found-next') : $_('review.not-found-previous'), 'error');
 }
 </script>
@@ -134,9 +144,11 @@ async function gotoProblem(dir: 1 | -1) {
     {#key updateCounter}
       <div>
         <button disabled={!Selection.focusedEntry}
-          onclick={() => gotoProblem(-1)}>{$_('review.previous')}</button>
+          onclick={() => gotoProblem('backward')}>{$_('review.previous')}</button>
         <button disabled={!Selection.focusedEntry}
-          onclick={() => gotoProblem(1)}>{$_('review.next')}</button>
+          onclick={() => gotoProblem('forward')}>{$_('review.next')}</button>
+        <button
+          onclick={() => gotoProblem('all')}>{$_('review.find-all')}</button>
       </div>
     {/key}
     </ConfigRow>

@@ -62,12 +62,14 @@ import { ChangeCause, ChangeType, Source } from '../frontend/Source';
 import FilterEdit from '../FilterEdit.svelte';
 import StyleSelect from '../StyleSelect.svelte';
 
-import { Collapsible, ConfigRow, ConfigTable, Tooltip } from "@the_dissidents/svelte-ui";
+import { ButtonStrip, Collapsible, StripItem, Tooltip } from "@the_dissidents/svelte-ui";
 
 import { _ } from 'svelte-i18n';
 import * as z from "zod/v4-mini";
 
 import { Memorized } from '../config/MemorizedValue.svelte';
+  import { AsteriskIcon } from '@lucide/svelte';
+  import { Menu } from '@tauri-apps/api/menu';
 
 handler.execute = execute;
 handler.focus = () => {
@@ -107,8 +109,7 @@ let resumeFrom: {
 
 function test(entry: SubtitleEntry, style: SubtitleStyle): boolean {
   if (useFilter) {
-    Debug.assert(filter !== null);
-    return Filter.evaluate(filter, entry, style).failed.length == 0;
+    return !filter || Filter.evaluate(filter, entry, style).failed.length == 0;
   } else {
     // not using filter
     return (!useStyle || style.name === searchStyle.name)
@@ -144,7 +145,7 @@ const replEscapedSequences = {
   't': '\t',
   'n': '\n',
   'v': '\v'
-}
+};
 
 function processReplacement(original: string, match: RegExpExecArray, repl: string) {
   if (!$useEscape)
@@ -211,11 +212,6 @@ async function execute(type: SearchAction, option: SearchOption) {
   // only apply resumeFrom if the focus has not changed
   if (resumeFrom && (resumeFrom.entry !== focus || option == "all"))
       resumeFrom = null;
-
-  if (useFilter && filter == null) {
-    Frontend.setStatus($_('msg.filter-is-empty'), 'error');
-    return;
-  }
 
   let expr: RegExp;
   if ($term !== '') {
@@ -382,62 +378,87 @@ async function execute(type: SearchAction, option: SearchOption) {
   }
   Frontend.setStatus(status);
 }
+
+let replInput = $state<HTMLInputElement>();
+
+function insertSpecial(t: string) {
+  replInput?.setRangeText(t,
+    replInput.selectionStart!,
+    replInput.selectionEnd!,
+    'end'
+  );
+}
 </script>
 
-<input class='wfill' type="text"
-  spellcheck="false" autocomplete="off"
-  bind:value={$term}
-  bind:this={termInput}
-  id='expr' placeholder={$_('search.expression')}/>
+<div class="vlayout">
+
 <div class="hlayout">
-  <input class='wfill' type="text"
+  <input class='flexgrow' type="text"
+    spellcheck="false" autocomplete="off"
+    bind:value={$term}
+    bind:this={termInput}
+    id='expr' placeholder={$_('search.expression')}/>
+</div>
+<div class="hlayout">
+  <input class='flexgrow' type="text"
     spellcheck="false" autocomplete="off"
     bind:value={$replaceTerm}
+    bind:this={replInput}
     id='repl' placeholder={$_('search.replace-term')}/>
   <!-- TODO: make a menu for inserting common escape sequences,
     but problem is that text inputs lose cursor once unfocused
     -->
-  <!-- <button onclick={() => {
-    Menu.new({items: [
-      {
-        text: $_('search.pattern.newline'),
-        action() {
-
-        },
-      }
-    ]}).then((x) => x.popup());
-  }}>...</button> -->
+  {#if $useEscape}
+  <Tooltip text={$_('search.insert-special')}>
+    <button onmousedown={(e) => e.preventDefault()}
+      onclick={() => {
+        void Menu.new({items: [
+          {
+            text: $_('search.pattern.newline'),
+            action: () => insertSpecial('\\n'),
+          },
+          {
+            text: $_('search.pattern.tab'),
+            action: () => insertSpecial('\\t'),
+          },
+          {
+            text: $_('search.pattern.match-content'),
+            action: () => insertSpecial('$&'),
+          },
+          {
+            text: $_('search.pattern.before-match'),
+            action: () => insertSpecial('$`'),
+          },
+          {
+            text: $_('search.pattern.after-match'),
+            action: () => insertSpecial('$\''),
+          }
+        ]}).then((x) => x.popup());
+      }}
+    >
+      <AsteriskIcon />
+    </button>
+  </Tooltip>
+  {/if}
 </div>
-<ConfigTable>
-  <ConfigRow name={$_('search.find')}>
-  <div class="hlayout">
-    <button class="left"
-      onclick={() => execute("select", "next")}
-    >{$_('search.next')}</button>
-    <button class="middle"
-      onclick={() => execute("select", "previous")}
-    >{$_('search.previous')}</button>
-    <button class="right flexgrow"
-      onclick={() => execute("select", "all")}
-    >{$_('search.all')}</button>
-  </div>
-  </ConfigRow>
 
-  <ConfigRow name={$_('search.replace')}>
-  <div class="hlayout">
+<div class="hlayout gapped" style="margin-top: 5px;">
+  <ButtonStrip>
+    <StripItem disabled={true}>{$_('search.find')}</StripItem>
+    <StripItem onclick={() => execute("select", "next")}>{$_('search.next')}</StripItem>
+    <StripItem onclick={() => execute("select", "previous")}>{$_('search.previous')}</StripItem>
+    <StripItem onclick={() => execute("select", "all")}>{$_('search.all')}</StripItem>
+  </ButtonStrip>
+  <ButtonStrip>
     {const cmd = $derived($useReplaceStyle && $onlyReplaceStyle ? 'replaceStyles' : 'replace')}
-    <button class="left"
-      onclick={() => execute(cmd, "next")}
-    >{$_('search.next')}</button>
-    <button class="middle"
-      onclick={() => execute(cmd, "previous")}
-    >{$_('search.previous')}</button>
-    <button class="right flexgrow"
-      onclick={() => execute(cmd, "all")}
-    >{$_('search.all')}</button>
-  </div>
-  </ConfigRow>
-</ConfigTable>
+    <StripItem disabled={true}>{$_('search.replace')}</StripItem>
+    <StripItem onclick={() => execute(cmd, "next")}>{$_('search.next')}</StripItem>
+    <StripItem onclick={() => execute(cmd, "previous")}>{$_('search.previous')}</StripItem>
+    <StripItem onclick={() => execute(cmd, "all")}>{$_('search.all')}</StripItem>
+  </ButtonStrip>
+</div>
+
+</div>
 
 <div class='form vlayout'>
   <h5>{$_('search.options')}</h5>
@@ -515,10 +536,6 @@ async function execute(type: SearchAction, option: SearchOption) {
 <style lang='scss'>
   .form > * {
     margin-top: 2px;
-  }
-
-  .wfill {
-    width: 100%;
   }
 
   .gapped {

@@ -417,6 +417,7 @@
   "dashlint": {
     "cjk-dashes-forbidden": "此处不允许使用中日韩文破折号",
     "dialog-dashes-should-begin-on-a-new-line": "对话应另起一行",
+    "missing-dialog-dash": "条目开头缺少对话破折号",
     "no-midline-dashes": "只允许在行尾出现破折号；考虑使用省略号",
     "single-dialog-dash": "单独的对话破折号",
     "wrong-cjk-dashes": "不推荐的中日韩文破折号形态",
@@ -610,6 +611,7 @@
     "dashes-line-end-only": "限制只能出现在行尾",
     "dashes-need-spaces-around": "周围需要空格",
     "dashes-normal": "正常",
+    "dashes-report-missing-dash": "报告缺少的对话破折号",
     "dashes-report-single-dash": "禁止孤单的对话破折号",
     "dashes-require-newline": "必须换行",
     "dashes-unicode": "Unicode",
@@ -820,6 +822,7 @@
   },
   "review": {
     "auto-fix-problems": "自动修复了{m,select,0 {所有} other {}} {n} 个问题",
+    "find-all": "选中全部",
     "fix-all-problems": "尝试修复所有拼写问题",
     "found-next": "定位到下一个问题",
     "found-previous": "定位到上一个问题",
@@ -846,11 +849,16 @@
     "find": "查找",
     "found-n-lines": "找到 {n} 行",
     "found-nothing": "什么也没找到",
+    "insert-special": "添加特殊字符",
     "next": "下一个",
     "only-replace-styles": "仅替换样式",
     "options": "选项",
     "pattern": {
-      "newline": "换行"
+      "after-match": "匹配部分之后的内容",
+      "before-match": "匹配部分之前的内容",
+      "match-content": "匹配内容",
+      "newline": "换行",
+      "tab": "制表符"
     },
     "previous": "上一个",
     "range": "范围",

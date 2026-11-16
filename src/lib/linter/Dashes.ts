@@ -32,6 +32,7 @@ export const DashesConfig = z.object({
         spaces: z.boolean(),
         separateLines: z.boolean(),
         reportLoneDash: z.optional(z.boolean()),
+        reportMissingDash: z.optional(z.boolean()),
     }),
     dash: z.object({
         type: ZDashType,
@@ -102,7 +103,12 @@ export class DashLinter {
 
         const cjk = this.config.cjkDash;
         const diagnostics: Diagnostic[] = [];
-        const dialogRanges: { start: number, to: number, isStartOfLine: boolean }[] = [];
+        const dialogRanges: {
+            start: number,
+            to: number,
+            isStartOfLine: boolean,
+            confident: boolean
+        }[] = [];
         const dashRegex = /([ \t]*)([-－⸺\u2010-\u2015]+)([ \t]*)/g;
         let match;
 
@@ -138,7 +144,7 @@ export class DashLinter {
             // punctuation; a right space is never added at the end of a line or right before a
             // preceding-space-subsuming punctuation (in either case it is unavoidable/subsumed).
             const emitDialog = (confident: boolean) => {
-                dialogRanges.push({ start, to, isStartOfLine });
+                dialogRanges.push({ start, to, isStartOfLine, confident });
                 // Only nag about newlines when we are sure this is a dialog dash, to avoid false
                 // positives on ambiguous CJK guesses (which might actually be word connectors).
                 if (confident && this.config.dialog.separateLines && !isStartOfLine) diagnostics.push({
@@ -214,8 +220,9 @@ export class DashLinter {
 
                 // Spaced dashes in a CJK context are dialog dashes. If it is both short and
                 // spaced it certainly cannot be a CJK dash, so we can report it confidently;
-                // otherwise (spaced but long) we only guess.
-                emitDialog(!isLong);
+                // otherwise (spaced but long, or unspaced and possibly a word connector) we
+                // only guess.
+                emitDialog(spaced && !isLong);
                 continue;
             }
 
@@ -259,17 +266,41 @@ export class DashLinter {
             }
         }
 
-        // A lone dialog dash at the entry's start marks no speaker change: we report and propose
-        // to remove it when asked. For a single dialog dash at a non-start position, we should
-        // insert another dialog dash at the start, but this is currently unsupported
+        // A dash at the very beginning of the entry marks the only speaker, so a single dialog
+        // dash there is redundant: we report it and propose to remove it when asked. A single
+        // dialog dash anywhere else means the entry starts without introducing the first
+        // speaker: that is a missing dash at the beginning, handled below. Note that a dash at
+        // the start of a *line* is not a lone dash when other lines precede it.
         if (this.config.dialog.reportLoneDash && dialogRanges.length === 1) {
-            // FIXME: should check for start of entry instead of start of line
-            const { start, to, isStartOfLine } = dialogRanges[0];
-            diagnostics.push({
+            const { start, to } = dialogRanges[0];
+            if (start === 0) diagnostics.push({
                 start, to,
                 type: 'punctuation',
                 description: $_('dashlint.single-dialog-dash'),
-                ...(isStartOfLine ? { fix: { substitute: '', confident: true } } : {})
+                fix: { substitute: '', confident: true }
+            });
+        }
+
+        // When dialog dashes are present but the entry itself does not begin with one, the
+        // first speaker is missing their dash. Propose to insert it before the entry's text.
+        // Only do this when at least one dialog dash was recognized confidently, since
+        // ambiguous CJK dashes may actually be word connectors.
+        const startsWithDash = dialogRanges.some((x) => x.start === 0);
+        if (this.config.dialog.reportMissingDash
+         && !startsWithDash
+         && dialogRanges.some((x) => x.confident)) {
+            const insertAt = /^[ \t]*/.exec(entry)![0].length;
+            const expectedChar = DashType[this.config.dialog.type];
+            const rightChar = entry.slice(insertAt, insertAt + 1);
+            const rightSubsumed = rightChar !== ''
+                && PRECEDING_SPACE_SUBSUMING.includes(rightChar);
+            const expectedSub = expectedChar
+                + ((this.config.dialog.spaces && !rightSubsumed) ? ' ' : '');
+            diagnostics.push({
+                start: insertAt, to: insertAt,
+                type: 'punctuation',
+                description: $_('dashlint.missing-dialog-dash'),
+                fix: { substitute: expectedSub, confident: true }
             });
         }
 
