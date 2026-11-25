@@ -80,6 +80,7 @@ export class TimelineInput {
         this.manager.onDragEnd.bind(this, this.#onDragEnd.bind(this));
         this.manager.onDragInterrupted.bind(this, this.#onDragInterrupted.bind(this));
 
+        this.manager.onBeforeMouseWheel = this.#onBeforeMouseWheel.bind(this);
         this.manager.onMouseWheel.bind(this, this.#onMouseWheel.bind(this));
         this.manager.onUserScroll.bind(this, () => {this.layout.requestedSampler = true});
 
@@ -176,6 +177,25 @@ export class TimelineInput {
                 current.start < pf.start ? current : pf,
                 current.end > pl.end ? current : pl],
             [sels[0], sels[0]]);
+    }
+
+    async #onBeforeMouseWheel(tr: TranslatedWheelEvent, e: WheelEvent): Promise<boolean> {
+        if (tr.isZoom || !TimelineConfig.data.mouseWheelHorizontalScroll)
+            return false;
+
+        if (e.shiftKey) {
+            // macOS turns Shift+vertical wheel into deltaX; accept whichever axis carries the delta
+            const deltaY = tr.amountY !== 0 ? tr.amountY : tr.amountX;
+            const [, y] = this.manager.scroll;
+            await this.manager.setScroll({ y: y + deltaY * 0.1 });
+            if (this.manager.scroll[1] !== y)
+                this.manager.onUserScroll.dispatch();
+            return true;
+        }
+
+        const amount = Math.abs(tr.amountX) >= Math.abs(tr.amountY) ? tr.amountX : tr.amountY;
+        await this.layout.setOffset(this.layout.offset + amount * 0.5 / this.layout.scale);
+        return true;
     }
 
     async #onMouseWheel(tr: TranslatedWheelEvent, e: WheelEvent) {

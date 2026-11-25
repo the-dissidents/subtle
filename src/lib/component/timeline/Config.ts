@@ -43,6 +43,12 @@ export const TimelineConfig = new PublicConfigGroup(
         type: 'boolean',
         default: false
     },
+    mouseWheelHorizontalScroll: {
+        localizedName: () => get(_)('config.wheel-horizontal-scroll'),
+        description: () => get(_)('config.wheel-horizontal-scroll-d'),
+        type: 'boolean',
+        default: false
+    },
     dragSeamArea: {
         localizedName: () => get(_)('config.seam-area-size'),
         type: 'number',
