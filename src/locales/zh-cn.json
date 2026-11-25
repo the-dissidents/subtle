@@ -749,6 +749,9 @@
     "waiting-for-chord-after-pressing": "已按下 {key}，等待下一个键…"
   },
   "ok": "确认",
+  "preview": {
+    "playback-speed": "播放倍速"
+  },
   "ppty": {
     "add-to-project": "添加到项目",
     "adjust-framerate": "调轴",

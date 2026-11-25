@@ -748,6 +748,9 @@
     "waiting-for-chord-after-pressing": "waiting for chord following {key} ..."
   },
   "ok": "ok",
+  "preview": {
+    "playback-speed": "Playback speed"
+  },
   "ppty": {
     "add-to-project": "add to project",
     "adjust-framerate": "adjust",
