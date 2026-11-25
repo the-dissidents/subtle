@@ -51,6 +51,6 @@ export const MediaConfig = new PublicConfigGroup(
     showDebug: {
         localizedName: () => $_('config.show-debug-info'),
         type: 'boolean',
-        default: true
+        default: false
     }
 });

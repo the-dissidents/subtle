@@ -65,7 +65,7 @@
   bind:this={element}
 >
   <div style="transform: {transform}; transform-origin: left top;">
-  {#each boxes as box (box)}
+  {#each boxes as box, idx (idx)}
   {const outline = box.style.outline * 2 * box.scale}
   {const shadow = box.style.shadow * box.scale}
   {const color = Color.serialize(box.style.color)}
@@ -86,7 +86,7 @@
             -webkit-text-stroke-color: ${outlineColor};`
           : `color: ${color};`}
         {shadow > 0
-          ? `filter: drop-shadow(${shadow}px ${shadow}px 0 ${shadowColor});`
+          ? `text-shadow: ${shadow}px ${shadow}px 0 ${shadowColor};`
           : ''}
       ">
         {@render line(box.line)}

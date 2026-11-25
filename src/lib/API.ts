@@ -170,7 +170,7 @@ export class MMedia {
         const pktpos = view.readI64();
         const stride = view.readU32();
         const length = view.readU32();
-        const content = view.readU8ClampedArray(length, { copy: true });
+        const content = view.readU8ClampedArray(length, { copy: false });
         const buf = pool.allocate(length);
         buf.data.set(content);
         return { pktpos, time, stride, length, content: buf, size: [...this.#outSize] };
