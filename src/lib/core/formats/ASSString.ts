@@ -13,8 +13,11 @@ export type ASSStringWarnings = {
 
 class ASSState extends Formatter {
     #fontsize?: number;
+    #font?: string;
     #pos: Positioning = null;
     #align: AlignMode | null = null;
+    #base?: SubtitleStyle;
+    #styles?: ReadonlyMap<string, SubtitleStyle>;
 
     get positioning() {
         return this.#pos;
@@ -24,12 +27,18 @@ class ASSState extends Formatter {
         return this.#align;
     }
 
-    constructor(readonly warnings: ASSStringWarnings = {
-        ignoredTags: new Map<string, number>(),
-        ignoredDrawing: 0,
-        ignoredSpecialCharacter: new Map<string, number>(),
-    }) {
+    constructor(
+        readonly warnings: ASSStringWarnings = {
+            ignoredTags: new Map<string, number>(),
+            ignoredDrawing: 0,
+            ignoredSpecialCharacter: new Map<string, number>(),
+        },
+        base?: SubtitleStyle,
+        styles?: ReadonlyMap<string, SubtitleStyle>
+    ) {
         super();
+        this.#base = base;
+        this.#styles = styles;
     }
 
     static fromGlobals(opts: { pos?: Positioning, alignment?: AlignMode }) {
@@ -40,9 +49,11 @@ class ASSState extends Formatter {
     }
 
     static fromAttrs(attrs: RichTextAttr[], base?: SubtitleStyle, from?: ASSState): ASSState {
-        const state = new ASSState(from?.warnings);
-        if (base)
+        const state = new ASSState(from?.warnings, base, from ? from.#styles : undefined);
+        if (base) {
             state.#fontsize = base.size;
+            state.#font = base.font;
+        }
         if (from) {
             state.#pos = from.#pos;
             state.#align = from.#align;
@@ -60,7 +71,10 @@ class ASSState extends Formatter {
                     if (base)
                         state.#fontsize = x.value * base.size;
                     break;
-                default: Debug.never(x.type);
+                case 'font':
+                    state.#font = x.value;
+                    break;
+                default: Debug.never(x);
             }
         });
         return state;
@@ -87,6 +101,12 @@ class ASSState extends Formatter {
             if (f0 !== f1)
                 result += `\\fs${f1 ? f1.toFixed(0) : ''}`;
         }
+
+        const fn0 = base && before.#font === base.font ? undefined : before.#font;
+        const fn1 = base && after.#font === base.font ? undefined : after.#font;
+        if (fn0 !== fn1)
+            result += `\\fn${fn1 ?? ''}`;
+
         return result.length > 0 ? `{${result}}` : '';
     }
 
@@ -95,6 +115,10 @@ class ASSState extends Formatter {
         if (this.#fontsize && this.#fontsize !== base.size) result.push({
             type: 'size',
             value: this.#fontsize / base.size
+        });
+        if (this.#font && this.#font !== base.font) result.push({
+            type: 'font',
+            value: this.#font
         });
         return result;
     }
@@ -116,6 +140,16 @@ class ASSState extends Formatter {
             .replaceAll('\n', '\\N');
     }
 
+    #resetInlineStyle(target?: SubtitleStyle) {
+        const base = this.#base;
+        this._italic = Boolean(target && target.styles.italic && !base?.styles.italic);
+        this._underline = Boolean(target && target.styles.underline && !base?.styles.underline);
+        this._strikethrough = Boolean(target && target.styles.strikethrough && !base?.styles.strikethrough);
+        this._bold = target && target.styles.bold && !base?.styles.bold ? 1 : 0;
+        this.#fontsize = target && (!base || target.size !== base.size) ? target.size : undefined;
+        this.#font = target && target.font && (!base || target.font !== base.font) ? target.font : undefined;
+    }
+
     processElement(elem: string) {
         elem = elem.trim();
         if (!elem.startsWith('\\')) return;
@@ -131,6 +165,24 @@ class ASSState extends Formatter {
             else if ((m = /^b\s*(\d+)?$/.exec(s)))  this._bold = Number.parseInt(m[1] ?? '0');
             else if ((m = /^fs\s*(\d+)?$/.exec(s)))
                 this.#fontsize = m[1] ? Number.parseInt(m[1]) : undefined;
+            else if ((m = /^fn\s*(.*)$/.exec(s))) {
+                const fontName = m[1].trim();
+                this.#font = fontName.length > 0 ? fontName : undefined;
+            }
+            else if ((m = /^r(.*)$/.exec(s))) {
+                const styleName = m[1].trim();
+                if (styleName.length === 0) {
+                    this.#resetInlineStyle();
+                } else {
+                    const target = this.#styles?.get(styleName);
+                    if (target) {
+                        this.#resetInlineStyle(target);
+                    } else {
+                        this.warnings.ignoredTags.set('\\' + s,
+                            (this.warnings.ignoredTags.get('\\' + s) ?? 0) + 1);
+                    }
+                }
+            }
             else if ((m = /pos\((\d+),(\d+)\)/.exec(s)))
                 this.#pos = {
                     type: 'absolute',
@@ -193,13 +245,14 @@ export namespace ASSString {
 
     export function parse(
         source: string, base: SubtitleStyle,
-        warnings: ASSStringWarnings
+        warnings: ASSStringWarnings,
+        styles?: ReadonlyMap<string, SubtitleStyle>
     ): {
         result: RichText,
         pos: Positioning,
         alignment: AlignMode | null,
      } {
-        const state = new ASSState(warnings);
+        const state = new ASSState(warnings, base, styles);
         const result: RichTextNode[] = [];
         let lastWord = '';
 

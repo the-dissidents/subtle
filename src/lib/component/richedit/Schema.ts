@@ -13,8 +13,10 @@ function getAttr(a: RichTextAttr): Mark {
     switch (a.type) {
         case 'size':
             return RichTextSchema.marks.changeSize.create({ value: a.value });
+        case 'font':
+            return RichTextSchema.marks.font.create({ value: a.value });
         default:
-            Debug.never(a.type);
+            Debug.never(a);
     }
 }
 
@@ -33,7 +35,12 @@ function toAttr(m: Mark): RichTextAttr {
             return {
                 type: 'size',
                 value: m.attrs.value
-            }
+            };
+        case "font":
+            return {
+                type: 'font',
+                value: m.attrs.value
+            };
         default:
             Debug.never(name);
     }
@@ -112,6 +119,17 @@ export const RichTextSchema = new Schema({
             },
             toDOM(mark) {
                 return ['span', { style: `font-size: ${mark.attrs.value * 100}%; line-height: 1;` }, 0]
+            },
+        },
+        font: {
+            attrs: {
+                value: {
+                    default: '',
+                    validate: (x) => typeof x === 'string' && x.length > 0
+                }
+            },
+            toDOM(mark) {
+                return ['span', { style: `font-family: ${mark.attrs.value};` }, 0]
             },
         },
     }
