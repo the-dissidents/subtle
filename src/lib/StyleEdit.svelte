@@ -249,7 +249,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
       </ConfigRow>
       <ConfigRow name={$_('style.size')}>
         <div class="hlayout style">
-        <NumberInput width="100%" bind:value={$style.size}
+        <NumberInput width="100%" bind:value={$style.size} min="0.01" step="any"
           onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-size'))}/>
         <label><input type='checkbox' bind:checked={$style.styles.bold}
           onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-font-style'))}
@@ -319,7 +319,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
             onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-color'))}/>
         </ConfigRow>
         <ConfigRow name={$_('style.line-size')}>
-          <NumberInput width="100%" bind:value={$style.outline} min='0'
+          <NumberInput width="100%" bind:value={$style.outline} min='0' step='any'
             onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-line-size'))}/>
         </ConfigRow>
         <ConfigRow name={$_('style.shadow-color')}>
@@ -327,7 +327,7 @@ Source.onSubtitlesChanged.bind(me, (t) => {
             onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow-color'))}/>
         </ConfigRow>
         <ConfigRow name={$_('style.shadow')}>
-          <NumberInput width="100%" bind:value={$style.shadow} min='0'
+          <NumberInput width="100%" bind:value={$style.shadow} min='0' step='any'
             onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.style-shadow'))}/>
         </ConfigRow>
         <ConfigRow name={$_('style.alignment')}>

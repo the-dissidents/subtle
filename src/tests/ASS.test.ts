@@ -35,7 +35,7 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
     message: () => Promise.resolve(),
 }));
 
-import { ASSParser, fromASSColor, toASSColor } from '../lib/core/formats/ASS.svelte';
+import { ASSParser, ASSWriter, fromASSColor, toASSColor } from '../lib/core/formats/ASS.svelte';
 import { AlignMode } from '../lib/core/Labels';
 import { RichTextSchema } from '../lib/component/richedit/Schema';
 
@@ -228,5 +228,32 @@ describe('RichTextSchema IME parseDOM rules', () => {
             (rule.getAttrs as (node: HTMLElement) => unknown)(el);
         expect(callTagAttrs(sizeRules![0], fakeSizeEl)).toEqual({ value: 1.25 });
         expect(callTagAttrs(sizeRules![1], fakeSizeEl)).toEqual({ value: 1.25 });
+    });
+
+    it('preserves decimal Fontsize, Outline, Shadow, \\fs, and \\pos values across ASS round-trip', () => {
+        const sample = `[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: MAIN,Arial,48.5,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2.5,1.25,2,80,80,50,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:03.00,MAIN,,0,0,0,,{\\pos(960.5, 540.25)}Hello {\\fs58.2}world{\\fs}!
+`;
+        const { subs, messages } = new ASSParser(sample).decode();
+        expect(messages).toEqual([]);
+        expect(subs.styles[0].size).toBe(48.5);
+        expect(subs.styles[0].outline).toBe(2.5);
+        expect(subs.styles[0].shadow).toBe(1.25);
+        expect(subs.entries[0].positioning).toEqual({ type: 'absolute', x: 960.5, y: 540.25 });
+
+        const exported = new ASSWriter(subs).toString();
+        expect(exported).toContain('Style: MAIN,Arial,48.5,');
+        expect(exported).toContain(',1,2.5,1.25,2,');
+        expect(exported).toContain('{\\pos(960.5, 540.25)}Hello {\\fs58.2}world{\\fs}!');
     });
 });
