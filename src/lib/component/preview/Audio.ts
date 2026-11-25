@@ -12,6 +12,7 @@ export class Audio {
     #worklet: AudioWorkletNode;
     #mutex = new Mutex(1000, 'audio');
     #volume = 1;
+    #feedbackTimestamp = 0;
 
     #feedback: AudioFeedbackData = {
         type: 'ok',
@@ -42,6 +43,17 @@ export class Audio {
 
     get time() {
         return this.#feedback.time;
+    }
+
+    get interpolatedTime(): number | undefined {
+        const base = this.#feedback.time;
+        if (base === undefined) return undefined;
+        if (!this.#feedback.isPlaying) return base;
+        const elapsed = Math.max(0, (performance.now() - this.#feedbackTimestamp) / 1000);
+        const capped = Math.min(elapsed, 0.25);
+        return this.#feedback.tailTime !== undefined
+            ? Math.min(base + capped, this.#feedback.tailTime)
+            : base + capped;
     }
 
     get head() {
@@ -96,6 +108,7 @@ export class Audio {
             }, 1000);
             this.#onAudioFeedback = (data) => {
                 this.#feedback = data;
+                this.#feedbackTimestamp = performance.now();
                 resolve();
             };
             this.#worklet.port.postMessage(msg);

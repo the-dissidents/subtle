@@ -34,6 +34,8 @@ export class MediaPlayer {
     #displaySize: [number, number] = [1, 1];
     #lastRequestedDecodeSize: [number, number] = [0, 0];
     #resizeTimer?: ReturnType<typeof setTimeout>;
+    #clockRafId: number | null = null;
+    #lastClockPos = -1;
 
     #diag = {
         latencies: [] as number[],
@@ -161,6 +163,7 @@ export class MediaPlayer {
     }
 
     async close() {
+        this.#stopClockLoop();
         if (this.#resizeTimer !== undefined) {
             clearTimeout(this.#resizeTimer);
             this.#resizeTimer = undefined;
@@ -284,7 +287,9 @@ export class MediaPlayer {
                 }
                 case "ok": {
                     const frame = data.frame;
-                    MediaPlayerInterface.onPlayback.dispatch(frame.time);
+                    if (!this.isPlaying || this.#buffer.audio.interpolatedTime === undefined) {
+                        MediaPlayerInterface.onPlayback.dispatch(frame.time);
+                    }
                     this.#drawFrame(frame);
                     this.manager.requestRender();
 
@@ -338,6 +343,36 @@ export class MediaPlayer {
         );
     }
 
+    #startClockLoop() {
+        if (this.#clockRafId !== null) return;
+        this.#lastClockPos = -1;
+        const tickClock = () => {
+            if (!this.isPlaying) {
+                this.#clockRafId = null;
+                return;
+            }
+            const t = this.#buffer.audio.interpolatedTime;
+            if (t !== undefined) {
+                const clamped = Math.max(this.startTime, Math.min(this.endTime, t));
+                const nextPos = this.#lastClockPos >= 0 ? Math.max(this.#lastClockPos, clamped) : clamped;
+                if (nextPos !== this.#lastClockPos) {
+                    this.#lastClockPos = nextPos;
+                    MediaPlayerInterface.onPlayback.dispatch(nextPos);
+                }
+            }
+            this.#clockRafId = requestAnimationFrame(tickClock);
+        };
+        this.#clockRafId = requestAnimationFrame(tickClock);
+    }
+
+    #stopClockLoop() {
+        if (this.#clockRafId !== null) {
+            cancelAnimationFrame(this.#clockRafId);
+            this.#clockRafId = null;
+        }
+        this.#lastClockPos = -1;
+    }
+
     async play() {
         await this.#mutex.use(async () => {
             if (this.isPlaying || this.#intent == 'closed') return;
@@ -346,10 +381,12 @@ export class MediaPlayer {
             await this.#buffer.audio.play();
             if (!this.#presenting) void this.#startPresenting();
         });
+        this.#startClockLoop();
         MediaPlayerInterface.onPlayStateChanged.dispatch();
     }
 
     async stop() {
+        this.#stopClockLoop();
         await this.#mutex.use(async () => {
             if (!this.isPlaying || this.#intent == 'closed') return;
             this.#intent = 'paused';

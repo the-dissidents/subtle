@@ -42,6 +42,11 @@ export class TimelineLayout {
 
   #shownStyles: SubtitleStyle[] = [];
   #stylesMap = new Map<SubtitleStyle, number>();
+  #sortedEntries: { entry: SubtitleEntry, index: number }[] = [];
+  #prefixMaxEnd: number[] = [];
+  #cachedMaxEnd = 0;
+  #entriesIndexDirty = true;
+  #samplerTimer: ReturnType<typeof setTimeout> | null = null;
 
   async #makeSampler(audio: number) {
     Debug.assert(this.#samplerMedia !== undefined);
@@ -49,6 +54,10 @@ export class TimelineLayout {
       this.#samplerMedia, audio,
       TimelineConfig.data.waveformResolution);
     sampler.onProgress = () => this.manager.requestRender();
+    sampler.onComplete = () => {
+      this.requestedSampler = true;
+      this.scheduleSampler(0);
+    };
     this.requestedSampler = true;
     this.manager.requestRender();
     return sampler;
@@ -121,6 +130,8 @@ export class TimelineLayout {
     Source.onSubtitlesChanged.bind(this, async (type) => {
       if (type == ChangeType.StyleDefinitions || type == ChangeType.General)
         this.requestedLayout = true;
+      if (type == ChangeType.Times || type == ChangeType.General || type == ChangeType.Order)
+        this.#entriesIndexDirty = true;
       if (type == ChangeType.Times || type == ChangeType.General)
         await this.#updateContentArea();
       if (type != ChangeType.Metadata)
@@ -133,6 +144,7 @@ export class TimelineLayout {
 
     Source.onSubtitleObjectReload.bind(this, (newFile) => {
       this.requestedLayout = true;
+      this.#entriesIndexDirty = true;
       this.manager.requestRender();
 
       const state = Source.subs.metadata.uiState;
@@ -159,11 +171,27 @@ export class TimelineLayout {
     });
   }
 
-  // TODO: cache it
+  #ensureEntryIndex() {
+    const entries = Source.subs.entries;
+    if (!this.#entriesIndexDirty && this.#sortedEntries.length === entries.length) return;
+    this.#entriesIndexDirty = false;
+    this.#sortedEntries = entries
+      .map((entry, index) => ({ entry, index }))
+      .sort((a, b) => a.entry.start - b.entry.start);
+    this.#prefixMaxEnd = new Array<number>(this.#sortedEntries.length);
+    let maxEnd = -Infinity;
+    for (let i = 0; i < this.#sortedEntries.length; i++) {
+      maxEnd = Math.max(maxEnd, this.#sortedEntries[i].entry.end);
+      this.#prefixMaxEnd[i] = maxEnd;
+    }
+    this.#cachedMaxEnd = maxEnd > 0 ? maxEnd : 0;
+  }
+
   get maxPosition() {
-    return Playback.loaded && Playback.player !== null
-      ? Playback.player.endTime + 20
-      : Math.max(0, ...Source.subs.entries.map((x) => x.end)) + 20;
+    if (Playback.loaded && Playback.player !== null)
+      return Playback.player.endTime + 20;
+    this.#ensureEntryIndex();
+    return this.#cachedMaxEnd + 20;
   }
 
   get minPosition() {
@@ -211,9 +239,40 @@ export class TimelineLayout {
   }
 
   getVisibleEntries(): SubtitleEntry[] {
-    const end = this.offset + this.width / this.scale;
-    return Source.subs.entries.filter(
-      (ent) => ent.end > this.offset && ent.start < end);
+    const offset = this.offset;
+    const end = offset + this.width / this.scale;
+    if (TimelineHandle.isDuringAction()) {
+      return Source.subs.entries.filter(
+        (ent) => ent.end > offset && ent.start < end);
+    }
+
+    this.#ensureEntryIndex();
+    const sorted = this.#sortedEntries;
+    const n = sorted.length;
+    if (n === 0) return [];
+
+    // binary search for last entry with start < end
+    let lo = 0, hi = n - 1, right = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >>> 1;
+      if (sorted[mid].entry.start < end) {
+        right = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    if (right < 0) return [];
+
+    const visible: { entry: SubtitleEntry, index: number }[] = [];
+    for (let i = right; i >= 0; i--) {
+      if (this.#prefixMaxEnd[i] <= offset) break;
+      const item = sorted[i];
+      if (item.entry.end > offset)
+        visible.push(item);
+    }
+    visible.sort((a, b) => a.index - b.index);
+    return visible.map((x) => x.entry);
   }
 
   getHorizontalPos(ent: SubtitleEntry, opt?: {local?: boolean}): [w: number, x: number] {
@@ -225,13 +284,15 @@ export class TimelineLayout {
 
   getEntryPositions(ent: SubtitleEntry): (Box & {text: string, style: SubtitleStyle})[] {
     const [w, x] = this.getHorizontalPos(ent);
-    return [...ent.texts.entries()].flatMap(([style, text]) => {
-      if (!this.#shownStyles.includes(style)) return [];
-      const i = this.#stylesMap.get(style) ?? 0;
+    const result: (Box & {text: string, style: SubtitleStyle})[] = [];
+    for (const [style, text] of ent.texts) {
+      const i = this.#stylesMap.get(style);
+      if (i === undefined) continue;
       const y = this.entryHeight * i
         + TimelineLayout.HEADER_HEIGHT + TimelineLayout.TRACKS_PADDING;
-      return [{x: x, y: y, w: w, h: this.entryHeight, text: RichText.toString(text), style}];
-    });
+      result.push({x, y, w, h: this.entryHeight, text: RichText.toString(text), style});
+    }
+    return result;
   }
 
   getChannelFromOffsetY(y: number, clamp = false): SubtitleStyle | undefined {
@@ -322,6 +383,15 @@ export class TimelineLayout {
     this.manager.requestRender();
   }
 
+  scheduleSampler(delayMs = 80) {
+    if (this.#samplerTimer !== null) return;
+    this.#samplerTimer = setTimeout(() => {
+      this.#samplerTimer = null;
+      if (this.requestedSampler)
+        this.processSampler();
+    }, delayMs);
+  }
+
   processSampler() {
     if (!Playback.sampler) return;
     const s = Playback.sampler;
@@ -332,8 +402,10 @@ export class TimelineLayout {
       if (s.sampleProgress + PRELOAD_MARGIN < left) {
         void Debug.trace('cancelling', s.sampleProgress);
         s.tryCancelSampling();
-      } else
-        s.changeSamplingEnd(Math.min(s.sampleEnd, right + PRELOAD_MARGIN))
+      } else {
+        const targetEnd = Math.min(Playback.duration + s.startTime, right + PRELOAD_MARGIN);
+        s.changeSamplingEnd(targetEnd);
+      }
       return;
     }
 
