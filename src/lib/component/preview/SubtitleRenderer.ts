@@ -210,8 +210,13 @@ export class SubtitleRenderer {
         this.#layout = [];
 
         const reverseStyles = this.#subs.styles.toReversed().filter((x) => !x.hidden);
+        const layers = [...new Set(this.#currentEntries.map((ent) => ent.entry.layer))]
+            .sort((a, b) => a - b);
+
+        for (const layer of layers)
         for (const style of reverseStyles)
         for (const ent of this.#currentEntries) {
+            if (ent.entry.layer !== layer) continue;
             const text = ent.entry.texts.get(style);
             if (!text) continue;
 
@@ -239,7 +244,8 @@ export class SubtitleRenderer {
 
                 while (true) {
                     const overlapping = this.#layout.find(
-                        (box) => (!ent.entry.positioning || box.entry == ent.entry)
+                        (box) => box.entry.layer === ent.entry.layer
+                            && (!ent.entry.positioning || box.entry == ent.entry)
                             && boxIntersects(box, newBox));
                     if (!overlapping) break;
                     newBox.y = dy > 0

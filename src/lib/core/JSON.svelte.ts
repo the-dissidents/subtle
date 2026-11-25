@@ -83,6 +83,7 @@ const ZEntry = z.object({
     start: z.number(),
     end: z.number(),
     label: z.enum(LABEL_TYPES),
+    layer: z._default(z.int().check(z.nonnegative()), 0),
     pos: z._default(ZPositioning, null),
     align: z.optional(z.enum(AlignMode)),
     texts: z.array(z.readonly(z.tuple([
@@ -98,6 +99,7 @@ function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
         start: entry.start,
         end: entry.end,
         label: entry.label,
+        layer: entry.layer,
         pos: entry.positioning,
         align: entry.alignment ?? undefined,
         texts: [...entry.texts.entries()]
@@ -234,6 +236,7 @@ export class JSONParser implements SubtitleParser {
     #parseEntry(obj: z.infer<typeof ZEntry>): SubtitleEntry {
         const entry = new SubtitleEntry(obj.start, obj.end);
         entry.label = obj.label;
+        entry.layer = obj.layer;
         entry.positioning = obj.pos;
         entry.alignment = obj.align ?? null;
 

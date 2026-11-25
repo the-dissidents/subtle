@@ -521,6 +521,7 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                     const text = entry.texts.get(style);
                     if (text !== undefined) {
                         const newEntry = new SubtitleEntry(entry.start, entry.end);
+                        newEntry.layer = entry.layer;
                         newEntry.texts.set(style, text);
                         newEntries.push(newEntry);
                     }

@@ -52,6 +52,7 @@ export const ZMetadata = z.object({
     height:        z._default(z.int().check(z.positive()), 1080),
     scalingFactor: z._default(z.number().check(z.positive()), 1),
     framerate:     z._default(z.nullable(z.number().check(z.positive())), null),
+    ycbcrMatrix:   z._default(z.string(), 'None'),
     special: z.object({
         untimedText:        z._default(z.string(), ''),
     }),
@@ -116,6 +117,7 @@ export class SubtitleEntry {
     texts = new SvelteMap<SubtitleStyle, RichText>();
     start: number = $state(0);
     end: number = $state(0);
+    layer: number = $state(0);
     positioning: Positioning = $state(null);
     alignment: AlignMode | null = $state(null);
 
