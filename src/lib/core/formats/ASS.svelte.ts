@@ -429,7 +429,9 @@ export class ASSWriter implements SubtitleWriter {
                 const assText = ASSString.serialize(text, style, {
                     defaultWrapStyle: this.#defaultWrapStyle,
                     pos: entry.positioning,
-                    alignment: entry.alignment ?? undefined
+                    alignment: entry.alignment ?? undefined,
+                    styles: this.subs.styles,
+                    styleNames: this.#styleNames
                 });
                 result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${assText}\n`;
             }

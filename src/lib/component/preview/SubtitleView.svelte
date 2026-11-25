@@ -48,7 +48,7 @@
   {/if} -->
   {#each line.chunks as word, i}
     {#each word.chunks as chunk}
-    {const css = toCSSStyle(chunk.format)}
+    {@const css = toCSSStyle(chunk.format)}
       <span style="
         font: {css.font};
         text-decoration: {css.textDecoration};
@@ -65,12 +65,12 @@
   bind:this={element}
 >
   <div style="transform: {transform}; transform-origin: left top;">
-  {#each boxes as box (box)}
-  {const outline = box.style.outline * 2 * box.scale}
-  {const shadow = box.style.shadow * box.scale}
-  {const color = Color.serialize(box.style.color)}
-  {const outlineColor = Color.serialize(box.style.outlineColor)}
-  {const shadowColor = Color.serialize(box.style.shadowColor)}
+  {#each boxes as box, idx (idx)}
+  {@const outline = box.style.outline * 2 * box.scale}
+  {@const shadow = box.style.shadow * box.scale}
+  {@const color = Color.serialize(box.style.color)}
+  {@const outlineColor = Color.serialize(box.style.outlineColor)}
+  {@const shadowColor = Color.serialize(box.style.shadowColor)}
     <div class="box" style="
       left: {box.x}px;
       top: {box.y}px;
@@ -122,7 +122,7 @@
     display: flex;
     flex-direction: row;
     font-synthesis: style;
-    /* align-items: baseline; */
+    align-items: baseline;
   }
 
   .box {

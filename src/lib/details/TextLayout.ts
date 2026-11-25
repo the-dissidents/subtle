@@ -63,7 +63,7 @@ function format(
                     style.size *= x.value;
                 break;
             case 'font':
-                style.fontFamily = x.value;
+                style.fontFamily = `"${x.value.replaceAll('"', '\\"')}", sans-serif`;
                 break;
             default:
                 Debug.never(x);

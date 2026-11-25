@@ -1,9 +1,20 @@
+import type * as Color from "colorjs.io/fn";
 import { Debug } from "../../Debug";
 import type { WrapStyle } from "../../details/TextLayout";
 import type { AlignMode } from "../Labels";
 import type { RichText, RichTextAttr, RichTextNode } from "../RichText";
 import type { Positioning, SubtitleStyle } from "../Subtitles.svelte";
 import { Formatter } from "./Formatter";
+
+function sameColor(a: Color.PlainColorObject, b: Color.PlainColorObject): boolean {
+    if (a.space !== b.space) return false;
+    if (Math.abs((a.alpha ?? 1) - (b.alpha ?? 1)) > 1e-4) return false;
+    if (a.coords.length !== b.coords.length) return false;
+    for (let i = 0; i < a.coords.length; i++) {
+        if (Math.abs((a.coords[i] ?? 0) - (b.coords[i] ?? 0)) > 1e-4) return false;
+    }
+    return true;
+}
 
 export type ASSStringWarnings = {
     ignoredTags: Map<string, number>,
@@ -14,6 +25,7 @@ export type ASSStringWarnings = {
 class ASSState extends Formatter {
     #fontsize?: number;
     #font?: string;
+    #inlineStyle?: string;
     #pos: Positioning = null;
     #align: AlignMode | null = null;
     #base?: SubtitleStyle;
@@ -48,7 +60,13 @@ class ASSState extends Formatter {
         return obj;
     }
 
-    static fromAttrs(attrs: RichTextAttr[], base?: SubtitleStyle, from?: ASSState): ASSState {
+    static fromAttrs(
+        attrs: RichTextAttr[],
+        base?: SubtitleStyle,
+        from?: ASSState,
+        styles?: readonly SubtitleStyle[],
+        styleNames?: ReadonlyMap<SubtitleStyle, string>
+    ): ASSState {
         const state = new ASSState(from?.warnings, base, from ? from.#styles : undefined);
         if (base) {
             state.#fontsize = base.size;
@@ -57,6 +75,14 @@ class ASSState extends Formatter {
         if (from) {
             state.#pos = from.#pos;
             state.#align = from.#align;
+        }
+
+        if (base && styles && attrs.length > 0) {
+            const matched = ASSString.findMatchingInlineStyle(attrs, base, styles);
+            if (matched) {
+                state.#inlineStyle = styleNames?.get(matched) ?? matched.name;
+                return state;
+            }
         }
 
         attrs.forEach((x) => {
@@ -88,7 +114,7 @@ class ASSState extends Formatter {
         return result.length > 0 ? `{${result}}` : '';
     }
 
-    static emitDifference(before: ASSState, after: ASSState, base?: SubtitleStyle): string {
+    static #emitInlineTags(before: ASSState, after: ASSState, base?: SubtitleStyle): string {
         let result = '';
         if (before._italic !== after._italic)       result += `\\i${after._italic ? 1 : 0}`;
         if (before._underline !== after._underline) result += `\\u${after._underline ? 1 : 0}`;
@@ -107,6 +133,20 @@ class ASSState extends Formatter {
         if (fn0 !== fn1)
             result += `\\fn${fn1 ?? ''}`;
 
+        return result;
+    }
+
+    static emitDifference(before: ASSState, after: ASSState, base?: SubtitleStyle): string {
+        if (after.#inlineStyle) {
+            if (before.#inlineStyle === after.#inlineStyle) return '';
+            return `{\\r${after.#inlineStyle}}`;
+        }
+        if (before.#inlineStyle) {
+            const baseState = ASSState.fromAttrs([], base);
+            const extra = ASSState.#emitInlineTags(baseState, after, base);
+            return `{\\r${extra}}`;
+        }
+        const result = ASSState.#emitInlineTags(before, after, base);
         return result.length > 0 ? `{${result}}` : '';
     }
 
@@ -221,10 +261,64 @@ class ASSState extends Formatter {
 }
 
 export namespace ASSString {
+    export function findMatchingInlineStyle(
+        attrs: RichTextAttr[],
+        base: SubtitleStyle,
+        styles: readonly SubtitleStyle[]
+    ): SubtitleStyle | undefined {
+        if (attrs.length === 0) return undefined;
+
+        let targetFont = base.font;
+        let targetSize = base.size;
+        let targetBold = base.styles.bold;
+        let targetItalic = base.styles.italic;
+        let targetUnderline = base.styles.underline;
+        let targetStrikethrough = base.styles.strikethrough;
+
+        for (const x of attrs) {
+            if (typeof x === 'string') {
+                switch (x) {
+                    case 'bold': targetBold = true; break;
+                    case 'italic': targetItalic = true; break;
+                    case 'underline': targetUnderline = true; break;
+                    case 'strikethrough': targetStrikethrough = true; break;
+                    default: Debug.never(x);
+                }
+            } else {
+                switch (x.type) {
+                    case 'size': targetSize = x.value * base.size; break;
+                    case 'font': targetFont = x.value; break;
+                    default: Debug.never(x);
+                }
+            }
+        }
+
+        const candidates = styles.filter((s) =>
+            s !== base
+            && s.font === targetFont
+            && Math.abs(s.size - targetSize) < 1e-3
+            && s.styles.bold === targetBold
+            && s.styles.italic === targetItalic
+            && s.styles.underline === targetUnderline
+            && s.styles.strikethrough === targetStrikethrough
+            && s.outline === base.outline
+            && s.shadow === base.shadow
+            && s.alignment === base.alignment
+            && sameColor(s.color, base.color)
+            && sameColor(s.outlineColor, base.outlineColor)
+            && sameColor(s.shadowColor, base.shadowColor)
+        );
+
+        if (candidates.length === 0) return undefined;
+        return candidates.find((s) => s.name.startsWith(`${base.name}_`)) ?? candidates[0];
+    }
+
     export function serialize(rt: RichText, base?: SubtitleStyle, opts?: {
         defaultWrapStyle?: WrapStyle,
         pos?: Positioning,
         alignment?: AlignMode,
+        styles?: readonly SubtitleStyle[],
+        styleNames?: ReadonlyMap<SubtitleStyle, string>,
     }): string {
         let state = ASSState.fromGlobals({ pos: opts?.pos, alignment: opts?.alignment });
         let result = state.emitGlobals();
@@ -235,7 +329,7 @@ export namespace ASSString {
         for (const part of rt) {
             const attrs = typeof part === 'string' ? [] : part.attrs;
             const content = typeof part === 'string' ? part : part.content;
-            const newState = ASSState.fromAttrs(attrs, base);
+            const newState = ASSState.fromAttrs(attrs, base, undefined, opts?.styles, opts?.styleNames);
             result += ASSState.emitDifference(state, newState, base);
             result += state.formatASSString(content);
             state = newState;

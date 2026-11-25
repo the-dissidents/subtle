@@ -122,6 +122,7 @@ export const RichTextSchema = new Schema({
             },
         },
         font: {
+            inclusive: false,
             attrs: {
                 value: {
                     default: '',

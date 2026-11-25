@@ -3,6 +3,7 @@ import type { ResolvedFontFace } from '../bindings/ResolvedFontFace';
 import type { SubsetResult } from '../bindings/SubsetResult';
 import { type SubtitleStyle } from '../core/Subtitles.svelte';
 import { ASSWriter } from '../core/formats/ASS.svelte';
+import { ASSString } from '../core/formats/ASSString';
 import { Source } from '../frontend/Source';
 import { Interface } from '../frontend/Interface';
 
@@ -17,7 +18,6 @@ import { CircleAlertIcon, CircleCheckIcon, CircleQuestionMarkIcon, CircleXIcon, 
 import { onMount } from 'svelte';
 import { SvelteMap } from 'svelte/reactivity';
 import { _ } from 'svelte-i18n';
-  import { RichText } from '../core/RichText';
 
 interface Props {
   args: [],
@@ -30,27 +30,49 @@ let inner: DialogBase;
 onMount(async () => {
   let subs = Source.subs;
   let map = new Map<string, number>();
-  for (const entry of subs.entries)
-    for (const [style, _] of entry.texts)
+  const inlineFontNames = new Set<string>();
+  for (const entry of subs.entries) {
+    for (const [style, rt] of entry.texts) {
       map.set(style.name, (map.get(style.name) ?? 0) + 1);
+      if (Array.isArray(rt)) {
+        for (const part of rt) {
+          if (typeof part === 'string') continue;
+          const matched = ASSString.findMatchingInlineStyle(part.attrs, style, subs.styles);
+          if (matched)
+            map.set(matched.name, (map.get(matched.name) ?? 0) + 1);
+          for (const attr of part.attrs) {
+            if (typeof attr === 'object' && attr.type === 'font' && attr.value)
+              inlineFontNames.add(attr.value);
+          }
+        }
+      }
+    }
+  }
   styles = subs.styles.map(
     (x) => ({style: x, count: map.get(x.name) ?? 0, use: !x.hidden}));
 
   fonts.clear();
-  for (const s of styles) if (s.style.font) {
-    if (fonts.has(s.style.font)) {
-      fonts.get(s.style.font)!.styles.add(s.style.name);
+  const ensureFont = async (fontName: string, styleName?: string) => {
+    if (fonts.has(fontName)) {
+      if (styleName) fonts.get(fontName)!.styles.add(styleName);
     } else {
       const obj = $state({
         used: true,
-        face: (await Fonts.getFamily(s.style.font))?.[0] ?? undefined,
-        styles: new Set([s.style.name]),
+        face: (await Fonts.getFamily(fontName))?.[0] ?? undefined,
+        styles: new Set(styleName ? [styleName] : []),
+        inlineOnly: !styleName,
         subset: {
           type: 'none'
         }
       } satisfies FontSetting);
-      fonts.set(s.style.font, obj);
+      fonts.set(fontName, obj);
     }
+  };
+  for (const s of styles) if (s.style.font) {
+    await ensureFont(s.style.font, s.style.name);
+  }
+  for (const fontName of inlineFontNames) {
+    await ensureFont(fontName);
   }
   update();
 
@@ -73,6 +95,7 @@ onMount(async () => {
 type FontSetting = {
   used: boolean,
   styles: Set<string>,
+  inlineOnly?: boolean,
   face?: ResolvedFontFace,
   subset: SubsetState
 };
@@ -94,26 +117,44 @@ const fonts = new SvelteMap<string, FontSetting>();
 
 function update() {
   for (const [_, s] of fonts)
-    s.used = false;
+    s.used = Boolean(s.inlineOnly);
 
   for (const s of styles)
-    if (s.use && s.style.font) {
+    if (s.use && s.count > 0 && s.style.font) {
       const setting = fonts.get(s.style.font)!;
       setting.used = true;
     }
 }
 
-async function handleSubsetButton(setting: FontSetting) {
+async function handleSubsetButton(fontName: string, setting: FontSetting) {
   if (!setting.face) return;
 
   switch (setting.subset.type) {
     case 'none': {
       setting.subset = { type: 'working' };
       let text = '';
-      for (const entry of Source.subs.entries)
-        for (const channel of entry.texts)
-          if (setting.styles.has(channel[0].name))
-            text += RichText.toString(channel[1]);
+      for (const entry of Source.subs.entries) {
+        for (const [style, rt] of entry.texts) {
+          if (typeof rt === 'string') {
+            if (setting.styles.has(style.name)) text += rt;
+          } else {
+            for (const part of rt) {
+              if (typeof part === 'string') {
+                if (setting.styles.has(style.name)) text += part;
+              } else {
+                const fontAttr = part.attrs.find(
+                  (a): a is { type: 'font', value: string } => typeof a === 'object' && a.type === 'font'
+                );
+                if (fontAttr) {
+                  if (fontAttr.value === fontName) text += part.content;
+                } else if (setting.styles.has(style.name)) {
+                  text += part.content;
+                }
+              }
+            }
+          }
+        }
+      }
 
       try {
         const result = await MAPI.subsetEncode(setting.face.url, setting.face.index, text);
@@ -196,8 +237,8 @@ async function handleSubsetButton(setting: FontSetting) {
 
         {#if [...fonts].find((x) => x[1].used)}
         {#each [...fonts].filter((x) => x[1].used) as [name, setting]}
-        {const w = Fonts.windowsAvailability(name)}
-        {const m = Fonts.macosAvailability(name)}
+        {@const w = Fonts.windowsAvailability(name)}
+        {@const m = Fonts.macosAvailability(name)}
         <li>
           <div class='fontname'>
             <span class='flexgrow'>{name}</span>
@@ -205,7 +246,7 @@ async function handleSubsetButton(setting: FontSetting) {
               <input type='checkbox' class="button"
                 disabled={!setting.face || setting.subset.type == 'working'}
                 checked={setting.subset.type == 'ok'}
-                onchange={() => handleSubsetButton(setting)}/>
+                onchange={() => handleSubsetButton(name, setting)}/>
 
               {setting.face
                 ? (setting.subset.type == 'ok' ? $_('exportassdialog.remove-embedding')
@@ -221,7 +262,7 @@ async function handleSubsetButton(setting: FontSetting) {
           </div>
           <ul>
             {#if setting.subset.type == 'ok'}
-            {const result = setting.subset.result}
+            {@const result = setting.subset.result}
               <li class="ok">
                 <CircleCheckIcon />
                 {$_('exportassdialog.embedded')}

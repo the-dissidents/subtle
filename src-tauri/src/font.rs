@@ -93,42 +93,45 @@ fn generate_preview_string(font: &font_kit::font::Font) -> String {
     preview_parts.join("  ")
 }
 
-fn load_family(f: FamilyHandle) -> Option<ResolvedFontFamily> {
-    let mut faces = Vec::<ResolvedFontFace>::new();
-    for handle in f.fonts() {
-        let (path, index) = match handle {
-            Handle::Path { path, font_index: index } => 
-                if let Some(s) = path.to_str() { (s, *index) } else {
-                    log::warn!("font path is invalid UTF-8");
-                    continue;
-                },
-            Handle::Memory { bytes: _, font_index: _ } => {
-                log::warn!("font face is Handle::Memory");
-                ("", 0)
+fn load_handle(handle: &Handle) -> Option<ResolvedFontFace> {
+    let (path, index) = match handle {
+        Handle::Path { path, font_index: index } =>
+            if let Some(s) = path.to_str() { (s, *index) } else {
+                log::warn!("font path is invalid UTF-8");
+                return None;
             },
-        };
-        handle.load().map_or_else(
-            |e| {
-                log::warn!("error loading font face: {e}");
-            },
-            |f| {
-                let metrics = f.metrics();
-                faces.push(ResolvedFontFace {
-                    url: path.to_string(), index,
-                    family_name: f.family_name(),
-                    full_name: f.full_name(),
-                    postscript_name: f.postscript_name().unwrap_or(f.full_name()), 
-                    real_height: metrics.units_per_em.to_f32().unwrap() / (metrics.ascent + metrics.descent.abs()), 
-                    weight: f.properties().weight.0, 
-                    stretch: f.properties().stretch.0, 
-                    style: f.properties().style.into(),
-                    preview_string: generate_preview_string(&f)
-                });
-            });
+        Handle::Memory { bytes: _, font_index: _ } => {
+            log::warn!("font face is Handle::Memory");
+            ("", 0)
+        },
+    };
+    match handle.load() {
+        Ok(f) => {
+            let metrics = f.metrics();
+            Some(ResolvedFontFace {
+                url: path.to_string(), index,
+                family_name: f.family_name(),
+                full_name: f.full_name(),
+                postscript_name: f.postscript_name().unwrap_or(f.full_name()),
+                real_height: metrics.units_per_em.to_f32().unwrap() / (metrics.ascent + metrics.descent.abs()),
+                weight: f.properties().weight.0,
+                stretch: f.properties().stretch.0,
+                style: f.properties().style.into(),
+                preview_string: generate_preview_string(&f)
+            })
+        },
+        Err(e) => {
+            log::warn!("error loading font face: {e}");
+            None
+        }
     }
+}
+
+fn load_family(f: FamilyHandle) -> Option<ResolvedFontFamily> {
+    let faces: Vec<ResolvedFontFace> = f.fonts().iter().filter_map(load_handle).collect();
     if faces.is_empty() { None } else {
-        Some(ResolvedFontFamily { 
-            faces, 
+        Some(ResolvedFontFamily {
+            faces,
             family_name: String::new()
         })
     }
@@ -146,10 +149,22 @@ pub async fn get_all_font_families() -> Result<Vec<String>, tauri::Error> {
 pub async fn resolve_family(name: &str) -> Result<Option<ResolvedFontFamily>, tauri::Error> {
     let name = name.to_string();
     async_runtime::spawn_blocking(move || {
-        match SystemSource::new().select_family_by_name(&name) {
-            Ok(f) => load_family(f),
-            Err(_) => None
+        let source = SystemSource::new();
+        if let Ok(f) = source.select_family_by_name(&name) {
+            if let Some(resolved) = load_family(f) {
+                return Some(resolved);
+            }
         }
+        if let Ok(handle) = source.select_by_postscript_name(&name) {
+            if let Some(face) = load_handle(&handle) {
+                let family_name = face.family_name.clone();
+                return Some(ResolvedFontFamily {
+                    faces: vec![face],
+                    family_name,
+                });
+            }
+        }
+        None
     })
     .await
 }
