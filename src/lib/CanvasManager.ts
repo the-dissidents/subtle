@@ -72,6 +72,7 @@ export class CanvasManager {
 
     // must synchronous
     canBeginDrag: (ev: MouseEvent) => boolean = () => false;
+    onBeforeMouseWheel?: (tr: TranslatedWheelEvent, ev: WheelEvent) => boolean | Promise<boolean>;
 
     renderer?: (ctx: CanvasRenderingContext2D) => void | Promise<void>;
     doNotPrescaleHighDPI = false;
@@ -357,6 +358,8 @@ export class CanvasManager {
     async #onMouseWheel(ev: WheelEvent) {
         let handled = false;
         const tr = translateWheelEvent(ev);
+        if (await this.onBeforeMouseWheel?.(tr, ev))
+            return;
         if (tr.isZoom) {
             const centerX = ev.offsetX / this.#scale + this.#scrollX;
             const centerY = ev.offsetY / this.#scale + this.#scrollY;
