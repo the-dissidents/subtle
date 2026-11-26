@@ -86,7 +86,10 @@
     "toggle-play": "toggle play/pause",
     "transform-times": "transform times...",
     "up": "up",
-    "word-count": "word count"
+    "word-count": "word count",
+    "wrap-chinese-quotes": "wrap selection in Chinese double quotes",
+    "wrap-english-quotes": "wrap selection in English double quotes",
+    "wrap-quotes": "wrap in double quotes"
   },
   "appmenu": {
     "entries": "Entries",
@@ -397,6 +400,8 @@
     "by": "by:",
     "channel-to-compare": "channel to compare:",
     "channels": "channels",
+    "chinese-double-quotes": "Chinese double quotes (“”)",
+    "english-double-quotes": "English double quotes (\"\")",
     "json-internal": "JSON (internal)",
     "no-recent-files": "no recent files",
     "other-file": "other file...",

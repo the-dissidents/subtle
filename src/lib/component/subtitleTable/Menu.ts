@@ -28,6 +28,7 @@ export async function contextMenu() {
         BasicCommands.moveMenu.toMenuItem(),
         { item: 'Separator' },
         BasicCommands.connectMenu.toMenuItem(),
+        BasicCommands.wrapQuotesMenu.toMenuItem(),
         { item: 'Separator' },
         {
             text: get(_)('cxtmenu.channels'),
