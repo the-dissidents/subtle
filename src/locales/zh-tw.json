@@ -349,6 +349,8 @@
     "show-debug-info": "顯示偵錯資訊",
     "show-keyframes": "顯示關鍵幀",
     "show-keyframes-d": "顯示關鍵幀標記。在許多影片檔案中，關鍵幀常常對應於鏡頭切換，可以作為對齊字幕條的參考。",
+    "page-scroll-on-playback": "播放時翻頁捲動",
+    "page-scroll-on-playback-d": "開啟後，播放頭到達時間線右邊緣時整頁向前翻頁，而不是貼邊持續推移時間線。",
     "show-test-toolbox": "顯示測試工具箱",
     "show-window-menu": "顯示選單列",
     "show-window-menu-d": "不適用於 macOS",

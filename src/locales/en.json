@@ -349,6 +349,8 @@
     "show-debug-info": "show debug info",
     "show-keyframes": "show keyframes",
     "show-keyframes-d": "Color keyframes in the timeline. In many media files, keyframes can correspond to scene changes and are useful for aligning subtitles.",
+    "page-scroll-on-playback": "page scroll during playback",
+    "page-scroll-on-playback-d": "Flip the timeline forward by a page when the playhead reaches the right edge during playback, instead of scrolling continuously.",
     "show-test-toolbox": "show test toolbox",
     "show-window-menu": "show window menu",
     "show-window-menu-d": "not applicable on macOS",

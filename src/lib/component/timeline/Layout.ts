@@ -270,9 +270,20 @@ export class TimelineLayout {
   }
 
   async keepPosInSafeArea(pos: number) {
-    const left = Math.max(0, this.offset + CURSOR_SAFE_AREA_RIGHT_MARGIN / this.#scale),
-         right = this.offset + (this.width
-            - CURSOR_SAFE_AREA_RIGHT_MARGIN - this.leftColumnWidth) / this.#scale;
+    const visibleDuration = Math.max(0, (this.width - this.leftColumnWidth) / this.#scale);
+    const marginSec = CURSOR_SAFE_AREA_RIGHT_MARGIN / this.#scale;
+    const left = Math.max(0, this.offset + marginSec),
+         right = this.offset + visibleDuration - marginSec;
+
+    if (TimelineConfig.data.pageScrollOnPlayback && !TimelineHandle.lockCursor.get()) {
+      if (pos > right || pos < this.offset) {
+        const leftLead = Math.min(marginSec, visibleDuration * 0.1);
+        await this.setOffset(pos - leftLead);
+        return true;
+      }
+      return false;
+    }
+
     if (pos < left) {
       await this.setOffset(this.offset + pos - left);
       return true;

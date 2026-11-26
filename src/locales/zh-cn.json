@@ -349,6 +349,8 @@
     "show-debug-info": "显示调试信息",
     "show-keyframes": "显示关键帧",
     "show-keyframes-d": "显示关键帧标记。在许多视频文件中，关键帧常常对应于镜头切换，可以作为对齐字幕条的参考。",
+    "page-scroll-on-playback": "播放时翻页滚动",
+    "page-scroll-on-playback-d": "开启后，播放头到达时间线右边缘时整页向前翻页，而不是贴边持续推移时间线。",
     "show-test-toolbox": "显示测试工具箱",
     "show-window-menu": "显示菜单栏",
     "show-window-menu-d": "不适用于macOS",

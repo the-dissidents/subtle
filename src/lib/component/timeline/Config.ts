@@ -37,6 +37,12 @@ export const TimelineConfig = new PublicConfigGroup(
         description: () => get(_)('config.show-keyframes-d'),
         default: true
     },
+    pageScrollOnPlayback: {
+        localizedName: () => get(_)('config.page-scroll-on-playback'),
+        description: () => get(_)('config.page-scroll-on-playback-d'),
+        type: 'boolean',
+        default: false
+    },
     dragSeamArea: {
         localizedName: () => get(_)('config.seam-area-size'),
         type: 'number',
