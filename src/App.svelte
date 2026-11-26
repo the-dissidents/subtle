@@ -470,7 +470,7 @@ observer.observe({ type: 'paint', buffered: true });
     class={[{twinkling: statusTwinkling}, $status.type]}
     onanimationend={() => statusTwinkling = false}
   >
-    <div class="message">
+    <div class="message" title={$status.msg}>
       {$status.msg}
     </div>
     {#if selectionLength > 0}
@@ -613,12 +613,15 @@ footer {
 
     &.border {
       border-left: 1px solid gray;
+      flex-shrink: 0;
     }
 
     &.message {
       flex-grow: 1;
+      min-width: 0;
       font-size: 100%;
-      overflow-x: scroll;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
