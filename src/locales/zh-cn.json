@@ -86,7 +86,10 @@
     "toggle-play": "播放/暂停",
     "transform-times": "变换时间...",
     "up": "向上",
-    "word-count": "字数统计"
+    "word-count": "字数统计",
+    "wrap-chinese-quotes": "首尾包裹中文双引号",
+    "wrap-english-quotes": "首尾包裹英文双引号",
+    "wrap-quotes": "包裹双引号"
   },
   "appmenu": {
     "entries": "字幕块",
@@ -397,6 +400,8 @@
     "by": "为：",
     "channel-to-compare": "选择要比较的频道：",
     "channels": "频道",
+    "chinese-double-quotes": "中文双引号（“”）",
+    "english-double-quotes": "英文双引号（\"\"）",
     "json-internal": "JSON（内部格式）",
     "no-recent-files": "没有最近的文件",
     "other-file": "其他文件...",

@@ -78,6 +78,40 @@ function notSelectionCommonStyles() {
     return Source.subs.styles.filter((x) => !common.includes(x));
 }
 
+function prependRichText(text: RichText, prefix: string): RichText {
+    return typeof text === 'string' ? prefix + text : RichText.concat(prefix, text);
+}
+
+function appendRichText(text: RichText, suffix: string): RichText {
+    return typeof text === 'string' ? text + suffix : RichText.concat(text, suffix);
+}
+
+async function wrapSelectionWithQuotes(openQuote: string, closeQuote: string, actionName: string) {
+    await Editing.submitFocusedEntry();
+    const selection = Selection.entries;
+    if (selection.length == 0) return;
+
+    const styles = selectionDistinctStyles();
+    let changed = false;
+    for (const style of styles) {
+        const entries = selection
+            .filter((e) => e.texts.has(style))
+            .sort((a, b) => a.start - b.start || a.end - b.end);
+        if (entries.length == 0) continue;
+
+        const first = entries[0];
+        const last = entries[entries.length - 1];
+        const firstText = first.texts.get(style)!;
+        first.texts.set(style, prependRichText(firstText, openQuote));
+        const lastText = last.texts.get(style)!;
+        last.texts.set(style, appendRichText(lastText, closeQuote));
+        changed = true;
+    }
+    if (changed) {
+        await Source.markChanged(ChangeType.InPlace, actionName);
+    }
+}
+
 export function forEachStyle(
     h: (style: SubtitleStyle) => void | Promise<void>,
     styles = Source.subs.styles
@@ -555,6 +589,30 @@ export const BasicCommands: Record<string, AnyUICommand> = {
         items: () => [
             BasicCommands.connectAll.wrap($_('action.connect-all')),
             BasicCommands.connectAll.wrap($_('action.keep-first-only')),
+        ]
+    }),
+    wrapChineseQuotes: new UICommand(() => $_('category.editing'),
+        [],
+    {
+        name: () => $_('action.wrap-chinese-quotes'),
+        isApplicable: hasSelection,
+        call: () => wrapSelectionWithQuotes('“', '”', $_('action.wrap-chinese-quotes')),
+    }),
+    wrapEnglishQuotes: new UICommand(() => $_('category.editing'),
+        [],
+    {
+        name: () => $_('action.wrap-english-quotes'),
+        isApplicable: hasSelection,
+        call: () => wrapSelectionWithQuotes('"', '"', $_('action.wrap-english-quotes')),
+    }),
+    wrapQuotesMenu: new UICommand(() => $_('category.editing'),
+        [],
+    {
+        name: () => $_('action.wrap-quotes'),
+        isApplicable: hasSelection,
+        items: () => [
+            BasicCommands.wrapChineseQuotes.wrap($_('cxtmenu.chinese-double-quotes')),
+            BasicCommands.wrapEnglishQuotes.wrap($_('cxtmenu.english-double-quotes')),
         ]
     }),
     label: new UICommand(() => $_('category.editing'),
