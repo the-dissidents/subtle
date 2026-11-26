@@ -307,6 +307,7 @@ export class ASSParser implements SubtitleParser {
             ignoredSpecialCharacter: new Map<string, number>(),
         };
 
+        const styleLayerCounts = new Map<SubtitleStyle, Map<number, number>>();
         const regex = RegExp(
             String.raw`^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
         let i = 0;
@@ -352,14 +353,32 @@ export class ASSParser implements SubtitleParser {
             }
 
             const entry = new SubtitleEntry(start, end);
-            entry.layer = layer;
             const style = getStyleOrCreate(opts[fieldMap.get('Style')!].trim());
+            entry.layers.set(style, layer);
+            let counts = styleLayerCounts.get(style);
+            if (!counts) {
+                counts = new Map<number, number>();
+                styleLayerCounts.set(style, counts);
+            }
+            counts.set(layer, (counts.get(layer) ?? 0) + 1);
             const { result, pos, alignment } = ASSString.parse(text, style, warnings, nameToStyle);
             entry.texts.set(style, result);
             entry.positioning = pos;
             entry.alignment = alignment;
 
             this.#subs.entries.push(entry);
+        }
+
+        for (const [style, counts] of styleLayerCounts) {
+            let bestLayer = 0;
+            let bestCount = -1;
+            for (const [layer, count] of counts) {
+                if (count > bestCount || (count === bestCount && layer < bestLayer)) {
+                    bestLayer = layer;
+                    bestCount = count;
+                }
+            }
+            style.defaultLayer = bestLayer;
         }
 
         if (warnings.ignoredDrawing > 0) this.#unsupported({
@@ -487,7 +506,7 @@ export class ASSWriter implements SubtitleWriter {
                     styles: this.subs.styles,
                     styleNames: this.#styleNames
                 });
-                result += `Dialogue: ${entry.layer},${t0},${t1},${styleName},,0,0,0,,${assText}\n`;
+                result += `Dialogue: ${entry.getLayer(style)},${t0},${t1},${styleName},,0,0,0,,${assText}\n`;
             }
         }
         return result;

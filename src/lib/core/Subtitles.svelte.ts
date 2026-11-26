@@ -36,6 +36,7 @@ export const ZStyleBase = z.object({
     }),
     alignment:         z._default(z.enum(AlignMode), AlignMode.BottomCenter),
     wrapStyle:         z._default(z.enum(WrapStyle), WrapStyle.Balanced),
+    defaultLayer:      z._default(z.int().check(z.nonnegative()), 0),
     hidden:            z._default(z.boolean(), false),
 
     // Special members.
@@ -115,9 +116,9 @@ export type Positioning = z.infer<typeof ZPositioning>;
 export class SubtitleEntry {
     label: LabelType = $state('none');
     texts = new SvelteMap<SubtitleStyle, RichText>();
+    layers = new SvelteMap<SubtitleStyle, number>();
     start: number = $state(0);
     end: number = $state(0);
-    layer: number = $state(0);
     positioning: Positioning = $state(null);
     alignment: AlignMode | null = $state(null);
 
@@ -125,6 +126,10 @@ export class SubtitleEntry {
     {
         this.start = start;
         this.end = end;
+    }
+
+    getLayer(style: SubtitleStyle): number {
+        return this.layers.get(style) ?? style.defaultLayer;
     }
 }
 

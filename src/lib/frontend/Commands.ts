@@ -495,8 +495,11 @@ export const BasicCommands: Record<string, AnyUICommand> = {
             const selection = Selection.entries;
             const first = selection[0];
             for (const entry of selection.slice(1)) {
-                for (const [style, text] of entry.texts)
+                for (const [style, text] of entry.texts) {
                     first.texts.set(style, text);
+                    const layer = entry.layers.get(style);
+                    if (layer !== undefined) first.layers.set(style, layer);
+                }
                 const index = Source.subs.entries.indexOf(entry);
                 Debug.assert(index >= 0);
                 Source.subs.entries.splice(index, 1);
@@ -521,7 +524,8 @@ export const BasicCommands: Record<string, AnyUICommand> = {
                     const text = entry.texts.get(style);
                     if (text !== undefined) {
                         const newEntry = new SubtitleEntry(entry.start, entry.end);
-                        newEntry.layer = entry.layer;
+                        const layer = entry.layers.get(style);
+                        if (layer !== undefined) newEntry.layers.set(style, layer);
                         newEntry.texts.set(style, text);
                         newEntries.push(newEntry);
                     }
