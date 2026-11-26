@@ -179,9 +179,8 @@ export class CanvasManager {
         Debug.assert(context !== null);
         this.#cxt = context;
 
-        new ResizeObserver(
-            () => requestAnimationFrame(() => void this.#updateSize()))
-                .observe(eventReceiver);
+        new ResizeObserver(() => void this.#updateSize())
+            .observe(eventReceiver);
         void this.#updateSize();
 
         eventReceiver.addEventListener('mousedown', (ev) => {
@@ -457,14 +456,29 @@ export class CanvasManager {
 
     async #updateSize() {
         const factor = window.devicePixelRatio;
-        this.#width = this.canvas.clientWidth;
-        this.#height = this.canvas.clientHeight;
-        this.canvas.width = Math.floor(this.#width * factor);
-        this.canvas.height = Math.floor(this.#height * factor);
-        this.requestRender();
+        const newW = this.canvas.clientWidth;
+        const newH = this.canvas.clientHeight;
+        const targetW = Math.floor(newW * factor);
+        const targetH = Math.floor(newH * factor);
+        if (newW === this.#width && newH === this.#height
+         && this.canvas.width === targetW && this.canvas.height === targetH)
+            return;
+
+        this.#width = newW;
+        this.#height = newH;
         await this.onDisplaySizeChanged.dispatchAndAwaitAll(
             this.#width, this.#height,
             this.#width * factor, this.#height * factor);
+
+        // Resize backing store and repaint immediately in the same frame
+        // to avoid flashing a blank frame between canvas clear and next rAF.
+        if (this.canvas.width !== targetW) this.canvas.width = targetW;
+        if (this.canvas.height !== targetH) this.canvas.height = targetH;
+        if (this.#isRendering) {
+            this.#requestedRender = true;
+        } else {
+            void this.#render();
+        }
     }
 
     #constrainScroll() {

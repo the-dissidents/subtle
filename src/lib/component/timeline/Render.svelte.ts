@@ -62,6 +62,10 @@ function font(size: number) {
 
 export class TimelineRenderer {
 	private readonly manager: CanvasManager;
+	#waveX = new Float32Array(0);
+	#waveY = new Float32Array(0);
+	#textWidthCache = new Map<string, number>();
+	#cachedTextFont = '';
 
 	constructor(private layout: TimelineLayout, private input: TimelineInput) {
 		this.manager = layout.manager;
@@ -76,13 +80,30 @@ export class TimelineRenderer {
 			() => this.manager.requestRender());
 	}
 
+	#measureTextWidth(ctx: CanvasRenderingContext2D, text: string, ctxfont: string): number {
+		if (this.#cachedTextFont !== ctxfont) {
+			this.#cachedTextFont = ctxfont;
+			this.#textWidthCache.clear();
+		}
+		let w = this.#textWidthCache.get(text);
+		if (w === undefined) {
+			w = ctx.measureText(text).width;
+			if (this.#textWidthCache.size > 4000)
+				this.#textWidthCache.clear();
+			this.#textWidthCache.set(text, w);
+		}
+		return w;
+	}
+
 	async #render(ctx: CanvasRenderingContext2D) {
 		if (this.layout.requestedLayout)
 			await this.layout.layout(ctx);
 
-		const t0 = Date.now();
+		const t0 = performance.now();
 
-		await this.layout.setScale(this.layout.scale);
+		const minScale = Math.max(this.layout.width / this.layout.positionSpan, 0.15);
+		if (this.layout.scale < minScale || this.layout.scale > 500)
+			await this.layout.setScale(this.layout.scale);
 		this.#renderWaveform(ctx);
 		this.#renderRuler(ctx);
 		this.#renderTracks(ctx);
@@ -99,7 +120,7 @@ export class TimelineRenderer {
 		ctx.font = `8px Courier, monospace`;
 		ctx.fillStyle = theme.isDark ? 'white' : 'black';
 		ctx.fillText(`off=${this.layout.offset.toFixed(2).padEnd(6)}`, x, y);
-		ctx.fillText(`rt=${(Date.now() - t0).toFixed(1).padEnd(5)}`, x - 80, y);
+		ctx.fillText(`rt=${(performance.now() - t0).toFixed(1).padEnd(5)}`, x - 80, y);
 		ctx.fillText(`scale=${this.layout.scale.toFixed(2).padEnd(6)}`, x, y - 10);
 		ctx.fillText(`dpr=${devicePixelRatio.toString().padEnd(5)}`, x - 80, y - 10);
 		ctx.fillText(`lcw=${this.layout.leftColumnWidth.toFixed(2).padEnd(6)}`, x, y - 20);
@@ -132,11 +153,12 @@ export class TimelineRenderer {
 		}
 	}
 
-	#drawAggregation<T extends Float32Array | Uint8Array>(
-		resolution: number,
-		tree: (level: number, from: number, to: number) => T,
-		handler: (x: number, width: number, value: number) => void
-	) {
+	#renderWaveform(ctx: CanvasRenderingContext2D) {
+		if (!Playback.sampler) return;
+
+		const sampler = Playback.sampler;
+		const yscroll = this.manager.scroll[1];
+		const resolution = sampler.intensityResolution;
 		const pointsPerPixel = Math.max(1,
 			Math.floor(resolution / this.layout.scale / devicePixelRatio));
 		const step = 2 ** Math.floor(Math.log2(pointsPerPixel));
@@ -147,81 +169,83 @@ export class TimelineRenderer {
 		const end = Math.ceil(
 			(this.layout.offset - this.layout.minPosition + this.layout.width / this.layout.scale)
 				* resolution / step);
-		const data = tree(step, start, end);
+		const data = sampler.intensityData(step, start, end);
 
-		const width_v = step / resolution * this.layout.scale;
+		const widthV = step / resolution * this.layout.scale;
 		const offset = this.layout.leftColumnWidth + this.layout.minPosition * this.layout.scale;
-		const drawWidth = Math.max(1 / devicePixelRatio, width_v);
+		const drawWidth = Math.max(1 / devicePixelRatio, widthV);
+		const drawStart = start * widthV + offset;
+		const drawEnd = end * widthV + offset;
+		const halfTrackH = (this.layout.height - TimelineLayout.HEADER_HEIGHT) / 2;
+		const baseline = halfTrackH + TimelineLayout.HEADER_HEIGHT + yscroll;
+		const halfPixel = 0.5 / devicePixelRatio;
 
-		for (let i = 0; i < data.length; i++) {
-			const x = (i + start) * width_v + offset;
-			handler(x, drawWidth, data[i]);
-		}
-		return {
-			drawStart: start * width_v + offset,
-			drawEnd: end * width_v + offset,
-			step
-		};
-	}
-
-	#renderWaveform(ctx: CanvasRenderingContext2D) {
-		if (!Playback.sampler) return;
-
-		const yscroll = this.manager.scroll[1];
-		const points: {x: number, y: number}[] = [];
+		// Pending waveform gaps
 		let lastGap = -1;
 		ctx.fillStyle = PENDING_WAVEFORM_COLOR;
-		const {drawStart, drawEnd} = this.#drawAggregation(
-			Playback.sampler.intensityResolution,
-			(a, b, c) => Playback.sampler!.intensityData(a, b, c),
-			(x, _, value) => {
-				if (isNaN(value)) {
-					if (lastGap < 0) lastGap = x;
-					this.layout.requestedSampler = true;
-					points.push({x, y: 0});
-				} else {
-					if (lastGap >= 0) {
-						ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
-						lastGap = -1;
-					}
-					points.push({x, y:
-						value * (this.layout.height - TimelineLayout.HEADER_HEIGHT) / 2});
-				}
-			});
+		for (let i = 0; i < data.length; i++) {
+			const x = (i + start) * widthV + offset;
+			if (isNaN(data[i])) {
+				if (lastGap < 0) lastGap = x;
+				this.layout.requestedSampler = true;
+			} else if (lastGap >= 0) {
+				ctx.fillRect(lastGap, yscroll, x - lastGap, this.layout.height);
+				lastGap = -1;
+			}
+		}
 		if (lastGap >= 0)
 			ctx.fillRect(lastGap, yscroll, drawEnd - lastGap, this.layout.height);
 
-		const baseline =
-			(this.layout.height - TimelineLayout.HEADER_HEIGHT) / 2 + TimelineLayout.HEADER_HEIGHT;
-		ctx.beginPath();
-		ctx.moveTo(drawStart, baseline);
-		points.forEach(
-			({x, y}) => ctx.lineTo(x, baseline + 0.5 / devicePixelRatio + y + yscroll));
-		ctx.lineTo(drawEnd, baseline);
-		points.reverse().forEach(
-			({x, y}) => ctx.lineTo(x, baseline - 0.5 / devicePixelRatio - y + yscroll));
-		ctx.closePath();
+		// Waveform fill: batch vertical rects when dense, or TypedArray polygon when zoomed in
 		ctx.fillStyle = WAVEFORM_COLOR;
+		ctx.beginPath();
+		if (drawWidth <= 2) {
+			for (let i = 0; i < data.length; i++) {
+				const v = data[i];
+				if (isNaN(v)) continue;
+				const halfH = v * halfTrackH + halfPixel;
+				ctx.rect((i + start) * widthV + offset, baseline - halfH, drawWidth, halfH * 2);
+			}
+		} else if (data.length > 0) {
+			if (this.#waveX.length < data.length) {
+				this.#waveX = new Float32Array(data.length);
+				this.#waveY = new Float32Array(data.length);
+			}
+			const wx = this.#waveX;
+			const wy = this.#waveY;
+			for (let i = 0; i < data.length; i++) {
+				wx[i] = (i + start) * widthV + offset;
+				const v = data[i];
+				wy[i] = isNaN(v) ? 0 : v * halfTrackH;
+			}
+			ctx.moveTo(drawStart, baseline);
+			for (let i = 0; i < data.length; i++)
+				ctx.lineTo(wx[i], baseline + halfPixel + wy[i]);
+			ctx.lineTo(drawEnd, baseline);
+			for (let i = data.length - 1; i >= 0; i--)
+				ctx.lineTo(wx[i], baseline - halfPixel - wy[i]);
+			ctx.closePath();
+		}
 		ctx.fill();
 
-		lastGap = -1;
 		if (TimelineConfig.data.showKeyframes
-		 && this.layout.scale * devicePixelRatio / Playback.sampler.keyframeResolution > 1)
+		 && this.layout.scale * devicePixelRatio / sampler.keyframeResolution > 1)
 		{
-			for (let x = 0; x < this.layout.width; x += 1) {
-				const left = this.layout.offset + x / this.layout.scale;
-				const right = this.layout.offset + (x+1) / this.layout.scale;
-				if (Playback.sampler.keyframeData(left, right)) {
-					ctx.fillStyle = KEYFRAME_COLOR;
+			const viewLeft = this.layout.offset;
+			const viewRight = viewLeft + this.layout.width / this.layout.scale;
+			const keyframes = sampler.keyframesInRange(viewLeft, viewRight);
+			if (keyframes.length > 0) {
+				ctx.fillStyle = KEYFRAME_COLOR;
+				for (const kf of keyframes) {
 					ctx.fillRect(
-						left * this.layout.scale + this.layout.leftColumnWidth, yscroll,
+						kf * this.layout.scale + this.layout.leftColumnWidth, yscroll,
 						2, this.layout.height);
 				}
 			}
 		}
 
 		if (this.layout.requestedSampler)
-			void this.layout.processSampler();
+			this.layout.scheduleSampler();
 	}
 
 	#getTick(scale: number): [small: number, nMed: number, nBig: number] {
@@ -238,39 +262,61 @@ export class TimelineRenderer {
 
 	#renderRuler(ctx: CanvasRenderingContext2D) {
 		const y = this.manager.scroll[1];
-
-		const line = (pos: number, height: number) => {
-			ctx.beginPath();
-			ctx.moveTo(pos, y);
-			ctx.lineTo(pos, y + height);
-			ctx.stroke();
-		};
 		const [small, medium, big] = this.#getTick(this.layout.scale);
 		const end = this.layout.offset + this.layout.width / this.layout.scale;
+		const scale = this.layout.scale;
+		const lcw = this.layout.leftColumnWidth;
+		const fullBottom = y + this.layout.height;
 
 		ctx.fillStyle = HEADER_BACK;
 		ctx.fillRect(
 			this.manager.scroll[0], y,
 			this.layout.width, TimelineLayout.HEADER_HEIGHT);
 
-		const draw = (tick: number, height: number, back?: string) => {
-			for (let x = Math.floor(this.layout.offset / tick) * tick;
-					 x <= end; x += tick)
-			{
-				const pos = x * this.layout.scale + this.layout.leftColumnWidth;
-				if (back) {
-					ctx.strokeStyle = back;
-					line(pos, this.layout.height);
-				}
-				ctx.strokeStyle = TICK_COLOR;
-				line(pos, height);
-			}
-		};
-
 		ctx.lineWidth = 0.5;
-		draw(small, TimelineLayout.HEADER_HEIGHT * 0.2);
-		draw(medium, TimelineLayout.HEADER_HEIGHT * 0.5, LINE_MED_COLOR);
-		draw(big, TimelineLayout.HEADER_HEIGHT, LINE_BIG_COLOR);
+
+		// Batch medium vertical grid lines
+		ctx.strokeStyle = LINE_MED_COLOR;
+		ctx.beginPath();
+		for (let x = Math.floor(this.layout.offset / medium) * medium; x <= end; x += medium) {
+			const pos = x * scale + lcw;
+			ctx.moveTo(pos, y);
+			ctx.lineTo(pos, fullBottom);
+		}
+		ctx.stroke();
+
+		// Batch big vertical grid lines
+		ctx.strokeStyle = LINE_BIG_COLOR;
+		ctx.beginPath();
+		for (let x = Math.floor(this.layout.offset / big) * big; x <= end; x += big) {
+			const pos = x * scale + lcw;
+			ctx.moveTo(pos, y);
+			ctx.lineTo(pos, fullBottom);
+		}
+		ctx.stroke();
+
+		// Batch all ruler ticks (small, medium, big) in one stroke
+		ctx.strokeStyle = TICK_COLOR;
+		ctx.beginPath();
+		const smallBottom = y + TimelineLayout.HEADER_HEIGHT * 0.2;
+		for (let x = Math.floor(this.layout.offset / small) * small; x <= end; x += small) {
+			const pos = x * scale + lcw;
+			ctx.moveTo(pos, y);
+			ctx.lineTo(pos, smallBottom);
+		}
+		const medBottom = y + TimelineLayout.HEADER_HEIGHT * 0.5;
+		for (let x = Math.floor(this.layout.offset / medium) * medium; x <= end; x += medium) {
+			const pos = x * scale + lcw;
+			ctx.moveTo(pos, y);
+			ctx.lineTo(pos, medBottom);
+		}
+		const bigBottom = y + TimelineLayout.HEADER_HEIGHT;
+		for (let x = Math.floor(this.layout.offset / big) * big; x <= end; x += big) {
+			const pos = x * scale + lcw;
+			ctx.moveTo(pos, y);
+			ctx.lineTo(pos, bigBottom);
+		}
+		ctx.stroke();
 
 		ctx.fillStyle = RULER_TEXT;
 		ctx.font = font(TimelineLayout.HEADER_HEIGHT * 0.8);
@@ -281,7 +327,7 @@ export class TimelineRenderer {
 				 x < end; x += big)
 		{
 			ctx.fillText(Basic.formatTimestamp(x, 2),
-				Math.round(x * this.layout.scale + this.layout.leftColumnWidth) + 5,
+				Math.round(x * scale + lcw) + 5,
 				y + TimelineLayout.HEADER_HEIGHT);
 		}
 	}
@@ -312,38 +358,37 @@ export class TimelineRenderer {
 		ctx.textBaseline = 'top';
 		const ctxfont = font(TimelineConfig.data.fontSize);
 		ctx.font = ctxfont;
+		const split = this.input.splitting;
 		for (const ent of this.layout.getVisibleEntries()) {
 			const boxes = this.layout.getEntryPositions(ent);
 			if (boxes.length == 0) continue;
-			const grad = ctx.createLinearGradient(
-				boxes[0].x + boxes[0].w - 15, boxes[0].y, boxes[0].x + boxes[0].w, boxes[0].y);
-			grad.addColorStop(0, ENTRY_TEXT);
-			grad.addColorStop(1, ENTRY_TEXT_FADE);
+			const fillStyle = ent.label === 'none'
+				? ENTRY_BACK
+				: LabelColor(ent.label, ENTRY_BACK_OPACITY);
+			const isSelected = this.input.selection.has(ent);
+			const strokeStyle = isSelected ? ENTRY_BORDER_FOCUS : ENTRY_BORDER;
+			const lineWidth = isSelected ? ENTRY_WIDTH_FOCUS : ENTRY_WIDTH;
+			let overflowGrad: CanvasGradient | null = null;
+
 			for (const b of boxes) {
-				ctx.fillStyle = ent.label === 'none'
-					? ENTRY_BACK
-					: LabelColor(ent.label, ENTRY_BACK_OPACITY);
-				if (this.input.selection.has(ent)) {
-					ctx.strokeStyle = ENTRY_BORDER_FOCUS;
-					ctx.lineWidth = ENTRY_WIDTH_FOCUS;
-				} else {
-					ctx.strokeStyle = ENTRY_BORDER;
-					ctx.lineWidth = ENTRY_WIDTH;
-				}
-				const path = new Path2D();
-				path.roundRect(b.x, b.y, b.w, b.h, 4);
-				ctx.fill(path);
-				ctx.stroke(path);
+				ctx.fillStyle = fillStyle;
+				ctx.strokeStyle = strokeStyle;
+				ctx.lineWidth = lineWidth;
+				ctx.beginPath();
+				ctx.roundRect(b.x, b.y, b.w, b.h, 4);
+				ctx.fill();
+				ctx.stroke();
 
-				if (b.w < 15)
+				if (b.w < 15 || b.text.length === 0)
 					continue;
-				ctx.save();
-				ctx.clip(path);
 
-				ctx.strokeStyle = ALIGNLINE_COLOR;
-				ctx.lineWidth = 2;
-				const split = this.input.splitting;
 				if (split?.target == ent && split.positions.has(b.style)) {
+					ctx.save();
+					ctx.beginPath();
+					ctx.rect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
+					ctx.clip();
+					ctx.strokeStyle = ALIGNLINE_COLOR;
+					ctx.lineWidth = 2;
 					const pos = split.positions.get(b.style);
 					const separator = (split.breakPosition - ent.start) / (ent.end - ent.start) * b.w;
 					const text1 = b.text.substring(0, pos);
@@ -363,12 +408,29 @@ export class TimelineRenderer {
 					ctx.moveTo(b.x + separator, b.y + 4);
 					ctx.lineTo(b.x + separator, b.y + this.layout.entryHeight - 4);
 					ctx.stroke();
+					ctx.restore();
 				} else {
-					ctx.fillStyle = grad;
-					ctx.fillText(b.text, b.x + 4, b.y + 4);
+					const textWidth = this.#measureTextWidth(ctx, b.text, ctxfont);
+					if (textWidth <= b.w - 19) {
+						ctx.fillStyle = ENTRY_TEXT;
+						ctx.fillText(b.text, b.x + 4, b.y + 4);
+					} else {
+						if (!overflowGrad) {
+							overflowGrad = ctx.createLinearGradient(
+								b.x + b.w - 15, b.y, b.x + b.w, b.y);
+							overflowGrad.addColorStop(0, ENTRY_TEXT);
+							overflowGrad.addColorStop(1, ENTRY_TEXT_FADE);
+						}
+						ctx.save();
+						ctx.beginPath();
+						ctx.rect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
+						ctx.clip();
+						ctx.fillStyle = overflowGrad;
+						ctx.fillText(b.text, b.x + 4, b.y + 4);
+						ctx.restore();
+					}
 				}
-				ctx.restore();
-			};
+			}
 		}
 	}
 
@@ -477,17 +539,18 @@ export class TimelineRenderer {
 
 	#renderLeftColumn(ctx: CanvasRenderingContext2D) {
 		const [x, y] = this.manager.convertPosition('offset', 'canvas', 0, 0);
-		ctx.fillStyle = LEFT_COLUMN_BACK;
 		if (this.layout.offset > 0) {
-			ctx.shadowBlur = 10;
-			ctx.shadowColor = LEFT_COLUMN_SHADOW;
-		} else {
-			ctx.shadowColor = 'transparent';
+			const edgeX = x + this.layout.leftColumnWidth;
+			const shadowGrad = ctx.createLinearGradient(edgeX, y, edgeX + 10, y);
+			shadowGrad.addColorStop(0, LEFT_COLUMN_SHADOW);
+			shadowGrad.addColorStop(1, 'transparent');
+			ctx.fillStyle = shadowGrad;
+			ctx.fillRect(edgeX, y, 10, this.layout.height);
 		}
+		ctx.fillStyle = LEFT_COLUMN_BACK;
 		ctx.fillRect(x, y,
 			this.layout.leftColumnWidth,
 			this.layout.height);
-		ctx.shadowColor = 'transparent';
 
 		ctx.strokeStyle = LEFT_COLUMN_OUTLINE;
 		ctx.lineWidth = 1;

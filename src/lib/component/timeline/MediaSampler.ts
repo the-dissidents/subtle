@@ -18,6 +18,18 @@ class Index {
         if (it.equals(this.set.rEnd())) return false;
         return it.pointer[0] <= right;
     }
+
+    /** returns all keyframe timestamps in [left, right] in ascending order */
+    queryRange(left: number, right: number): number[] {
+        const result: number[] = [];
+        const end = this.set.end();
+        for (const it = this.set.lowerBound(left); !it.equals(end); it.next()) {
+            const t = it.pointer[0];
+            if (t > right) break;
+            result.push(t);
+        }
+        return result;
+    }
 }
 
 export class MediaSampler {
@@ -35,6 +47,7 @@ export class MediaSampler {
     #videoIndex: Index;
 
     onProgress?: () => void;
+    onComplete?: () => void;
 
     get startTime() { return this.media.audio!.startTime; }
     get endTime() {
@@ -67,6 +80,10 @@ export class MediaSampler {
 
     keyframeData(from: number, to: number) {
         return this.#videoIndex.query(from, to);
+    }
+
+    keyframesInRange(from: number, to: number): number[] {
+        return this.#videoIndex.queryRange(from, to);
     }
 
     async getKeyframeBefore(time: number) {
@@ -193,12 +210,14 @@ export class MediaSampler {
                 if (this.#sampleProgress > this.#sampleEnd) {
                     await Debug.trace(`sampling done: ${from.toFixed(4)} - ${this.#sampleProgress.toFixed(4)}`);
                     this.#sampling = false;
+                    this.onComplete?.();
                     return false;
                 }
                 if (this.#cancelling) {
                     await Debug.trace('sampling cancelled');
                     this.#sampling = false;
                     this.#cancelling = false;
+                    this.onComplete?.();
                     return false;
                 }
                 return true;

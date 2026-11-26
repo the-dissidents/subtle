@@ -83,11 +83,13 @@ export class SubtitleRenderer {
 
     #currentEntries: WrappedEntry[] = [];
     #sortedEntries: WrappedEntry[] = [];
+    #prefixMaxEnd: number[] = [];
 
     #currentTime = 0;
     #hMargin = 0;
     #vMargin = 0;
     #scale = 1;
+    #dirty = true;
 
     #layout: LineBox[] = [];
 
@@ -117,10 +119,15 @@ export class SubtitleRenderer {
         this.updateTimes();
     }
 
+    invalidate() {
+        this.#dirty = true;
+    }
+
     changeSubtitles(newSubs: Subtitles) {
         this.#subs = newSubs;
         this.updateResolution();
         this.updateTimes();
+        this.#dirty = true;
     }
 
     updateResolution() {
@@ -133,6 +140,7 @@ export class SubtitleRenderer {
             [this.#hMargin, this.#vMargin] = [(width - height * ratio) / 2, 0];
             this.#scale = height / this.#subs.metadata.height * this.#subs.metadata.scalingFactor;
         }
+        this.#dirty = true;
         // TODO: investigate https://github.com/libass/libass/blob/695509365f152bd28720a0c0e036d46836ee9345/libass/ass_render.c#L2161
     }
 
@@ -140,21 +148,54 @@ export class SubtitleRenderer {
         this.#sortedEntries = this.#subs.entries
             .map((x, i) => ({oldIndex: i, newIndex: -1, entry: x}))
             .toSorted((a, b) => a.entry.start - b.entry.start);
-        for (let i = 0; i < this.#sortedEntries.length; i++)
+        this.#prefixMaxEnd = new Array<number>(this.#sortedEntries.length);
+        let maxEnd = -Infinity;
+        for (let i = 0; i < this.#sortedEntries.length; i++) {
             this.#sortedEntries[i].newIndex = i;
+            maxEnd = Math.max(maxEnd, this.#sortedEntries[i].entry.end);
+            this.#prefixMaxEnd[i] = maxEnd;
+        }
 
         this.#searchCurrentEntries();
+        this.#dirty = true;
     }
 
     #searchCurrentEntries() {
-        this.#currentEntries = [];
-        for (let i = 0; i < this.#sortedEntries.length; i++) {
-            const w = this.#sortedEntries[i];
-            if (w.entry.start > this.#currentTime) break;
-            if (w.entry.end > this.#currentTime)
-                this.#currentEntries.push(w);
+        const n = this.#sortedEntries.length;
+        const next: WrappedEntry[] = [];
+        if (n > 0) {
+            let lo = 0, hi = n - 1, right = -1;
+            while (lo <= hi) {
+                const mid = (lo + hi) >>> 1;
+                if (this.#sortedEntries[mid].entry.start <= this.#currentTime) {
+                    right = mid;
+                    lo = mid + 1;
+                } else {
+                    hi = mid - 1;
+                }
+            }
+            for (let i = right; i >= 0; i--) {
+                if (this.#prefixMaxEnd[i] <= this.#currentTime) break;
+                const w = this.#sortedEntries[i];
+                if (w.entry.end > this.#currentTime)
+                    next.push(w);
+            }
+            next.sort((a, b) => a.oldIndex - b.oldIndex);
         }
-        this.#currentEntries.sort((a, b) => a.oldIndex - b.oldIndex);
+
+        let changed = next.length !== this.#currentEntries.length;
+        if (!changed) {
+            for (let i = 0; i < next.length; i++) {
+                if (next[i].entry !== this.#currentEntries[i].entry) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        if (changed) {
+            this.#currentEntries = next;
+            this.#dirty = true;
+        }
     }
 
     #basePoint(align: AlignMode, style: SubtitleStyle, pos: Positioning): [number, number, 1 | -1] {
@@ -192,6 +233,9 @@ export class SubtitleRenderer {
         ctx.rect(this.#hMargin, this.#vMargin,
             width - 2 * this.#hMargin, height - 2 * this.#vMargin);
         ctx.stroke();
+
+        if (!this.#dirty) return;
+        this.#dirty = false;
 
         const styleFonts = new Map<SubtitleStyle, EvaluatedStyle>(this.#subs.styles.map((style) => {
             const fontFamily = style.font ? `"${style.font}", sans-serif` : 'sans-serif';

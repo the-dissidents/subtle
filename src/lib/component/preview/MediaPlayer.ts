@@ -28,8 +28,14 @@ export class MediaPlayer {
 
     #bufCanvas: OffscreenCanvas;
     #bufCtx: OffscreenCanvasRenderingContext2D;
+    #bufFrameSize: [number, number] = [0, 0];
+    #hasFrame = false;
     #displayOffset: [number, number] = [0, 0];
     #displaySize: [number, number] = [1, 1];
+    #lastRequestedDecodeSize: [number, number] = [0, 0];
+    #resizeTimer?: ReturnType<typeof setTimeout>;
+    #clockRafId: number | null = null;
+    #lastClockPos = -1;
 
     #diag = {
         latencies: [] as number[],
@@ -62,16 +68,13 @@ export class MediaPlayer {
         private readonly manager: CanvasManager,
         private rawurl: string,
     ) {
-        const [w, h] = manager.physicalSize;
-        this.#bufCanvas = new OffscreenCanvas(w, h);
-        const ctx = this.#bufCanvas.getContext('2d', { alpha: true });
+        this.#bufCanvas = new OffscreenCanvas(1, 1);
+        const ctx = this.#bufCanvas.getContext('2d', { alpha: false });
         if (!ctx) throw new Error("VideoPlayer: cannot create offscreen context");
         this.#bufCtx = ctx;
 
-        manager.onDisplaySizeChanged.bind(this, (_, __, w, h) => {
-            this.#bufCanvas.width = w;
-            this.#bufCanvas.height = h;
-            void this.#updateOutputSize();
+        manager.onDisplaySizeChanged.bind(this, () => {
+            this.#scheduleOutputSizeUpdate();
         });
 
         this.#buffer = new PlayerBuffer(media, audio);
@@ -80,14 +83,13 @@ export class MediaPlayer {
             if (!this.#presenting) void this.#startPresenting();
             MediaPlayerInterface.onPlayback.dispatch(t);
         });
-        void this.#updateOutputSize();
-        void this.#startPresenting();
+        void this.#updateOutputSize(true).catch((e) => Debug.forwardError(e));
+        void this.#startPresenting().catch((e) => Debug.forwardError(e));
 
         MediaPlayerInterface.getLatencies = () => this.#diag.latencies;
     }
 
-    async #updateOutputSize() {
-        Debug.assert(this.#intent !== 'closed');
+    #recalculateDisplayRect(): [number, number] {
         Debug.assert(this.#buffer.media.video !== undefined);
 
         const video = this.#buffer.media.video;
@@ -114,7 +116,32 @@ export class MediaPlayer {
             oh = Math.max(1, Math.round(oh));
         }
 
-        await this.stop();
+        return [ow, oh];
+    }
+
+    #scheduleOutputSizeUpdate() {
+        if (this.#intent === 'closed') return;
+        this.#recalculateDisplayRect();
+        if (this.#resizeTimer !== undefined) clearTimeout(this.#resizeTimer);
+        this.#resizeTimer = setTimeout(() => {
+            this.#resizeTimer = undefined;
+            if (this.#intent !== 'closed')
+                void this.#updateOutputSize(false).catch((e) => Debug.forwardError(e));
+        }, 200);
+    }
+
+    async #updateOutputSize(immediate: boolean) {
+        if (this.#intent === 'closed') return;
+        const [ow, oh] = this.#recalculateDisplayRect();
+        if (!immediate
+         && ow === this.#lastRequestedDecodeSize[0]
+         && oh === this.#lastRequestedDecodeSize[1])
+            return;
+
+        this.#lastRequestedDecodeSize = [ow, oh];
+        if (this.isPlaying) {
+            await this.stop();
+        }
         return this.#buffer.resize(ow, oh);
     }
 
@@ -136,6 +163,11 @@ export class MediaPlayer {
     }
 
     async close() {
+        this.#stopClockLoop();
+        if (this.#resizeTimer !== undefined) {
+            clearTimeout(this.#resizeTimer);
+            this.#resizeTimer = undefined;
+        }
         EventHost.unbind(this);
         AsyncEventHost.unbind(this);
 
@@ -155,24 +187,23 @@ export class MediaPlayer {
         await this.#buffer.audio.setVolume(value);
     }
 
-    async #drawFrame(frame: ReadonlyVideoFrameData) {
-        const ctx = this.#bufCtx;
-        const [w, h] = this.manager.physicalSize;
+    #drawFrame(frame: ReadonlyVideoFrameData) {
         const [ow, oh] = frame.size;
-        const [dw, dh] = this.#displaySize;
-        const [dx, dy] = this.#displayOffset;
-
-        ctx.clearRect(0, 0, w, h);
-        const imgData = new ImageData(frame.content.data, frame.stride);
-        let rescaled = false;
-        if (ow !== dw || oh !== dh) {
-            const bitmap = await createImageBitmap(imgData, 0, 0, ow, oh);
-            ctx.drawImage(bitmap, dx, dy, dw, dh);
-            bitmap.close();
-            rescaled = true;
-        } else {
-            ctx.putImageData(imgData, dx, dy, 0, 0, ow, oh);
+        if (this.#bufCanvas.width !== ow || this.#bufCanvas.height !== oh) {
+            this.#bufCanvas.width = ow;
+            this.#bufCanvas.height = oh;
         }
+        const ctx = this.#bufCtx;
+        const imgData = new ImageData(frame.content.data, frame.stride);
+        ctx.putImageData(imgData, 0, 0, 0, 0, ow, oh);
+        this.#bufFrameSize = [ow, oh];
+        this.#hasFrame = true;
+
+        const [dw, dh] = this.#displaySize;
+        const rescaled = ow !== dw || oh !== dh;
+        const w = ow;
+        const h = oh;
+        const dx = 0;
 
         if (!MediaConfig.data.showDebug) return;
         const videoSize = this.#buffer.videoBufferSize
@@ -231,7 +262,7 @@ export class MediaPlayer {
             if (!frame) return 0;
 
             MediaPlayerInterface.onPlayback.dispatch(frame.time);
-            await this.#drawFrame(frame);
+            this.#drawFrame(frame);
             this.manager.requestRender();
             return -1;
         }
@@ -256,8 +287,10 @@ export class MediaPlayer {
                 }
                 case "ok": {
                     const frame = data.frame;
-                    MediaPlayerInterface.onPlayback.dispatch(frame.time);
-                    await this.#drawFrame(frame);
+                    if (!this.isPlaying || this.#buffer.audio.interpolatedTime === undefined) {
+                        MediaPlayerInterface.onPlayback.dispatch(frame.time);
+                    }
+                    this.#drawFrame(frame);
                     this.manager.requestRender();
 
                     const targetTime = (this.#buffer.peekVideoFrame() ?? frame).time;
@@ -282,17 +315,62 @@ export class MediaPlayer {
     async #startPresenting() {
         Debug.assert(!this.#presenting);
         this.#presenting = true;
-        while (true) {
-            const delay = await this.#mutex.use(() => this.#presentNextLocked());
-            this.#diag.delay = delay * 1000;
-            if (delay < 0) break;
-            await Basic.wait(delay * 1000);
+        try {
+            while (true) {
+                const delay = await this.#mutex.use(() => this.#presentNextLocked());
+                this.#diag.delay = delay * 1000;
+                if (delay < 0) break;
+                // Align frame presentation with display vsync to eliminate setTimeout jitter.
+                if (delay > 0.032) {
+                    await Basic.wait((delay - 0.016) * 1000);
+                }
+                await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+            }
+        } finally {
+            this.#presenting = false;
         }
-        this.#presenting = false;
     }
 
     renderTo(ctx: CanvasRenderingContext2D) {
-        ctx.drawImage(this.#bufCanvas, 0, 0);
+        if (!this.#hasFrame || this.#bufFrameSize[0] <= 0 || this.#bufFrameSize[1] <= 0)
+            return;
+        const [dx, dy] = this.#displayOffset;
+        const [dw, dh] = this.#displaySize;
+        ctx.drawImage(
+            this.#bufCanvas,
+            0, 0, this.#bufFrameSize[0], this.#bufFrameSize[1],
+            dx, dy, dw, dh
+        );
+    }
+
+    #startClockLoop() {
+        if (this.#clockRafId !== null) return;
+        this.#lastClockPos = -1;
+        const tickClock = () => {
+            if (!this.isPlaying) {
+                this.#clockRafId = null;
+                return;
+            }
+            const t = this.#buffer.audio.interpolatedTime;
+            if (t !== undefined) {
+                const clamped = Math.max(this.startTime, Math.min(this.endTime, t));
+                const nextPos = this.#lastClockPos >= 0 ? Math.max(this.#lastClockPos, clamped) : clamped;
+                if (nextPos !== this.#lastClockPos) {
+                    this.#lastClockPos = nextPos;
+                    MediaPlayerInterface.onPlayback.dispatch(nextPos);
+                }
+            }
+            this.#clockRafId = requestAnimationFrame(tickClock);
+        };
+        this.#clockRafId = requestAnimationFrame(tickClock);
+    }
+
+    #stopClockLoop() {
+        if (this.#clockRafId !== null) {
+            cancelAnimationFrame(this.#clockRafId);
+            this.#clockRafId = null;
+        }
+        this.#lastClockPos = -1;
     }
 
     async play() {
@@ -303,10 +381,12 @@ export class MediaPlayer {
             await this.#buffer.audio.play();
             if (!this.#presenting) void this.#startPresenting();
         });
+        this.#startClockLoop();
         MediaPlayerInterface.onPlayStateChanged.dispatch();
     }
 
     async stop() {
+        this.#stopClockLoop();
         await this.#mutex.use(async () => {
             if (!this.isPlaying || this.#intent == 'closed') return;
             this.#intent = 'paused';

@@ -50,13 +50,21 @@
     playPos = Playback.position;
   });
 
+  let lastUiPosUpdate = 0;
   Playback.onPositionChanged.bind(me, () => {
+    const now = performance.now();
+    if (Playback.isPlaying && now - lastUiPosUpdate < 66) return;
+    lastUiPosUpdate = now;
     playPos = $loadState == 'loaded' ? Playback.position : 0;
     playPosInput = Playback.position;
   });
 
   MediaPlayerInterface.onPlayStateChanged.bind(me, () => {
     isPlaying = Playback.isPlaying;
+    if (!isPlaying) {
+      playPos = $loadState == 'loaded' ? Playback.position : 0;
+      playPosInput = Playback.position;
+    }
   });
 </script>
 

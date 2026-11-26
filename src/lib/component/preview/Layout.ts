@@ -56,8 +56,10 @@ export class PreviewLayout {
         Source.onSubtitlesChanged.bind(this, (type) => {
             if (type == ChangeType.Metadata)
                 this.#subsRenderer.updateResolution();
-            if (type == ChangeType.Times || type == ChangeType.General)
+            else if (type == ChangeType.Times || type == ChangeType.General)
                 this.#subsRenderer.updateTimes();
+            else
+                this.#subsRenderer.invalidate();
             this.#manager.requestRender();
         });
         Source.onSubtitleObjectReload.bind(this, () => {
@@ -114,6 +116,7 @@ export class PreviewLayout {
                 x: Math.round(this.#startPos[0] + dx * scale),
                 y: Math.round(this.#startPos[1] + dy * scale),
             };
+            this.#subsRenderer.invalidate();
             this.manager.requestRender();
         });
 
@@ -127,6 +130,7 @@ export class PreviewLayout {
         this.manager.onDragInterrupted.bind(this, () => {
             Debug.assert(!!this.#hovering);
             this.#hovering.positioning = this.#originalPositioning;
+            this.#subsRenderer.invalidate();
         });
     }
 
