@@ -74,7 +74,7 @@ export function toRichText(n: Node): RichTextNode[] {
 }
 
 export function fromRichText(t: RichText): Node {
-    return RichTextSchema.nodes.doc.create(null, 
+    return RichTextSchema.nodes.doc.create(null,
         Array.isArray(t) ? t.flatMap(getNode) : getNode(t));
 }
 
@@ -92,15 +92,19 @@ export const RichTextSchema = new Schema({
     },
     marks: {
         bold: {
+            parseDOM: [{ tag: 'b' }, { tag: 'strong' }],
             toDOM: () => ['b', 0]
         },
         italic: {
+            parseDOM: [{ tag: 'i' }, { tag: 'em' }],
             toDOM: () => ['i', 0]
         },
         underline: {
+            parseDOM: [{ tag: 'u' }],
             toDOM: () => ['u', 0]
         },
         strikethrough: {
+            parseDOM: [{ tag: 's' }, { tag: 'del' }],
             toDOM: () => ['s', 0]
         },
         changeSize: {
@@ -110,8 +114,28 @@ export const RichTextSchema = new Schema({
                     validate: (x) => typeof x === 'number' && x !== 100 && x > 0
                 }
             },
+            parseDOM: [
+                {
+                    tag: 'span[data-size]',
+                    getAttrs(dom) {
+                        const raw = dom.getAttribute('data-size');
+                        const value = raw ? Number.parseFloat(raw) : NaN;
+                        return Number.isFinite(value) && value > 0 && value !== 100 ? { value } : false;
+                    }
+                },
+                {
+                    tag: 'span',
+                    getAttrs(dom) {
+                        const raw = dom.style.fontSize?.trim();
+                        if (!raw || !raw.endsWith('%')) return false;
+                        const pct = Number.parseFloat(raw.slice(0, -1));
+                        const value = pct / 100;
+                        return Number.isFinite(value) && value > 0 && value !== 100 ? { value } : false;
+                    }
+                }
+            ],
             toDOM(mark) {
-                return ['span', { style: `font-size: ${mark.attrs.value * 100}%; line-height: 1;` }, 0]
+                return ['span', { 'data-size': String(mark.attrs.value), style: `font-size: ${mark.attrs.value * 100}%; line-height: 1;` }, 0]
             },
         },
     }

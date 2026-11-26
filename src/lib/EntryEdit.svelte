@@ -164,9 +164,9 @@ function applyEditForm() {
   </label>
   {#if !!editingPos}
   <div class="hlayout">
-    <NumberInput bind:value={editingPos.x} min="0" max="10000" style="flex-grow:1"
+    <NumberInput bind:value={editingPos.x} min="0" max="10000" step="any" style="flex-grow:1"
       onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.positioning'))} />
-    <NumberInput bind:value={editingPos.y} min="0" max="10000" style="flex-grow:1"
+    <NumberInput bind:value={editingPos.y} min="0" max="10000" step="any" style="flex-grow:1"
       onchange={() => Source.markChanged(ChangeType.InPlace, $_('c.positioning'))} />
   </div>
   {/if}

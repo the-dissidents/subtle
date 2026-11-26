@@ -1,4 +1,5 @@
 // import { convertFileSrc } from "@tauri-apps/api/core";
+import { EventHost } from "@the_dissidents/svelte-ui";
 import { MAPI } from "./API";
 import type { ResolvedFontFace } from "./bindings/ResolvedFontFace";
 import { Debug } from "./Debug";
@@ -9,6 +10,15 @@ let initialized = false;
 type FaceId = `${string}@${number}`;
 const faces = new Map<FaceId, LoadedFontFace>();
 const cachedFamilies = new Map<string, LoadedFontFace[]>();
+
+export type ResolvedCSSFont = {
+    family: string;
+    weight?: number;
+    italic?: boolean;
+};
+
+const cssFontCache = new Map<string, ResolvedCSSFont>();
+const cssFontPending = new Set<string>();
 
 const allFamilies = new Set<string>();
 const onInitCallbacks: (() => void | Promise<void>)[] = [];
@@ -72,6 +82,44 @@ export const Fonts = {
 
     get families(): ReadonlySet<string> {
         return allFamilies;
+    },
+
+    onCSSFontResolved: new EventHost<[name: string]>(),
+
+    resolveCSSFont(name: string): ResolvedCSSFont {
+        if (!name) return { family: 'sans-serif' };
+        if (allFamilies.has(name)) return { family: name };
+        const cached = cssFontCache.get(name);
+        if (cached) return cached;
+
+        if (!cssFontPending.has(name)) {
+            cssFontPending.add(name);
+            void Fonts.onInit(async () => {
+                try {
+                    if (allFamilies.has(name)) {
+                        cssFontCache.set(name, { family: name });
+                        return;
+                    }
+                    const resolvedFaces = await Fonts.getFamily(name);
+                    const face = resolvedFaces?.[0];
+                    if (face && face.familyName) {
+                        const snappedWeight = Math.min(900, Math.max(100, Math.round(face.weight / 100) * 100));
+                        const resolved: ResolvedCSSFont = {
+                            family: face.familyName,
+                            weight: snappedWeight !== 400 ? snappedWeight : undefined,
+                            italic: face.style === 'italic' || face.style === 'oblique',
+                        };
+                        cssFontCache.set(name, resolved);
+                        Fonts.onCSSFontResolved.dispatch(name);
+                    } else {
+                        cssFontCache.set(name, { family: name });
+                    }
+                } finally {
+                    cssFontPending.delete(name);
+                }
+            });
+        }
+        return { family: name };
     },
 
     async getFamily(name: string) {

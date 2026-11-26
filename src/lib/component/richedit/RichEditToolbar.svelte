@@ -181,7 +181,7 @@
 
   <span class="separator"></span>
 
-  <input type="number" min="0" max="10000" value={currentSize}
+  <input type="number" min="0" max="10000" step="any" value={currentSize}
     disabled={!target}
     onchange={(x) => {
       const s = x.currentTarget.valueAsNumber;

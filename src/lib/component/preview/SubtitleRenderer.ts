@@ -4,6 +4,7 @@ import { AlignMode } from "../../core/Labels";
 import { EventHost } from "@the_dissidents/svelte-ui";
 import { Typography } from "../../details/Typography";
 import { layoutText, type EvaluatedStyle, type Line } from "../../details/TextLayout";
+import { Fonts } from "../../Fonts";
 
 export type LineBox = {
     x: number, y: number,
@@ -113,6 +114,9 @@ export class SubtitleRenderer {
         manager.onDisplaySizeChanged.bind(this, () => {
             this.updateResolution();
         });
+        Fonts.onCSSFontResolved.bind(this, () => {
+            this.manager.requestRender();
+        });
         this.updateResolution();
         this.updateTimes();
     }
@@ -194,14 +198,18 @@ export class SubtitleRenderer {
         ctx.stroke();
 
         const styleFonts = new Map<SubtitleStyle, EvaluatedStyle>(this.#subs.styles.map((style) => {
-            const fontFamily = style.font ? `"${style.font}", sans-serif` : 'sans-serif';
-            const factor = style.font ? Typography.getRealDimFactor(style.font) : 1;
+            const resolved = style.font ? Fonts.resolveCSSFont(style.font) : null;
+            const fontFamily = resolved ? `"${resolved.family.replaceAll('"', '\\"')}", sans-serif` : 'sans-serif';
+            const factor = resolved
+                ? Typography.getRealDimFactor(resolved.family, resolved.weight, resolved.italic)
+                : 1;
             const cssSize = factor * style.size * this.#scale;
             return [style, {
                 size: cssSize, fontFamily,
                 color: style.color,
                 bold: style.styles.bold,
-                italic: style.styles.italic,
+                weight: resolved?.weight,
+                italic: style.styles.italic || resolved?.italic,
                 underline: style.styles.underline,
                 strikethrough: style.styles.strikethrough
             }];
@@ -220,7 +228,7 @@ export class SubtitleRenderer {
             const lines = layoutText(text, ctx, {
                 warpStyle: style.wrapStyle,
                 baseStyle: styleFonts.get(style)!,
-                lineWidth,
+                lineWidth
             });
 
             const alignment = ent.entry.alignment ?? style.alignment;

@@ -12,6 +12,7 @@ export type EvaluatedStyle = {
     size: number,
     fontFamily: string,
     bold?: boolean,
+    weight?: number,
     italic?: boolean,
     underline?: boolean,
     strikethrough?: boolean,
@@ -33,8 +34,11 @@ export function applyStyle(style: CSSStyle, ctx: CanvasRenderingContext2D) {
 
 export function toCSSStyle(style: EvaluatedStyle): CSSStyle {
     const sizeClause = style.size ? `${style.size}px` : '';
+    const weightClause = style.bold
+        ? (style.weight && style.weight > 700 ? `${Math.round(style.weight)} ` : 'bold ')
+        : (style.weight && style.weight !== 400 ? `${Math.round(style.weight)} ` : '');
     return {
-        font: `${style.bold ? 'bold ' : ''} ${style.italic ? 'italic ' : ''} ${sizeClause} ${style.fontFamily}`,
+        font: `${style.italic ? 'italic ' : ''}${weightClause}${sizeClause} ${style.fontFamily}`,
         fillStyle: style.color ? Color.serialize(style.color) : '',
         textDecoration: (style.underline ? 'underline' : '') + ' ' + (style.strikethrough ? ' line-through' : '')
     };

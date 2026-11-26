@@ -78,8 +78,7 @@ export class ASSParser implements SubtitleParser {
     #parsed = false;
 
     constructor(source: string) {
-        const sectionRegex  = /(?<=^|\n)\[(.+)\]\s*\n((?:\s*[^[\n]+.+(\n|$))+)/g;
-        this.#sections = new Map([...source.matchAll(sectionRegex)].map((x) => [x[1], x[2]]));
+        this.#sections = parseASSSections(source);
         if (this.#sections.size == 0)
             throw new DeserializationError('invalid ASS');
         this.#subs = new Subtitles();
@@ -118,9 +117,9 @@ export class ASSParser implements SubtitleParser {
         if (text === undefined)
             throw new DeserializationError('invalid ASS: script info not found');
 
-        const entryRegex = /(?<=\n)([^;].+?): *(.*)/g;
+        const entryRegex = /^([^;\r\n][^:\r\n]*?): *(.*)$/gm;
         const infos = new Map([...text.matchAll(entryRegex)]
-            .map((x) => [x[1], x[2]]));
+            .map((x) => [x[1].trim(), x[2].trim()]));
         this.#subs.metadata.title = infos.get('Title') ?? this.#subs.metadata.title;
         if (infos.has('PlayResX')) {
             const n = Number.parseInt(infos.get('PlayResX')!);
@@ -169,7 +168,7 @@ export class ASSParser implements SubtitleParser {
 
         this.#subs.styles = [];
 
-        const stylesRegex = /Style:\s*(.*)\n/g;
+        const stylesRegex = /^Style:\s*(.*)$/gm;
         let first: SubtitleStyle | undefined;
         const nameToStyle = new Map<string, SubtitleStyle>();
 
@@ -177,7 +176,7 @@ export class ASSParser implements SubtitleParser {
         for (const match of styleMatches) {
             const bool = (field: string, f: (x: boolean) => boolean | void) => {
                 if (!styleFieldMap.has(field)) return;
-                const value = items[styleFieldMap.get(field)!];
+                const value = items[styleFieldMap.get(field)!].trim();
                 if (value == '-1' && f(true) !== false) return;
                 else if (value == '0' && f(false) !== false) return;
                 else this.#invalid({ type: 'invalid-style-field', name, field, value });
@@ -185,21 +184,22 @@ export class ASSParser implements SubtitleParser {
             const float =
             (field: string, f: (x: number) => boolean | void) => {
                 if (!styleFieldMap.has(field)) return;
-                const value = items[styleFieldMap.get(field)!];
+                const value = items[styleFieldMap.get(field)!].trim();
                 const n = Number.parseFloat(value);
                 if (!isNaN(n) && f(n) !== false) return;
                 this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
-            const color = (field: string, f: (x: Color.PlainColorObject) => boolean | void) => {
-                if (!styleFieldMap.has(field)) return;
-                const value = items[styleFieldMap.get(field)!];
-                const color = fromASSColor(value);
-                if (color !== null && f(color) !== false) return;
+            const color = (fields: string | string[], f: (x: Color.PlainColorObject) => boolean | void) => {
+                const field = (Array.isArray(fields) ? fields : [fields]).find((k) => styleFieldMap.has(k));
+                if (!field) return;
+                const value = items[styleFieldMap.get(field)!].trim();
+                const parsed = fromASSColor(value);
+                if (parsed !== null && f(parsed) !== false) return;
                 else this.#invalid({ type: 'invalid-style-field', name, field, value });
             };
             const ignore = (field: string, def: string | RegExp) => {
                 if (!styleFieldMap.has(field)) return;
-                const value = items[styleFieldMap.get(field)!];
+                const value = items[styleFieldMap.get(field)!].trim();
                 if (typeof def == 'string'
                     ? value == def
                     : def.test(value)) return;
@@ -209,7 +209,7 @@ export class ASSParser implements SubtitleParser {
             const items = match[1].split(',');
             if (items.length != styleFieldMap.size)
                 throw new DeserializationError('invalid ASS');
-            const name = items[styleFieldMap.get('Name')!];
+            const name = items[styleFieldMap.get('Name')!].trim();
             let style = nameToStyle.get(name);
             if (style === undefined) {
                 const newStyle = $state(SubtitleStyle.new(name));
@@ -222,7 +222,7 @@ export class ASSParser implements SubtitleParser {
             }
 
             if (styleFieldMap.has('Fontname'))
-                style.font = items[styleFieldMap.get('Fontname')!];
+                style.font = items[styleFieldMap.get('Fontname')!].trim();
 
             bool('Bold',        (x) => {style.styles.bold = x});
             bool('Italic',      (x) => {style.styles.italic = x});
@@ -243,8 +243,9 @@ export class ASSParser implements SubtitleParser {
                 style.alignment = a;
             });
 
-            color('PrimaryColor', (x) => {style.color = x});
-            color('OutlineColor', (x) => {style.outlineColor = x});
+            color(['PrimaryColour', 'PrimaryColor'], (x) => {style.color = x});
+            color(['OutlineColour', 'OutlineColor'], (x) => {style.outlineColor = x});
+            color(['BackColour', 'BackColor'],       (x) => {style.shadowColor = x});
 
             ignore('ScaleX', /^100(\.0+)?$/);
             ignore('ScaleY', /^100(\.0+)?$/);
@@ -253,7 +254,7 @@ export class ASSParser implements SubtitleParser {
             ignore('BorderStyle', '1');
             ignore('RelativeTo', '0');
 
-            // FIXME: SecondaryColour and BackColour are also ignored but not warned here
+            // FIXME: SecondaryColour is ignored and not warned here
             // because we don't know when to warn, yet we don't want to warn every time
         }
 
@@ -298,14 +299,14 @@ export class ASSParser implements SubtitleParser {
         let i = 0;
         for (const line of text.matchAll(regex)) {
             const timestamp = (field: string) => {
-                const value = opts[fieldMap.get(field)!];
+                const value = opts[fieldMap.get(field)!].trim();
                 const t = Basic.parseTimestamp(value);
                 if (t !== null) return t;
                 this.#invalid({ type: 'invalid-event-field', line: i, field, value});
                 return null;
             };
             const ignore = (field: string, def: string) => {
-                if (!fieldMap.has(field) || opts[fieldMap.get(field)!] === def) return;
+                if (!fieldMap.has(field) || opts[fieldMap.get(field)!].trim() === def) return;
                 ignoredField.set(field, (ignoredField.get(field) ?? 0) + 1);
             };
 
@@ -326,7 +327,7 @@ export class ASSParser implements SubtitleParser {
             ignore('Layer', '0');
 
             const entry = new SubtitleEntry(start, end);
-            const style = getStyleOrCreate(opts[fieldMap.get('Style')!]);
+            const style = getStyleOrCreate(opts[fieldMap.get('Style')!].trim());
             const { result, pos, alignment } = ASSString.parse(text, style, warnings);
             entry.texts.set(style, result);
             entry.positioning = pos;
@@ -519,24 +520,31 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\
 export function toASSColor(original: Color.ColorTypes) {
     const c = Color.to(original, 'srgb', { inGamut: true });
     const r = c.coords[0] ?? 0, g = c.coords[1] ?? 0, b = c.coords[2] ?? 0;
+    const byte = (v: number) =>
+        Math.max(0, Math.min(255, Math.round(v * 255)))
+            .toString(16).toUpperCase().padStart(2, '0');
     return '&H'
-        + ((1 - (c.alpha ?? 1)) * 255).toString(16).toUpperCase().padStart(2, '0')
-        + (b * 255).toString(16).toUpperCase().padStart(2, '0')
-        + (g * 255).toString(16).toUpperCase().padStart(2, '0')
-        + (r * 255).toString(16).toUpperCase().padStart(2, '0');
+        + byte(1 - (c.alpha ?? 1))
+        + byte(b)
+        + byte(g)
+        + byte(r);
 }
 
-export function fromASSColor(str: string): Color.PlainColorObject | null {
-    str = str.toUpperCase();
-    if (!str.startsWith('&H') || str.length != 10) return null;
+export function fromASSColor(raw: string): Color.PlainColorObject | null {
+    const str = raw.trim().toUpperCase().replace(/&$/, '');
+    if (!str.startsWith('&H')) return null;
 
-    const [r, g, b, alpha] = [
-        Number.parseInt(str.slice(8, 10), 16) / 255,
-        Number.parseInt(str.slice(6, 8), 16) / 255,
-        Number.parseInt(str.slice(4, 6), 16) / 255,
-        Number.parseInt(str.slice(2, 4), 16) / 255
-    ];
-    if ([r, g, b, alpha].some((x) => Number.isNaN(x))) return null;
+    const hex = str.slice(2);
+    if (!/^[0-9A-F]{6}$|^[0-9A-F]{8}$/.test(hex)) return null;
+
+    const hasAlpha = hex.length === 8;
+    const offset = hasAlpha ? 2 : 0;
+    const alpha = hasAlpha
+        ? 1 - Number.parseInt(hex.slice(0, 2), 16) / 255
+        : 1;
+    const b = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    const g = Number.parseInt(hex.slice(offset + 2, offset + 4), 16) / 255;
+    const r = Number.parseInt(hex.slice(offset + 4, offset + 6), 16) / 255;
 
     return {
         space: Color.sRGB,
@@ -545,8 +553,35 @@ export function fromASSColor(str: string): Color.PlainColorObject | null {
     };
 }
 
+function parseASSSections(source: string): Map<string, string> {
+    const normalized = source.replace(/^\uFEFF/, '').replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    const sections = new Map<string, string>();
+    const lines = normalized.split('\n');
+    let currentSection: string | null = null;
+    let currentLines: string[] = [];
+
+    const flush = () => {
+        if (currentSection !== null) {
+            sections.set(currentSection, currentLines.join('\n'));
+        }
+    };
+
+    for (const line of lines) {
+        const match = /^\[([^\]\r\n]+)\][ \t]*$/.exec(line);
+        if (match) {
+            flush();
+            currentSection = match[1].trim();
+            currentLines = [];
+        } else if (currentSection !== null) {
+            currentLines.push(line);
+        }
+    }
+    flush();
+    return sections;
+}
+
 function getASSFormatFieldMap(section: string) {
-    const fieldMapMatch = section.match(/Format:\s*(.*)\n/);
+    const fieldMapMatch = section.match(/^Format:\s*(.*)$/m);
     if (!fieldMapMatch) return null;
     return new Map(
         fieldMapMatch[1].split(/,/).map((x, i) => [x.trim(), i] as const));

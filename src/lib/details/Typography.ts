@@ -4,10 +4,13 @@ const RealDims = new Map<string, number>();
 
 export const Typography = {
     getRealDimFactor(
-        fontFamily: string
+        fontFamily: string,
+        weight?: number,
+        italic?: boolean
     ) {
-        if (RealDims.has(fontFamily))
-            return RealDims.get(fontFamily)!;
+        const cacheKey = `${italic ? 'i' : ''}:${weight ?? 400}:${fontFamily}`;
+        if (RealDims.has(cacheKey))
+            return RealDims.get(cacheKey)!;
 
         const offscreen = new OffscreenCanvas(1000, 1000);
         const ctx = offscreen.getContext("2d") ?? undefined;
@@ -15,11 +18,12 @@ export const Typography = {
 
         const testPxSize = 500;
         const testString = 'Mgjpq';
-        ctx.font = `${testPxSize}px "${fontFamily}"`;
+        const stylePrefix = `${italic ? 'italic ' : ''}${weight && weight !== 400 ? `${Math.round(weight)} ` : ''}`;
+        ctx.font = `${stylePrefix}${testPxSize}px "${fontFamily.replaceAll('"', '\\"')}"`;
         const metrics = ctx.measureText(testString);
         const result = testPxSize /
             (metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent);
-        RealDims.set(fontFamily, result);
+        RealDims.set(cacheKey, result);
 
         return result;
     }
