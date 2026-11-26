@@ -36,6 +36,7 @@ export const ZStyleBase = z.object({
     }),
     alignment:         z._default(z.enum(AlignMode), AlignMode.BottomCenter),
     wrapStyle:         z._default(z.enum(WrapStyle), WrapStyle.Balanced),
+    defaultLayer:      z._default(z.int().check(z.nonnegative()), 0),
     hidden:            z._default(z.boolean(), false),
 
     // Special members.
@@ -52,6 +53,7 @@ export const ZMetadata = z.object({
     height:        z._default(z.int().check(z.positive()), 1080),
     scalingFactor: z._default(z.number().check(z.positive()), 1),
     framerate:     z._default(z.nullable(z.number().check(z.positive())), null),
+    ycbcrMatrix:   z._default(z.string(), 'None'),
     special: z.object({
         untimedText:        z._default(z.string(), ''),
     }),
@@ -114,6 +116,7 @@ export type Positioning = z.infer<typeof ZPositioning>;
 export class SubtitleEntry {
     label: LabelType = $state('none');
     texts = new SvelteMap<SubtitleStyle, RichText>();
+    layers = new SvelteMap<SubtitleStyle, number>();
     start: number = $state(0);
     end: number = $state(0);
     positioning: Positioning = $state(null);
@@ -123,6 +126,10 @@ export class SubtitleEntry {
     {
         this.start = start;
         this.end = end;
+    }
+
+    getLayer(style: SubtitleStyle): number {
+        return this.layers.get(style) ?? style.defaultLayer;
     }
 }
 

@@ -76,6 +76,7 @@ export class ASSParser implements SubtitleParser {
     #sections: Map<string, string>;
     #warnings: ASSParseMessage[] = [];
     #parsed = false;
+    #defaultWrapStyle = WrapStyle.Balanced;
 
     constructor(source: string) {
         const sectionRegex  = /(?<=^|\n)\[(.+)\]\s*\n((?:\s*[^[\n]+.+(\n|$))+)/g;
@@ -90,6 +91,7 @@ export class ASSParser implements SubtitleParser {
         if (this.#parsed) {
             this.#warnings = [];
             this.#subs = new Subtitles();
+            this.#defaultWrapStyle = WrapStyle.Balanced;
             this.#parseScriptInfo();
         }
         this.#parseStyles();
@@ -129,6 +131,16 @@ export class ASSParser implements SubtitleParser {
         if (infos.has('PlayResY')) {
             const n = Number.parseInt(infos.get('PlayResY')!);
             if (!Number.isNaN(n)) this.#subs.metadata.height = n;
+        }
+        const ycbcrMatrix = infos.get('YCbCr Matrix');
+        if (ycbcrMatrix) {
+            this.#subs.metadata.ycbcrMatrix = ycbcrMatrix;
+        }
+        const wrapStyle = infos.get('WrapStyle');
+        switch (wrapStyle) {
+            case '0': this.#defaultWrapStyle = WrapStyle.Balanced; break;
+            case '1': this.#defaultWrapStyle = WrapStyle.Greedy; break;
+            case '2': this.#defaultWrapStyle = WrapStyle.NoWrap; break;
         }
     }
 
@@ -213,6 +225,7 @@ export class ASSParser implements SubtitleParser {
             let style = nameToStyle.get(name);
             if (style === undefined) {
                 const newStyle = $state(SubtitleStyle.new(name));
+                newStyle.wrapStyle = this.#defaultWrapStyle;
                 style = newStyle;
                 this.#subs.styles.push(newStyle);
                 nameToStyle.set(name, newStyle);
@@ -279,6 +292,7 @@ export class ASSParser implements SubtitleParser {
             if (!style) {
                 this.#invalid({ type: 'undefined-style', name: styleName });
                 const newStyle = $state(SubtitleStyle.new(styleName));
+                newStyle.wrapStyle = this.#defaultWrapStyle;
                 style = newStyle;
                 nameToStyle.set(styleName, newStyle);
                 this.#subs.styles.push(newStyle);
@@ -293,6 +307,7 @@ export class ASSParser implements SubtitleParser {
             ignoredSpecialCharacter: new Map<string, number>(),
         };
 
+        const styleLayerCounts = new Map<SubtitleStyle, Map<number, number>>();
         const regex = RegExp(
             String.raw`^Dialogue:\s*((?:(?:[^,\n\r])*,){${fieldMap.size-1}})(.+)`, 'gm');
         let i = 0;
@@ -323,16 +338,47 @@ export class ASSParser implements SubtitleParser {
             ignore('MarginT', '0');
             ignore('MarginB', '0');
             ignore('Marked', '0');
-            ignore('Layer', '0');
+
+            let layer = 0;
+            if (fieldMap.has('Layer')) {
+                const rawLayer = opts[fieldMap.get('Layer')!].trim();
+                if (rawLayer.length > 0) {
+                    const parsedLayer = Number.parseInt(rawLayer, 10);
+                    if (!Number.isNaN(parsedLayer) && parsedLayer >= 0 && String(parsedLayer) === rawLayer) {
+                        layer = parsedLayer;
+                    } else {
+                        this.#invalid({ type: 'invalid-event-field', line: i, field: 'Layer', value: rawLayer });
+                    }
+                }
+            }
 
             const entry = new SubtitleEntry(start, end);
-            const style = getStyleOrCreate(opts[fieldMap.get('Style')!]);
-            const { result, pos, alignment } = ASSString.parse(text, style, warnings);
+            const style = getStyleOrCreate(opts[fieldMap.get('Style')!].trim());
+            entry.layers.set(style, layer);
+            let counts = styleLayerCounts.get(style);
+            if (!counts) {
+                counts = new Map<number, number>();
+                styleLayerCounts.set(style, counts);
+            }
+            counts.set(layer, (counts.get(layer) ?? 0) + 1);
+            const { result, pos, alignment } = ASSString.parse(text, style, warnings, nameToStyle);
             entry.texts.set(style, result);
             entry.positioning = pos;
             entry.alignment = alignment;
 
             this.#subs.entries.push(entry);
+        }
+
+        for (const [style, counts] of styleLayerCounts) {
+            let bestLayer = 0;
+            let bestCount = -1;
+            for (const [layer, count] of counts) {
+                if (count > bestCount || (count === bestCount && layer < bestLayer)) {
+                    bestLayer = layer;
+                    bestCount = count;
+                }
+            }
+            style.defaultLayer = bestLayer;
         }
 
         if (warnings.ignoredDrawing > 0) this.#unsupported({
@@ -403,7 +449,34 @@ export class ASSWriter implements SubtitleWriter {
         });
     }
 
+    #computeDefaultWrapStyle(subs: Subtitles): WrapStyle {
+        const wrapStatistics: Record<WrapStyle, number> = {
+            [WrapStyle.Balanced]: 0,
+            [WrapStyle.Greedy]: 0,
+            [WrapStyle.NoWrap]: 0,
+        };
+
+        subs.entries.forEach(
+            (e) => e.texts.forEach(
+                (_, s) => wrapStatistics[s.wrapStyle]++));
+
+        if (Object.values(wrapStatistics).every((n) => n === 0)) {
+            subs.styles.forEach((s) => wrapStatistics[s.wrapStyle]++);
+        }
+
+        const max = Math.max(...Object.values(wrapStatistics));
+        let result = WrapStyle.Balanced;
+        if (wrapStatistics[WrapStyle.Balanced] == max)
+            result = WrapStyle.Balanced;
+        if (wrapStatistics[WrapStyle.Greedy] == max)
+            result = WrapStyle.Greedy;
+        if (wrapStatistics[WrapStyle.NoWrap] == max)
+            result = WrapStyle.NoWrap;
+        return result;
+    }
+
     toString(): string {
+        this.#defaultWrapStyle = this.#computeDefaultWrapStyle(this.subs);
         const body = this.writeBody();
         if (this.#headerless) return body;
         else {
@@ -429,9 +502,11 @@ export class ASSWriter implements SubtitleWriter {
                 const assText = ASSString.serialize(text, style, {
                     defaultWrapStyle: this.#defaultWrapStyle,
                     pos: entry.positioning,
-                    alignment: entry.alignment ?? undefined
+                    alignment: entry.alignment ?? undefined,
+                    styles: this.subs.styles,
+                    styleNames: this.#styleNames
                 });
-                result += `Dialogue: 0,${t0},${t1},${styleName},,0,0,0,,${assText}\n`;
+                result += `Dialogue: ${entry.getLayer(style)},${t0},${t1},${styleName},,0,0,0,,${assText}\n`;
             }
         }
         return result;
@@ -453,29 +528,11 @@ export class ASSWriter implements SubtitleWriter {
         const width = subs.metadata.width / subs.metadata.scalingFactor;
         const height = subs.metadata.height / subs.metadata.scalingFactor;
 
-        const wrapStatistics: Record<WrapStyle, number> = {
-            [WrapStyle.Balanced]: 0,
-            [WrapStyle.Greedy]: 0,
-            [WrapStyle.NoWrap]: 0,
-        };
-
-        subs.entries.forEach(
-            (e) => e.texts.forEach(
-                (_, s) => wrapStatistics[s.wrapStyle]++));
-
-        const max = Math.max(...Object.values(wrapStatistics));
-        if (wrapStatistics[WrapStyle.Balanced] == max)
-            this.#defaultWrapStyle = WrapStyle.Balanced;
-        if (wrapStatistics[WrapStyle.Greedy] == max)
-            this.#defaultWrapStyle = WrapStyle.Greedy;
-        if (wrapStatistics[WrapStyle.NoWrap] == max)
-            this.#defaultWrapStyle = WrapStyle.NoWrap;
-
         let result =
 `[Script Info]
 ; Script generated by subtle ${Basic.version}
 ScriptType: v4.00+
-YCbCr Matrix: None
+YCbCr Matrix: ${subs.metadata.ycbcrMatrix || 'None'}
 ScaledBorderAndShadow: yes
 Title: ${subs.metadata.title}
 PlayResX: ${width}

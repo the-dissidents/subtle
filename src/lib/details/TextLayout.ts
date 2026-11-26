@@ -62,8 +62,11 @@ function format(
                 if (!opts.disableSize)
                     style.size *= x.value;
                 break;
+            case 'font':
+                style.fontFamily = `"${x.value.replaceAll('"', '\\"')}", sans-serif`;
+                break;
             default:
-                Debug.never(x.type);
+                Debug.never(x);
         }
     });
 

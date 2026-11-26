@@ -3,4 +3,5 @@
 /target/
 /gen
 /debug
+/bindings/
 flamegraph*.svg

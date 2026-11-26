@@ -13,6 +13,10 @@ export const ZRtAttr = z.union([
         type: z.literal('size'),
         value: z.number()
     }),
+    z.object({
+        type: z.literal('font'),
+        value: z.string()
+    }),
     // z.object({
     //     type: z.literal('color'),
     //     value: ZColor

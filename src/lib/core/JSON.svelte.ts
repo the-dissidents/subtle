@@ -83,6 +83,11 @@ const ZEntry = z.object({
     start: z.number(),
     end: z.number(),
     label: z.enum(LABEL_TYPES),
+    layer: z._default(z.int().check(z.nonnegative()), 0),
+    layers: z.optional(z.array(z.readonly(z.tuple([
+        z.string(),
+        z.int().check(z.nonnegative())
+    ])))),
     pos: z._default(ZPositioning, null),
     align: z.optional(z.enum(AlignMode)),
     texts: z.array(z.readonly(z.tuple([
@@ -98,6 +103,10 @@ function serializeEntry(entry: SubtitleEntry): z.infer<typeof ZEntry> {
         start: entry.start,
         end: entry.end,
         label: entry.label,
+        layer: 0,
+        layers: entry.layers.size > 0
+            ? [...entry.layers.entries()].map(([style, layer]) => [style.name, layer] as const)
+            : undefined,
         pos: entry.positioning,
         align: entry.alignment ?? undefined,
         texts: [...entry.texts.entries()]
@@ -261,6 +270,16 @@ export class JSONParser implements SubtitleParser {
                 style = found;
             }
             entry.texts.set(style, text);
+        }
+
+        if (obj.layers) {
+            for (const [styleName, layer] of obj.layers) {
+                const style = this.#subs.styles.find((x) => x.name == styleName);
+                if (style) entry.layers.set(style, layer);
+            }
+        } else if (obj.layer > 0) {
+            for (const style of entry.texts.keys())
+                entry.layers.set(style, obj.layer);
         }
         return entry;
     }

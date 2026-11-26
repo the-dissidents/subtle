@@ -40,8 +40,10 @@ function attrToTag(attr: RichTextAttr): Tag | [] {
         switch (attr.type) {
             case 'size':
                 return [];
+            case 'font':
+                return { start: `<font face="${attr.value}">`, end: '</font>' };
             default:
-                Debug.never(attr.type);
+                Debug.never(attr);
         }
     }
 }

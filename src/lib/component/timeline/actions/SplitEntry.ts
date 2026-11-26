@@ -100,6 +100,8 @@ export class SplitEntry extends TimelineAction {
                 const second = RichText.substring(text, pos);
                 newEntry.texts.set(style, RichText.trimEnd(first));
                 target.texts.set(style, RichText.trimStart(second));
+                const layer = target.layers.get(style);
+                if (layer !== undefined) newEntry.layers.set(style, layer);
             }
             await Source.markChanged(ChangeType.Times, get(_)('c.split-entry-timeline'));
 
