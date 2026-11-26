@@ -15,10 +15,16 @@
 
   import { PauseIcon, PlayIcon, Volume2Icon } from "@lucide/svelte";
   import { onMount } from "svelte";
+  import { _ } from "svelte-i18n";
   import * as z from "zod/v4-mini";
+
+  const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4] as const;
 
   let volume = Memorized.$('playbackVolume', z.number().check(z.gt(0)).check(z.lt(1)), 0.8);
   volume.subscribe((x) => void Playback.player?.setVolume(x));
+
+  let playbackRate = Memorized.$('playbackRate', z.number().check(z.gte(0.25)).check(z.lte(4)), 1);
+  playbackRate.subscribe((x) => void Playback.player?.setPlaybackRate(x));
 
   let isPlaying = $state(false);
   let playPosStart = $state(0);
@@ -48,15 +54,25 @@
     playPosStart = Playback.player!.startTime;
     playPosEnd = Playback.player!.startTime + Playback.duration;
     playPos = Playback.position;
+    void Playback.player!.setVolume($volume);
+    void Playback.player!.setPlaybackRate($playbackRate);
   });
 
+  let lastUiPosUpdate = 0;
   Playback.onPositionChanged.bind(me, () => {
+    const now = performance.now();
+    if (Playback.isPlaying && now - lastUiPosUpdate < 66) return;
+    lastUiPosUpdate = now;
     playPos = $loadState == 'loaded' ? Playback.position : 0;
     playPosInput = Playback.position;
   });
 
   MediaPlayerInterface.onPlayStateChanged.bind(me, () => {
     isPlaying = Playback.isPlaying;
+    if (!isPlaying) {
+      playPos = $loadState == 'loaded' ? Playback.position : 0;
+      playPosInput = Playback.position;
+    }
   });
 </script>
 
@@ -66,6 +82,8 @@
     value={$volume}
     oninput={(x) => $volume = x.currentTarget.valueAsNumber}/>
 </Popup>
+
+
 
 <div class="vlayout fill area"
   class:focused={$uiFocus == 'Preview'}
@@ -105,6 +123,17 @@
     }} disabled={$loadState !== 'loaded'}>
       <Volume2Icon />
     </button>
+    <select class="speed-select"
+      aria-label={$_('preview.playback-speed')}
+      title={$_('preview.playback-speed')}
+      disabled={$loadState !== 'loaded'}
+      value={$playbackRate}
+      onchange={(e) => $playbackRate = Number(e.currentTarget.value)}
+    >
+      {#each PLAYBACK_RATES as rate (rate)}
+        <option value={rate}>{rate}x</option>
+      {/each}
+    </select>
     <TimestampInput bind:timestamp={playPosInput}
       tight={true}
       disabled={$loadState !== 'loaded'}
@@ -158,5 +187,9 @@ canvas {
   &::-webkit-slider-runnable-track {
     height: 6px;
   }
+}
+
+.speed-select {
+  font-variant-numeric: tabular-nums;
 }
 </style>

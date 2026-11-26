@@ -102,8 +102,12 @@ export class PlayerBuffer {
             const status = await this.media.openAudio(id);
 
             if (status.sampleRate !== oldrate) {
+                const prevVolume = this.audio.volume;
+                const prevRate = this.audio.playbackRate;
                 await this.audio.close();
                 this.#audio = await Audio.create(status.sampleRate);
+                await this.#audio.setVolume(prevVolume);
+                await this.#audio.setPlaybackRate(prevRate);
             }
 
             await this.#clearBufferLocked();
@@ -277,7 +281,7 @@ export class PlayerBuffer {
 
         return this.#videoBuffer.length < MediaConfig.data.videoCacheSize
             || this.audio.tail !== undefined && this.audio.head !== undefined
-               && this.audio.tail - this.audio.head < MediaConfig.data.audioPreloadAmount;
+               && this.audio.tail - this.audio.head < MediaConfig.data.audioPreloadAmount * Math.max(1, this.audio.playbackRate);
     }
 
     async #decodeLocked() {
